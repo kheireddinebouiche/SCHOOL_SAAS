@@ -1,14 +1,15 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django_tenants.utils import schema_context
 from .form import *
 from .models import Profile
 
+
+@login_required(login_url='institut_app:login')
 def Index(request):
-
     tenant = getattr(request, 'tenant', None)
-
     # Get the schema name or set it to "Unknown" if no tenant is found
     schema_name = tenant.schema_name if tenant else "Unknown"
 
