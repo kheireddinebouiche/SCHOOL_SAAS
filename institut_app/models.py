@@ -14,6 +14,20 @@ class Formation(models.Model):
 
     def __str__(self):
         return self.nom
+    
+class Specialites(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
+    duree = models.IntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at= models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Spécialité"
+        verbose_name_plural="Spécialités"
+    def __str__(self):
+        return self.label
 
 class Etudiant(models.Model):
     nom = models.CharField(max_length=255)
