@@ -11,6 +11,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('',Index, name="index"),  
     path('admin_tenant/', tenant_admin_site.urls),
+    path('nouveau-compte/', new_tenant, name="nouveau-tenant"),
+    path('liste-comptes/', tenant_list, name="tenant_list"),
     path('login/',LoginView.as_view(), name="login"),
     path('logout/',LogoutView.as_view(), name="logout"),
+
+    
 ]

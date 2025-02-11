@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
 
-@login_required(login_url='institut_app:login')
+
 def Index(request):
     tenant = getattr(request, 'tenant', None)
     # Get the schema name or set it to "Unknown" if no tenant is found

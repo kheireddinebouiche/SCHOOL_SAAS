@@ -18,5 +18,5 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('',include('institut_app.urls', namespace='institut_app')),
+    
 ]

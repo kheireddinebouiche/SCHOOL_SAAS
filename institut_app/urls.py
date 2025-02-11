@@ -10,7 +10,7 @@ app_name="institut_app"
 urlpatterns = [
     
     path('',Index, name="index"),
-    #path('login/',LoginView.as_view(), name="login"),
+   
     path('login/',login_view, name="login"),
     path('register/', register, name="register"),
     path('logout/',logout_view, name="logout"),
