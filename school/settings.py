@@ -47,6 +47,7 @@ TENANT_APPS = [
     'institut_app',
     't_formateurs',
     't_formations',
+    't_etudiants',
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
