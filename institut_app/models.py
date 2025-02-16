@@ -16,6 +16,12 @@ class Entreprise(models.Model):
     art = models.CharField(max_length=255, blank=True, null=True)
     nis = models.CharField(max_length=255, null=True, blank=True)
 
+    adresse = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    site_web = models.URLField(null=True, blank=True)
+    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

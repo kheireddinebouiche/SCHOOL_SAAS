@@ -8,6 +8,7 @@ from .models import Profile
 from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
+from django.db import transaction
 
 @login_required(login_url='institut_app:login')
 def Index(request):
@@ -51,9 +52,39 @@ def register(request):
         )
         new_user.set_password(password1)
         new_user.save()
-        
+
         messages.success(request, 'Compte créé avec succès')
         return redirect('institut_app:login')
  
     return render(request, 'registration/register.html')
 
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def NewEntreprise(request):
+    form = EntrepriseForm()
+    if request.method == 'POST':
+        form = EntrepriseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Entreprise créée avec succès')
+            return redirect('institut_app:index')
+    return render(request, 'tenant_folder/new_entreprise.html', {'form': form})
+
+@login_required(login_url='institut_app:login')
+def ListeEntreprises(request):
+    entreprises = Entreprise.objects.all()
+    return render(request, 'tenant_folder/liste_entreprises.html', {'entreprises': entreprises})
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ModifierEntreprise(request, id):
+    entreprise = Entreprise.objects.get(id=id)
+    form = EntrepriseForm(instance=entreprise)
+    if request.method == 'POST':
+        form = EntrepriseForm(request.POST, instance=entreprise)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Entreprise modifiée avec succès')
+            return redirect('institut_app:liste_entreprise')
+    return render(request, 'tenant_folder/modifier_entreprise.html', {'form': form})
