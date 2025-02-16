@@ -20,6 +20,8 @@ class Etudiant(models.Model):
     pays = models.CharField(max_length=255, null=True, blank=True)
     commune = models.CharField(max_length=255, null=True, blank=True)
 
+    cin = models.CharField(max_length=255, null=True, blank=True)
+
     groupe_sanguin = models.CharField(max_length=5, null=True, blank=True, choices=[
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'), ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-')
     ])

@@ -7,6 +7,7 @@ from django.contrib import messages
 from django_tenants.utils import schema_context
 from django.contrib.auth.models import User
 
+@login_required(login_url='login')
 def Index(request):
     tenant = getattr(request, 'tenant', None)
 
