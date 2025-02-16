@@ -62,7 +62,7 @@ def new_tenant(request):
 
             messages.success(request,'Le compte à été crée avec succès')
 
-            return redirect('app:index')
+            return redirect('index')
         
 
     context = {

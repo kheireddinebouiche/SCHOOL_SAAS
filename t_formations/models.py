@@ -46,3 +46,17 @@ class Modules(models.Model):
 
     def __str__(self):
         return self.label
+    
+class FraisInscription(models.Model):
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
+    label = models.CharField(max_length=255, null=True, blank=True)
+    montant = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Frais d'inscription"
+        verbose_name_plural="Frais d'inscription"
+
+    def __str__(self):
+        return self.label

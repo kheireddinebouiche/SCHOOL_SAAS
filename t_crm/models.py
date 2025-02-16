@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from t_formations.models import *
 
 class NouveauVisiteur(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -16,6 +17,8 @@ class NouveauVisiteur(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_paied = models.BooleanField(default=False)
+
+    formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name="Visiteur"
