@@ -6,7 +6,6 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
 
-
 class Entreprise(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
     designation = models.CharField(max_length=255, null=True, blank=True)
@@ -20,7 +19,7 @@ class Entreprise(models.Model):
     telephone = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
-    
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
