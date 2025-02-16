@@ -14,6 +14,8 @@ urlpatterns = [
     path('nouveau-compte/', new_tenant, name="nouveau-tenant"),
     path('liste-comptes/', tenant_list, name="tenant_list"),
     
+    path('nouveau-utilisateur/', CreateSuperUser, name="CreateSuperUser"),
+    
     path('login/',LoginView.as_view(), name="login"),
     path('logout/',LogoutView.as_view(), name="logout"),
 

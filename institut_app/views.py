@@ -51,6 +51,7 @@ def register(request):
         )
         new_user.set_password(password1)
         new_user.save()
+        
         messages.success(request, 'Compte créé avec succès')
         return redirect('institut_app:login')
  

@@ -49,6 +49,7 @@ TENANT_APPS = [
     't_formations',
     't_etudiants',
     't_crm',
+    't_dashboard',
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
