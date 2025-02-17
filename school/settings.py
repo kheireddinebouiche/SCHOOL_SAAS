@@ -45,7 +45,7 @@ SHARED_APPS = [
 
 TENANT_APPS = [
     'institut_app',
-    't_formateurs',
+    't_rh',
     't_formations',
     't_etudiants',
     't_crm',

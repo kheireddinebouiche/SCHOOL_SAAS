@@ -17,6 +17,8 @@ class NouveauVisiteur(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_paied = models.BooleanField(default=False)
+    
+    cin = models.CharField(max_length=255, null=True, blank=True)
 
     formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
 
