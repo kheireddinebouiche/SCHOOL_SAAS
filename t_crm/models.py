@@ -17,7 +17,7 @@ class NouveauVisiteur(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_paied = models.BooleanField(default=False)
-    
+
     cin = models.CharField(max_length=255, null=True, blank=True)
 
     formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
@@ -27,6 +27,6 @@ class NouveauVisiteur(models.Model):
         verbose_name_plural = "Visiteurs"
 
     def __str__(self):
-        return self.nom
+        return f"{self.nom} {self.prenom}"
     
 
