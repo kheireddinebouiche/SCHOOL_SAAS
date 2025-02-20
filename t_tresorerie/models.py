@@ -1,0 +1,29 @@
+from django.db import models
+from t_etudiants.models import *
+from institut_app.models import *
+from t_formations.models import *
+from django.contrib.auth.models import User
+
+
+class StudentsPaiementsRequest(models.Model):
+    student = models.ForeignKey(Etudiant, on_delete=models.CASCADE)
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE)
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    paid = models.BooleanField(default=False)
+
+    paiement_date = models.DateTimeField(null=True, blank=True)
+
+
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Demande de paiement"
+        verbose_name_plural = "Demandes de paiement"
+
+    def __str__(self):
+        return f"{self.student}"
+

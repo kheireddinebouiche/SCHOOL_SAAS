@@ -26,9 +26,18 @@ class Specialites(models.Model):
 
     code = models.CharField(max_length=100, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
+
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
+
     duree = models.IntegerField(null=True, blank=True)
+
+    nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
+
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
+
+    nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
+    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
 
@@ -74,7 +83,6 @@ class FraisInscription(models.Model):
     def __str__(self):
         return self.label
     
-
 class Partenaires(models.Model):
     nom = models.CharField(max_length=255, null=True, blank=True)
     adresse = models.CharField(max_length=255, null=True, blank=True)
