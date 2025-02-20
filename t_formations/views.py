@@ -1,6 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from .models import *
 from .forms import *
+from django.contrib.auth.decorators import login_required
 
 
 def listModules(request):
@@ -20,7 +22,15 @@ def listFraisInscription(request):
     return render(request, 't_formations/frais.html', {'frais': frais})
 
 def addFormation(request):
-    pass
+    form = NewFormationForm()
+    if request.method == 'POST':
+        form = NewFormationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Formation ajoutée avec succès')
+            return redirect('listFormations')
+    return render(request, 'tenant_folder/formations/nouvelle_formations.html', {'form': form})
+
 
 def addSpecialite(request):
     pass

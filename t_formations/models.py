@@ -1,14 +1,23 @@
 from django.db import models
 from django.contrib.auth.models import User
+from institut_app.models import Entreprise
+
 
 class Formation(models.Model):
     nom = models.CharField(max_length=255)
+
     description = models.TextField(null=True, blank=True)
+
     duree = models.PositiveIntegerField()
+
     date_creation = models.DateTimeField(auto_now_add=True)
+
+    entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
+
+    partenaire = models.ForeignKey('Partenaires', on_delete=models.SET_NULL, null=True, blank=True)
+    
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-
 
     def __str__(self):
         return self.nom
@@ -37,6 +46,10 @@ class Modules(models.Model):
     
     duree = models.IntegerField(null=True, blank=True)
 
+    coef = models.IntegerField(null=True, blank=True)
+    n_elimate = models.IntegerField(null=True, blank=True)
+
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
 
@@ -60,3 +73,20 @@ class FraisInscription(models.Model):
 
     def __str__(self):
         return self.label
+    
+
+class Partenaires(models.Model):
+    nom = models.CharField(max_length=255, null=True, blank=True)
+    adresse = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    site_web = models.URLField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Partenaire"
+        verbose_name_plural="Partenaires"
+
+    def __str__(self):
+        return self.nom

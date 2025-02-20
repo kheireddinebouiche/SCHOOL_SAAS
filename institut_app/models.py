@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from app.models import Institut
+from django_countries.fields import CountryField
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -17,6 +18,8 @@ class Entreprise(models.Model):
 
     adresse = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(max_length=255, null=True, blank=True)
+    wilaya = models.CharField(max_length=255, null=True, blank=True)
+    pays = CountryField(null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
 
@@ -47,3 +50,14 @@ class BankAccount(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class Settings(models.Model):
+    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+    
+    class Meta:
+        verbose_name="Paramètre"
+        verbose_name_plural="Paramètres"
+
+    def __str__(self):
+        return self.tenant.nom
