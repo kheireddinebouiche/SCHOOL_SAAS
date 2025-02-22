@@ -6,6 +6,14 @@ from django_countries.fields import CountryField
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
+    role = models.CharField(max_length=100, null=True, blank=True, choices=[('admin', 'Admin'), ('user', 'User'),('tresorier', 'Trésorier'),('rh', 'Ressources Humaines'),('crm', 'Gestion de la relation client')])
+
+    class Meta:
+        verbose_name="Profile"
+        verbose_name_plural="Profiles"
+    
+    def __str__(self):
+        return self.user.username
 
 class Entreprise(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
@@ -50,7 +58,6 @@ class BankAccount(models.Model):
 
     def __str__(self):
         return self.label
-
 
 class Settings(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)

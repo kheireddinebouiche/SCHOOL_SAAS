@@ -15,9 +15,13 @@ class Formation(models.Model):
     entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
 
     partenaire = models.ForeignKey('Partenaires', on_delete=models.SET_NULL, null=True, blank=True)
+
+    type_formation = models.CharField(choices=[('etrangere', 'Formation étrangere'), ('national', 'Formation Etatique')], max_length=100, null=True, blank=True, default='national')
     
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
 
     def __str__(self):
         return self.nom
@@ -84,7 +88,9 @@ class FraisInscription(models.Model):
         return self.label
     
 class Partenaires(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True, blank=True)
+    code = models.CharField(max_length=255, null=True, blank=True)
     adresse = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)

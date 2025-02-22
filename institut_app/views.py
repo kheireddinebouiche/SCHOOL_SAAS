@@ -15,8 +15,11 @@ def Index(request):
     tenant = getattr(request, 'tenant', None)
     # Get the schema name or set it to "Unknown" if no tenant is found
     schema_name = tenant.schema_name if tenant else "Unknown"
-
-    return render(request, 'tenant_folder/index.html')
+    context = {
+        'schema_name' : schema_name,
+        'tenant' : tenant,
+    }
+    return render(request, 'tenant_folder/index.html', context)
 
 def logout_view(request):
     logout(request)
@@ -69,7 +72,7 @@ def NewEntreprise(request):
             form.save()
             messages.success(request, 'Entreprise créée avec succès')
             return redirect('institut_app:index')
-    return render(request, 'tenant_folder/new_entreprise.html', {'form': form})
+    return render(request, 'tenant_folder/entreprise/new_entreprise.html', {'form': form})
 
 @login_required(login_url='institut_app:login')
 def ListeEntreprises(request):

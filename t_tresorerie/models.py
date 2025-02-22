@@ -2,11 +2,12 @@ from django.db import models
 from t_etudiants.models import *
 from institut_app.models import *
 from t_formations.models import *
+from t_crm.models import *
 from django.contrib.auth.models import User
 
 
-class StudentsPaiementsRequest(models.Model):
-    student = models.ForeignKey(Etudiant, on_delete=models.CASCADE)
+class ClientPaiementsRequest(models.Model):
+    client = models.ForeignKey(Visiteurs, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE)
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

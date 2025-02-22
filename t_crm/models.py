@@ -40,6 +40,9 @@ class Visiteurs(models.Model):
     post_occupe = models.CharField(max_length=255, null=True, blank=True)
     experience = models.CharField(max_length=255, null=True, blank=True)
     entreprise = models.CharField(max_length=255, null=True, blank=True)
+
+    is_student = models.BooleanField(default=False)
+    is_entreprise = models.BooleanField(default=False)
     
     class Meta:
         verbose_name="Visiteur"

@@ -19,6 +19,8 @@ class Employees(models.Model):
     date_depart = models.DateField(null=True, blank=True)
 
     cin = models.CharField(max_length=255, null=True, blank=True)
+    secu = models.CharField(max_length=255, null=True, blank=True) 
+
     situation_familiale = models.CharField(max_length=255, null=True, blank=True, choices=[('C', 'Célibataire'), ('M', 'Marié(e)'), ('D', 'Divorcé(e)'), ('V', 'Veuf(ve)')])
     sexe = models.CharField(max_length=1, null=True, blank=True, choices=[('M', 'Masculin'), ('F', 'Feminin')])
     date_naissance = models.DateField(null=True, blank=True)

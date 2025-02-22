@@ -8,4 +8,10 @@ urlpatterns = [
 
     path('nouvelle-formation/', addFormation, name="addFormation"),
     path('nouvelle-specialite/', addSpecialite, name="addSpecialite"),
+    path('liste-des-formation/', listFormations, name="listFormations"),
+
+    path('nouveau-partenaire/', AddPartenaire, name="addPartenaire"),
+    path('liste-partenaires/', ListeDesPartenaires, name="listPartenaires"),
+    path('details-partenaire/<int:pk>/', detailsPartenaire, name="detailsPartenaire"),
+    path('supprimer-partenaire/<int:pk>/', deletePartenaire, name="deletePartenaire"),
 ]
