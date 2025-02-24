@@ -28,7 +28,7 @@ class Formation(models.Model):
     
 class Specialites(models.Model):
 
-    code = models.CharField(max_length=100, null=True, blank=True)
+    code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     label = models.CharField(max_length=100, null=True, blank=True)
 
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)

@@ -3,7 +3,7 @@ from django.contrib import messages
 from .models import *
 from .forms import *
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
 
 TenantModel = get_tenant_model()
@@ -15,7 +15,11 @@ def listModules(request):
 
 def listSpecialites(request):
     specialites = Specialites.objects.all()
-    return render(request, 't_formations/specialites.html', {'specialites': specialites})
+    context = {
+        'liste' : specialites,
+        'tenant' : request.tenant
+    }
+    return render(request, 'tenant_folder/formations/liste_des_specialites.html', context)
 
 def listFormations(request):
     formations = Formation.objects.all()
@@ -42,7 +46,7 @@ def addFormation(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Formation ajoutée avec succès')
-            return redirect('listFormations')
+            return redirect('t_formations:listFormations')
     context = {
         'form' : form,
     }
@@ -95,8 +99,28 @@ def ListeDesPartenaires(request):
     }
     return render(request, 'tenant_folder/formations/liste_des_partenaires.html', context)
 
+@transaction.atomic
 def addSpecialite(request):
-    pass
+    form = NewSpecialiteForm()
+    if request.method == 'POST':
+        form = NewSpecialiteForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Spécialité ajoutée avec succès")
+            return redirect('t_formations:listSpecialites')
+           
+        else:
+            errors = " | ".join(["{}: {}".format(field, ", ".join(errors)) for field, errors in form.errors.items()])
+            messages.error(request, f"{errors}")
+            return redirect('t_formations:addSpecialite')
+        
+    else:
+        context = {
+            'form' : form,
+            'tenant' : request.tenant,
+        }
+
+        return render(request, 'tenant_folder/formations/nouvelle_specialite.html', context)
 
 def addModule(request):
     pass
@@ -128,8 +152,16 @@ def deleteModule(request):
 def deleteFraisInscription(request):
     pass
 
-def detailFormation(request):
-    pass
+def detailFormation(request, pk):
+    formation = Formation.objects.get(id = pk)
+    specialite = Specialites.objects.filter(formation = formation)
+
+    context = {
+        'formation' : formation,
+        'tenant' : request.tenant,
+        'specialite' : specialite,
+    }
+    return render(request, 'tenant_folder/formations/details_formation.html', context)
 
 def detailSpecialite(request):
     pass

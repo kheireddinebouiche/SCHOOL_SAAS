@@ -48,7 +48,20 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['code', 'label', 'prix', 'duree', 'formation']
+        fields = ['code', 'label', 'prix', 'formation']
+
+        widgets = {
+            'code' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'label' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'prix' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'formation' : forms.Select(attrs={'class' : 'form-control'}),
+        }
+
+        def clean_name(self):
+            name = self.cleaned_data.get("code")
+            if Specialites.objects.filter(code=name).exists():
+                raise forms.ValidationError("Cette spécialité existe déjà")
+            return name
 
 class NewModuleForm(forms.ModelForm):
     class Meta:
