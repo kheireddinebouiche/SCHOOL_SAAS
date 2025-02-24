@@ -10,6 +10,8 @@ class Groupe(models.Model):
     nom = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
 
+    annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
+
     min_student = models.IntegerField(default=0)
     max_student = models.IntegerField(default=0)
 
@@ -17,6 +19,8 @@ class Groupe(models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='groupe_specialite', null=True, blank=True)
+
+    etat = models.CharField(max_length=200, choices=[('inscription',"En cours d'inscription"),('enc', 'En cours'), ('Cloturé', 'Cloturé')], default='enc')
 
     date_creation = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -8,5 +8,6 @@ urlpatterns = [
     path('rh/',include('t_rh.urls',namespace='t_rh')),
     path('crm/',include('t_crm.urls',namespace='t_crm')),
     path('pedagogie/formations/',include('t_formations.urls',namespace='t_formations')),
+    path('scolartie/groupes/',include('t_groupe.urls',namespace='t_groupe')),
     
 ]
