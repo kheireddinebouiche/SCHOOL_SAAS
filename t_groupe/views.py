@@ -54,3 +54,18 @@ def detailsGroupe(request, pk):
         'tenant' : request.tenant,
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
+
+def UpdateGroupe(request):
+    pass
+
+def deleteGroupe(request, pk):
+    groupe = Groupe.objects.get(pk=pk)
+    groupe.delete()
+    messages.success(request, "Groupe supprimé avec succès")
+    return redirect('t_groupe:listegroupes')
+
+def PrintSuivieCours(request):
+    pass
+
+def PrintPvExamen(request):
+    pass

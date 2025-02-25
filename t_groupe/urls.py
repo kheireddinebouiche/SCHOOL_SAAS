@@ -9,4 +9,5 @@ urlpatterns = [
     path('nouveau-groupe/', NewGroupe, name="nouveaugroupe"),
     path('liste-des-groupes/', ListeGroupe, name="listegroupes"),
     path('details-groupe/<int:pk>/', detailsGroupe, name="detailsgroupe"),
+    path('supprimer-groupe/<int:pk>/', deleteGroupe, name="deletegroupe"),
 ]
