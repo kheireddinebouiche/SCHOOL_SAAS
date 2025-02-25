@@ -45,4 +45,12 @@ def ListeGroupe(request):
     }
     return render(request,'tenant_folder/formations/groupe/liste_des_groupes.html', context)
 
-
+def detailsGroupe(request, pk):
+    groupe = Groupe.objects.get(pk=pk)
+    students = GroupeLine.objects.filter(groupe = groupe)
+    context = {
+        'groupe' : groupe,
+        'students' : students,
+        'tenant' : request.tenant,
+    }
+    return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)

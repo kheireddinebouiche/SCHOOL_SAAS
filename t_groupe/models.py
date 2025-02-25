@@ -20,7 +20,7 @@ class Groupe(models.Model):
 
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='groupe_specialite', null=True, blank=True)
 
-    etat = models.CharField(max_length=200, choices=[('inscription',"En cours d'inscription"),('enc', 'En cours'), ('Cloturé', 'Cloturé')], default='enc')
+    etat = models.CharField(max_length=200, choices=[('inscription',"En cours d'inscription"),('enc', 'En cours'), ('Cloturé', 'Cloturé')], default='inscriptio')
 
     date_creation = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
