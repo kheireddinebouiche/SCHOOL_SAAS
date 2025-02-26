@@ -13,7 +13,7 @@ class VisiteurForm(forms.ModelForm):
             'pays' : forms.Select(attrs={'class':'form-control'}),
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'prenom' : forms.TextInput(attrs={'class':'form-control'}),
-            'date_naissance' : forms.DateInput(attrs={'class':'form-control'}),
+            'date_naissance' : forms.DateInput(attrs={'class':'form-control', 'type':'date'}),
             'lieu_naissance' : forms.TextInput(attrs={'class':'form-control'}),
             'email' : forms.EmailInput(attrs={'class':'form-control'}),
             'telephone' : forms.TextInput(attrs={'class':'form-control'}),
@@ -23,12 +23,13 @@ class VisiteurForm(forms.ModelForm):
             'niveau_etude' : forms.Select(attrs={'class':'form-control'}),
             'formule' : forms.Select(attrs={'class':'form-control'}),
             'session' : forms.Select(attrs={'class':'form-control'}),
-            'formation' : forms.Select(attrs={'class':'form-control'}),
+            'formation' : forms.Select(attrs={'class':'form-control', 'id' : "formation"}),
             'situation_family' : forms.Select(attrs={'class':'form-control'}),
             'situation_professionnelle' : forms.Select(attrs={'class':'form-control'}),
             'post_occupe' : forms.TextInput(attrs={'class':'form-control'}),
             'experience' : forms.TextInput(attrs={'class':'form-control'}),
             'entreprise' : forms.TextInput(attrs={'class':'form-control'}),
+            'specialite' : forms.Select(attrs={'class':'form-control', 'id':"specialite"}),
 
         }
 
@@ -52,4 +53,5 @@ class VisiteurForm(forms.ModelForm):
             'post_occupe' : 'Poste occupé',
             'experience' : 'Expérience',
             'entreprise' : 'Entreprise',
+            'specialite' : 'Spécialité',
         }

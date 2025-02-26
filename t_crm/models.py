@@ -24,7 +24,9 @@ class Visiteurs(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    has_paied = models.BooleanField(default=False)
+    has_paied_enrollment = models.BooleanField(default=False)
+    has_completed_documents = models.BooleanField(default=False)
+    has_paid_fees = models.BooleanField(default=False)
 
     cin = models.CharField(max_length=255, null=True, blank=True)
 
@@ -34,6 +36,7 @@ class Visiteurs(models.Model):
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'mars')])
 
     formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
 
     situation_family = models.CharField(max_length=255, null=True, blank=True, choices=[('celibataire', 'Célibataire'), ('marie', 'Marié(e)')])
     situation_professionnelle = models.CharField(max_length=255, null=True, blank=True, choices=[('etudiant', 'Etudiant(e)'), ('salarié', 'Salarié(e)'), ('employeur', 'Employeur'),('sans_emploi', 'Sans emploi')])
@@ -43,6 +46,8 @@ class Visiteurs(models.Model):
 
     is_student = models.BooleanField(default=False)
     is_entreprise = models.BooleanField(default=False)
+
+    etat = models.CharField(max_length=255, null=True, blank=True, default='visiteur' , choices=[('visiteur','Visiteur'),('en_attente', 'En attente'), ('inscrit', 'Inscrit'), ('rejete', 'Rejeté')])
     
     class Meta:
         verbose_name="Visiteur"

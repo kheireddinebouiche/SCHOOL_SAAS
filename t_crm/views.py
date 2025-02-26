@@ -1,13 +1,18 @@
 from django.shortcuts import render,redirect
+from django.http import JsonResponse
 from .models import *
 from .forms import *
 from django.contrib import messages
 from t_tresorerie.models import *
+from t_formations.models import *
+from django.db import transaction
+
 
 def listeVisiteurs(request):
     liste = Visiteurs.objects.all()
     return render(request, 'tenant_folder/crm/liste_visiteurs.html', {'liste': liste})
 
+@transaction.atomic
 def nouveauVisiteur(request):
     form = VisiteurForm()
     if request.method == 'POST':
@@ -43,4 +48,18 @@ def supprimerVisiteur(request, id):
 
 def detailsVisiteur(request, pk):
     obj = Visiteurs.objects.get(id = pk)
-    return render(request,'tenant_folder/crm/details_visiteur.html')
+    context = {
+        'obj' : obj,
+        'tenant' : request.tenant
+    }
+    return render(request,'tenant_folder/crm/details_visiteur.html', context)
+
+def ApiGetSpecialite(request):
+    formation_id = request.GET.get('formation_id')
+    
+    specialites = Specialites.objects.filter(formation = formation_id).values('id','label')
+    return JsonResponse(list(specialites), safe=False)
+
+@transaction.atomic
+def ConfirmeDemandeInscription(request, pk):
+    pass
