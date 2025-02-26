@@ -43,8 +43,12 @@ def ApprouveVisiteurInscription(request,pk):
 def modifierVisiteur(request, id):
     pass
 
-def supprimerVisiteur(request, id):
-    pass
+def supprimerVisiteur(request):
+    pk = request.POST.get('id')
+    visiteur = Visiteurs.objects.get(id = pk)
+    visiteur.delete()
+    messages.success(request, 'Visiteur supprimé avec succès')
+    return JsonResponse({'status': 'success'})
 
 def detailsVisiteur(request, pk):
     obj = Visiteurs.objects.get(id = pk)

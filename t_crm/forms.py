@@ -6,7 +6,7 @@ class VisiteurForm(forms.ModelForm):
     class Meta:
         model = Visiteurs
         fields = '__all__'
-        exclude = ['created_by','created_at','updated_at','has_paied']
+        exclude = ['etat','created_by','created_at','updated_at','has_paied','has_paied_enrollment','has_completed_documents','has_paid_fees','is_student','is_entreprise']
 
         widgets = {
 
