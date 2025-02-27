@@ -48,7 +48,7 @@ def supprimerVisiteur(request):
     visiteur = Visiteurs.objects.get(id = pk)
     visiteur.delete()
     messages.success(request, 'Visiteur supprimé avec succès')
-    return JsonResponse({'status': 'success'})
+    return JsonResponse({'success': True})
 
 def detailsVisiteur(request, pk):
     obj = Visiteurs.objects.get(id = pk)
@@ -66,4 +66,19 @@ def ApiGetSpecialite(request):
 
 @transaction.atomic
 def ConfirmeDemandeInscription(request, pk):
-    pass
+    visiteur = Visiteurs.objects.get(id = pk)
+    
+    paiement_request = ClientPaiementsRequest.objects.create(
+        client = visiteur,
+        formation = visiteur.formation,
+        specialite = visiteur.specialite,
+
+        amount = (visiteur.formation.frais_inscription + visiteur.specialite.prix) / int(visiteur.specialite.nb_tranche),
+
+        created_by = request.user,  
+
+    )
+
+    paiement_request.save()
+    messages.success(request, 'Demande d\'inscription confirmée avec succès')
+    return redirect('t_crm:details_visiteur', pk = pk)

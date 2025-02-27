@@ -1,5 +1,6 @@
 from django.db import models
 from app.models import *
+from django.contrib.auth.models import User
 
 
 class Employees(models.Model):
@@ -11,12 +12,6 @@ class Employees(models.Model):
     telephone = models.CharField(max_length=15, null=True, blank=True)
 
     adresse = models.TextField(null=True, blank=True)
-
-    poste = models.CharField(max_length=255, null=True, blank=True, choices=[('emp','Employe(e)'), ('dir', 'Directeur(trice)'), ('per', 'Enseignant permanant'), ('vac', 'Enseignant vacataire')])
-    
-    salaire = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
-    date_embauche = models.DateField(null=True, blank=True)
-    date_depart = models.DateField(null=True, blank=True)
 
     cin = models.CharField(max_length=255, null=True, blank=True)
     secu = models.CharField(max_length=255, null=True, blank=True) 
@@ -38,6 +33,23 @@ class Employees(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}"
 
+class Absences(models.Model):
+    pass
+
+class Services(models.Model):
+    label = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Service"
+        verbose_name_plural="Services"
+
+    def __str__(self):
+        return self.label
 
 class Conges(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
@@ -74,3 +86,51 @@ class Paie(models.Model):
 
     def __str__(self):
         return f"{self.employee.nom} {self.employee.prenom}"
+    
+
+class Contrats(models.Model):
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
+    type_contrat = models.CharField(max_length=255, null=True, blank=True, choices=[('cdi', 'CDI'), ('cdd', 'CDD'), ('stage', 'Stage'), ('interim', 'Interim')])
+
+    date_debut = models.DateField()
+    date_fin = models.DateField()
+
+    poste = models.CharField(max_length=255, null=True, blank=True, choices=[('emp','Employe(e)'), ('dir', 'Directeur(trice)'), ('per', 'Enseignant permanant'), ('vac', 'Enseignant vacataire')])
+    service = models.ForeignKey('Services', on_delete=models.SET_NULL, null=True, blank=True)
+
+    salaire = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
+    date_embauche = models.DateField(null=True, blank=True)
+    date_depart = models.DateField(null=True, blank=True)
+
+    motif = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Contrat"
+        verbose_name_plural="Contrats"
+
+    def __str__(self):
+        return f"{self.employee.nom} {self.employee.prenom}"
+    
+class ArticlesContrat(models.Model):
+    titre = models.CharField(max_length=255, blank=True, null=True)
+    contenu = models.TextField()
+    type_contrat = models.CharField(
+        max_length=20,
+        choices=[
+            ('CDD', 'Contrat à Durée Déterminée'),
+            ('CDI', 'Contrat à Durée Indéterminée'),
+            ('Stage', 'Stage'),
+            ('Vacation', 'Vacation'),
+            ('Tous', 'Applicable à tous')
+        ],blank=True, null=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return self.titre

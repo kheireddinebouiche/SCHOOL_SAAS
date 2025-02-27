@@ -13,4 +13,5 @@ urlpatterns = [
 
     path('ApiGetSpecialite',ApiGetSpecialite,name="ApiGetSpecialite"),
     
+    path('approuve-visiteur-inscription/<int:pk>/',ConfirmeDemandeInscription,name="ConfirmeDemandeInscription"),
 ]
