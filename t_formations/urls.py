@@ -21,5 +21,9 @@ urlpatterns = [
     path('supprimer-partenaire/<int:pk>/', deletePartenaire, name="deletePartenaire"),
 
     path('apigetmodules',ApiGetSpecialiteModule, name="ApiGeSpecialitetModules"),
+    path('deleteModule',deleteModule,name="deletemodule"),
     path('ApiAddModule', ApiAddModule, name="ApiAddModule"),
+    path('archive-modules/' , archiveModule, name="archiveModule"),
+    path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
+    path('archiveFormation' , archiveFormation, name="archiveFormation"),
 ]

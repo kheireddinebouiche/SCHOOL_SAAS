@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from institut_app.models import Entreprise
+from t_rh.models import *
 
 
 class Formation(models.Model):
@@ -41,8 +42,9 @@ class Specialites(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
 
     nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
-    
 
+    responsable = models.ForeignKey(Employees, on_delete=models.SET_NULL, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
 
@@ -63,10 +65,14 @@ class Modules(models.Model):
     coef = models.IntegerField(null=True, blank=True)
     n_elimate = models.IntegerField(null=True, blank=True)
 
+    is_archived = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
 
+    created_by = models.ForeignKey(User, on_delete = models.SET_NULL, blank=True, null=True, related_name="module_created_by")
+    updated_by = models.ForeignKey(User, on_delete = models.SET_NULL, blank=True, null=True, related_name="module_updated_by")
+    
     class Meta:
         verbose_name="Module"
         verbose_name_plural="Modules"

@@ -191,7 +191,7 @@ def detailSpecialite(request, pk):
 
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
-    modules = Modules.objects.filter(specialite = id).values('id', 'label','code')
+    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree')
     return JsonResponse(list(modules), safe=False)
 
 
@@ -201,6 +201,7 @@ def ApiAddModule(request):
     coef = request.POST.get('coef')
     duree = request.POST.get('duree')
     id = request.POST.get('id')
+    code = request.POST.get('code_module')
 
     specialite = Specialites.objects.get(id = id)
 
@@ -209,12 +210,39 @@ def ApiAddModule(request):
         coef = coef,
         duree = duree,
         specialite = specialite,
+        code = code,
+        created_by = request.user,
     )
 
     new_module.save()
     return JsonResponse({'success' : True})
     
+def deleteModule(request):
+    id = request.GET.get('id')
+    
+    obj = Modules.objects.get(id = id)
+    obj.is_archived = True
+    obj.updated_by = request.user,
+    obj.save()
+   
+    return JsonResponse({'success' : True, 'message' : "Le module à été supprimé avec succès"})
 
+def archiveModule(request):
+    liste = Modules.objects.filter(is_archived = True)
+    context = {
+        'liste' : liste,
+        'tenant' : request.tenant
+    }
+    return render(request, 'tenant_folder/formations/archive/archive_module.html', context)
+
+def ApiGetModuleDetails(request):
+    id = request.GET.get('id')
+    obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef')
+    return JsonResponse(list(obj), safe=False)
+
+def archiveFormation(request):
+    pass
+ 
 def detailModule(request):
     pass
 
