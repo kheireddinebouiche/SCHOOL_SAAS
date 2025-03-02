@@ -16,7 +16,9 @@ urlpatterns = [
     path('logout/',logout_view, name="logout"),
 
     path('nouvelle-entreprise/', NewEntreprise, name="new_entreprise"),
+    path('details-entreprise/<int:pk>/', detailsEntreprise, name="details_entreprise"),
     path('liste-des-entreprise/', ListeEntreprises, name="liste_entreprise"),
     path('modification-entreprise/<int:id>/', ModifierEntreprise, name="modifier_entreprise"),
+    path('update-entreprise/', ApiUpdateEntreprise, name="update_entreprise"),
     
 ]

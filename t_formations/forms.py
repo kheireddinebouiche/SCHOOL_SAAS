@@ -4,19 +4,16 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['nom', 'description', 'duree','frais_inscription']
+        fields = ['entite_legal','nom', 'description', 'duree','frais_inscription','frais_assurance']
 
-class NewFormationFormMaster(forms.ModelForm):
-    class Meta:
-        model = Formation
-        fields = ['nom', 'description', 'duree','partenaire','type_formation','frais_inscription']
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'description': forms.Textarea(attrs={'class':'form-control'}),
             'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
-            'partenaire': forms.Select(attrs={'class': 'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -26,6 +23,31 @@ class NewFormationFormMaster(forms.ModelForm):
             'partenaire' : "Partenaire",
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
+            'frais_assurance' : "Frais d'assurance",
+        }
+        
+class NewFormationFormMaster(forms.ModelForm):
+    class Meta:
+        model = Formation
+        fields = ['nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance']
+        widgets = {
+            'nom' : forms.TextInput(attrs={'class':'form-control'}),
+            'description': forms.Textarea(attrs={'class':'form-control'}),
+            'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
+            'partenaire': forms.Select(attrs={'class': 'form-control'}),
+            'type_formation': forms.Select(attrs={'class': 'form-control'}),
+            'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
+        }
+
+        labels = {
+            'nom' : "Nom de la formation",
+            'description' : "Description de la formation",
+            'duree' : "Durée de la formation",
+            'partenaire' : "Partenaire",
+            'type_formation' : "Type de formation",
+            'frais_inscription' : "Frais d'inscription",
+            'frais_assurance' : "Frais d'assurance",
         }
 
 class NewPartenaireForm(forms.ModelForm):
@@ -67,6 +89,7 @@ class NewModuleForm(forms.ModelForm):
     class Meta:
         model = Modules
         fields = ['specialite', 'code', 'label', 'duree', 'coef', 'n_elimate']
+
 
 class NewFraisInscriptionForm(forms.ModelForm):
     class Meta:

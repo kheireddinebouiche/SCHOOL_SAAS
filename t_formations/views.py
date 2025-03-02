@@ -5,6 +5,7 @@ from .forms import *
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
+from django.http import JsonResponse
 
 TenantModel = get_tenant_model()
 tenants = TenantModel.objects.filter(tenant_type='second')
@@ -143,9 +144,26 @@ def updateFraisInscription(request):
 def deleteFormation(request):
     pass
 
-def deleteSpecialite(request):
-    pass
+def deleteSpecialite(request, pk):
+    specialite = Specialites.objects.get(id = pk)
 
+    if request.tenant.tenant_type == 'master':
+
+        specialite.delete()
+        messages.success(request, 'Spécialité supprimée avec succès')
+        return redirect('t_formations:listSpecialites')
+
+    elif specialite.formaton.type_formation == 'etranger':
+
+        messages.error(request, 'Vous ne pouvez pas supprimer cette spécialité')
+        return redirect('t_formations:listSpecialites')
+    
+    else:
+
+        specialite.delete()
+        messages.success(request, 'Spécialité supprimée avec succès')
+        return redirect('t_formations:listSpecialites')
+    
 def deleteModule(request):
     pass
 
@@ -163,8 +181,39 @@ def detailFormation(request, pk):
     }
     return render(request, 'tenant_folder/formations/details_formation.html', context)
 
-def detailSpecialite(request):
-    pass
+def detailSpecialite(request, pk):
+    object = Specialites.objects.get(id = pk)
+    context = {
+        'object' : object,
+        'tenant' : request.tenant,
+    }
+    return render(request, "tenant_folder/formations/details_specialite.html", context)
+
+def ApiGetSpecialiteModule(request):
+    id = request.GET.get('id')
+    modules = Modules.objects.filter(specialite = id).values('id', 'label','code')
+    return JsonResponse(list(modules), safe=False)
+
+
+def ApiAddModule(request):
+
+    label = request.POST.get('label')
+    coef = request.POST.get('coef')
+    duree = request.POST.get('duree')
+    id = request.POST.get('id')
+
+    specialite = Specialites.objects.get(id = id)
+
+    new_module = Modules.objects.create(
+        label = label,
+        coef = coef,
+        duree = duree,
+        specialite = specialite,
+    )
+
+    new_module.save()
+    return JsonResponse({'success' : True})
+    
 
 def detailModule(request):
     pass

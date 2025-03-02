@@ -55,6 +55,7 @@ TENANT_APPS = [
     't_commercial',
     't_config',
     't_groupe',
+    't_exam',
     'django_countries',
     'django.contrib.auth',
     'django.contrib.admin',

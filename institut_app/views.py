@@ -61,7 +61,6 @@ def register(request):
  
     return render(request, 'registration/register.html')
 
-
 @login_required(login_url='institut_app:login')
 @transaction.atomic
 def NewEntreprise(request):
@@ -72,12 +71,21 @@ def NewEntreprise(request):
             form.save()
             messages.success(request, 'Entreprise créée avec succès')
             return redirect('institut_app:index')
-    return render(request, 'tenant_folder/entreprise/new_entreprise.html', {'form': form})
+    
+    context = {
+        'form' : form,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/entreprise/new_entreprise.html',context)
 
 @login_required(login_url='institut_app:login')
 def ListeEntreprises(request):
     entreprises = Entreprise.objects.all()
-    return render(request, 'tenant_folder/liste_entreprises.html', {'entreprises': entreprises})
+    context = {
+        'liste' : entreprises,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/entreprise/mes_entreprises.html', context)
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -90,4 +98,39 @@ def ModifierEntreprise(request, id):
             form.save()
             messages.success(request, 'Entreprise modifiée avec succès')
             return redirect('institut_app:liste_entreprise')
-    return render(request, 'tenant_folder/modifier_entreprise.html', {'form': form})
+    return render(request, 'tenant_folder/entreprise/modifier_entreprise.html', {'form': form})
+
+def ApiUpdateEntreprise(request):
+    designation = request.POST.get('designation')
+    site_web = request.POST.get('site_web')
+    rc = request.POST.get('rc')
+    nif = request.POST.get('nif')
+    nis = request.POST.get('nis')
+    art = request.POST.get('art')
+    adresse = request.POST.get('adresse')
+    telephone = request.POST.get('telephone')
+    
+    print(designation)
+
+@login_required(login_url='institut_app:login')
+def ApiGetEntrepriseDetails(request):
+    id = request.GET.get('id')
+    entreprise = Entreprise.objects.filter(id=id).values('id','designation','rc','nif','art','nis','adresse','telephone','wilaya','pays','email','site_web')
+    return JsonResponse(list(entreprise), safe=False)
+
+@login_required(login_url='institut_app:login')
+def detailsEntreprise(request, pk):
+    entreprise = Entreprise.objects.get(id=pk)
+    updateForm = EntrepriseForm(instance=entreprise)
+    if request.method == "POST":
+        updateForm = EntrepriseForm(request.POST, instance=entreprise)
+        if updateForm.is_valid():
+            updateForm.save()
+            messages.success(request, "Les informations ont été modifier avec succès")
+            return redirect("institut_app:details_entreprise", pk)
+    context = {
+        'entreprise' : entreprise,
+        'tenant' : request.tenant,
+        'updateForm' : updateForm,
+    }
+    return render(request, 'tenant_folder/entreprise/details_entreprise.html', context)

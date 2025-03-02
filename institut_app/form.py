@@ -19,14 +19,21 @@ class ProfilForm(forms.Form):
 class EntrepriseForm(forms.ModelForm):
     class Meta:
         model = Entreprise
-        fields = ['designation', 'rc', 'nif', 'art', 'nis']
+        fields = "__all__"
+        exclude = ['tenant']
 
         labels = {
             'designation' : "Désignation :",
             'rc' : "N° Registre Commerce :",
             'nif' : "N° Identification Fiscale :",
             'art' : "N° Article :",
-            'nis' : "N° Identification Statistique :"
+            'nis' : "N° Identification Statistique :",
+            'adresse' : "Adresse :",
+            'telephone' : "N° Téléphone :",
+            'wilaya' : "Wilaya :",
+            'pays' : "Pays :",
+            'email' : "Email :",
+            'site_web' : "Site WEB :",
         }
 
         widgets = {
@@ -34,5 +41,11 @@ class EntrepriseForm(forms.ModelForm):
             'rc' : forms.TextInput(attrs={'class':'form-control'}),
             'nif' : forms.TextInput(attrs={'class':'form-control'}),
             'art' : forms.TextInput(attrs={'class':'form-control'}),
-            'nis' : forms.TextInput(attrs={'class':'form-control'})
+            'nis' : forms.TextInput(attrs={'class':'form-control'}),
+            'adresse' : forms.TextInput(attrs={'class':'form-control'}),
+            'telephone' : forms.TextInput(attrs={'class':'form-control'}),
+            'wilaya' : forms.TextInput(attrs={'class':'form-control'}),
+            'pays' : forms.Select(attrs={'class':'form-control'}),
+            'email' : forms.EmailInput(attrs={'class':'form-control'}),
+            'site_web' : forms.URLInput(attrs={'class':'form-control'}),
         }

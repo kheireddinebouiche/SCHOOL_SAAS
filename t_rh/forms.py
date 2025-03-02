@@ -5,7 +5,7 @@ class NouveauEmploye(forms.ModelForm):
     class Meta:
         model = Employees
         fields = '__all__'
-        exclude = ['created_by','updated_by','created_at','updated_at']
+        exclude = ['tenant','created_by','updated_by','created_at','updated_at']
 
 
 class NouveauService(forms.ModelForm):

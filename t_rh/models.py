@@ -86,7 +86,24 @@ class Paie(models.Model):
 
     def __str__(self):
         return f"{self.employee.nom} {self.employee.prenom}"
-    
+
+class LigneFicheDePaie(models.Model):
+    pass
+
+class TemplateFichePaie(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    label = models.CharField(max_length=100, null=True, blank=True)
+    mode = models.CharField(max_length=100, null=True, blank=True, choices=[('vacataire','Enseignant vacataire'),('employe','Employe(e)')])
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Temple fiche de paie"
+        verbose_name_plural = "Templates fiche de paie"
+
+    def __str__(self):
+        return self.label
 
 class Contrats(models.Model):
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)

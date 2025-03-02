@@ -22,6 +22,7 @@ class Formation(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
+    frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
 
     def __str__(self):
         return self.nom
@@ -104,3 +105,21 @@ class Partenaires(models.Model):
 
     def __str__(self):
         return self.nom
+
+class RepartitionsModules(models.Model):
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
+    semestre = models.CharField(choices=[('1','1'),('2','2'),('3','3'),('4','4')], max_length=1)
+
+    created_by = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        verbose_name="Repartition du module"
+        verbose_name_plural = "Repartition des modules"
+        unique_together = ('module','specialite','semestre')
+    def __str__(self):
+        return f"{self.module.label} - {self.semestre}"
+    
+
