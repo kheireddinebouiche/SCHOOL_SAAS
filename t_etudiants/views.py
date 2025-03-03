@@ -8,7 +8,7 @@ from .forms import *
 def ListeStudents(request):
     students = Etudiant.objects.all()
     context = {
-        'students' : students,
+        'liste' : students,
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/student/liste_des_etudiants.html', context)

@@ -50,6 +50,7 @@ def addFormation(request):
             return redirect('t_formations:listFormations')
     context = {
         'form' : form,
+        'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/formations/nouvelle_formations.html', context)
 
@@ -132,11 +133,29 @@ def addFraisInscription(request):
 def updateFormation(request):
     pass
 
-def updateSpecialite(request):
-    pass
+@transaction.atomic
+def updateSpecialite(request,pk):
+    specialite = Specialites.objects.get(id = pk)
+    form = NewSpecialiteForm(instance=specialite)
+    if request.method == "POST":
+        form = NewSpecialiteForm(request.POST, instance=specialite)
+        if form.is_valid():
+            updated_spec = form.save()
+            updated_spec.updated_by = request.user
+            updated_spec.save()
+            messages.success(request, "Les données de la spécialitée ont été mis à jours avec succès")
+            return redirect('t_formations:detailSpecialite', pk)
+        else:
+            messages.err(request, "Une erreur c'est produite lors du traitement de la réquête")
+            return redirect('t_formations:detailSpecialite', pk)
+    
+    context = {
+        'form' : form,
+        'tenant' : request.tenant
+    }
+    return render(request, "tenant_folder/formations/update_specialite.html", context)
 
-def updateModule(request):
-    pass
+
 
 def updateFraisInscription(request):
     pass
@@ -193,7 +212,6 @@ def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
     modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree')
     return JsonResponse(list(modules), safe=False)
-
 
 def ApiAddModule(request):
 

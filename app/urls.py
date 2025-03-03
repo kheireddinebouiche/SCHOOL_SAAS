@@ -10,5 +10,6 @@ urlpatterns = [
     path('pedagogie/formations/',include('t_formations.urls',namespace='t_formations')),
     path('scolartie/groupes/',include('t_groupe.urls',namespace='t_groupe')),
     path('comptabilite/tresorerie/',include('t_tresorerie.urls',namespace='t_tresorerie')),
+    path('scolarite/etudiants/', include('t_etudiants.urls', namespace='t_etudiants')),
     
 ]

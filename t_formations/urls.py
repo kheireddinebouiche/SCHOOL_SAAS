@@ -14,6 +14,7 @@ urlpatterns = [
     path('details-specialite/<int:pk>/', detailSpecialite, name="detailSpecialite"),
     path('details-formations/<int:pk>/', detailFormation, name="detailFormation"),
     path('supprimer-specialite/<int:pk>/', deleteSpecialite, name="deleteSpecialite"),
+    path('modification-specialite/<int:pk>/', updateSpecialite, name="updateSpecialite"),
 
 
     path('nouveau-partenaire/', AddPartenaire, name="addPartenaire"),

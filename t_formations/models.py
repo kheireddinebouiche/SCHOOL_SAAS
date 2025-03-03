@@ -35,7 +35,7 @@ class Specialites(models.Model):
 
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
 
-    duree = models.IntegerField(null=True, blank=True)
+    duree = models.CharField(max_length=300, null=True, blank=True)
 
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
 
@@ -47,6 +47,8 @@ class Specialites(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
+
+    updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="specialite_updated_by")
 
     class Meta:
         verbose_name="Spécialité"
