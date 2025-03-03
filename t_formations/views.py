@@ -240,6 +240,25 @@ def ApiGetModuleDetails(request):
     obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef')
     return JsonResponse(list(obj), safe=False)
 
+@transaction.atomic
+def ApiUpdateModule(request):
+
+    id = request.POST.get('id')
+    coef = request.POST.get('coef')
+    duree = request.POST.get('duree')
+    label = request.POST.get('label')
+    code = request.POST.get('code')
+
+    module = Modules.objects.get(id= id)
+    module.code = code
+    module.duree = duree
+    module.label = label
+    module.coef = coef
+
+    module.save()
+
+    return JsonResponse({'success' : True, 'message' : "Les information du module ont été mis à jours avec succès"})
+
 def archiveFormation(request):
     pass
  

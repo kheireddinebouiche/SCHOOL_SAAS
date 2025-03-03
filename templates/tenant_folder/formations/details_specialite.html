@@ -35,7 +35,22 @@
                                     <h5 class="card-title mb-0">{{object.label}}</i></h5>
                                 </div>
                                 <div class="card-body">
-                                  
+                                    <div class="row">
+                                        <div class="col-lg-2">
+                                            <label for="code_spec">Code de spécialitée </label>
+                                            <input type="text" disabled class="form-control" id="code_spec" value="{{object.code}}" />
+                                        </div> 
+                                        <div class="col-lg-5">
+                                            <label for="label_spec">Nom spécialitée </label>
+                                            <input type="text" disabled class="form-control" id="label_spec" value="{{object.label}}" />
+                                        </div> 
+                                        <div class="col-lg-5">
+                                            <label for="label_spec">Formation </label>
+                                            <input type="text" disabled class="form-control" id="label_spec" value="{{object.formation}}" />
+                                        </div> 
+
+                                        
+                                    </div>
                                 </div>
                                 <div class="card-footer">
                                     <div class="row">
@@ -68,8 +83,8 @@
                                         <table class="table table-centered table-nowrap table-hover mb-0" >
                                             <thead>
                                                 <tr>
-                                                    <th scope="col">Label</th>
                                                     <th scope="col">Code</th>
+                                                    <th scope="col">Label</th>
                                                     <th scope="col">Coeffecient</th>
                                                     <th scope="col">Volume Horaire</th>
                                                     <th scope="col">Actions</th>
@@ -137,6 +152,7 @@
             </div>
             <div class="modal-body">
                <div class="row">
+                    <input type="hidden" id="_id_module" disabled />
                     <div class="col-lg-3">
                         <label for="u_label">Nom du module :</label>
                         <input type="text" class="form-control" id="u_label" />
@@ -187,7 +203,6 @@
     $(document).ready(function(){
         var id = document.getElementById('_specialite').value;
         
-
         loadModule();
 
         function loadModule(){
@@ -204,8 +219,8 @@
                     if(data.length > 0){
                         $.each(data, function(index, p){
                             row += "<tr>";
-                            row += "<td>"+p.label+"</td>";
                             row += "<td>"+p.code+"</td>";
+                            row += "<td>"+p.label+"</td>";
                             row += "<td>"+p.coef+"</td>";
                             row += "<td>"+p.duree+" H</td>";
                             row += "<td>";
@@ -245,6 +260,7 @@
             var label = document.getElementById('_label').value;
             var coef = document.getElementById('_coef').value;
             var duree = document.getElementById('_duree').value;
+            var code = document.getElementById('_code_module').value;
 
             $.ajax({
                 url : "{% url 't_formations:ApiAddModule' %}",
@@ -255,6 +271,7 @@
                     'label' : label, 
                     'coef' : coef, 
                     'duree': duree,
+                    'code_module' : code,   
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
 
@@ -313,6 +330,7 @@
                     $('#updateModule #u_duree').val(data[0].duree);
                     $('#updateModule #u_coef').val(data[0].coef);
                     $('#updateModule #u_code_module').val(data[0].code);
+                    $('#updateModule #_id_module').val(data[0].id);
                 }
             });
             
@@ -320,10 +338,33 @@
         });
 
         $(document).on('click','#ConfirmUpdateBtn', function(){
+
             var label = document.getElementById('u_label').value;
             var code = document.getElementById('u_code_module').value;
             var duree = document.getElementById('u_duree').value;
             var coef = document.getElementById('u_coef').value;
+            var id = document.getElementById('_id_module').value;
+
+            $.ajax({
+                url : "{% url 't_formations:ApiUpdateModule' %}",
+                dataType : "JSON",
+                type : 'POST',
+                data : {
+                    'label' : label,
+                    'code' : code,
+                    'duree' : duree,
+                    'coef' : coef,
+                    'id' : id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if(response.success){
+                        $('#updateModule').modal('hide');
+                        loadModule();
+                        alertify.success(response.message);
+                    }
+                } 
+            });
 
         });
 
