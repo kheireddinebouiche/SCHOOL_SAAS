@@ -50,6 +50,8 @@ class Specialites(models.Model):
 
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="specialite_updated_by")
 
+    version = models.CharField(max_length=100, null=True, blank=True)
+
     class Meta:
         verbose_name="Spécialité"
         verbose_name_plural="Spécialités"
