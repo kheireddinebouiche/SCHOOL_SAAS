@@ -5,7 +5,12 @@ from django.contrib import messages
 from django.db import transaction
 
 def listeEmployes(request):
-    pass
+    liste = Employees.objects.prefetch_related('contrats').all()
+   
+    context = {
+        'liste' : liste,
+    }
+    return render(request,"tenant_folder/rh/liste_des_employee.html", context)
 
 @transaction.atomic
 def nouveauEmploye(request):
@@ -23,6 +28,14 @@ def nouveauEmploye(request):
     }
 
     return render(request, 'tenant_folder/rh/nouveau_employe.html', context)
+
+def detailsEmploye(request, pk):
+    employe = Employees.objects.prefetch_related('contrats').get(id = pk)
+    context = {
+        'employe' : employe,
+        'contrats' : employe.contrats.all(),
+    }
+    return render(request,'tenant_folder/rh/details_employe.html', context)
 
 @transaction.atomic
 def nouveauService(request):

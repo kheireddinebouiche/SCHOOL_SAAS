@@ -7,13 +7,14 @@ class Employees(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True, blank=True)
     prenom = models.CharField(max_length=255, null=True, blank=True)
-
+    civilite = models.CharField(max_length=100, null=True, blank=True, choices=[('mr','Mr.'),('mme','Mme'),('mlle','Mlle')])
     email = models.EmailField(null=True, blank=True)
     telephone = models.CharField(max_length=15, null=True, blank=True)
 
     adresse = models.TextField(null=True, blank=True)
 
     cin = models.CharField(max_length=255, null=True, blank=True)
+    nin = models.CharField(max_length=255, null=True, blank=True)
     secu = models.CharField(max_length=255, null=True, blank=True) 
 
     situation_familiale = models.CharField(max_length=255, null=True, blank=True, choices=[('C', 'Célibataire'), ('M', 'Marié(e)'), ('D', 'Divorcé(e)'), ('V', 'Veuf(ve)')])
@@ -25,6 +26,8 @@ class Employees(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    has_contract = models.BooleanField(default=False)
 
     class Meta:
         verbose_name="Employe"
@@ -106,7 +109,7 @@ class TemplateFichePaie(models.Model):
         return self.label
 
 class Contrats(models.Model):
-    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
     type_contrat = models.CharField(max_length=255, null=True, blank=True, choices=[('cdi', 'CDI'), ('cdd', 'CDD'), ('stage', 'Stage'), ('interim', 'Interim')])
 
     date_debut = models.DateField()
