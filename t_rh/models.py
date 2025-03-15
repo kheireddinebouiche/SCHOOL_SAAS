@@ -1,6 +1,7 @@
 from django.db import models
 from app.models import *
 from django.contrib.auth.models import User
+from institut_app.models import *
 
 
 class Employees(models.Model):
@@ -28,6 +29,8 @@ class Employees(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_contract = models.BooleanField(default=False)
+
+    work_in = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name="Employe"

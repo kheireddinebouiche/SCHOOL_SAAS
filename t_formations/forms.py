@@ -57,9 +57,8 @@ class NewPartenaireForm(forms.ModelForm):
         widgets = {
             'tenant': forms.HiddenInput(),
             'created_by': forms.HiddenInput(),
-
-            'nom':  forms.TextInput(attrs={'class': 'form-control'})
-,           'adresse' : forms.TextInput(attrs={'class': 'form-control'}),
+            'nom':  forms.TextInput(attrs={'class': 'form-control'}),
+            'adresse' : forms.TextInput(attrs={'class': 'form-control'}),
             'code' : forms.TextInput(attrs={'class': 'form-control'}),
             'telephone':  forms.TextInput(attrs={'class': 'form-control'}),
             'email' : forms.TextInput(attrs={'class': 'form-control'}),
@@ -70,7 +69,7 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['code', 'label', 'prix', 'formation','duree','responsable','nb_semestre']
+        fields = ['code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version']
 
         widgets = {
             'code' : forms.TextInput(attrs={'class' : 'form-control'}),
@@ -80,7 +79,7 @@ class NewSpecialiteForm(forms.ModelForm):
             'duree' : forms.TextInput(attrs={'class' : 'form-control'}),
             'responsable' : forms.Select(attrs={'class':'form-control'}),
             'nb_semestre' : forms.Select(attrs={'class':'form-control'}),
-            
+            'version' : forms.TextInput(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -90,6 +89,7 @@ class NewSpecialiteForm(forms.ModelForm):
             'duree' : "Durée total de la formation (Stage inclue) ",
             'responsable' : "Responsable de spécialité :",
             'nb_semestre' : "Nombre de semestre théorique :",
+            'version' : "Version du programme :",
         }
 
         def clean_name(self):

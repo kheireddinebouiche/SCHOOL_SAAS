@@ -116,19 +116,18 @@ class Partenaires(models.Model):
     def __str__(self):
         return self.nom
 
-class RepartitionsModules(models.Model):
+class ProgrammeFormation(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
-    semestre = models.CharField(choices=[('1','1'),('2','2'),('3','3'),('4','4')], max_length=1)
+    semestre = models.CharField(choices=[('1','1'),('2','2'),('3','3'),('4','4')], max_length=1, null=True, blank=True)
 
-    created_by = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
     class Meta:
         verbose_name="Repartition du module"
         verbose_name_plural = "Repartition des modules"
         unique_together = ('module','specialite','semestre')
+
     def __str__(self):
         return f"{self.module.label} - {self.semestre}"
     
