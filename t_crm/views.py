@@ -58,6 +58,31 @@ def detailsVisiteur(request, pk):
     }
     return render(request,'tenant_folder/crm/details_visiteur.html', context)
 
+@transaction.atomic
+def updateVisiteur(request,pk):
+    obj = Visiteurs.objects.get(id = pk)
+    form = VisiteurForm(instance=obj)
+    if request.method == "POST":
+        form = VisiteurForm(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request,"Les informations ont été sauvegarder ave succès")
+            return redirect("t_crm:details_visiteur", pk)
+        
+        else:
+            messages.error(request, "Une erreur c'est produite lors du traitement du formulaire")
+            return redirect('t_crm:updateVisiteur', pk)
+        
+    else:
+
+        context = {
+            'form' : form,
+            'tenant' : request.tenant
+        }
+        return render(request, "tenant_folder/crm/update_visiteur.html",context)
+
+
+
 def ApiGetSpecialite(request):
     formation_id = request.GET.get('formation_id')
     

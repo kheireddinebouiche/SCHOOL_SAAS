@@ -8,6 +8,7 @@ class NewGroupeForms(forms.ModelForm):
         fields = "__all__"
         exclude = {
             'createdy',
+            'etat',
         }
 
         widgets = {

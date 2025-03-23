@@ -15,6 +15,24 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
 
+class Roles(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+
+    can_edit = models.BooleanField(default=True)
+    can_delete = models.BooleanField(default=True)
+    can_add = models.BooleanField(default=True)
+    can_validate = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Role"
+        verbose_name_plural="Roles"
+
+    def __str__(self):
+        return self.label
+
 class Entreprise(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
     designation = models.CharField(max_length=255, null=True, blank=True)

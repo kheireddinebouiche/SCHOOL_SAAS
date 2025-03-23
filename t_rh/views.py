@@ -18,9 +18,9 @@ def nouveauEmploye(request):
     if request.method == 'POST':
         form = NouveauEmploye(request.POST)
         if form.is_valid():
-            form.save()
+            emp = form.save()
             messages.success(request, 'Employé ajouté avec succès')
-            return redirect('t_rh:liste_employes')
+            return redirect('t_rh:detailsEmploye', emp.id)
     
     context = {
         'form' : form,
@@ -36,6 +36,23 @@ def detailsEmploye(request, pk):
         'contrats' : employe.contrats.all(),
     }
     return render(request,'tenant_folder/rh/details_employe.html', context)
+
+@transaction.atomic
+def updateEmploye(request,pk):
+    emp = Employees.objects.get(id = pk)
+    form = NouveauEmploye(instance=emp)
+    if request.method == "POST":
+        form = NouveauEmploye(request.POST, instance=emp)
+        if form.is_valid():
+            form.save()
+            messages.success(request,"Les informations de l'employe ont été mis à jours.")
+            return redirect('t_rh:detailsEmploye', pk)
+    
+    context = {
+        'form' : form,
+        'tenant' : request.tenant,
+    }
+    return render(request, "tenant_folder/rh/update_employe.html", context)
 
 @transaction.atomic
 def nouveauService(request):

@@ -56,4 +56,23 @@ class Visiteurs(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}"
     
+class DemandeInscription(models.Model):
+
+    visiteur = models.ForeignKey(Visiteurs, on_delete=models.CASCADE, null=True, blank=True)
+
+    formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
+
+    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,related_name="created_by_demande_inscription")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_demande_inscription")
+
+    class Meta:
+        verbose_name="Demande d'inscription"
+        verbose_name_plural = "Demandes d'inscription"
+
+    def __str__(self):
+        return f"{self.visiteur.nom} + {self.visiteur.prenom} - {self.specialite.label}"
 

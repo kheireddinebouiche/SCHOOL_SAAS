@@ -57,14 +57,15 @@ class NewPartenaireForm(forms.ModelForm):
         widgets = {
             'tenant': forms.HiddenInput(),
             'created_by': forms.HiddenInput(),
+            'type_partenaire' : forms.Select(attrs={'class':'form-control'}),
             'nom':  forms.TextInput(attrs={'class': 'form-control'}),
             'adresse' : forms.TextInput(attrs={'class': 'form-control'}),
             'code' : forms.TextInput(attrs={'class': 'form-control'}),
             'telephone':  forms.TextInput(attrs={'class': 'form-control'}),
             'email' : forms.TextInput(attrs={'class': 'form-control'}),
             'site_web' : forms.TextInput(attrs={'class': 'form-control'}),
-           
         }
+        exclude = ['updated_by']
 
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:

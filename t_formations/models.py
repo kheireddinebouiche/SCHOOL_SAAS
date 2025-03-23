@@ -106,8 +106,10 @@ class Partenaires(models.Model):
     telephone = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
+    type_partenaire = models.CharField(max_length=100, null=True, blank=True, choices=[('national', 'National'),('etranger','Etranger')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_partenaire")
 
     class Meta:
         verbose_name="Partenaire"
@@ -120,6 +122,7 @@ class ProgrammeFormation(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     semestre = models.CharField(choices=[('1','1'),('2','2'),('3','3'),('4','4')], max_length=1, null=True, blank=True)
+
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
