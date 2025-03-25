@@ -81,8 +81,6 @@ def updateVisiteur(request,pk):
         }
         return render(request, "tenant_folder/crm/update_visiteur.html",context)
 
-
-
 def ApiGetSpecialite(request):
     formation_id = request.GET.get('formation_id')
     
