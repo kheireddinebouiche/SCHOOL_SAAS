@@ -69,6 +69,8 @@ class Modules(models.Model):
     coef = models.IntegerField(null=True, blank=True)
     n_elimate = models.IntegerField(null=True, blank=True)
 
+    systeme_eval = models.CharField(max_length=100, null=True, blank=True)
+
     is_archived = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
