@@ -15,15 +15,33 @@ def listeVisiteurs(request):
 @transaction.atomic
 def nouveauVisiteur(request):
     form = VisiteurForm()
+    demande = DemandeInscriptionForm()
     if request.method == 'POST':
         form = VisiteurForm(request.POST)
-        if form.is_valid():
-            form.save()
+        demande = DemandeInscriptionForm(request.POST)
+        if form.is_valid() and demande.is_valid():
+            visiteur = form.save()
+
+            formation = demande.cleaned_data.get('formation')
+            specialite = demande.cleaned_data.get('specialite')
+            formule = demande.cleaned_data.get('formule')
+            session = demande.cleaned_data.get('session')
+
+            demande = DemandeInscription(
+                visiteur = visiteur,
+                formation = formation, 
+                specialite = specialite,
+                session = session,
+                formule = formule,
+            )
+            demande.save()
+
             messages.success(request, 'Visiteur ajouté avec succès')
             return redirect('t_crm:liste_visiteurs')
     else:
         context = {
             'form' : form,
+            'demande' : demande,
         }
         return render(request, 'tenant_folder/crm/nouveau_visiteur.html', context)
 
@@ -105,3 +123,11 @@ def ConfirmeDemandeInscription(request, pk):
     paiement_request.save()
     messages.success(request, 'Demande d\'inscription confirmée avec succès')
     return redirect('t_crm:details_visiteur', pk = pk)
+
+def ApiGETDemandeInscription(request):
+    id_visiteur = request.GET.get('id_visiteur')
+    demandes = DemandeInscription.objects.filter(visiteur = id_visiteur).values('id','formation','specialite__label','created_at','etat')
+    for demande in demandes:
+        demande_obj = DemandeInscription.objects.get(id=demande['id'])
+        demande['etat_label'] = demande_obj.get_etat_display()
+    return JsonResponse(list(demandes), safe=False)

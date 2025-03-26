@@ -11,6 +11,7 @@ class VisiteurForm(forms.ModelForm):
         widgets = {
 
             'pays' : forms.Select(attrs={'class':'form-control'}),
+            'civilite' : forms.Select(attrs={'class':'form-control'}),
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'prenom' : forms.TextInput(attrs={'class':'form-control'}),
             'date_naissance' : forms.DateInput(attrs={'class':'form-control', 'type':'date'}),
@@ -21,21 +22,19 @@ class VisiteurForm(forms.ModelForm):
             'type_visiteur' : forms.Select(attrs={'class':'form-control'}),
             'cin' : forms.TextInput(attrs={'class':'form-control'}),
             'niveau_etude' : forms.Select(attrs={'class':'form-control'}),
-            'formule' : forms.Select(attrs={'class':'form-control'}),
-            'session' : forms.Select(attrs={'class':'form-control'}),
-            'formation' : forms.Select(attrs={'class':'form-control', 'id' : "formation"}),
             'situation_family' : forms.Select(attrs={'class':'form-control'}),
             'situation_professionnelle' : forms.Select(attrs={'class':'form-control'}),
             'post_occupe' : forms.TextInput(attrs={'class':'form-control'}),
             'experience' : forms.TextInput(attrs={'class':'form-control'}),
             'entreprise' : forms.TextInput(attrs={'class':'form-control'}),
-            'specialite' : forms.Select(attrs={'class':'form-control', 'id':"specialite"}),
+            
 
         }
 
         labels = {
             'pays' : 'Pays',
             'nom' : 'Nom',
+            'civilite' : 'Civilité',
             'prenom' : 'Prénom',
             'date_naissance' : 'Date de naissance',
             'lieu_naissance' : 'Lieu de naissance',
@@ -55,3 +54,28 @@ class VisiteurForm(forms.ModelForm):
             'entreprise' : 'Entreprise',
             'specialite' : 'Spécialité',
         }
+
+class DemandeInscriptionForm(forms.ModelForm):
+    
+    class Meta:
+        model = DemandeInscription
+        fields = '__all__'
+        exclude = ['created_at','updated_at','created_by','etat','updated_by']
+
+        widgets = {
+            'visiteur' : forms.Select(attrs={'class':'form-control'}),
+            'formation' : forms.Select(attrs={'class':'form-control', 'id':'formation'}),
+            'promo' : forms.Select(attrs={'class':'form-control'}),
+            'formule' : forms.Select(attrs={'class':'form-control'}),
+            'specialite' : forms.Select(attrs={'class':'form-control', 'id':'specialite'}),
+            'session' : forms.Select(attrs={'class':'form-control'}),
+        }
+
+        labels = {
+            'formation' : 'Formation',
+            'specialite' : 'Spécialité',
+            'promo' : 'Promotion',
+            'formule' : 'Formule',
+            'session' : 'Session',
+        }
+

@@ -134,4 +134,18 @@ class ProgrammeFormation(models.Model):
     def __str__(self):
         return f"{self.module.label} - {self.semestre}"
     
+class Promos(models.Model):
+    
+    label = models.CharField(max_length=255, null=True, blank=True)
+    session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
 
+    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Promo"
+        verbose_name_plural="Promos"
+
+    def __str__(self):
+        return self.label

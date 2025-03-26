@@ -13,6 +13,7 @@ urlpatterns = [
     path('delete-visiteur/', supprimerVisiteur, name="supprimer_visiteur"),
 
     path('ApiGetSpecialite',ApiGetSpecialite,name="ApiGetSpecialite"),
+    path('ApiGETDemandeInscription', ApiGETDemandeInscription,name="ApiGETDemandeInscription"),
     
     path('approuve-visiteur-inscription/<int:pk>/',ConfirmeDemandeInscription,name="ConfirmeDemandeInscription"),
 ]

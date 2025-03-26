@@ -6,15 +6,15 @@ app_name="t_formations"
 
 urlpatterns = [
 
-    path('nouvelle-formation/', addFormation, name="addFormation"),
-    path('nouvelle-specialite/', addSpecialite, name="addSpecialite"),
-    path('liste-des-formation/', listFormations, name="listFormations"),
-    path('liste-des-specialitees/',listSpecialites, name="listSpecialites"),
+    path('formations/nouvelle-formation/', addFormation, name="addFormation"),
+    path('specialites/nouvelle-specialite/', addSpecialite, name="addSpecialite"),
+    path('formations/liste-des-formation/', listFormations, name="listFormations"),
+    path('specialites/liste-des-specialitees/',listSpecialites, name="listSpecialites"),
     
-    path('details-specialite/<int:pk>/', detailSpecialite, name="detailSpecialite"),
-    path('details-formations/<int:pk>/', detailFormation, name="detailFormation"),
+    path('specialites/details-specialite/<int:pk>/', detailSpecialite, name="detailSpecialite"),
+    path('formations/details-formations/<int:pk>/', detailFormation, name="detailFormation"),
     path('supprimer-specialite/<int:pk>/', deleteSpecialite, name="deleteSpecialite"),
-    path('modification-specialite/<int:pk>/', updateSpecialite, name="updateSpecialite"),
+    path('specilaites/modification-specialite/<int:pk>/', updateSpecialite, name="updateSpecialite"),
 
 
     path('nouveau-partenaire/', AddPartenaire, name="addPartenaire"),
@@ -30,4 +30,9 @@ urlpatterns = [
     path('archive-modules/' , archiveModule, name="archiveModule"),
     path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
     path('archiveFormation' , archiveFormation, name="archiveFormation"),
+    
+    path('promos/nouvelle-promotion/',AddPromo, name="AddPromo"),
+    path('promos/liste-des-promotions/',listPromos, name="listPromos"),
+    path('ApiListePromos',ApiListePromos,name="ApiListePromos"),
+
 ]

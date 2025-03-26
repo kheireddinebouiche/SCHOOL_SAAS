@@ -286,5 +286,43 @@ def detailModule(request):
 def detailFraisInscription(request):
     pass
 
+def listPromos(request):
+    
+    context = {
+        
+        'tenant' : request.tenant,
+    }
+    return render(request,'tenant_folder/formations/promos/list_promos.html',context)
 
+def ApiListePromos(request):
+    liste= Promos.objects.filter().values('id','label','etat')
 
+    for l in liste:
+        l_obj = Promos.objects.get(id = l['id'])
+        l['etat_label'] = l_obj.get_etat_display()
+
+    return JsonResponse(list(liste), safe=False)
+
+def AddPromo(request):
+    form = PromoForm()
+    if request.method =="POST":
+        form = PromoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Promo ajoutée avec succès')
+            return redirect('t_formations:listPromos')
+        else:
+            messages.error(request, 'Une erreur c\'est produite lors du traitement de la requête')
+            return redirect('t_formations:AddPromo')
+    context = {
+        'form' : form,
+        'tenant' : request.tenant
+    }
+    return render(request, 'tenant_folder/formations/promos/new_promo.html', context)
+
+def SpecialitePromo(request):
+    
+    context = {
+        'tenant' : request.tenant
+    }
+    return render(request, 'tenant_folder/formations/promos/specialite_promo.html', context)
