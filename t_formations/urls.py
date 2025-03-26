@@ -34,5 +34,9 @@ urlpatterns = [
     path('promos/nouvelle-promotion/',AddPromo, name="AddPromo"),
     path('promos/liste-des-promotions/',listPromos, name="listPromos"),
     path('ApiListePromos',ApiListePromos,name="ApiListePromos"),
+    path('ApiGetPromo',ApiGetPromo,name="ApiGetPromo"),
+    path('ApiUpdatePromo',ApiUpdatePromo,name="ApiUpdatePromo"),
+    path('ApiActivatePromo', ApiActivatePromo, name="ApiActivatePromo"),
+    path('ApiDeletePromo',ApiDeletePromo,name="ApiDeletePromo"),
 
 ]

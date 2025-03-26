@@ -141,7 +141,7 @@ class Promos(models.Model):
     label = models.CharField(max_length=255, null=True, blank=True)
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
 
-    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')])
+    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')], default='inactive')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

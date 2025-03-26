@@ -1,6 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
-{% block title %} RH/Configuration - Liste des articles de contrat {% endblock title %}
+{% block title %} RH/Configuration - Liste des services {% endblock title %}
 
 {% block content %}
         <!-- ============================================================== -->
@@ -15,12 +15,12 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Liste des articles</h4>
+                                <h4 class="mb-sm-0">Liste des services</h4>
 
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
                                         <li class="breadcrumb-item"><a href="javascript: void(0);">RH/Configuration</a></li>
-                                        <li class="breadcrumb-item active">Liste des articles</li>
+                                        <li class="breadcrumb-item active">Liste des services</li>
                                     </ol>
                                 </div>
 
@@ -32,7 +32,14 @@
                         <div class="col-lg-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <h5 class="card-title mb-0">Liste des articles de contrat</h5>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title mb-0">Liste des services</h5>
+                                        <div class="d-flex">
+                                            <button type="button" class="btn btn-primary btn-sm" id="btnAdd">
+                                                <i class="ri-add-line align-middle me-2"></i> Ajouter un service
+                                            </button>
+                                        </div>
                                 </div>
                                 <div class="card-body">
                                     <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
@@ -44,34 +51,9 @@
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="listItem">
 
-                                            {% if liste.count != 0 %}
-                                                {% for i in liste %}
-                                                    <tr> 
-                                                        <td>{{i.titre}}</td>
-                                                        <td><b>{{i.type_contrat}}</b></td>
-                                                        <td>
-                                                            <div class="dropdown d-inline-block">
-                                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="ri-more-fill align-middle"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a href="{% url 't_formations:detailFormation' pk=i.id %}" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
-                                                                    <li><a class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                                    <li>
-                                                                        <a class="dropdown-item remove-item-btn">
-                                                                            <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                                        </a>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                            {% else %}
-                                                <tr><td colspan="6" class="text-muted text-center">Aucune donnée trouvée</td></tr>
-                                            {% endif %}
+                                            
                                         </tbody>
                                     </table>
                                 </div>
@@ -83,6 +65,89 @@
                 <!-- container-fluid -->
             </div>
             <!-- End Page-content -->
+        </div>
+        <!-- end main content-->
+
+        
+        <div id="addModal" class="modal fade" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addModalLabel">Nouveau service</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe">
+                            <label for="label">Label :</label>  
+                            <input type="text" class="form-control" name="label" id="label" />
+                        </div>
+
+                        <div class="form-groupe">
+                            <label for="description">Description</label>
+                            <textarea class="form-control" name="description" id="description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer add-btns">
+                        
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+<script>
+    $(document).ready(function(){
+
+        function loadItems(){
+            $.ajax({
+                url: "{% url 't_rh:ApiListeServices' %}",
+                type: "GET",
+                success: function(data){
+                    var row = "";
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            row += "<tr>";
+                            row += "<td>"+p.label+"</td>";
+                            row += "<td>"+p.created_at+"</td>";
+                            row += "<td style='align-items:center;'>";
+                                row += '<div class="dropdown d-inline-block">';
+                                row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                row += '<i class="ri-more-fill align-middle"></i>';
+                                row += '</button>';
+                                row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                                    row += "<li>" + (p.etat == 'inactive' ? 
+                                        '<button data-id="' + p.id + '" id="activeBtn" class="dropdown-item edit-item-btn">' +
+                                        '<i class="ri-skip-right-fill align-bottom me-2 text-muted"></i> Activer </button>' 
+                                        : '') + "</li>";
+                                row += '<li><button data-id='+p.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                                row += '<li><button data-id='+p.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                                row += "</ul></div></td>";
+                            row += "</tr>";
+    
+                        });
+                    }else{
+                        row += "<tr><td colspan='3' class='text-center' style='font-weight:700'>Aucun service trouvé</td></tr>";
+                    }
+                    
+                    $("#listItem").html(row);
+                
+                }
+            });
+        }
+
+        loadItems();
+
+        $(document).on('click','#btnAdd', function(){
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmAddBtn" class="btn btn-primary">Confirmer</a>';
+
+            $('.add-btns').html(row);
+            $('#addModal').modal('show');
+           
+        });
+    });
+</script>
+
 {% endblock content %}
            
 

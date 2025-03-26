@@ -113,11 +113,11 @@ class PromoForm(forms.ModelForm):
     class Meta:
         model = Promos
         fields = '__all__'
-        exclude = ['created_by', 'created_at', 'updated_at']
+        exclude = ['created_by', 'created_at', 'updated_at','etat']
         widgets = {
             
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'etat' : forms.Select(attrs={'class' : 'form-control'}),
+            
             'session' : forms.Select(attrs={'class' : 'form-control'}),
       
         }

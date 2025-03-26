@@ -13,6 +13,7 @@ urlpatterns = [
 
     path('nouveau-service/',nouveauService, name="nouveau_service"),
     path('liste-services/',listeServices, name="liste_services"),
+    path('ApiListeServices', ApiListeServices, name="ApiListeServices"),
 
     path('nouveau-article-contrat/',NouveauArticleContrat, name="nouveau_article_contrat"),
     path('liste-articles-contrat/',listeArticlesContrat, name="liste_articles_contrat"),

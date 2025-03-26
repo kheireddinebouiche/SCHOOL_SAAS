@@ -295,11 +295,12 @@ def listPromos(request):
     return render(request,'tenant_folder/formations/promos/list_promos.html',context)
 
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','etat')
+    liste= Promos.objects.filter().values('id','label','session','etat')
 
     for l in liste:
         l_obj = Promos.objects.get(id = l['id'])
         l['etat_label'] = l_obj.get_etat_display()
+        l['session_label'] = l_obj.get_session_display()
 
     return JsonResponse(list(liste), safe=False)
 
@@ -319,6 +320,41 @@ def AddPromo(request):
         'tenant' : request.tenant
     }
     return render(request, 'tenant_folder/formations/promos/new_promo.html', context)
+
+def ApiDeletePromo(request):
+    id = request.POST.get('id')
+    promo = Promos.objects.get(id = id)
+    if promo.etat == 'active':
+        return JsonResponse({'success' : False, 'message' : 'Vous ne pouvez pas supprimer une promo active'})
+    else:
+        promo.delete()
+        return JsonResponse({'success' : True, 'message' : 'Promo supprimée avec succès'})
+
+def ApiGetPromo(request):
+    id = request.GET.get('id')
+    promo = Promos.objects.filter(id = id).values('id', 'label', 'session')
+    return JsonResponse(list(promo), safe=False)
+
+def ApiUpdatePromo(request):
+    id = request.POST.get('id')
+    label = request.POST.get('label')
+    session = request.POST.get('session')
+
+    if not label or not session:
+        return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
+    else:
+        promo = Promos.objects.get(id = id)
+        promo.label = label
+        promo.session = session
+        promo.save()
+        return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
+    
+def ApiActivatePromo(request):
+    id = request.POST.get('id')
+    promo = Promos.objects.get(id = id)
+    promo.etat = 'active'
+    promo.save()
+    return JsonResponse({'success' : True, 'message' : 'Promo activée avec succès'})
 
 def SpecialitePromo(request):
     

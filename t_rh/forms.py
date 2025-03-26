@@ -45,6 +45,16 @@ class NouveauService(forms.ModelForm):
         fields = '__all__'
         exclude = ['created_by','created_at','updated_at']
 
+        widgets = {
+            'label' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'description' : forms.Textarea(attrs={'class' : 'form-control'}),
+        }
+
+        labels = {
+            'label' : "Nom du service :",
+            'description' : "Description :",
+        }
+
 class NouvelleArticleContrat(forms.ModelForm):
     class Meta:
         model = ArticlesContrat

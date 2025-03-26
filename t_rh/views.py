@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from .forms import *
 from .models import *
 from django.contrib import messages
@@ -71,12 +72,16 @@ def nouveauService(request):
     return render(request, 'tenant_folder/rh/services/nouveau_service.html', context)
 
 def listeServices(request):
-    liste = Services.objects.all()
+
     context = {
-        'liste' : liste,
+        
         'tenant' : request.tenant
     }
     return render(request, 'tenant_folder/rh/services/liste_des_services.html', context)
+
+def ApiListeServices(request):
+    liste = Services.objects.filter().values('id','label', 'description')
+    return JsonResponse(list(liste), safe=False)
 
 @transaction.atomic
 def NouveauArticleContrat(request):
