@@ -9,8 +9,20 @@ from django.db import transaction
 
 
 def listeVisiteurs(request):
-    liste = Visiteurs.objects.all()
-    return render(request, 'tenant_folder/crm/liste_visiteurs.html', {'liste': liste})
+    context = {
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/crm/liste_visiteurs.html',context)
+
+def ApiListeVisiteurs(request):
+    liste = Visiteurs.objects.filter().values('id','cin','etat','type_visiteur','nom','prenom','email','telephone','created_at')
+
+    for l in liste:
+        l_obj = Visiteurs.objects.get(id=l['id'])
+        l['type_visiteur_label'] = l_obj.get_type_visiteur_display()
+        l['etat_label'] = l_obj.get_etat_display()
+
+    return JsonResponse(list(liste), safe=False)
 
 @transaction.atomic
 def nouveauVisiteur(request):
@@ -27,14 +39,15 @@ def nouveauVisiteur(request):
             formule = demande.cleaned_data.get('formule')
             session = demande.cleaned_data.get('session')
 
-            demande = DemandeInscription(
-                visiteur = visiteur,
-                formation = formation, 
-                specialite = specialite,
-                session = session,
-                formule = formule,
-            )
-            demande.save()
+            if formation and specialite and formule and session:
+                demande = DemandeInscription(
+                    visiteur = visiteur,
+                    formation = formation, 
+                    specialite = specialite,
+                    session = session,
+                    formule = formule,
+                )
+                demande.save()
 
             messages.success(request, 'Visiteur ajouté avec succès')
             return redirect('t_crm:liste_visiteurs')
@@ -63,10 +76,14 @@ def modifierVisiteur(request, id):
 
 def supprimerVisiteur(request):
     pk = request.POST.get('id')
+    
     visiteur = Visiteurs.objects.get(id = pk)
-    visiteur.delete()
-    messages.success(request, 'Visiteur supprimé avec succès')
-    return JsonResponse({'success': True})
+    demande_inscription = DemandeInscription.objects.filter(visiteur = visiteur).count()
+    if demande_inscription > 0:
+        return JsonResponse({'success': False, 'message': 'Impossible de supprimer le visiteur car il a une demande d\'inscription en cours.'})
+    else:
+        visiteur.delete()
+        return JsonResponse({'success': True, 'message': 'Visiteur supprimé avec succès'})
 
 def detailsVisiteur(request, pk):
     obj = Visiteurs.objects.get(id = pk)

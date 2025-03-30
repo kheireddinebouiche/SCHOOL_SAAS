@@ -14,6 +14,10 @@ class Employees(models.Model):
 
     adresse = models.TextField(null=True, blank=True)
 
+    prenom_pere = models.CharField(max_length=100, null=True, blank=True)
+    nom_mere = models.CharField(max_length=100, null=True, blank=True)
+    prenom_mere = models.CharField(max_length=100, null=True, blank=True)
+
     cin = models.CharField(max_length=255, null=True, blank=True)
     nin = models.CharField(max_length=255, null=True, blank=True)
     secu = models.CharField(max_length=255, null=True, blank=True) 
@@ -111,9 +115,23 @@ class TemplateFichePaie(models.Model):
     def __str__(self):
         return self.label
 
+class TypesContrat(models.Model):
+    label = models.CharField(max_length=255, null=True)
+    description = models.TextField(null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Type de contrat"
+        verbose_name_plural="Types de contrat"
+
+    def __str__(self):
+        return self.label
+
 class Contrats(models.Model):
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
-    type_contrat = models.CharField(max_length=255, null=True, blank=True, choices=[('cdi', 'CDI'), ('cdd', 'CDD'), ('stage', 'Stage'), ('interim', 'Interim')])
+    type_contrat = models.ForeignKey(TypesContrat, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
 
     date_debut = models.DateField()
     date_fin = models.DateField()
@@ -127,6 +145,10 @@ class Contrats(models.Model):
 
     motif = models.TextField(null=True, blank=True)
 
+    periode_essai = models.CharField(max_length=100, null=True, blank=True)
+
+    observations = models.CharField(max_length=1000, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -137,19 +159,10 @@ class Contrats(models.Model):
     def __str__(self):
         return f"{self.employee.nom} {self.employee.prenom}"
     
-class ArticlesContrat(models.Model):
+class ArticlesContratStandard(models.Model):
     titre = models.CharField(max_length=255, blank=True, null=True)
-    contenu = models.TextField()
-    type_contrat = models.CharField(
-        max_length=20,
-        choices=[
-            ('CDD', 'Contrat à Durée Déterminée'),
-            ('CDI', 'Contrat à Durée Indéterminée'),
-            ('Stage', 'Stage'),
-            ('Vacation', 'Vacation'),
-            ('Tous', 'Applicable à tous')
-        ],blank=True, null=True
-    )
+    contenu = models.TextField(null=True)
+    type_contrat = models.ForeignKey(TypesContrat, on_delete=models.CASCADE, null=True, blank=True, related_name="articles")
 
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
@@ -157,3 +170,19 @@ class ArticlesContrat(models.Model):
 
     def __str__(self):
         return self.titre
+    
+class ArticleContratSpecial(models.Model):
+    contrat = models.ForeignKey(Contrats, on_delete=models.CASCADE, null=True, blank=True, related_name="articles_special")
+
+    label = models.CharField(max_length=255, blank=True)
+    contenu = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name="Article de contrat special"
+        verbose_name_plural="Articles de contrat special"
+
+    def __str__(self):
+        return self.label

@@ -48,48 +48,9 @@
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="listeItem">
 
-                                            {% if liste.count != 0 %}
-                                                {% for i in liste %}
-                                                    <tr> 
-                                                        <td>{{i.cin}}</td>
-                                                        <td>{{i.nom}} {{i.prenom}}</td>
-                                                        <td>{{i.telephone}}</td>
-                                                        <td>{{i.email}}</td>
-                                                        <td>{{i.get_type_visiteur_display}}</td>
-                                                        <td>
-                                                            {% if i.etat == "en_attente" %}
-                                                               <span class="badge bg-warning">{{i.get_etat_display}}</span>
-                                                            {% elif i.etat == "inscrit" %}
-                                                               <span class="badge bg-success">{{i.get_etat_display}}</span>
-                                                            {% elif i.etat == "visiteur" %}
-                                                               <span class="badge bg-danger">{{i.get_etat_display}}</span>
-                                                            {% endif %}
-                                                            
-                                                        </td>
-                                                        <td>
-                                                            <div class="dropdown d-inline-block">
-                                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="ri-more-fill align-middle"></i>
-                                                                </button>
-                                                                
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a href="{% url 't_crm:details_visiteur' pk=i.id %}" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
-                                                                    <li><a href="{% url 't_crm:updateVisiteur' pk=i.id %}" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                                    <li>
-                                                                        <button id="deleteConfirmation" data-id="{{i.id}}" class="dropdown-item remove-item-btn">
-                                                                            <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                                        </button>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                            {% else %}
-                                                <tr><td colspan="6" class="text-muted text-center">Aucun visiteur trouvé</td></tr>
-                                            {% endif %}
+                                            
                                         </tbody>
                                     </table>
                                 </div>
@@ -126,7 +87,61 @@
 
     $(document).ready(function(){
 
-        $('#deleteConfirmation').click(function(){
+        function loadItems(){
+            $.ajax({
+                url : "{% url 't_crm:ApiListeVisiteurs' %}",
+                dataType : "JSON",
+                type : "GET",
+                success: function(data){
+                    var row = "";
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            row += '<tr>';
+                            row += '<td><strong>'+p.cin+'</strong></td>';
+                            row += '<td>'+p.nom+' '+p.prenom+'</td>'; 
+                            row += '<td>'+p.telephone+'</td>';
+                            row += '<td>'+p.email+'</td>';
+                            row += '<td>'+p.type_visiteur_label+'</td>';
+                            row += '<td>';
+                            if (p.etat == "en_attente"){
+                                row += '<span class="badge bg-warning">'+p.etat_label+'</span>';
+                            }else if (p.etat == "inscrit"){
+                                row += '<span class="badge bg-success">'+p.etat_label+'</span>';
+                            }else if (p.etat == "visiteur"){
+                                row += '<span class="badge bg-danger">'+p.etat_label+'</span>';
+                            }
+                            row += '</td>';
+                            row += '<td>';
+                            row += '<div class="dropdown d-inline-block">';
+                            row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                            row += '<i class="ri-more-fill align-middle"></i>';
+                            row += '</button>';
+                            row += '<ul class="dropdown-menu dropdown-menu-end">';
+                            row += '<li><a href="/crm/details-visiteur/' + p.id + '/" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
+                            row += '<li><a href="/crm/mise-a-jours/' + p.id + '/" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                            row += '<li>';
+                            row += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
+                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
+                            row += '</button>';
+                            row += '</li>';
+                            row += '</ul>';
+                            row += '</div>';
+                            row += '</td>';
+                            row += '</tr>';
+                        });
+                    }else{
+                        row += '<tr>';
+                        row += '<td colspan="7" class="text-center">Aucun visiteur trouvé</td>';
+                        row += '</tr>';
+                    }
+                    $('#listeItem').html(row);
+                }
+            });
+        }
+
+        loadItems();
+
+        $(document).on('click', '#deleteConfirmation' ,function(){
             var id= $(this).data('id');
             var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
                    '<button type="button" id="confirmDeleteBtn" data-id='+id+' class="btn btn-danger">Confirmer</a>';
@@ -147,8 +162,12 @@
                 },
                 success: function(data){
                     if(data.success){
+                        alertify.success(data.message);
                         $('.deleteModal').modal('hide');
-                        window.location.reload();
+                        loadItems();
+                    }else{
+                        alertify.error(data.message);
+                        $('.deleteModal').modal('hide');
                     }
                 }
             });

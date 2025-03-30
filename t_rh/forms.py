@@ -55,8 +55,14 @@ class NouveauService(forms.ModelForm):
             'description' : "Description :",
         }
 
-class NouvelleArticleContrat(forms.ModelForm):
+class ArticleStandardForm(forms.ModelForm):
     class Meta:
-        model = ArticlesContrat
+        model = ArticlesContratStandard
+        fields = '__all__'
+        exclude = ['created_by','created_at','updated_at']
+
+class ArticleSpecialForm(forms.ModelForm):
+    class Meta:
+        model = ArticleContratSpecial
         fields = '__all__'
         exclude = ['created_by','created_at','updated_at']

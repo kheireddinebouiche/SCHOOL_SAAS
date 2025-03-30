@@ -40,6 +40,7 @@
                                                 <i class="ri-add-line align-middle me-2"></i> Ajouter un service
                                             </button>
                                         </div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
@@ -47,7 +48,7 @@
                                             <tr>
                                                 
                                                 <th>Titre</th>
-                                                <th>Type de contrat</th>
+                                                <th>Crée le</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
@@ -77,13 +78,13 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-groupe">
-                            <label for="label">Label :</label>  
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Label :</strong></label>  
                             <input type="text" class="form-control" name="label" id="label" />
                         </div>
 
                         <div class="form-groupe">
-                            <label for="description">Description</label>
+                            <label for="description"><strong>Description : </strong></label>
                             <textarea class="form-control" name="description" id="description"></textarea>
                         </div>
                     </div>
@@ -91,6 +92,50 @@
                         
                     </div>
         
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <div id="updateModal" class="modal fade" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="updateModalLabel">Modification des informations du service</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Label :</strong></label>  
+                            <input type="text" class="form-control" name="label" id="new_label" />
+                        </div>
+
+                        <div class="form-groupe">
+                            <label for="description"><strong>Description : </strong></label>
+                            <textarea class="form-control" name="description" id="new_description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer update-btns">
+                        
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                        </lord-icon>
+                        <div class="mt-4">
+                            <h4 class="mb-3">Vous étes sur le point de supprimer le service</h4>
+                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                            <div class="hstack gap-2 justify-content-center">
+                                
+                            </div>
+                        </div>
+                    </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
@@ -108,7 +153,7 @@
                         $.each(data, function(index, p){
                             row += "<tr>";
                             row += "<td>"+p.label+"</td>";
-                            row += "<td>"+p.created_at+"</td>";
+                            row += "<td>"+p.created_at.split("T")[0]+"</td>";
                             row += "<td style='align-items:center;'>";
                                 row += '<div class="dropdown d-inline-block">';
                                 row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
@@ -143,7 +188,114 @@
 
             $('.add-btns').html(row);
             $('#addModal').modal('show');
+
+            $('#confirmAddBtn').on('click', function(){
+                var label = $('#label').val();
+                var description = $('#description').val();
+                $.ajax({
+                    url: "{% url 't_rh:ApiAddService' %}",
+                    type: "POST",
+                    dataType: "JSON",
+                    data: {
+                        'label' : label,
+                        'description' : description,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    },
+                    success: function(response){
+                        if(response.status == "success"){
+                            alertify.success(response.message);
+                            $('#addModal').modal('hide');
+                            loadItems();
+                        }else{
+                            alertify.error(response.message);
+                        }
+                    }
+
+                });
+            });
            
+        });
+
+        $(document).on('click','#btnUpdate', function(){
+            var id = $(this).data('id');
+
+            $.ajax({
+                url : "{% url 't_rh:ApiGetService' %}",
+                type : "GET",
+                data : {
+                    'id' : id,
+                },
+                success : function(data){
+                    $('#new_label').val(data[0].label);
+                    $('#new_description').val(data[0].description);
+
+                    var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                              '<button id="confirmUpdateBtn" data-id='+id+' class="btn btn-warning">Confirmer les Modifications</a>';
+
+                    $('.update-btns').html(row);
+
+                    $('#updateModal').modal('show');
+                }
+            });
+
+        });
+
+        $(document).on('click', '#confirmUpdateBtn', function(){
+            var id = $(this).data('id');
+            var new_label = $('#new_label').val();
+            var new_description = $('#new_description').val();
+
+            $.ajax({
+                url: "{% url 't_rh:ApiUpdateService' %}",
+                type: "POST",
+                dataType: "JSON",
+                data: {
+                    'id' : id,
+                    'label' : new_label,
+                    'description' : new_description,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success: function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        $('#updateModal').modal('hide');
+                        loadItems();
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+
+            });
+        });
+
+        $(document).on('click', '#btnDelete', function(){
+            var id = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id+' class="btn btn-danger">Confirmer</a>';
+
+            $('.hstack').html(row);
+            $('.deleteModal').modal('show');
+
+            $('#confirmDeleteBtn').on('click', function(){
+                $.ajax({
+                    url : "{% url 't_rh:ApiDeleteService' %}",
+                    dataType : "JSON",
+                    type: "POST",
+                    data:{
+                        'id' : id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    },
+                    success : function(response){
+                        if(response.status == "success"){
+                            alertify.success(response.message);
+                            $('.deleteModal').modal('hide');
+                            loadItems();
+                        }else{
+                            alertify.error(response.message);
+                        }
+                    }
+                });
+            });
         });
     });
 </script>

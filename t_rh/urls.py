@@ -14,8 +14,20 @@ urlpatterns = [
     path('nouveau-service/',nouveauService, name="nouveau_service"),
     path('liste-services/',listeServices, name="liste_services"),
     path('ApiListeServices', ApiListeServices, name="ApiListeServices"),
+    path('ApiAddService', ApiAddService, name="ApiAddService"),
+    path('ApiGetService', ApiGetService, name="ApiGetService"),
+    path('ApiUpdateService', ApiUpdateService, name="ApiUpdateService"),
+    path('ApiDeleteService', ApiDeleteService, name="ApiDeleteService"),
 
     path('nouveau-article-contrat/',NouveauArticleContrat, name="nouveau_article_contrat"),
     path('liste-articles-contrat/',listeArticlesContrat, name="liste_articles_contrat"),
-    
+    path('types-contrat/', listeTypeContrat, name="listeTypeContrat"),
+    path('ApiListeTypeContrat', ApiListeTypeContrat, name="ApiListeTypeContrat"),
+    path('ApiAddTypeContrat', ApiAddTypeContrat, name="ApiAddTypeContrat"),
+    path('ApiUpdateTypeContrat', ApiUpdateTypeContrat, name="ApiUpdateTypeContrat"),
+    path('ApiDeleteTypeContrat', ApiDeleteTypeContrat, name="ApiDeleteTypeContrat"),
+    path('clauses-type-contrat/standard/<int:pk>/', ClausesTypeContrat, name="ClausesTypeContrat"),
+    path('ApiGetClauseStandardOfType', ApiGetClauseStandardOfType, name="ApiGetClauseStandardOfType"),
+    path('ApiAddNewClause', ApiAddNewClause, name="ApiAddNewClause"),
+    path('ApiDeleteClause', ApiDeleteClause, name="ApiDeleteClause"),
 ]

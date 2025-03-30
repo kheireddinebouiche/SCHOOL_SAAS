@@ -10,8 +10,8 @@ class VisiteurForm(forms.ModelForm):
 
         widgets = {
 
-            'pays' : forms.Select(attrs={'class':'form-control'}),
-            'civilite' : forms.Select(attrs={'class':'form-control'}),
+            'pays' : forms.Select(attrs={'class':'form-control', 'id':'pays'}),
+            'civilite' : forms.Select(attrs={'class':'form-control','required':'True'}),
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'prenom' : forms.TextInput(attrs={'class':'form-control'}),
             'date_naissance' : forms.DateInput(attrs={'class':'form-control', 'type':'date'}),
@@ -28,7 +28,6 @@ class VisiteurForm(forms.ModelForm):
             'experience' : forms.TextInput(attrs={'class':'form-control'}),
             'entreprise' : forms.TextInput(attrs={'class':'form-control'}),
             
-
         }
 
         labels = {
@@ -54,17 +53,19 @@ class VisiteurForm(forms.ModelForm):
             'entreprise' : 'Entreprise',
             'specialite' : 'Spécialité',
         }
+    
+    
 
 class DemandeInscriptionForm(forms.ModelForm):
     
     class Meta:
         model = DemandeInscription
         fields = '__all__'
-        exclude = ['created_at','updated_at','created_by','etat','updated_by']
+        exclude = ['created_at','updated_at','created_by','etat','updated_by','visiteur']
 
         widgets = {
-            'visiteur' : forms.Select(attrs={'class':'form-control'}),
-            'formation' : forms.Select(attrs={'class':'form-control', 'id':'formation'}),
+            
+            'formation' : forms.Select(attrs={'class':'form-control', 'id':'formation', }),
             'promo' : forms.Select(attrs={'class':'form-control'}),
             'formule' : forms.Select(attrs={'class':'form-control'}),
             'specialite' : forms.Select(attrs={'class':'form-control', 'id':'specialite'}),

@@ -8,19 +8,19 @@ from django_countries.fields import CountryField
 class Visiteurs(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
-    civilite = models.CharField(max_length=255, null=True, blank=True, choices=[('monsieur', 'Monsieur'), ('madame', 'Madame')])
-    nom = models.CharField(max_length=255, null=True, blank=True)
-    prenom = models.CharField(max_length=255, null=True, blank=True)
-    date_naissance = models.DateField(null=True, blank=True)
-    lieu_naissance = models.CharField(max_length=255, null=True, blank=True)
+    civilite = models.CharField(max_length=255, null=True, choices=[('monsieur', 'Monsieur'), ('madame', 'Madame')])
+    nom = models.CharField(max_length=255, null=True)
+    prenom = models.CharField(max_length=255, null=True)
+    date_naissance = models.DateField(null=True)
+    lieu_naissance = models.CharField(max_length=255, null=True)
 
-    email = models.EmailField(null=True, blank=True)
-    telephone = models.CharField(max_length=15, null=True, blank=True)
+    email = models.EmailField(null=True)
+    telephone = models.CharField(max_length=15, null=True)
 
-    adresse = models.TextField(null=True, blank=True)
-    pays = CountryField(null=True, blank=True)
+    adresse = models.TextField(null=True)
+    pays = CountryField(null=True)
 
-    type_visiteur = models.CharField(max_length=255, null=True, blank=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
+    type_visiteur = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
