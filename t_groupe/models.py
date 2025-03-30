@@ -11,6 +11,7 @@ class Groupe(models.Model):
     description = models.TextField(blank=True, null=True)
 
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
+    promotion = models.ForeignKey(Promos, on_delete=models.DO_NOTHING, null=True)
 
     min_student = models.IntegerField(default=0, null=True, blank=True)
     max_student = models.IntegerField(default=0, null=True, blank=True)

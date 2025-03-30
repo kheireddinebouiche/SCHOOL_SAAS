@@ -111,7 +111,7 @@
                         <span id="tags-container"></span>
                         <div class="form-groupe mt-3">
                             <label for="contenu"><strong>Contenu : </strong></label>
-                            <textarea class="form-control" name="contenu" id="contenu"></textarea>
+                            <textarea class="form-control" rows="10" name="contenu" id="contenu"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer add-btns">
@@ -138,7 +138,7 @@
                         <span id="update-tags-container"></span>
                         <div class="form-groupe mt-3">
                             <label for="update_contenu"><strong>Contenu : </strong></label>
-                            <textarea class="form-control" name="update_contenu" id="update_contenu"></textarea>
+                            <textarea class="form-control" rows="10" name="update_contenu" id="update_contenu"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer update-btns">
@@ -223,8 +223,6 @@
         $(document).on('click', '#btnAdd', function(){
             var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
                    '<button id="confirmAddBtn" data-id='+id+' class="btn btn-primary">Confirmer</a>';
-
-            
             $('.add-btns').html(row);
             $('#addModal').modal('show');
         });
@@ -232,7 +230,6 @@
         $(document).on('click', '#confirmAddBtn', function(){
             var titre = document.getElementById('titre').value;
             var contenu = document.getElementById('contenu').value;
-
             $.ajax({
                 url : "{% url 't_rh:ApiAddNewClause' %}",
                 dataType: 'JSON',
@@ -247,12 +244,15 @@
                     if (response.status == 'success'){
                         alertify.success(response.message);
                         $('#addModal').modal('hide');
+
+                        $('#titre').val("");
+                        $('#contenu').val("");
+                             
                         loadItems();
                     }else{
                         alertify.error(response.message)
                     }
                 }
-            
             });
         });
 
@@ -284,14 +284,13 @@
                         $('.deleteModal').modal('hide');
                     }
                 }
-            
             }); 
         });
 
         $(document).on('click', '#updateBtn', function(){
-
+            var id_clause = $(this).data('id');
             var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmAddBtn" data-id='+id+' class="btn btn-warning">Confirmer les modifications</a>';
+                   '<button id="confirmUpdateBtn" data-id='+id_clause+' class="btn btn-warning">Confirmer les modifications</a>';
 
             var update_titre = $(this).data('titre');
             var update_contenu = $(this).data('contenu');
@@ -302,54 +301,83 @@
             $('.update-btns').html(row);
             $('#updateModal').modal('show');
         });
+
+        $(document).on('click', '#confirmUpdateBtn', function(){
+
+            var id_clause = $(this).data('id');
+            var update_titre =  $('#update_titre').val();
+            var update_contenu =  $('#update_contenu').val();
+
+            $.ajax({
+                url : "{% url 't_rh:ApiUpdateClause' %}",
+                dataType: "JSON",
+                type: "POST",
+                data : {
+                    'id' : id_clause,
+                    'update_titre' : update_titre,
+                    'update_contenu' : update_contenu,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        $('#updateModal').modal('hide');
+                        loadItems();
+                    }else{
+                        alertify.error(response.message);
+                        $('#updateModal').modal('hide');
+                    }
+                }
+            });
+        });
         
-            const tags = [
-                "employee", "type_contrat", "date_debut", "date_fin",
-                "poste", "service", "salaire", "date_embauche",
-                "motif"
-            ];
-    
-            // Afficher les tags dans l'interface
-            const tagsContainer = document.getElementById('tags-container');
-            const tagsContainerUpdate = document.getElementById('update-tags-container');
+        const tags = [
+            "employee", "type_contrat", "date_debut", "date_fin",
+            "poste", "service", "salaire", "date_embauche",
+            "motif","periode_essai"
+        ];
 
-            tags.forEach(tag => {
-                let tagElement = document.createElement('span');
-                tagElement.className = 'tag';
-                tagElement.innerHTML = `<span class="badge bg-primary p-2 text-white rounded me-2">[${tag}]</span>`;
-                tagElement.onclick = () => insertTag(`[${tag}]`);
-                tagsContainer.appendChild(tagElement);
-            });
+        // Afficher les tags dans l'interface
+        const tagsContainer = document.getElementById('tags-container');
+        const tagsContainerUpdate = document.getElementById('update-tags-container');
 
-            tags.forEach(tag => {
-                let tagElement = document.createElement('span');
-                tagElement.className = 'tag';
-                tagElement.innerHTML = `<span class="badge bg-primary p-2 text-white rounded me-2">[${tag}]</span>`;
-                tagElement.onclick = () => insertTagUpdate(`[${tag}]`);
-                tagsContainerUpdate.appendChild(tagElement);
-            });
-    
-            // Fonction pour insérer un tag dans le champ de texte
-            function insertTag(tag) {
-                let textarea = document.getElementById('contenu');
-                let startPos = textarea.selectionStart;
-                let endPos = textarea.selectionEnd;
-                let text = textarea.value;
-                textarea.value = text.substring(0, startPos) + tag + text.substring(endPos);
-                textarea.focus();
-                textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
-            }
+        tags.forEach(tag => {
+            let tagElement = document.createElement('span');
+            tagElement.className = 'tag';
+            tagElement.innerHTML = `<span class="badge bg-primary p-2 text-white rounded me-2">[${tag}]</span>`;
+            tagElement.onclick = () => insertTag(`[${tag}]`);
+            tagsContainer.appendChild(tagElement);
+        });
 
-            // Fonction pour insérer un tag dans le champ de texte
-            function insertTagUpdate(tag) {
-                let textarea = document.getElementById('update_contenu');
-                let startPos = textarea.selectionStart;
-                let endPos = textarea.selectionEnd;
-                let text = textarea.value;
-                textarea.value = text.substring(0, startPos) + tag + text.substring(endPos);
-                textarea.focus();
-                textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
-            }
+        tags.forEach(tag => {
+            let tagElement = document.createElement('span');
+            tagElement.className = 'tag';
+            tagElement.innerHTML = `<span class="badge bg-primary p-2 text-white rounded me-2">[${tag}]</span>`;
+            tagElement.onclick = () => insertTagUpdate(`[${tag}]`);
+            tagsContainerUpdate.appendChild(tagElement);
+        });
+
+        // Fonction pour insérer un tag dans le champ de texte
+        function insertTag(tag) {
+            let textarea = document.getElementById('contenu');
+            let startPos = textarea.selectionStart;
+            let endPos = textarea.selectionEnd;
+            let text = textarea.value;
+            textarea.value = text.substring(0, startPos) + tag + text.substring(endPos);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
+        }
+
+        // Fonction pour insérer un tag dans le champ de texte
+        function insertTagUpdate(tag) {
+            let textarea = document.getElementById('update_contenu');
+            let startPos = textarea.selectionStart;
+            let endPos = textarea.selectionEnd;
+            let text = textarea.value;
+            textarea.value = text.substring(0, startPos) + tag + text.substring(endPos);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
+        }
     });
 </script>
 {% endblock content %}

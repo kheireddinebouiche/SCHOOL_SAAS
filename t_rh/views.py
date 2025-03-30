@@ -230,6 +230,21 @@ def ApiDeleteClause(request):
     obj.delete()
     return JsonResponse({'status' : 'success', 'message' : "La clause à été supprimé avec succès"})
 
+def ApiUpdateClause(request):
+    id = request.POST.get('id')
+    titre = request.POST.get('update_titre')
+    contenu = request.POST.get('update_contenu')
+    if id or titre or contenu:
+        obj = ArticlesContratStandard.objects.get(id=id)
+        obj.titre = titre
+        obj.contenu = contenu
+        obj.save()
+        return JsonResponse({'status' : 'success', 'message' : "Les informations ont été modifier avec succès."})
+    else:
+        return JsonResponse({'status' : 'error', 'message' : "Tous les champs sont requis"})
+
+
+
 def modifierArticleContrat(request):
     pass
 

@@ -34,8 +34,6 @@ class Employees(models.Model):
 
     has_contract = models.BooleanField(default=False)
 
-    work_in = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
-
     class Meta:
         verbose_name="Employe"
         verbose_name_plural="Employes"
@@ -146,6 +144,7 @@ class Contrats(models.Model):
     motif = models.TextField(null=True, blank=True)
 
     periode_essai = models.CharField(max_length=100, null=True, blank=True)
+    work_in = models.ForeignKey(Entreprise, null=True, on_delete=models.SET_NULL)
 
     observations = models.CharField(max_length=1000, null=True, blank=True)
 

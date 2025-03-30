@@ -30,4 +30,5 @@ urlpatterns = [
     path('ApiGetClauseStandardOfType', ApiGetClauseStandardOfType, name="ApiGetClauseStandardOfType"),
     path('ApiAddNewClause', ApiAddNewClause, name="ApiAddNewClause"),
     path('ApiDeleteClause', ApiDeleteClause, name="ApiDeleteClause"),
+    path('ApiUpdateClause', ApiUpdateClause, name="ApiUpdateClause"),
 ]
