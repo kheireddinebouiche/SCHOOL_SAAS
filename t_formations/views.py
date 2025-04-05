@@ -14,6 +14,8 @@ def listModules(request):
     modules = Modules.objects.all()
     return render(request, 't_formations/modules.html', {'modules': modules})
 
+
+
 def listSpecialites(request):
     specialites = Specialites.objects.all()
     context = {

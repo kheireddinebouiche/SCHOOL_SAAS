@@ -73,7 +73,7 @@ class NewSpecialiteForm(forms.ModelForm):
         fields = ['code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version']
 
         widgets = {
-            'code' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'specialiteId'}),
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prix' : forms.TextInput(attrs={'class' : 'form-control'}),
             'formation' : forms.Select(attrs={'class' : 'form-control'}),
