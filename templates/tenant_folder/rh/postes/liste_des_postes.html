@@ -1,0 +1,227 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH/Configuration - Liste des postes {% endblock title %}
+
+{% block content %}
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0"> Liste des postes </h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">RH/Configuration</a></li>
+                                        <li class="breadcrumb-item active"> Liste des postes </li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title mb-0"> Liste des postes </h5>
+                                        <div class="d-flex">
+                                            <button type="button" class="btn btn-primary btn-sm" id="btnAdd">
+                                                <i class="ri-add-line align-middle me-2"></i> Nouveau poste
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Label</th>
+                                                <th>Entite associé</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listItem">
+
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+        
+        <div id="addModal" class="modal fade" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addModalLabel">Nouveau poste</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe mb-3">
+                            <label for="poste"><strong>Intitulé du poste :</strong></label>  
+                            <input type="text" class="form-control" name="poste" id="poste" />
+                        </div>
+                        <div class="form-groupe mt-3">
+                            <label for="description"><strong>Description du poste: </strong></label>
+                            <textarea class="form-control" rows="10" name="description" id="description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer add-btns">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmAddButton" data-id='+id+' class="btn btn-primary">Confirmer</a>
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <div id="detailsModal" class="modal fade" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="detailsModalLabel">Détails du poste</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe mb-3">
+                            <label for="poste"><strong>Intitulé du poste :</strong></label>  
+                            <input type="text" class="form-control" name="poste" id="poste" />
+                        </div>
+                        <div class="form-groupe mt-3">
+                            <label for="description"><strong>Description du poste: </strong></label>
+                            <textarea class="form-control" rows="4" name="description" id="description"></textarea>
+                        </div>
+                        
+                        <h5 class="mt-5">Liste des tâches</h5>
+                        <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Titre</th>
+                                    <th>Description</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listItem">
+
+                                
+                            </tbody>
+                        </table>
+
+                    </div>
+                    <div class="modal-footer add-btns">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmAddButton" data-id='+id+' class="btn btn-primary">Confirmer</a>
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+<script>
+
+$(document).ready(function(){
+   
+    function loadListe(){
+        $.ajax({
+            url :"{% url 't_rh:ApiListePostes' %}",
+            dataType : "JSON",
+            type : 'GET',
+            success: function(data){
+                var row = "";
+                if (data.length > 0){
+                    $.each(data, function(index, p){
+                        row += "<tr>";
+                        row += "<td><strong>"+p.label+"</strong></td>";
+                        row += "<td>"+p.description+"</td>";
+                        row += '<td>';
+                            row += '<div class="dropdown d-inline-block">';
+                                row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                    row += '<i class="ri-more-fill align-middle"></i>';
+                                row += '</button>';
+                                row += '<ul class="dropdown-menu dropdown-menu-end">';
+                                    row += '<li><button id="detailsBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-eye-line align-bottom me-2 text-muted"></i>Détails</button></li>';
+                                    row += '<li><a href="/rh/mise-a-jours-poste/'+p.id+'"  class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                                    row += '<li>';
+                                        row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
+                                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
+                                        row += '</button>';
+                                    row += '</li>';
+                                row += '</ul>';
+                           row += ' </div>';
+                        row += '</td>';
+                        row += "</tr>";
+                    });
+                }else{
+                    var row = "<tr><td colspan='3'>Aucune données disponible ! </td></tr>";
+                }
+                $('#listItem').html(row);
+                
+            }
+        });
+    }
+
+    loadListe();
+
+    $(document).on('click', '#btnAdd', function(){
+        $('#addModal').modal('show');
+    });
+
+    $(document).on('click', '#confirmAddButton', function(){
+        var poste = document.getElementById('poste').value;
+        var description = document.getElementById('description').value;
+
+        $.ajax({
+            url : "{% url 't_rh:ApiAddPoste' %}",
+            dataType : "JSON",
+            type : 'POST',
+            data : {
+                'poste' : poste,
+                'description' : description,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response){
+                if (response.status == "success"){
+                    var url = "{% url 't_rh:updatePoste' pk=0 %}";
+                    window.location.href = url.replace('0', response.id);
+                }else{
+                    alertify.error(response.message);
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '#detailsBtn', function(){
+        var id=$(this).data('id');
+
+        $('#detailsModal').modal('show');
+    
+    });
+
+
+});
+</script>
+
+{% endblock content %}
+           
+
+
+
+    

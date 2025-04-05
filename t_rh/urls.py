@@ -31,4 +31,22 @@ urlpatterns = [
     path('ApiAddNewClause', ApiAddNewClause, name="ApiAddNewClause"),
     path('ApiDeleteClause', ApiDeleteClause, name="ApiDeleteClause"),
     path('ApiUpdateClause', ApiUpdateClause, name="ApiUpdateClause"),
+
+    path('categories-contrat/', ListeCategorieContrat, name="ListeCategorieContrat"),
+    path('ApiListCategorie', ApiListCategorie, name="ApiListCategorie"),
+    path('ApiGetDefaultValueForContrat', ApiGetDefaultValueForContrat, name="ApiGetDefaultValueForContrat"),
+    path('ApiApiAddCategorieContrat', ApiAddCategorieContrat, name="ApiApiAddCategorieContrat"),
+    path('details-catagories/<int:pk>/',detailsCategorie, name="detailsCategorie"),
+    path('ApiGetListeTypeContratByCategorie', ApiGetListeTypeContratByCategorie, name="ApiGetListeTypeContratByCategorie"),
+
+    path('ApiGetCategorieContrat', ApiGetCategorieContrat, name="ApiGetCategorieContrat"),
+    path('ApiGetTypeContrat', ApiGetTypeContrat, name="ApiGetTypeContrat"),
+
+    path('ApiCreateContrat', ApiCreateContrat, name="ApiCreateContrat"),
+
+    path('liste-des-postes/', ListeDesPostes , name="ListeDesPostes"),
+    path('ApiAddPoste', ApiAddPoste, name="ApiAddPoste"),
+    path('ApiListePostes', ApiListePostes, name="ApiListePostes"),
+    path('ApiGetListContratForEmploye', ApiGetListContratForEmploye, name="ApiGetListContratForEmploye"),
+    path('mise-a-jours-poste/<int:pk>/',UpdatePoste, name="updatePoste"),
 ]

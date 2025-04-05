@@ -66,3 +66,20 @@ class ArticleSpecialForm(forms.ModelForm):
         model = ArticleContratSpecial
         fields = '__all__'
         exclude = ['created_by','created_at','updated_at']
+
+class NouveauPoste(forms.ModelForm):
+    class Meta:
+        model = Posts
+        fields = '__all__'
+        exclude = ['created_by','created_at','updated_at','service']
+
+        widgets = {
+            'label' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'description' : forms.Textarea(attrs={'class' : 'form-control','rows': 3}),
+        }
+
+        labels = {
+            'label' : "Nom du poste :",
+            'description' : "Description :",
+            'service' : "Service :",
+        }

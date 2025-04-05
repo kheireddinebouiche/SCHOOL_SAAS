@@ -24,6 +24,11 @@ class Employees(models.Model):
 
     situation_familiale = models.CharField(max_length=255, null=True, blank=True, choices=[('C', 'Célibataire'), ('M', 'Marié(e)'), ('D', 'Divorcé(e)'), ('V', 'Veuf(ve)')])
     sexe = models.CharField(max_length=1, null=True, blank=True, choices=[('M', 'Masculin'), ('F', 'Feminin')])
+
+    groupe_sanguin = models.CharField(max_length=5, null=True, blank=True, choices=[
+        ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'), ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-')
+    ])
+    
     date_naissance = models.DateField(null=True, blank=True)
     lieu_naissance = models.CharField(max_length=255, null=True, blank=True)
 
@@ -33,6 +38,7 @@ class Employees(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_contract = models.BooleanField(default=False)
+    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('en cours', "En cours d'activité"),('demission',"Démissionnaire")])
 
     class Meta:
         verbose_name="Employe"
@@ -56,6 +62,32 @@ class Services(models.Model):
         verbose_name="Service"
         verbose_name_plural="Services"
 
+    def __str__(self):
+        return self.label
+
+class Posts(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    service = models.ForeignKey(Services, null=True, blank=True, on_delete=models.SET_NULL)
+    description = models.CharField(max_length=1000, null=True, blank=True)
+
+    class Meta:
+        verbose_name="Poste"
+        verbose_name_plural="Posts"
+
+    def __str__(self):
+        return self.label
+
+class TachesPoste(models.Model):
+    poste = models.ForeignKey(Posts, on_delete=models.CASCADE, null=True)
+    label = models.CharField(max_length=100, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta: 
+        verbose_name="Tache"
+        verbose_name_plural = "Taches"
+    
     def __str__(self):
         return self.label
 
@@ -113,8 +145,27 @@ class TemplateFichePaie(models.Model):
     def __str__(self):
         return self.label
 
+class CategoriesContrat(models.Model):
+    
+    label = models.CharField(max_length=100, null=True)
+    entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True)
+    description = models.CharField(max_length=100, null=True, blank=True)
+
+    etat = models.CharField(max_length=100, null=True, choices=[('active', "Activé"),('disabled','Désactivé')], default='active')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at= models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name="Catégorie de contrat"
+        verbose_name_plural="Catégories de contrat"
+    
+    def __str__(self):
+        return self.label
+
 class TypesContrat(models.Model):
     label = models.CharField(max_length=255, null=True)
+    categorie = models.ForeignKey(CategoriesContrat, null=True, on_delete=models.SET_NULL)
     description = models.TextField(null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -131,21 +182,21 @@ class Contrats(models.Model):
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
     type_contrat = models.ForeignKey(TypesContrat, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
 
-    date_debut = models.DateField()
-    date_fin = models.DateField()
+    date_fin = models.DateField(null=True)
 
-    poste = models.CharField(max_length=255, null=True, blank=True, choices=[('emp','Employe(e)'), ('dir', 'Directeur(trice)'), ('per', 'Enseignant permanant'), ('vac', 'Enseignant vacataire')])
+    poste = models.ForeignKey(Posts, null=True, on_delete=models.SET_NULL)
     service = models.ForeignKey('Services', on_delete=models.SET_NULL, null=True, blank=True)
 
-    salaire = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
+    salaire_base = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
     date_embauche = models.DateField(null=True, blank=True)
     date_depart = models.DateField(null=True, blank=True)
+    duree = models.CharField(max_length=100, null=True, blank=True)
 
     motif = models.TextField(null=True, blank=True)
 
+    has_essai = models.BooleanField(null=True, blank=True)
     periode_essai = models.CharField(max_length=100, null=True, blank=True)
-    work_in = models.ForeignKey(Entreprise, null=True, on_delete=models.SET_NULL)
-
+    
     observations = models.CharField(max_length=1000, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

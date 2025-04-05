@@ -158,9 +158,11 @@ def ApiListeTypeContrat(request):
 def ApiAddTypeContrat(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
+    categorie = request.POST.get('id_categorie')
 
-    if label:
-        type_contrat = TypesContrat(label=label, description=description)
+    if label and categorie:
+        cat = CategoriesContrat.objects.get(id = categorie)
+        type_contrat = TypesContrat(label=label, description=description, categorie = cat)
         type_contrat.save()
         return JsonResponse({'status': 'success', 'message':"Type de contrat ajouté avec succès"})
     else:
@@ -243,6 +245,155 @@ def ApiUpdateClause(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Tous les champs sont requis"})
 
+def ListeCategorieContrat(request):
+    context = {
+        'tenant' : request.tenant
+    }
+    return render(request,'tenant_folder/rh/contrats/liste_categorie_contrat.html', context)
+
+def ApiListCategorie(request):
+    liste = CategoriesContrat.objects.filter().values('id', 'label', 'entite_legal','entite_legal__designation', 'description')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiAddCategorieContrat(request):
+    label = request.POST.get('label')
+    description = request.POST.get('description')
+    entite = request.POST.get('entite')
+
+    if label and entite:
+        obj_ent = Entreprise.objects.get(id = entite)
+
+        new_cat = CategoriesContrat(
+            label = label,
+            description = description,
+            entite_legal = obj_ent,
+        )
+        new_cat.save()
+        return JsonResponse({'status': "success", 'message' : "La catégorie à été crée avec succès"})
+    else:
+        return JsonResponse({'status' : "error", 'message': "Champs requis manquants, veuillez completer les champs"})
+
+def ApiGetDefaultValueForContrat(request):
+    entreprises = list(Entreprise.objects.filter().values('id', 'designation'))
+    services = list(Services.objects.values('id', 'label'))
+    postes = list(Posts.objects.filter().values('id','label'))
+    return JsonResponse({'entreprises': entreprises, 'services': services, 'postes' : postes}, safe=False)
+
+def detailsCategorie(request, pk):
+    cate = CategoriesContrat.objects.get(id = pk)
+    context = {
+        'categorie' : cate, 
+    }
+    return render(request,'tenant_folder/rh/contrats/details_categorie_contrat.html', context)
+
+def ApiGetListeTypeContratByCategorie(request):
+    id = request.GET.get('id_categorie')
+    liste = TypesContrat.objects.filter(categorie = id).values('id','label','description','created_at')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiGetCategorieContrat(request):
+    id_entite = request.GET.get('id_entite')
+    entite = Entreprise.objects.get(id = id_entite)
+    categories = CategoriesContrat.objects.filter(entite_legal = entite).values('id', 'label')
+    return JsonResponse(list(categories), safe=False)
+
+
+def ApiGetTypeContrat(request):
+    id_categorie = request.GET.get('id_categorie')
+    categorie = CategoriesContrat.objects.get(id = id_categorie)
+    types = TypesContrat.objects.filter(categorie = categorie).values('id', 'label')
+    return JsonResponse(list(types), safe=False)
+
+def ApiCreateContrat(request):
+    id_employe = request.POST.get('id_employe')
+    id_type_contrat = request.POST.get('type_contrat')
+    id_service  = request.POST.get('service')
+    id_poste = request.POST.get('posts')
+    date_embauche = request.POST.get('date_embauche')
+    periode_essaie = request.POST.get('periode_essaie')
+    duree_essaie = request.POST.get('duree_essaie')
+    duree_contrat = request.POST.get('duree_contrat')
+    
+    if(periode_essaie == "1"):
+        has_essaie = True
+    else:
+        has_essaie = False
+
+    employe = Employees.objects.get(id = id_employe)
+    service = Services.objects.get(id = id_service)
+    poste = Posts.objects.get(id = id_poste)
+    type_contrat = TypesContrat.objects.get(id = id_type_contrat)
+
+    new_contrat = Contrats(
+        service = service,
+        employee = employe,
+        date_embauche = date_embauche,
+        periode_essai = duree_essaie,
+        has_essai = has_essaie,
+        poste = poste,
+        type_contrat = type_contrat,
+        duree = duree_contrat
+    )
+    new_contrat.save()
+
+    employe.has_contract = True
+    employe.save()
+
+    return JsonResponse({"status" : "success", 'message' : "Le contrat à été crée avec succès"})
+
+def ApiGetListContratForEmploye(request):
+    id_employe = request.GET.get('id_employe')
+    employe = Employees.objects.get(id = id_employe)
+    liste = Contrats.objects.filter(employee = employe).values('id','type_contrat__label','poste__label','date_embauche','duree','created_at')
+
+
+    return JsonResponse(list(liste), safe=False)
+
+def ApiListePostes(request):
+    liste = Posts.objects.filter().values('id', 'label', 'description')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiAddPoste(request):
+    poste = request.POST.get('poste')
+    description = request.POST.get('description')
+
+    new_poste = Posts(
+        label = poste,
+        description = description
+    )
+    new_poste.save()
+    messages.success(request, 'Le poste à été ajouté avec succès')
+    return JsonResponse({'status' : "success", "message" : "Le poste à été ajouter avec suucès",'id' : new_poste.id})
+
+
+def ListeDesPostes(request):
+    context = {
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/rh/postes/liste_des_postes.html', context)
+
+def UpdatePoste(request, pk):
+    poste = Posts.objects.get(id = pk)
+    form = NouveauPoste(instance=poste)
+    if request.method == 'POST':
+        form = NouveauPoste(request.POST, instance=poste)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Le poste à été mis à jour avec succès')
+            return redirect('t_rh:updatePoste', pk)
+    
+    context = {
+        'form' : form,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/rh/postes/update_poste.html', context)
+
+
+def ApiUpdateCategorie(request):
+    pass
+
+def ApiDeleteCategorie(request):
+    pass
 
 
 def modifierArticleContrat(request):

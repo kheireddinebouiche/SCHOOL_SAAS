@@ -1,0 +1,208 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH/Configuration - Catégories de de contrat {% endblock title %}
+
+{% block content %}
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0"> Catégories de de contrat </h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">RH/Configuration</a></li>
+                                        <li class="breadcrumb-item active"> Catégories de de contrat </li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title mb-0"> Catégories de de contrat </h5>
+                                        <div class="d-flex">
+                                            <button type="button" class="btn btn-primary btn-sm" id="btnAdd">
+                                                <i class="ri-add-line align-middle me-2"></i> Nouvelle catégorie
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Label</th>
+                                                <th>Entite associé</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listeItem">
+
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+        
+        <div id="addModal" class="modal fade" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addModalLabel">Nouvelle catégorie de contrat</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Titre :</strong></label>  
+                            <input type="text" class="form-control" name="label" id="label" />
+                        </div>
+
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Entité légale (Définissez pour quelle entreprise vous allez appliquer la catégorie) :</strong></label>  
+                            <select name="entite" id="entite" class="form-control">
+
+                            </select>
+                        </div>
+                       
+                        <span id="tags-container"></span>
+                        <div class="form-groupe mt-3">
+                            <label for="description"><strong>Description : </strong></label>
+                            <textarea class="form-control" rows="10" name="description" id="description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer add-btns">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmAddButton" data-id='+id+' class="btn btn-primary">Confirmer</a>
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+<script>
+
+$(document).ready(function(){
+    function loadItems(){
+        $.ajax({
+            url : "{% url 't_rh:ApiListCategorie' %}",
+            type : "GET",
+            dataType: "JSON",
+            success : function(data){
+                var row="";
+                if (data.length > 0){
+                    $.each(data, function(index, p){
+                        row += "<tr>";
+                        row += "<td>"+p.label+"</td>";
+                        row += "<td><strong>"+p.entite_legal__designation+"</strong></td>";
+                        row += '<td>';
+                            row += '<div class="dropdown d-inline-block">';
+                                row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                    row += '<i class="ri-more-fill align-middle"></i>';
+                                row += '</button>';
+                                row += '<ul class="dropdown-menu dropdown-menu-end">';
+                                    row += '<li><a href="/rh/details-catagories/'+p.id+'" class="dropdown-item"><i class="ri-file-list-line align-bottom me-2 text-muted"></i>Types de contrat</a></li>';
+                                    row += '<li><button id="updateBtn" data-id='+p.id+' data-titre="'+p.label+'" data-contenu="'+p.description+'" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                    row += '<li>';
+                                        row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
+                                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
+                                        row += '</button>';
+                                    row += '</li>';
+                                row += '</ul>';
+                           row += ' </div>';
+                        row += '</td>';
+                        row += "</tr>";
+                    });
+                }else{
+                    row += "<tr><td colspan='3' class='text-muted text-center'>Aucune catégorie disponible ! </td></tr>";
+                }
+
+                $('#listeItem').html(row);
+            },
+        });
+    }
+
+    loadItems();
+
+    $(document).on('click', '#btnAdd', function(){
+
+        $.ajax({
+            url :"{% url 't_rh:ApiGetEntite' %}",
+            dataType: "JSON",
+            type : "GET",
+            success: function(data){
+                var row = "";
+               
+                $.each(data, function(index, p){
+                    row += "<option value='0'>--------------</option>";
+                    row += "<option value='"+p.id+"'>"+p.designation+"</option>";
+                });
+                $('#entite').html(row);
+            }
+        });
+
+
+        $('#addModal').modal('show');
+    });
+
+    $(document).on('click', '#confirmAddButton', function(){
+        var label = $('#label').val();
+        var description = $('#description').val();
+        var entite = $('#entite').val();
+
+        $.ajax({
+            url : "{% url 't_rh:ApiApiAddCategorieContrat' %}",
+            dataType: "JSON",
+            type : "POST",
+            data : {
+                'label' : label,
+                'description' : description,
+                'entite' : entite,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+
+            success : function(response){
+                if (response.status == 'success'){
+                    alertify.success(response.message);
+                    $('#addModal').modal('hide');
+                    loadItems();
+                }else{
+                    alertify.error(response.message);
+                }
+            }
+
+        });
+    });
+
+
+});
+</script>
+
+{% endblock content %}
+           
+
+
+
+    
