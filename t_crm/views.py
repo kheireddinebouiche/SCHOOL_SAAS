@@ -6,6 +6,7 @@ from django.contrib import messages
 from t_tresorerie.models import *
 from t_formations.models import *
 from django.db import transaction
+from django.db.models import Count
 
 
 def listeVisiteurs(request):
@@ -142,6 +143,37 @@ def ApiGetListeDemandeInscription(request):
         demande_obj = DemandeInscription.objects.get(id=demande['id'])
         demande['etat_label'] = demande_obj.get_etat_display()
     return JsonResponse(list(demandes), safe=False)
+
+
+
+def ApiGetGrideDemandeInscription(request):
+    specialites = Specialites.objects.all()
+
+    specialites_demandes = []
+
+    for specialite in specialites:
+        # Récupérer les promotions associées à chaque spécialité
+        demandes_par_promo = (
+            specialite.demandeinscription_set
+            .values('promo__label','promo__session')  # Agréger par le nom de la promotion
+            .annotate(nb_demandes=Count('id'))  # Compter les demandes d'inscription
+            .order_by('promo__label')  # Trier par nom de promotion
+        )
+
+        # Ajout de la spécialité et du nombre de demandes par promotion
+        for promo in demandes_par_promo:
+            specialite_data = {
+                'code': specialite.code, 
+                'label': specialite.label,
+                'promotion': promo['promo__label'],
+                'session' : promo['promo__session'],
+                'nb_demande': promo['nb_demandes'],
+                'id': specialite.id  
+            }
+
+            specialites_demandes.append(specialite_data)
+
+    return JsonResponse({'specialites_demandes': specialites_demandes})
 
 def ApiAddNewDemandeInscription(request):
     promo = request.POST.get('_promo')
