@@ -139,8 +139,8 @@ def ApiAddNewDemandeInscription(request):
 
     if promo and formation and specialite and formule and id_visiteur:
 
-        specialite = Specialites.objects.get(id = specialite)
-        obj = DemandeInscription.objects.filter(visiteur = id_visiteur, specialite = specialite).count()
+        obj_specialite = Specialites.objects.get(id = specialite)
+        obj = DemandeInscription.objects.filter(visiteur = id_visiteur, specialite = obj_specialite).count()
         if obj > 0:
             return JsonResponse({'status': "error", 'message': 'Demande d\'inscription déjà existante pour cette spécialité'})
 
