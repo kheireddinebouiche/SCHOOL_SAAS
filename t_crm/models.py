@@ -8,7 +8,7 @@ from django_countries.fields import CountryField
 class Visiteurs(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
-    civilite = models.CharField(max_length=255, null=True, choices=[('monsieur', 'Monsieur'), ('madame', 'Madame')])
+    civilite = models.CharField(max_length=255, null=True, choices=[('monsieur', 'Mr.'), ('madame', 'Mme')])
     nom = models.CharField(max_length=255, null=True)
     prenom = models.CharField(max_length=255, null=True)
     date_naissance = models.DateField(null=True)

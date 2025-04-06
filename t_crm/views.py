@@ -130,6 +130,19 @@ def ApiGETDemandeInscription(request):
         demande['etat_label'] = demande_obj.get_etat_display()
     return JsonResponse(list(demandes), safe=False)
 
+def ListeDemandeInscription(request):
+    context = {
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/crm/liste_demande_inscription.html', context)
+
+def ApiGetListeDemandeInscription(request):
+    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat')
+    for demande in demandes:
+        demande_obj = DemandeInscription.objects.get(id=demande['id'])
+        demande['etat_label'] = demande_obj.get_etat_display()
+    return JsonResponse(list(demandes), safe=False)
+
 def ApiAddNewDemandeInscription(request):
     promo = request.POST.get('_promo')
     formation = request.POST.get('_formation')
