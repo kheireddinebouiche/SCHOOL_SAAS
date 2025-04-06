@@ -29,7 +29,7 @@ class ClientPaiementsRequest(models.Model):
     def __str__(self):
         return f"{self.student}"
     
-def clientPaiementsRequestLine(models):
+class clientPaiementsRequestLine(models.Model):
     pass
 
 class Paiements(models.Model):

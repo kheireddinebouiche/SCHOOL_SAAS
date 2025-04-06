@@ -14,8 +14,6 @@ def listModules(request):
     modules = Modules.objects.all()
     return render(request, 't_formations/modules.html', {'modules': modules})
 
-
-
 def listSpecialites(request):
     specialites = Specialites.objects.all()
     context = {
@@ -156,8 +154,6 @@ def updateSpecialite(request,pk):
         'tenant' : request.tenant
     }
     return render(request, "tenant_folder/formations/update_specialite.html", context)
-
-
 
 def updateFraisInscription(request):
     pass
@@ -304,6 +300,15 @@ def ApiListePromos(request):
         l['etat_label'] = l_obj.get_etat_display()
         l['session_label'] = l_obj.get_session_display()
 
+    return JsonResponse(list(liste), safe=False)
+
+def ApiListeFormation(request):
+    liste = Formation.objects.all().values('id', 'nom')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiListeSpecialiteByFormation(request):
+    id= request.GET.get('id_formation')
+    liste = Specialites.objects.filter(formation = id).values('id', 'label','code')
     return JsonResponse(list(liste), safe=False)
 
 def AddPromo(request):

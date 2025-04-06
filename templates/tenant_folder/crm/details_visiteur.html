@@ -154,76 +154,41 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-
-                <div class="row">
-                    <div class="col-lg-3 mb-3">
-                        <label for="entite_legal" class="form-label" ><strong>Employeur :</strong></label>  
-                        <select id="entite_legal" name="entite_legal" class='form-control'>
-
-                        </select>
-                    </div>
-
-                    <div class="col-lg-3 mb-3">
-                        <label for="categorie_contrat" class="form-label"><strong>Catégorie de contrat :</strong></label>  
-                        <select id="categorie_contrat" name="categorie_contrat" class='form-control'>
-
-                        </select>
-                    </div>
-
-                    <div class="col-lg-3 mb-3">
-                        <label for="type_contrat" class="form-label"><strong>Type de contrat :</strong></label>  
-                        <select id="type_contrat" name="type_contrat" class='form-control'>
-
-                        </select>
-                    </div>
-
-                    <div class="col-lg-3">
-                        <label for="duree_contrat" class="form-label"> Durée (Durée du contrat): </label>
-                        <input required type="text" id="duree_contrat" class="form-control" />
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-lg-6">
-                        <label for="services" class="form-label">Service : </label>
-                        <select id='services' name="services" class="form-control" >
-
-                        </select>
-                    </div>
-                    <div class="col-lg-6">
-                        <label for="posts" class="form-label">Poste : </label>
-                        <select id='posts' name="posts" class="form-control" >
-                            
-                        </select>
-                    </div>
-                </div>
-
                 <div class="row">
                     <div class="col-lg-4">
-                        <label for="data_embauche" class="form-label"> Date de recrutement : </label>
-                        <input type="date" id="date_embauche" class="form-control" />
-                    </div>
-                    <div class="col-lg-4">
-                        <label for="periode_essaie" class="form-label"> Période d'essai ? : </label>
-                        <select id="periode_essaie" class="form-control" >
-                            <option value="0" > Non </option>
-                            <option value="1" > Oui </option>
+                        <label for="" class="form-label">Promotion : </label>
+                        <select id="_promo" class="form-control">
+
                         </select>
                     </div>
                     <div class="col-lg-4">
-                        <label for="duree_essaie" class="form-label"> Durée (Durée de la période d'essai): </label>
-                        <input type="text" id="duree_essaie" class="form-control" />
+                        <label for="" class="form-label">Formation : </label>
+                        <select id="_formations" class="form-control">
+
+                        </select>
+                    </div>
+                    <div class="col-lg-4">
+                        <label for="" class="form-label">Specialite : </label>
+                        <select id="_specialites" class="form-control">
+
+                        </select>
                     </div>
                 </div>
-
-                <div class="form-group mt-3">
-                    <label for="contenu"><strong>Contenu : </strong></label>
-                    <textarea class="form-control" rows="10" name="contenu" id="contenu"></textarea>
+                <div class="row mt-2">
+                    <div class="col-lg-12">
+                        <label for="_formule" class="form-label">Formule</label>
+                        <select id='_formule' class="form-control">
+                            <option value="0">Sélectionner la formule de cours</option>
+                            <option value="week">Week End</option>
+                            <option value="jour">Cours du jour</option>
+                            <option value="soir">Cours du soir</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer add-btns">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button id="confirmBtn" class="btn btn-primary">Confirmer</a>
+                <button id="confirmNewBtn" class="btn btn-primary">Confirmer</a>
             </div>
 
         </div><!-- /.modal-content -->
@@ -402,7 +367,77 @@
             
         }
 
+        function loadPromo(){
+            $.ajax({
+                url : "{% url 't_formations:ApiListePromos' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                success : function(data){
+                    var options = "<option value='0'>Séléctionner une promo</option>";
+                    $.each(data, function(index, promo){
+                        options += "<option value='"+promo.id+"'>"+promo.session_label+' - '+promo.label+"</option>";
+                    });
+                    $('#_promo').html(options);
+                }
+            });
+        }
+
+        function loadFormations(){
+            $.ajax({
+                url :"{% url 't_formations:ApiListeFormation' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                success : function(data){
+                    var options = "<option value='0'>Séléctionner une formation</option>";
+                    $.each(data, function(index, formation){
+                        options += "<option value='"+formation.id+"'>"+formation.nom+"</option>";
+                    });
+                    $('#_formations').html(options);
+                }
+            });
+        }
+
         loadItems();
+        loadPromo();
+        loadFormations();
+
+        $('#_formations').on('change', function() {
+            var id_formation = $('#_formations').val();
+            $.ajax({
+                url : "{% url 't_formations:ApiListeSpecialiteByFormation' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                data : {
+                    'id_formation' : id_formation
+                },
+                success : function(data){
+                    var options = "<option value='0'>Séléctionner une spécialité</option>";
+                    $.each(data, function(index, specialite){
+                        options += "<option value='"+specialite.id+"'>"+specialite.code+' - '+specialite.label+"</option>";
+                    });
+                    $('#_specialites').html(options);
+                }
+            });
+        });
+
+        $(document).on('click', '#confirmNewBtn', function(){
+            var _promo = document.getElementById('_promo').value;
+            var _formation = document.getElementById('_formations').value;
+            var _specialite = document.getElementById('_specialites').value;
+            var _formule = document.getElementById('_formule').value;
+
+            $.ajax({
+                url : "{% url 't_crm:ApiAddNewDemandeInscription' %}",
+                dataType: 'JSON',
+                type : 'POST',
+                data : {
+                    '_promo' : _promo,
+                    '_formation': _formation,
+                    '_specialite' : _specialite,
+                    '_formulue'  : _formule
+                },
+            });
+        });
 
         $(document).on('click','#addDemande', function(){
             $('#nouvelleDemande').modal('show');
