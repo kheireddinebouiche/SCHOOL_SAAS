@@ -122,25 +122,6 @@ def ApiGetSpecialite(request):
     specialites = Specialites.objects.filter(formation = formation_id).values('id','label')
     return JsonResponse(list(specialites), safe=False)
 
-@transaction.atomic
-def ConfirmeDemandeInscription(request, pk):
-    visiteur = Visiteurs.objects.get(id = pk)
-    
-    paiement_request = ClientPaiementsRequest.objects.create(
-        client = visiteur,
-        formation = visiteur.formation,
-        specialite = visiteur.specialite,
-
-        amount = (visiteur.formation.frais_inscription + visiteur.specialite.prix) / int(visiteur.specialite.nb_tranche),
-
-        created_by = request.user,  
-
-    )
-
-    paiement_request.save()
-    messages.success(request, 'Demande d\'inscription confirmée avec succès')
-    return redirect('t_crm:details_visiteur', pk = pk)
-
 def ApiGETDemandeInscription(request):
     id_visiteur = request.GET.get('id_visiteur')
     demandes = DemandeInscription.objects.filter(visiteur = id_visiteur).values('id','formation','specialite__label','created_at','etat')
@@ -148,3 +129,47 @@ def ApiGETDemandeInscription(request):
         demande_obj = DemandeInscription.objects.get(id=demande['id'])
         demande['etat_label'] = demande_obj.get_etat_display()
     return JsonResponse(list(demandes), safe=False)
+
+def ApiAddNewDemandeInscription(request):
+    promo = request.POST.get('_promo')
+    formation = request.POST.get('_formation')
+    specialite = request.POST.get('_specialite')
+    formule = request.POST.get('_formule')
+    id_visiteur = request.POST.get('id_visiteur')
+
+    if promo and formation and specialite and formule and id_visiteur:
+
+        specialite = Specialites.objects.get(id = specialite)
+        obj = DemandeInscription.objects.filter(visiteur = id_visiteur, specialite = specialite).count()
+        if obj > 0:
+            return JsonResponse({'status': "error", 'message': 'Demande d\'inscription déjà existante pour cette spécialité'})
+
+        else:
+            new_demande = DemandeInscription(
+                visiteur = Visiteurs.objects.get(id = id_visiteur),
+                formation = Formation.objects.get(id = formation),
+                specialite = Specialites.objects.get(id = specialite),
+                formule = formule,
+                promo = Promos.objects.get(id = promo),
+            )
+
+            new_demande.save()
+
+            return JsonResponse({'status': "success", 'message': 'Demande d\'inscription ajoutée avec succès'})
+    else:
+        return JsonResponse({'status': "error", 'message': 'Veuillez remplir tous les champs obligatoires'})
+
+def ApiConfirmDemandeInscription(request):
+    id_demande = request.GET.get('id_demande')
+    demande = DemandeInscription.objects.get(id = id_demande)
+    demande.etat = 'accepte'
+
+    demande.save()
+    return JsonResponse({'status': 'success', 'message' : 'La demande d\'incription à été confirmer avec succès.'})
+
+def ApiAnnulerDemandeInscription(request):
+    id_demande = request.POST.get('id_demande')
+    demande = DemandeInscription.objects.get(id = id_demande)
+    demande.etat = 'rejete'
+    demande.save()
+    return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})    

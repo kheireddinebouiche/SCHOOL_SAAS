@@ -288,7 +288,7 @@
                 <div class="mt-4">
                     <h4 class="mb-3">Vous étes sur le point de d'annuler la demande d'inscription</h4>
                     <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir effectuer cela ? Cette action est irréversible. </p>
-                    <div class="hstack gap-2 justify-content-center">
+                    <div class="hstack delete gap-2 justify-content-center">
                         
                     </div>
                 </div>
@@ -306,7 +306,7 @@
                 <div class="mt-4">
                     <h4 class="mb-3">Vous étes sur le point de d'annuler la demande d'inscription</h4>
                     <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir effectuer cela ? Cette action est irréversible. </p>
-                    <div class="hstack gap-2 justify-content-center">
+                    <div class="hstack confirme gap-2 justify-content-center">
                         
                     </div>
                 </div>
@@ -344,10 +344,11 @@
                         html += '<i class="ri-more-fill align-middle"></i>';
                         html += '</button>';
                         html += '<ul class="dropdown-menu dropdown-menu-end">';
-                        html += '<li><button data-id='+p.id+' id="confirmBtn" class="dropdown-item"><i class="ri-check-fill align-bottom me-2 text-muted"></i> Confirmer la demande</button></li>';
-                        html += '<li><button id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                        html += '<li><button data-id='+p.id+' id="detailsBtn" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
+                        html += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' data-id='+p.id+' id="confirmBtn" class="dropdown-item"><i class="ri-check-fill align-bottom me-2 text-muted"></i> Confirmer la demande</button></li>';
+                        html += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
                         html += '<li>';
-                        html += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
+                        html += '<button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
                         html += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Annuler la demande';
                         html += '</button>';
                         html += '</li>';
@@ -431,11 +432,23 @@
                 dataType: 'JSON',
                 type : 'POST',
                 data : {
+                    'id_visiteur' : id_visiteur,
                     '_promo' : _promo,
                     '_formation': _formation,
                     '_specialite' : _specialite,
-                    '_formulue'  : _formule
+                    '_formulue'  : _formule,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
+
+                success : function(response){
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('#nouvelleDemande').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
             });
         });
 
@@ -448,12 +461,67 @@
         });
 
         $(document).on('click','#deleteConfirmation', function(){
+            var id_demande = $(this).data('id');
+
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id_demande+' class="btn btn-danger">Confirmer</a>';
+
+            $('.delete').html(row);
+
             $('.deleteModal').modal('show');
+
+            $('#confirmDeleteBtn').on('click', function(){
+                $.ajax({
+                    url : "{% url 't_crm:ApiAnnulerDemandeInscription' %}",
+                    dataType: 'JSON',
+                    type : 'POST',
+                    data : {
+                        'id_demande' : id_demande,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success : function(response){
+                        if (response.status == "success"){
+                            alertify.success(response.message);
+                            loadItems();
+                            $('.deleteModal').modal('hide');
+                        }else{ 
+                            alertify.error("Une erreur c'est produite lors du traitement de la requete");
+                        }
+                    }
+                });
+            });
         });
 
         $(document).on('click', '#confirmBtn', function(){
+            var id_demande = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmActivationBtn" data-id='+id_demande+' class="btn btn-success">Confirmer la demande d\'inscription</a>';
+
+            $('.confirme').html(row);
             $('.confirmModal').modal('show');
+
+            $('#confirmActivationBtn').on('click', function(){
+                $.ajax({
+                    url : "{% url 't_crm:ApiConfirmDemandeInscription' %}",
+                    type : 'GET',
+                    dataType: 'JSON',
+                    data : {
+                        'id_demande' : id_demande,
+                    },
+                    success : function(response){
+                        if (response.status == "success"){
+                            alertify.success(response.message);
+                            $('.confirmModal').modal('hide');
+                            loadItems();
+                        }else{
+                            alertify.error(response.message);
+                        }
+                    },  
+                });
+            });
         });
+
+       
     });
 </script>
 

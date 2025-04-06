@@ -15,6 +15,8 @@ urlpatterns = [
 
     path('ApiGetSpecialite',ApiGetSpecialite,name="ApiGetSpecialite"),
     path('ApiGETDemandeInscription', ApiGETDemandeInscription,name="ApiGETDemandeInscription"),
+    path('ApiAddNewDemandeInscription',ApiAddNewDemandeInscription,name='ApiAddNewDemandeInscription'),
     
-    path('approuve-visiteur-inscription/<int:pk>/',ConfirmeDemandeInscription,name="ConfirmeDemandeInscription"),
+    path('ApiConfirmDemandeInscription', ApiConfirmDemandeInscription, name="ApiConfirmDemandeInscription"),
+    path('ApiAnnulerDemandeInscription', ApiAnnulerDemandeInscription, name="ApiAnnulerDemandeInscription"),
 ]
