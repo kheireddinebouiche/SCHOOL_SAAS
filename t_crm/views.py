@@ -39,6 +39,7 @@ def nouveauVisiteur(request):
             specialite = demande.cleaned_data.get('specialite')
             formule = demande.cleaned_data.get('formule')
             session = demande.cleaned_data.get('session')
+            promo = demande.cleaned_data.get('promo')
 
             if formation and specialite and formule and session:
                 demande = DemandeInscription(
@@ -47,6 +48,7 @@ def nouveauVisiteur(request):
                     specialite = specialite,
                     session = session,
                     formule = formule,
+                    promo = promo,
                 )
                 demande.save()
 
