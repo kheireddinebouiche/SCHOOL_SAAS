@@ -146,8 +146,6 @@ def ApiGetListeDemandeInscription(request):
         demande['etat_label'] = demande_obj.get_etat_display()
     return JsonResponse(list(demandes), safe=False)
 
-
-
 def ApiGetGrideDemandeInscription(request):
     specialites = Specialites.objects.all()
 
