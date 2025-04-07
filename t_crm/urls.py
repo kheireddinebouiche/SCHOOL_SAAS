@@ -19,8 +19,10 @@ urlpatterns = [
     path('liste-demande-inscription/', ListeDemandeInscription, name="ListeDemandeInscription"),
     path('ApiGetListeDemandeInscription', ApiGetListeDemandeInscription, name="ApiGetListeDemandeInscription"),
     path('ApiGetGrideDemandeInscription', ApiGetGrideDemandeInscription, name="ApiGetGrideDemandeInscription"),
-   
+    
     
     path('ApiConfirmDemandeInscription', ApiConfirmDemandeInscription, name="ApiConfirmDemandeInscription"),
     path('ApiAnnulerDemandeInscription', ApiAnnulerDemandeInscription, name="ApiAnnulerDemandeInscription"),
+
+    path('filter_visiteur', filter_visiteur, name="filter_visiteur"),
 ]

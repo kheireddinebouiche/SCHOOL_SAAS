@@ -6,7 +6,7 @@ from django.contrib import messages
 from t_tresorerie.models import *
 from t_formations.models import *
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 
 
 def listeVisiteurs(request):
@@ -218,3 +218,33 @@ def ApiAnnulerDemandeInscription(request):
     demande.etat = 'rejete'
     demande.save()
     return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})    
+
+
+def filter_visiteur(request):
+    search = request.GET.get('search')
+    visiteur = Visiteurs.objects.all()
+
+    if search:
+        visiteurs = visiteur.filter(
+            Q(cin__icontains=search) |
+            Q(nom__icontains=search) |
+            Q(prenom__icontains=search) |
+            Q(telephone__icontains=search) |
+            Q(email__icontains=search) |
+            Q(type_visiteur__icontains=search)
+        )
+
+    data = []
+    for v in visiteurs:
+        data.append({
+            'id' : v.id,
+            'cin': v.cin,
+            'nom_prenom': f"{v.nom} {v.prenom}",
+            'email': v.email,
+            'telephone' : v.telephone,
+            'type_visiteur': v.get_type_visiteur_display(),
+            'etat': v.etat,
+            'etat_label' : v.get_etat_display()
+        })
+    return JsonResponse({'filtred': data})
+
