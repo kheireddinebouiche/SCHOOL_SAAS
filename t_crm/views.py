@@ -209,6 +209,16 @@ def ApiConfirmDemandeInscription(request):
     demande = DemandeInscription.objects.get(id = id_demande)
     demande.etat = 'accepte'
 
+    demande_paiement = ClientPaiementsRequest(
+        client = demande.visiteur,
+        formation = demande.formation,
+        specialite = demande.specialite,
+        amount = demande.formation.frais_inscription + demande.formation.frais_assurance + demande.specialite.prix,
+        etat = 'paiment'
+    )
+
+    demande_paiement.save()
+
     demande.save()
     return JsonResponse({'status': 'success', 'message' : 'La demande d\'incription à été confirmer avec succès.'})
 
