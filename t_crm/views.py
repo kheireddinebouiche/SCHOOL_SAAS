@@ -229,6 +229,14 @@ def ApiAnnulerDemandeInscription(request):
     demande.save()
     return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})    
 
+def ApiRemoveDemandeInscription(request):
+    if request.user.is_staff:
+        id_demande = request.POST.get('id')
+        demande = DemandeInscription.objects.get(id = id_demande)
+        demande.delete()
+        return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})
+    else:
+        return JsonResponse({'status' : "error", "message" : "Action non autorisé pour votre niveau de compte"})
 
 def filter_visiteur(request):
     search = request.GET.get('search')

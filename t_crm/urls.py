@@ -23,6 +23,7 @@ urlpatterns = [
     
     path('ApiConfirmDemandeInscription', ApiConfirmDemandeInscription, name="ApiConfirmDemandeInscription"),
     path('ApiAnnulerDemandeInscription', ApiAnnulerDemandeInscription, name="ApiAnnulerDemandeInscription"),
+    path('ApiRemoveDemandeInscription', ApiRemoveDemandeInscription, name="ApiRemoveDemandeInscription"),
 
     path('filter_visiteur', filter_visiteur, name="filter_visiteur"),
 ]

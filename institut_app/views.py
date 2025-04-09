@@ -10,6 +10,7 @@ from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
 from django.db import transaction
 
+
 @login_required(login_url='institut_app:login')
 def Index(request):
     tenant = getattr(request, 'tenant', None)
@@ -134,3 +135,13 @@ def detailsEntreprise(request, pk):
         'updateForm' : updateForm,
     }
     return render(request, 'tenant_folder/entreprise/details_entreprise.html', context)
+
+def UsersListePage(request):
+    context = {
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/users/liste_users.html', context)
+
+def ApiListeUsers(request):
+    users = User.objects.all()
+    return JsonResponse(list(users), safe=False)
