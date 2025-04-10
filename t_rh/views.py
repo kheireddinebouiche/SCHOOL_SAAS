@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from .forms import *
 from .models import *
+from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 
@@ -404,3 +405,7 @@ def detailsArticleContrat(request):
 
 def supprimerArticleContrat(request):
     pass
+
+def ApiGetEntite(request):
+    liste = Entreprise.objects.all().values('id','designation')
+    return JsonResponse(list(liste),safe=False)
