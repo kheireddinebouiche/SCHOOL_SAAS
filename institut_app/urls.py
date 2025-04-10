@@ -24,5 +24,6 @@ urlpatterns = [
     path('utilisateurs/',UsersListePage, name="UsersListePage"),
     path('ApiListeUsers',ApiListeUsers,name="ApiListeUsers"),
     path('ApiGetDetailsProfile', ApiGetDetailsProfile, name="ApiGetDetailsProfile"),
+    path('ApiCreateProfile', ApiCreateProfile, name="ApiCreateProfile"),
     
 ]

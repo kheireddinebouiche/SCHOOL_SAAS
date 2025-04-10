@@ -155,3 +155,23 @@ def ApiGetDetailsProfile(request):
         return JsonResponse(list(profile),safe=False)
     else:
         return JsonResponse({'status' : 'error', 'message' : "Aucun profile trouvé pour l'utilisateur"})
+    
+def ApiCreateProfile(request):
+    id_user= request.POST.get('id_user')
+    nom = request.POST.get('nom')
+    prenom = request.POST.get('prenom')
+    adresse = request.POST.get('adresse')
+
+    user_obj = User.objects.get(id= id_user)
+
+    profile = Profile(
+        user = user_obj,
+        adresse = adresse
+    )
+    profile.save()
+
+    user_obj.first_name = nom
+    user_obj.last_name = prenom
+    user_obj.save()
+
+    return JsonResponse({'status' : 'success', 'message' : "Le profile de l'utilisateur crée avec succès"})
