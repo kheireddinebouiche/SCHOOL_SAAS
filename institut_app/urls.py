@@ -20,5 +20,9 @@ urlpatterns = [
     path('liste-des-entreprise/', ListeEntreprises, name="liste_entreprise"),
     path('modification-entreprise/<int:id>/', ModifierEntreprise, name="modifier_entreprise"),
     path('update-entreprise/', ApiUpdateEntreprise, name="update_entreprise"),
+
+    path('utilisateurs/',UsersListePage, name="UsersListePage"),
+    path('ApiListeUsers',ApiListeUsers,name="ApiListeUsers"),
+    path('ApiGetDetailsProfile', ApiGetDetailsProfile, name="ApiGetDetailsProfile"),
     
 ]

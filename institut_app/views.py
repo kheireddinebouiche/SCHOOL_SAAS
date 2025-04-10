@@ -143,5 +143,15 @@ def UsersListePage(request):
     return render(request, 'tenant_folder/users/liste_users.html', context)
 
 def ApiListeUsers(request):
-    users = User.objects.all()
+    users = User.objects.all().values('id','is_staff','email','username','date_joined','is_active')
     return JsonResponse(list(users), safe=False)
+
+def ApiGetDetailsProfile(request):
+    id = request.GET.get('id')
+    obj = User.objects.get(id = id)
+    profile = Profile.objects.filter(user = obj).values('id','adresse','role')
+
+    if profile:
+        return JsonResponse(list(profile),safe=False)
+    else:
+        return JsonResponse({'status' : 'error', 'message' : "Aucun profile trouvé pour l'utilisateur"})
