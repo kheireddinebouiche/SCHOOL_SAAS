@@ -175,3 +175,25 @@ def ApiCreateProfile(request):
     user_obj.save()
 
     return JsonResponse({'status' : 'success', 'message' : "Le profile de l'utilisateur crée avec succès"})
+
+def ApiDeactivateUser(request):
+    id = request.GET.get('id')
+    if id:
+        user = User.objects.get(id = id)
+        user.is_active = False
+        user.save()
+
+        return JsonResponse({'status' : 'success', 'message' : "<i class='ri-information-line me-2'></i>Désactiver avec succès"})
+    else:
+        return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Erreur"})
+    
+def ApiActivateUser(request):
+    id = request.GET.get('id')
+    if id:
+        user = User.objects.get(id = id)
+        user.is_active = True
+        user.save()
+
+        return JsonResponse({'status' : 'success', 'message' : "<i class='ri-information-line me-2'></i>Désactiver avec succès"})
+    else:
+        return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Le compte utilisateur a été desactiver avec succès"})

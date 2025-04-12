@@ -111,7 +111,7 @@
                     <div class="col-lg-6">
                         <label for="nom" class="form-modal">Nom</label>
                         <input type="text" id="_nom" name="nom" class="form-control" />
-                        <input type="text" id="_id" name="nom" class="form-control" />
+                        <input disabled type="hidden" id="_id" name="nom" class="form-control" />
                     </div>
                     <div class="col-lg-6">
                         <label for="prenom" class="form-modal">Prénom</label>
@@ -145,6 +145,39 @@
                         <label for="nom" class="form-modal">Nom</label>
                         <input type="text" id="_nom" name="nom" class="form-control" />
                         <input type="text" id="_id" name="nom" class="form-control" />
+                    </div>
+                    <div class="col-lg-6">
+                        <label for="prenom" class="form-modal">Prénom</label>
+                        <input type="text" id="_prenom" name="prenom" class="form-control" />
+                    </div>
+                    <div class="col-lg-12">
+                        <label for="" class="form-modal">Adresse</label>
+                        <input type="text" id="_adresse" name="adresse" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button id="confirmProfileCreation" class="btn btn-success">Confirmer la création du profile</a>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="UpdateUserModal" class="modal fade" tabindex="-1" aria-labelledby="UpdateUserModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="UpdateUserModalLabel">Mise à jour du profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <label for="nom" class="form-modal">Nom</label>
+                        <input type="text" id="_nom" name="nom" class="form-control" />
+                        <input type="hidden" id="_id" name="nom" class="form-control" />
                     </div>
                     <div class="col-lg-6">
                         <label for="prenom" class="form-modal">Prénom</label>
@@ -209,9 +242,58 @@
     </div>
 </div>
 
+<div class="modal fade deactiveModalConfirmation" tabindex="-1" role="dialog" aria-labelledby="deactiveModalConfirmationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                <lord-icon
+                    src="https://cdn.lordicon.com/vihyezfv.json"
+                    trigger="loop"
+                    colors="primary:orange"
+                    style="width:120px;height:120px">
+                </lord-icon>
+               
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point de desactiver le compte utilisateur !</h4>
+                    <p class="text-muted mb-4">Voulez vous effectuer cette action maintenant ?</p>
+                    <div class="hstack deactivateModalButtons gap-2 justify-content-center">
+                       
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade activateModalConfirmation" tabindex="-1" role="dialog" aria-labelledby="activateModalConfirmationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                <lord-icon
+                    src="https://cdn.lordicon.com/oqdmuxru.json"
+                    trigger="loop"
+                    delay="2000"
+                    colors="primary:#66ee78"
+                    style="width:120px;height:120px">
+                </lord-icon>
+               
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point d'activer le compte utilisateur !</h4>
+                    <p class="text-muted mb-4">Voulez vous effectuer cette action maintenant ?</p>
+                    <div class="hstack activateModalButtons gap-2 justify-content-center">
+                       
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
 
 <script>
     $(document).ready(function(){
+
         function loadItems(){
             $.ajax({
                 url : "{% url 'institut_app:ApiListeUsers' %}",
@@ -225,7 +307,7 @@
                                 html += '<td><strong>'+p.username+'</strong></td>';
                                 html += '<td><strong>'+p.email+'</strong></td>';
                                 html += '<td><strong>'+(p.is_staff ? 'Administrateur' : '-' )+'</strong></td>';
-                                html += '<td><strong>'+p.is_active+'</strong></td>';
+                                html += '<td><strong>'+(p.is_active  ? '<span class="badge bg-success"> Compte active </span>' : '<span class="badge bg-danger"> Compte active </span>') +'</strong></td>';
                               
                                 html += '<td>'+ p.date_joined.split('T')[0]+'</td>';
                                
@@ -236,7 +318,9 @@
                                 html += '</button>';
                                 html += '<ul class="dropdown-menu dropdown-menu-end">';
                                 html += '<li><button data-id='+p.id+' id="detailsBtn" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
-                                html += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                html += '<li><button '+(p.is_active ? 'hidden' : '')+' data-id='+p.id+' id="activateBtn" class="dropdown-item"><i class="ri-check-line align-bottom me-2 text-muted"></i> Activer</button></li>';
+                                html += '<li><button '+(p.is_active ? '' : 'hidden')+' data-id="'+p.id+'" id="deactivateBtn" class="dropdown-item"><i class="ri-shut-down-line  align-bottom me-2 text-muted"></i> Déscativer</button></li>';
+                                html += '<li><button  id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
                                 html += '<li>';
                                 html += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
                                 html += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -326,6 +410,78 @@
                 }
 
             });
+        });
+ 
+        $(document).on('click', '#deactivateBtn', function(){
+            var id_user = $(this).data('id');
+            console.log(id_user);
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeactivateBTN" data-id="'+id_user+'" class="btn btn-warning">Confirmer</a>';
+
+            $('.deactivateModalButtons').html(row);
+
+            $('.deactiveModalConfirmation').modal('show');
+            
+        });
+
+        $(document).on('click','#confirmDeactivateBTN', function(){
+            var id_ = $(this).data('id');
+            
+            $.ajax({
+                url : "{% url 'institut_app:ApiDeactivateUser' %}",
+                dataType: 'JSON',
+                type : "GET",
+                data : {
+                    'id' : id_,
+                },
+                success: function(response){
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('.deactiveModalConfirmation').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors de l'execution de l'opération !");
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', "#activateBtn", function(){
+            var id_user = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmActivateBTN" data-id="'+id_user+'" class="btn btn-success">Confirmer</a>';
+
+            $('.activateModalButtons').html(row);
+
+            $('.activateModalConfirmation').modal('show');
+        });
+
+        $(document).on('click', '#confirmActivateBTN', function(){
+            var id = $(this).data('id');
+
+            $.ajax({
+                url : "{% url 'institut_app:ApiActivateUser' %}",
+                dataType: 'JSON',
+                type : "GET",
+                data : {
+                    'id' : id,
+                },
+                success: function(response){
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('.activateModalConfirmation').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors de l'execution de l'opération !");
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', "#updateBtn", function(){
+
+
+            $('#UpdateUserModal').modal('show');
         });
 
 
