@@ -199,7 +199,7 @@ def ApiActivateUser(request):
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Le compte utilisateur a été desactiver avec succès"})
     
 def ListGroupePage(request):
-    return render(request, "tenant_folder/users/groupe_list.hmtl", {'tenant' : request.tenant})
+    return render(request, "tenant_folder/users/groupe_list.html", {'tenant' : request.tenant})
 
 def ApilistGroupe(request):
     liste = CustomGroupe.objects.all().values('id', 'name', 'description', 'created_at')
