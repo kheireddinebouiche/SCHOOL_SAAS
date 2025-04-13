@@ -28,6 +28,9 @@ urlpatterns = [
     path('ApiDeactivateUser', ApiDeactivateUser, name="ApiDeactivateUser"),
     path('ApiActivateUser', ApiActivateUser, name="ApiActivateUser"),
 
+    path('group-list/', ListGroupePage, name="ListGroupePage"),
+    path('ApilistGroupe', ApilistGroupe, name="ApilistGroupe"),
+
     path('NewCustomGroupe', NewCustomGroupe, name="NewCustomGroupe"),
 
     
