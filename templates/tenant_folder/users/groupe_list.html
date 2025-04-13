@@ -1,0 +1,495 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Utilisateurs - Liste des utilisateurs{% endblock title %}
+
+{% block content %}
+<style>
+    <style>
+        .profile-img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+        }
+        .modal-content {
+            border-radius: 15px;
+        }
+        .profile-header {
+            background: linear-gradient(45deg, #2193b0, #6dd5ed);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+        }
+    </style>
+</style>
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0">Liste des utilisateurs</h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Utilisateurs</a></li>
+                                        <li class="breadcrumb-item active">Liste des utilisateurs</li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Liste des utilisateurs</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                
+                                                <th>Nom d'utilisateurs</th>
+                                                <th>Email</th>
+                                                <th>Membre du staff</th>
+                                                <th>Etat</th>
+                                                <td>Crée le </th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listItem">
+
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+<div class="modal fade demandeCreateProfile" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                </lord-icon>
+                <div class="mt-4">
+                    <h4 class="mb-3">Aucun profile trouvé pour l'utilisateur !</h4>
+                    <p class="text-muted mb-4">Voulez vous en créer un maintenant ?</p>
+                    <div class="hstack gap-2 justify-content-center">
+                        
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="createProfileModal" class="modal fade" tabindex="-1" aria-labelledby="createProfileModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createProfileModalLabel">Création d'un profile utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <label for="nom" class="form-modal">Nom</label>
+                        <input type="text" id="_nom" name="nom" class="form-control" />
+                        <input disabled type="hidden" id="_id" name="nom" class="form-control" />
+                    </div>
+                    <div class="col-lg-6">
+                        <label for="prenom" class="form-modal">Prénom</label>
+                        <input type="text" id="_prenom" name="prenom" class="form-control" />
+                    </div>
+                    <div class="col-lg-12">
+                        <label for="" class="form-modal">Adresse</label>
+                        <input type="text" id="_adresse" name="adresse" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button id="confirmProfileCreation" class="btn btn-success">Confirmer la création du profile</a>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="ProfileDetailsModal" class="modal fade" tabindex="-1" aria-labelledby="ProfileDetailsModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ProfileDetailsModalLabel">Détails du profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <label for="nom" class="form-modal">Nom</label>
+                        <input type="text" id="_nom" name="nom" class="form-control" />
+                        <input type="text" id="_id" name="nom" class="form-control" />
+                    </div>
+                    <div class="col-lg-6">
+                        <label for="prenom" class="form-modal">Prénom</label>
+                        <input type="text" id="_prenom" name="prenom" class="form-control" />
+                    </div>
+                    <div class="col-lg-12">
+                        <label for="" class="form-modal">Adresse</label>
+                        <input type="text" id="_adresse" name="adresse" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button id="confirmProfileCreation" class="btn btn-success">Confirmer la création du profile</a>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="UpdateUserModal" class="modal fade" tabindex="-1" aria-labelledby="UpdateUserModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="UpdateUserModalLabel">Mise à jour du profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <label for="nom" class="form-modal">Nom</label>
+                        <input type="text" id="_nom" name="nom" class="form-control" />
+                        <input type="hidden" id="_id" name="nom" class="form-control" />
+                    </div>
+                    <div class="col-lg-6">
+                        <label for="prenom" class="form-modal">Prénom</label>
+                        <input type="text" id="_prenom" name="prenom" class="form-control" />
+                    </div>
+                    <div class="col-lg-12">
+                        <label for="" class="form-modal">Adresse</label>
+                        <input type="text" id="_adresse" name="adresse" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button id="confirmProfileCreation" class="btn btn-success">Confirmer la création du profile</a>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Modale du profil -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="profile-header">
+                <div class="text-center">
+                    <img src="https://via.placeholder.com/150" alt="Photo de profil" class="profile-img rounded-circle mb-3">
+                    <h3 class="mb-0">Jean Dupont</h3>
+                    <p class="mb-0">Développeur Full Stack</p>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Informations personnelles</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><i class="fas fa-envelope me-2"></i> jean.dupont@example.com</li>
+                            <li class="mb-2"><i class="fas fa-phone me-2"></i> +33 6 12 34 56 78</li>
+                            <li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> Paris, France</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Compétences</h5>
+                        <div class="mb-2">
+                            <span class="badge bg-primary me-1">JavaScript</span>
+                            <span class="badge bg-primary me-1">React</span>
+                            <span class="badge bg-primary me-1">Node.js</span>
+                            <span class="badge bg-primary me-1">Python</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h5 class="mb-3">À propos</h5>
+                    <p>Développeur passionné avec plus de 5 ans d'expérience dans le développement web. Spécialisé dans la création d'applications modernes et performantes.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary">Modifier le profil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade deactiveModalConfirmation" tabindex="-1" role="dialog" aria-labelledby="deactiveModalConfirmationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                <lord-icon
+                    src="https://cdn.lordicon.com/vihyezfv.json"
+                    trigger="loop"
+                    colors="primary:orange"
+                    style="width:120px;height:120px">
+                </lord-icon>
+               
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point de desactiver le compte utilisateur !</h4>
+                    <p class="text-muted mb-4">Voulez vous effectuer cette action maintenant ?</p>
+                    <div class="hstack deactivateModalButtons gap-2 justify-content-center">
+                       
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade activateModalConfirmation" tabindex="-1" role="dialog" aria-labelledby="activateModalConfirmationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                <lord-icon
+                    src="https://cdn.lordicon.com/oqdmuxru.json"
+                    trigger="loop"
+                    delay="2000"
+                    colors="primary:#66ee78"
+                    style="width:120px;height:120px">
+                </lord-icon>
+               
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point d'activer le compte utilisateur !</h4>
+                    <p class="text-muted mb-4">Voulez vous effectuer cette action maintenant ?</p>
+                    <div class="hstack activateModalButtons gap-2 justify-content-center">
+                       
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script>
+    $(document).ready(function(){
+
+        function loadItems(){
+            $.ajax({
+                url : "{% url 'institut_app:ApiListeUsers' %}",
+                type: 'GET',
+                dataType: 'JSON',
+                success : function(data){
+                    var html ="";
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            html += '<tr>';
+                                html += '<td><strong>'+p.username+'</strong></td>';
+                                html += '<td><strong>'+p.email+'</strong></td>';
+                                html += '<td><strong>'+(p.is_staff ? 'Administrateur' : '-' )+'</strong></td>';
+                                html += '<td><strong>'+(p.is_active  ? '<span class="badge bg-success"> Compte active </span>' : '<span class="badge bg-danger"> Compte active </span>') +'</strong></td>';
+                              
+                                html += '<td>'+ p.date_joined.split('T')[0]+'</td>';
+                               
+                                html += '<td>';
+                                html += '<div class="dropdown d-inline-block">';
+                                html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                html += '<i class="ri-more-fill align-middle"></i>';
+                                html += '</button>';
+                                html += '<ul class="dropdown-menu dropdown-menu-end">';
+                                html += '<li><button data-id='+p.id+' id="detailsBtn" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
+                                html += '<li><button '+(p.is_active ? 'hidden' : '')+' data-id='+p.id+' id="activateBtn" class="dropdown-item"><i class="ri-check-line align-bottom me-2 text-muted"></i> Activer</button></li>';
+                                html += '<li><button '+(p.is_active ? '' : 'hidden')+' data-id="'+p.id+'" id="deactivateBtn" class="dropdown-item"><i class="ri-shut-down-line  align-bottom me-2 text-muted"></i> Déscativer</button></li>';
+                                html += '<li><button  id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                html += '<li>';
+                                html += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
+                                html += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
+                                html += '</button>';
+                                html += '</li>';
+                                html += '</ul>';
+                                html += '</div>';
+                                html += '</td>';
+                                html += '</tr>';
+                        });
+                    }else{
+                                html = "<tr><td colspan=6 class='text-muted text-center'>Aucune données disponible</td><tr>";
+                    }
+
+                    $('#listItem').html(html);
+                }
+            });
+        }
+
+        loadItems();
+
+        $(document).on('click','#detailsBtn', function(){
+            var id = $(this).data('id');
+            $.ajax({
+                url : "{% url 'institut_app:ApiGetDetailsProfile' %}",
+                dataType: "JSON",
+                type : "GET",
+                data : {
+                    'id' : id,
+                },
+                success : function(data){
+                    if (Array.isArray(data)) {
+
+                        // On suppose que le profil est toujours en première position
+                        var profil = data[0];
+                        
+                        $('#profileModal').modal('show');
+                       
+
+                    } else if (data.status === 'error') {
+                       alertify.error(data.message)
+                       var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                                 '<button id="confirmeCreateProfile" data-id='+id+' class="btn btn-warning">Créer le profile maintenant</a>';
+    
+                        $('.hstack').html(row);
+                       $('.demandeCreateProfile').modal('show');
+                    }
+                }
+            });
+
+            $(document).on('click','#confirmeCreateProfile', function(){
+                var id_user = $(this).data('id');
+                $('.demandeCreateProfile').modal('hide');
+
+                $('#createProfileModal #_id').val(id_user);
+
+                $('#createProfileModal').modal('show');
+            });
+        });
+
+        $(document).on('click', '#confirmProfileCreation', function(){
+
+            var nom = document.getElementById('_nom').value;
+            var prenom = document.getElementById('_prenom').value;
+            var adresse = document.getElementById('_adresse').value;
+            var id_user = document.getElementById('_id').value;
+
+            $.ajax({
+                url : "{% url 'institut_app:ApiCreateProfile' %}",
+                type : "POST",
+                dataType: 'JSON',
+                data : {
+                    'id_user' : id_user,
+                    'nom' : nom,
+                    'prenom' : prenom,
+                    'adresse' : adresse,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('#createProfileModal').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors de la création du profile");
+                    }
+                }
+
+            });
+        });
+ 
+        $(document).on('click', '#deactivateBtn', function(){
+            var id_user = $(this).data('id');
+            console.log(id_user);
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeactivateBTN" data-id="'+id_user+'" class="btn btn-warning">Confirmer</a>';
+
+            $('.deactivateModalButtons').html(row);
+
+            $('.deactiveModalConfirmation').modal('show');
+            
+        });
+
+        $(document).on('click','#confirmDeactivateBTN', function(){
+            var id_ = $(this).data('id');
+            
+            $.ajax({
+                url : "{% url 'institut_app:ApiDeactivateUser' %}",
+                dataType: 'JSON',
+                type : "GET",
+                data : {
+                    'id' : id_,
+                },
+                success: function(response){
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('.deactiveModalConfirmation').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors de l'execution de l'opération !");
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', "#activateBtn", function(){
+            var id_user = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmActivateBTN" data-id="'+id_user+'" class="btn btn-success">Confirmer</a>';
+
+            $('.activateModalButtons').html(row);
+
+            $('.activateModalConfirmation').modal('show');
+        });
+
+        $(document).on('click', '#confirmActivateBTN', function(){
+            var id = $(this).data('id');
+
+            $.ajax({
+                url : "{% url 'institut_app:ApiActivateUser' %}",
+                dataType: 'JSON',
+                type : "GET",
+                data : {
+                    'id' : id,
+                },
+                success: function(response){
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadItems();
+                        $('.activateModalConfirmation').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors de l'execution de l'opération !");
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', "#updateBtn", function(){
+
+
+            $('#UpdateUserModal').modal('show');
+        });
+
+
+    });
+</script>
+{% endblock content %}
+           
+
+
+
+    

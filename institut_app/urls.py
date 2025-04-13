@@ -28,5 +28,7 @@ urlpatterns = [
     path('ApiDeactivateUser', ApiDeactivateUser, name="ApiDeactivateUser"),
     path('ApiActivateUser', ApiActivateUser, name="ApiActivateUser"),
 
+    path('NewCustomGroupe', NewCustomGroupe, name="NewCustomGroupe"),
+
     
 ]

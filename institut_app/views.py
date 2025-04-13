@@ -197,3 +197,22 @@ def ApiActivateUser(request):
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-information-line me-2'></i>Désactiver avec succès"})
     else:
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Le compte utilisateur a été desactiver avec succès"})
+    
+def NewCustomGroupe(request):
+    form = CustomGroupForm()
+
+    if request.method == "POST":
+        form = CustomGroupForm(request.POST)
+        if form.is_valid():
+            form.save()
+
+            messages.success(request,"Le groupe a été crée avec succès")
+            return redirect('institut_app:listGroupe')
+        else:
+            messages.success(request,"Le groupe a été crée avec succès")
+            return redirect('institut_app:listGroupe')
+            
+    context = {
+        'form' : form,
+    }
+    return render(request,'tenant_folder/users/nouveau_groupe.html', context)

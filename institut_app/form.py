@@ -49,3 +49,14 @@ class EntrepriseForm(forms.ModelForm):
             'email' : forms.EmailInput(attrs={'class':'form-control'}),
             'site_web' : forms.URLInput(attrs={'class':'form-control'}),
         }
+
+class CustomGroupForm(forms.ModelForm):
+    class Meta:
+        model = CustomGroupe
+        fields = "__all__"
+
+        widgets = {
+            'permissions' : forms.SelectMultiple(attrs={'class' : 'form-control'}),
+            'name' : forms.TextInput(attrs={"class" : "form-control"}),
+            'description' : forms.TextInput(attrs={"class" : 'form-control'})
+        }
