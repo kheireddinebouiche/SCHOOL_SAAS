@@ -223,3 +223,49 @@ def NewCustomGroupe(request):
         'form' : form,
     }
     return render(request,'tenant_folder/users/nouveau_groupe.html', context)
+
+def ApiGetGroupFrom(request):
+    form = CustomGroupForm()
+    form_html = form.as_p()
+    return JsonResponse({'form' : form_html})
+
+def ApiGetUpdateGroupForm(request):
+    id = request.GET.get('id')
+    obj = CustomGroupe.objects.get(id = id)
+    form = CustomUpdateGroupForm(instance=obj)
+    form_html = form.as_p()
+    return JsonResponse({'form' : form_html})
+
+def ApiSaveGroup(request):
+    if request.method == 'POST':
+        form = CustomGroupForm(request.POST)
+        if form.is_valid():
+            obj = form.save()
+            if obj:
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success' : False, "message": "Le rôle  existe déja ! <br>Veuillez attribuer un nom diffents"})
+        else:
+            return JsonResponse({'success': False,"message": "Le rôle existe déja ! <br>Veuillez attribuer un nom diffents"})
+        
+def ApiGetGroupeDetails(request):
+    id = request.GET.get('id')
+    try:
+        groupe = CustomGroupe.objects.get(id=id)
+        data = {
+            'id': groupe.id,
+            'name': groupe.name,
+            'description': groupe.description,
+            'created_at': groupe.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'permissions': list(groupe.permissions.values('id', 'name', 'codename')),
+        }
+        return JsonResponse(data, safe=False)
+
+    except CustomGroupe.DoesNotExist:
+        return JsonResponse({'error': 'Groupe non trouvé'}, status=404)
+    
+def ApiDeleteGroup(request):
+    id = request.GET.get('id')
+    obj = CustomGroupe.objects.get(id = id)
+    obj.delete()
+    return JsonResponse({'status' : 'success' , 'message' : "Le groupe à été supprimé avec succès" })

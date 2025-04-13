@@ -32,6 +32,11 @@ urlpatterns = [
     path('ApilistGroupe', ApilistGroupe, name="ApilistGroupe"),
 
     path('NewCustomGroupe', NewCustomGroupe, name="NewCustomGroupe"),
+    path('ApiGetGroupFrom', ApiGetGroupFrom, name="ApiGetGroupFrom"),
+    path('ApiSaveGroup', ApiSaveGroup, name="ApiSaveGroup"),
+    path('ApiGetGroupeDetails', ApiGetGroupeDetails, name="ApiGetGroupeDetails"),
+    path('ApiGetUpdateGroupForm', ApiGetUpdateGroupForm, name="ApiGetUpdateGroupForm"),
+    path('ApiDeleteGroup', ApiDeleteGroup, name="ApiDeleteGroup"),
 
     
 ]

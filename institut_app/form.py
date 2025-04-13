@@ -56,7 +56,18 @@ class CustomGroupForm(forms.ModelForm):
         fields = "__all__"
 
         widgets = {
-            'permissions' : forms.SelectMultiple(attrs={'class' : 'form-control'}),
+            'permissions' : forms.SelectMultiple(attrs={'class' : 'form-control', 'id':'id_permissions' }),
+            'name' : forms.TextInput(attrs={"class" : "form-control"}),
+            'description' : forms.TextInput(attrs={"class" : 'form-control'})
+        }
+
+class CustomUpdateGroupForm(forms.ModelForm):
+    class Meta:
+        model = CustomGroupe
+        fields = "__all__"
+
+        widgets = {
+            'permissions' : forms.SelectMultiple(attrs={'class' : 'form-control', 'id':'id_permission' }),
             'name' : forms.TextInput(attrs={"class" : "form-control"}),
             'description' : forms.TextInput(attrs={"class" : 'form-control'})
         }
