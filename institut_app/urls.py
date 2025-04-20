@@ -41,6 +41,8 @@ urlpatterns = [
     path('ApiGetNewUserForm', ApiGetNewUserForm, name="ApiGetNewUserForm"),
     path('ApiSaveUser', ApiSaveUser, name="ApiSaveUser"),
     path('ApiGetUserDetails', ApiGetUserDetails, name="ApiGetUserDetails"),
+    path('modification-details-utilisateur/<int:pk>/', PageUpdateUserDetails, name="PageUpdateUserDetails"),
+    path('ApiCheckUsernameDisponibility',ApiCheckUsernameDisponibility, name="ApiCheckUsernameDisponibility"),
 
     
 ]

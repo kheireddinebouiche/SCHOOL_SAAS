@@ -28,6 +28,22 @@ class CreateNewUserForm(UserCreationForm):
 
         }
 
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username','first_name','last_name','groups','user_permissions','email']
+
+        widgets = {
+            'first_name' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'last_name' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'username' : forms.TextInput(attrs={'class' : 'form-control','id' : '_username'}),
+            'groups' : forms.SelectMultiple(attrs={'class' : 'form-control', 'id' : 'id_groupes'}),
+            'user_permissions' : forms.SelectMultiple(attrs={'class' : 'form-control', 'id' : 'id_permissions'}),
+            'email' : forms.EmailInput(attrs={"class" : "form-control"}),
+           
+        }
+
+
 class ProfilForm(forms.Form):
     adresse = forms.CharField(widget=forms.TextInput(attrs={'placeholder':'Veuillez saisir l\'adresse.'}))
 

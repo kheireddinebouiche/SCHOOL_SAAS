@@ -41,8 +41,92 @@
             text-align : center;
         }
 </style>
-   
+<style>
+    /* The switch - the box around the slider */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 26px;
+    }
     
+    /* Hide default HTML checkbox */
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    /* The slider */
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: red;
+      -webkit-transition: .4s;
+      transition: .4s;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 23px;
+      width: 23px;
+      left: 4px;
+      bottom: 2px;
+      background-color: white;
+      -webkit-transition: .4s;
+      transition: .4s;
+    }
+    
+    input:checked + .slider {
+      background-color:rgb(75, 243, 33);
+    }
+    
+    input:focus + .slider {
+      box-shadow: 0 0 1px rgb(75, 243, 33);
+    }
+    
+    input:checked + .slider:before {
+      -webkit-transform: translateX(26px);
+      -ms-transform: translateX(26px);
+      transform: translateX(26px);
+    }
+    
+    /* Rounded sliders */
+    .slider.round {
+      border-radius: 25px;
+    }
+    
+    .slider.round:before {
+      border-radius: 50%;
+    }
+</style>
+<style>
+    #ProfileDetailsModal input {
+        border : 0px;
+        font-weight : 600;
+        
+    }
+</style>
+<style>
+   
+    .select2-container {
+        z-index: 9999 !important;  /* Très haut pour passer devant les modals */
+    }
+    .select2-container--open {
+        z-index: 9999 !important;
+    }
+    .select2-selection__choice {
+        background-color: black !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    </style>
 
         <!-- ============================================================== -->
         <!-- Start right Content here -->
@@ -180,9 +264,13 @@
 <div id="ProfileDetailsModal" class="modal fade" tabindex="-1" aria-labelledby="ProfileDetailsModalLabel" aria-hidden="true" style="display: none;">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-between align-items-center">
                 <h5 class="modal-title" id="ProfileDetailsModalLabel">Détails du profile</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="profileState"></span>
+                    <div class="toogle-switch"></div>
+                    <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="row">
@@ -194,20 +282,27 @@
                         <label for="detailsEmail" class="form-modal">Email</label>
                         <input type="text" id="detailsEmail" name="detailsEmail" class="form-control" />
                     </div>
-                    <div class="col-lg-6">
+                  
+                    <div class="col-lg-6  mt-3">
                         <label for="detailsPrenom" class="form-modal">Prénom</label>
                         <input type="text" id="detailsPrenom" name="detailsPrenom" class="form-control" />
                     </div>
-                    <div class="col-lg-6">
+                    <div class="col-lg-6 mt-3">
                         <label for="detailsNom" class="form-modal">Nom</label>
                         <input type="text" id="detailsNom" name="detailsNom" class="form-control" />
                     </div>
-                    <div class="col-lg-12">
-                        <label for="detailsIsActive" class="form-modal">Compte activé ?</label>
-                        <input type="text" id="detailsIsActive" name="detailsIsActive" class="form-control" />
+                    <div class="col-lg-6 mt-3">
+                        <label for="lastLogin" class="form-modal">Derniere connexion</label>
+                        <input type="text" id="lastLogin" name="lastLogin" class="form-control" />
                     </div>
+                    <div class="col-lg-6 mt-3">
+                        <label for="joinedDate" class="form-modal">Compte crée le</label>
+                        <input type="text" id="joinedDate" name="joinedDate" class="form-control" />
+                    </div>
+                  
+                    
                 </div>
-                <div class="row  mt-3">
+                <div class="row mt-3">
                     <h5>Liste des groupes</h5>
                     <div class="col-lg-12">
                         <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
@@ -219,8 +314,13 @@
                 </div> 
                 <div class="row mt-3">
                     <h5>Pérmissions liées à l'utilisateur </h5>
-                    <ol id="listGroupe" style="list-style: none;">
-                    </ol>
+                    <div class="col-lg-12">
+                        <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                            <tbody id="listPermissions" >
+
+                            </tbody>
+                        </table>
+                    </div>
                 </div>  
             </div>
             <div class="modal-footer">
@@ -236,78 +336,27 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="UpdateUserModalLabel">Mise à jour du profile</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="ProfileDetailsModalLabel">Modification du profile utilisateur</h5>             
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <label for="nom" class="form-modal">Nom</label>
-                        <input type="text" id="_nom" name="nom" class="form-control" />
-                        <input type="hidden" id="_id" name="nom" class="form-control" />
-                    </div>
-                    <div class="col-lg-6">
-                        <label for="prenom" class="form-modal">Prénom</label>
-                        <input type="text" id="_prenom" name="prenom" class="form-control" />
-                    </div>
+            <form id="UserFormUpdate" method="POST">
+                <div class="modal-body">
                     <div class="col-lg-12">
-                        <label for="" class="form-modal">Adresse</label>
-                        <input type="text" id="_adresse" name="adresse" class="form-control" />
+                        {% csrf_token %}
+                        <div id="formUpdateUser">
+                            <!--Formulaire de création du nouveau groupe-->
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button id="confirmProfileCreation" class="btn btn-success">Confirmer la création du profile</a>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit"  class="btn btn-warning">Confirmer la modification du groupe</a>
+                </div>
+            </form> 
 
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<!-- Modale du profil -->
-<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="profile-header">
-                <div class="text-center">
-                    <img src="https://via.placeholder.com/150" alt="Photo de profil" class="profile-img rounded-circle mb-3">
-                    <h3 class="mb-0">Jean Dupont</h3>
-                    <p class="mb-0">Développeur Full Stack</p>
-                </div>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5 class="mb-3">Informations personnelles</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><i class="fas fa-envelope me-2"></i> jean.dupont@example.com</li>
-                            <li class="mb-2"><i class="fas fa-phone me-2"></i> +33 6 12 34 56 78</li>
-                            <li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> Paris, France</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h5 class="mb-3">Compétences</h5>
-                        <div class="mb-2">
-                            <span class="badge bg-primary me-1">JavaScript</span>
-                            <span class="badge bg-primary me-1">React</span>
-                            <span class="badge bg-primary me-1">Node.js</span>
-                            <span class="badge bg-primary me-1">Python</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <h5 class="mb-3">À propos</h5>
-                    <p>Développeur passionné avec plus de 5 ans d'expérience dans le développement web. Spécialisé dans la création d'applications modernes et performantes.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary">Modifier le profil</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <div class="modal fade deactiveModalConfirmation" tabindex="-1" role="dialog" aria-labelledby="deactiveModalConfirmationLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -361,6 +410,7 @@
 <script>
     $(document).ready(function(){
 
+       
         function loadItems(){
             $.ajax({
                 url : "{% url 'institut_app:ApiListeUsers' %}",
@@ -374,7 +424,7 @@
                                 html += '<td><strong>'+p.username+'</strong></td>';
                                 html += '<td><strong>'+p.email+'</strong></td>';
                                 html += '<td><strong>'+(p.is_staff ? 'Administrateur' : '-' )+'</strong></td>';
-                                html += '<td><strong>'+(p.is_active  ? '<span class="badge bg-success"> Compte active </span>' : '<span class="badge bg-danger"> Compte active </span>') +'</strong></td>';
+                                html += '<td><strong>'+(p.is_active  ? '<span class="badge bg-success"> Compte active </span>' : '<span class="badge bg-danger"> Compte désactivé </span>') +'</strong></td>';
                               
                                 html += '<td>'+ p.date_joined.split('T')[0]+'</td>';
                                
@@ -384,10 +434,10 @@
                                 html += '<i class="ri-more-fill align-middle"></i>';
                                 html += '</button>';
                                 html += '<ul class="dropdown-menu dropdown-menu-end">';
-                                html += '<li><button data-id='+p.id+' id="groupBtn" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
+                                html += '<li><button data-id='+p.id+' id="detailsBtn" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
                                 html += '<li><button '+(p.is_active ? 'hidden' : '')+' data-id='+p.id+' id="activateBtn" class="dropdown-item"><i class="ri-check-line align-bottom me-2 text-muted"></i> Activer</button></li>';
                                 html += '<li><button '+(p.is_active ? '' : 'hidden')+' data-id="'+p.id+'" id="deactivateBtn" class="dropdown-item"><i class="ri-shut-down-line  align-bottom me-2 text-muted"></i> Déscativer</button></li>';
-                                html += '<li><button  id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                html += '<li><a href="/modification-details-utilisateur/'+p.id+'" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
                                 html += '<li>';
                                 html += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
                                 html += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -409,7 +459,7 @@
 
         loadItems();
 
-        $(document).on('click','#detailsBtn', function(){
+        $(document).on('click','#groupBtn', function(){
             var id = $(this).data('id');
             $.ajax({
                 url : "{% url 'institut_app:ApiGetDetailsProfile' %}",
@@ -430,7 +480,7 @@
                     } else if (data.status === 'error') {
                        alertify.error(data.message)
                        var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                                 '<button id="confirmeCreateProfile" data-id='+id+' class="btn btn-warning">Créer le profile maintenant</a>';
+                                 '<button id="confirmeCreateProfile" data-id='+id+' class="btn btn-warning">Confirmer</a>';
     
                         $('.hstack').html(row);
                        $('.demandeCreateProfile').modal('show');
@@ -545,12 +595,7 @@
             });
         });
 
-        $(document).on('click', "#updateBtn", function(){
-
-
-            $('#UpdateUserModal').modal('show');
-        });
-
+     
         $(document).on('click', "#btnAdd", function(){
             $.ajax({
                 url : "{% url 'institut_app:ApiGetNewUserForm' %}",
@@ -575,6 +620,7 @@
             $('#createUserModal').modal('show');
         });
 
+      
         $(document).on('submit', '#userCreationFormID', function(e){
             e.preventDefault();
             const formData = $(this).serialize();
@@ -599,8 +645,9 @@
             });
         });
 
-        $(document).on('click', '#groupBtn', function(){
-            var id = $(this).data('id')
+        $(document).on('click', '#detailsBtn', function(){
+            var id = $(this).data('id');
+            $("#ProfileDetailsModal input").prop('disabled', true);
             $.ajax({
                 url : "{% url 'institut_app:ApiGetUserDetails' %}",
                 dataType: "JSON",
@@ -613,17 +660,39 @@
                     $('#detailsEmail').val(data.email);
                     $('#detailsNom').val(data.last_name);
                     $('#detailsPrenom').val(data.first_name);
-                    $('#detailsIsActive').val(data.is_active);
+                    $('#lastLogin').val(data.last_login.split('T')[0]);
+                    $('#joinedDate').val(data.joined_date.split('T')[0]);
+
+                    var checked = data.is_active ? 'checked' : '';
+                    var profileState = data.is_active ? 'Compte activé' : 'Compte désactivé';
+                    
+                    var stateSwitch = "<label class='switch'>"+
+                                      "<input type='checkbox' id='toggleUserStatus' disabled "+checked+">"+
+                                      "<span class='slider round'></span>"+
+                                      "</label>";
+                    $('.profileState').html(profileState);
+                    $('.toogle-switch').html(stateSwitch);
+
+
                     var row = "";
                     if(data.groups.length>0){
                         $.each(data.groups, function(index, p){
                             row += "<td>"+p.name+"</td>";
                         });
                     }else{
-                         row = "<tr><td>Aucun groupe</td>";
+                         row = "<tr><td>Aucun groupe</td></tr>";
                     }
                     $('#listGroupe').html(row);
 
+                    var row2="";
+                    if(data.permissions.length>0){
+                        $.each(data.permissions, function(index, p){
+                            row2 += "<td>"+p.name+"</td>";
+                        });
+                    }else{
+                        row2 = "<tr><td>Aucune permission </td></tr>";
+                    }
+                    $('#listPermissions').html(row2);
                     $('#ProfileDetailsModal').modal('show');
                 },
             });

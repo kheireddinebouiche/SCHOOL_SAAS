@@ -235,6 +235,27 @@ def ApiGetNewUserForm(request):
     html = render_to_string('tenant_folder/users/html/form_create_user.html', {'form': form}, request=request)
     return JsonResponse({'form' : html})
 
+@transaction.atomic
+def PageUpdateUserDetails(request, pk):
+    obj = User.objects.get(id = pk)
+    form = UserUpdateForm(instance=obj)
+    if request.method == "POST":
+        form = UserUpdateForm(request.POST, instance = obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Les information de l'utilisateur ont été enregistrer avec succès")
+            return redirect('institut_app:PageUpdateUserDetails', pk)
+        else:
+            messages.error(request, "Une erreur est survenue lors du traitement de la requete")
+            return redirect('institut_app:PageUpdateUserDetails', pk)
+    else:
+        context = {
+            'obj' : obj,
+            'form' : form,
+            'tenant' : request.tenant
+        }
+        return render(request, 'tenant_folder/users/update_user.html', context)
+
 def ApiSaveUser(request):
     if request.method == "POST":
         form = CreateNewUserForm(request.POST)
@@ -243,6 +264,16 @@ def ApiSaveUser(request):
             return JsonResponse({'success' : True, 'message' : "L'utilisateur à été ajouter avec succès"})
         else:
             return JsonResponse({'success' : False, 'message' : "Erreur de traitement du formulaire"})
+
+def ApiCheckUsernameDisponibility(request):
+    username = request.GET.get('username')
+    try:
+        obj = User.objects.get(username = username)
+        if obj:
+            return JsonResponse({'status' : 'success'})
+        
+    except:
+         return JsonResponse({'status' : 'error'})
 
 
 def ApiGetUpdateGroupForm(request):
@@ -275,9 +306,10 @@ def ApiGetUserDetails(request):
             'last_name' : user.last_name,
             'email' : user.email,
             'is_active' : user.is_active,
+            'last_login' : user.last_login,
+            'joined_date' : user.date_joined,
             'groups' : list(user.groups.values('id','name')),
             'permissions' : list(user.user_permissions.values('id','name'))
-
         }
         return JsonResponse(data, safe=False)
     
