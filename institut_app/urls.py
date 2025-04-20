@@ -38,5 +38,9 @@ urlpatterns = [
     path('ApiGetUpdateGroupForm', ApiGetUpdateGroupForm, name="ApiGetUpdateGroupForm"),
     path('ApiDeleteGroup', ApiDeleteGroup, name="ApiDeleteGroup"),
 
+    path('ApiGetNewUserForm', ApiGetNewUserForm, name="ApiGetNewUserForm"),
+    path('ApiSaveUser', ApiSaveUser, name="ApiSaveUser"),
+    path('ApiGetUserDetails', ApiGetUserDetails, name="ApiGetUserDetails"),
+
     
 ]

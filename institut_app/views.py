@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
 from django.db import transaction
+from django.template.loader import render_to_string
 
 
 @login_required(login_url='institut_app:login')
@@ -229,6 +230,21 @@ def ApiGetGroupFrom(request):
     form_html = form.as_p()
     return JsonResponse({'form' : form_html})
 
+def ApiGetNewUserForm(request):
+    form = CreateNewUserForm()
+    html = render_to_string('tenant_folder/users/html/form_create_user.html', {'form': form}, request=request)
+    return JsonResponse({'form' : html})
+
+def ApiSaveUser(request):
+    if request.method == "POST":
+        form = CreateNewUserForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'success' : True, 'message' : "L'utilisateur à été ajouter avec succès"})
+        else:
+            return JsonResponse({'success' : False, 'message' : "Erreur de traitement du formulaire"})
+
+
 def ApiGetUpdateGroupForm(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -247,7 +263,28 @@ def ApiSaveGroup(request):
                 return JsonResponse({'success' : False, "message": "Le rôle  existe déja ! <br>Veuillez attribuer un nom diffents"})
         else:
             return JsonResponse({'success': False,"message": "Le rôle existe déja ! <br>Veuillez attribuer un nom diffents"})
-        
+
+def ApiGetUserDetails(request):
+    id = request.GET.get('id')
+    try:
+        user = User.objects.get(id = id)
+        data = {
+            'id':user.id,
+            'username' : user.username,
+            'first_name' : user.first_name,
+            'last_name' : user.last_name,
+            'email' : user.email,
+            'is_active' : user.is_active,
+            'groups' : list(user.groups.values('id','name')),
+            'permissions' : list(user.user_permissions.values('id','name'))
+
+        }
+        return JsonResponse(data, safe=False)
+    
+    except user.DoesNotExist:
+
+        return JsonResponse({'error' : 'Utilisateur non trouvé'})
+
 def ApiGetGroupeDetails(request):
     id = request.GET.get('id')
     try:

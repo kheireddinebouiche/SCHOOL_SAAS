@@ -7,6 +7,8 @@ from t_tresorerie.models import *
 from t_formations.models import *
 from django.db import transaction
 from django.db.models import Count, Q
+from django.core.exceptions import PermissionDenied
+from functools import wraps
 
 
 def listeVisiteurs(request):
@@ -78,24 +80,33 @@ def modifierVisiteur(request, id):
     pass
 
 def supprimerVisiteur(request):
-    pk = request.POST.get('id')
-    
-    visiteur = Visiteurs.objects.get(id = pk)
-    demande_inscription = DemandeInscription.objects.filter(visiteur = visiteur).count()
-    if demande_inscription > 0:
-        return JsonResponse({'success': False, 'message': 'Impossible de supprimer le visiteur car il a une demande d\'inscription en cours.'})
+    if request.user.has_perm("t_crm.delete_visiteurs"):
+        pk = request.POST.get('id')
+        visiteur = Visiteurs.objects.get(id = pk)
+        demande_inscription = DemandeInscription.objects.filter(visiteur = visiteur).count()
+        if demande_inscription > 0:
+            return JsonResponse({'success': False, 'message': 'Impossible de supprimer le visiteur car il a une demande d\'inscription en cours.'})
+        else:
+            visiteur.delete()
+            return JsonResponse({'success': True, 'message': 'Visiteur supprimé avec succès'})
     else:
-        visiteur.delete()
-        return JsonResponse({'success': True, 'message': 'Visiteur supprimé avec succès'})
+        return JsonResponse({'success': False, 'message': 'Vous n\'avez pas l\'autorisation de supprimer le visiteur'})
+
 
 def detailsVisiteur(request, pk):
-    obj = Visiteurs.objects.get(id = pk)
-    context = {
-        'obj' : obj,
-        'tenant' : request.tenant
-    }
-    return render(request,'tenant_folder/crm/details_visiteur.html', context)
-
+    if not request.user.has_perm('t_crm.view_visiteurs'):
+        permissions = request.user.get_all_permissions()
+        print(permissions)
+        obj = Visiteurs.objects.get(id = pk)
+        context = {
+            'obj' : obj,
+            'tenant' : request.tenant
+        }
+        return render(request,'tenant_folder/crm/details_visiteur.html', context)
+    else:
+        messages.error(request,"Vous n'avez pas l'autorisation d'acceder a cette partie.")
+        return redirect('t_crm:liste_visiteurs')
+        
 @transaction.atomic
 def updateVisiteur(request,pk):
     obj = Visiteurs.objects.get(id = pk)
