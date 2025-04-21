@@ -7,8 +7,9 @@ from django.contrib.auth.models import User
 
 
 class ClientPaiementsRequest(models.Model):
+    
+    demandes = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
 
-    client = models.ForeignKey(Visiteurs, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     
@@ -21,6 +22,8 @@ class ClientPaiementsRequest(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    etat = models.CharField(max_length=100, null=True, blank=True, default='en_attente' ,choices=[('en_attente','En Attente'),('terminer','Cloturer')])
 
     class Meta:
         verbose_name = "Demande de paiement"

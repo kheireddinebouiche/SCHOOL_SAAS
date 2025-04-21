@@ -6,52 +6,39 @@ from t_rh.models import *
 
 class Formation(models.Model):
     nom = models.CharField(max_length=255)
-
     description = models.TextField(null=True, blank=True)
-
     duree = models.PositiveIntegerField()
-
     date_creation = models.DateTimeField(auto_now_add=True)
-
     entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
-
     partenaire = models.ForeignKey('Partenaires', on_delete=models.SET_NULL, null=True, blank=True)
-
     type_formation = models.CharField(choices=[('etrangere', 'Formation étrangere'), ('national', 'Formation Etatique')], max_length=100, null=True, blank=True, default='national')
-    
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-
     frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
     frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
+
+    class Meta:
+        verbose_name="Formation"
+        verbose_name_plural="Formations"
 
     def __str__(self):
         return self.nom
     
 class Specialites(models.Model):
-
     code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     label = models.CharField(max_length=100, null=True, blank=True)
-
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
-
     duree = models.CharField(max_length=300, null=True, blank=True)
-
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
-
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
-
     nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
-
     responsable = models.ForeignKey(Employees, on_delete=models.SET_NULL, null=True, blank=True)
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)
-
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="specialite_updated_by")
-
     version = models.CharField(max_length=100, null=True, blank=True)
-
+    condition_access = models.TextField(max_length=1000, null=True, blank=True)
+    dossier_inscription = models.TextField(max_length=1000, null=True, blank=True)
     class Meta:
         verbose_name="Spécialité"
         verbose_name_plural="Spécialités"

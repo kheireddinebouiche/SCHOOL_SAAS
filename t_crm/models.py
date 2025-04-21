@@ -42,8 +42,10 @@ class Visiteurs(models.Model):
     is_student = models.BooleanField(default=False)
     is_entreprise = models.BooleanField(default=False)
 
-    etat = models.CharField(max_length=255, null=True, blank=True, default='visiteur' , choices=[('visiteur','Visiteur'),('en_attente', 'En attente'), ('inscrit', 'Inscrit'), ('rejete', 'Rejeté')])
+    etat = models.CharField(max_length=255, null=True, blank=True, default='visiteur' , choices=[('visiteur','Visiteur'),('instance', 'En Instance'),('en_attente', 'En attente'), ('inscrit', 'Inscrit'), ('rejete', 'Rejeté')])
     
+    observation = models.CharField(max_length=1000, null=True, blank=True)
+
     class Meta:
         verbose_name="Visiteur"
         verbose_name_plural = "Visiteurs"

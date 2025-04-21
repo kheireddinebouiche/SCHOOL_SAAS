@@ -151,7 +151,7 @@ def ListeDemandeInscription(request):
     return render(request, 'tenant_folder/crm/liste_demande_inscription.html', context)
 
 def ApiGetListeDemandeInscription(request):
-    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat')
+    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat','visiteur__has_completed_documents')
     for demande in demandes:
         demande_obj = DemandeInscription.objects.get(id=demande['id'])
         demande['etat_label'] = demande_obj.get_etat_display()
@@ -219,13 +219,17 @@ def ApiConfirmDemandeInscription(request):
     id_demande = request.GET.get('id_demande')
     demande = DemandeInscription.objects.get(id = id_demande)
     demande.etat = 'accepte'
+    
+    user = demande.visiteur
+    user.etat = "instance"
+    user.save()
 
     demande_paiement = ClientPaiementsRequest(
-        client = demande.visiteur,
+        demandes = demande,
         formation = demande.formation,
         specialite = demande.specialite,
         amount = demande.formation.frais_inscription + demande.formation.frais_assurance + demande.specialite.prix,
-        etat = 'paiment'
+       
     )
 
     demande_paiement.save()
@@ -236,6 +240,8 @@ def ApiConfirmDemandeInscription(request):
 def ApiAnnulerDemandeInscription(request):
     id_demande = request.POST.get('id_demande')
     demande = DemandeInscription.objects.get(id = id_demande)
+    paiement_request = ClientPaiementsRequest.objects.get(demandes = demande)
+    paiement_request.delete()
     demande.etat = 'rejete'
     demande.save()
     return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})    
