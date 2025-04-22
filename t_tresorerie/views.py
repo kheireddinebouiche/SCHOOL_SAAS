@@ -27,7 +27,12 @@ def PageDetailsDemandePaiement(request, pk):
 
 def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
-    pass
+    obj = ClientPaiementsRequest.objects.get(id = id)
+    data = {
+        'demandeur_nom' : obj.demandes.visiteur.nom,
+        'demandeur_prenom': obj.demandes.visiteur.prenom,
+    }
+    return JsonResponse(data, safe=False)
 
 def ApiDeleteDemandePaiement(request):
     id_demande = request.GET.get('id_demande')

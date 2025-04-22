@@ -241,10 +241,11 @@ def ApiAnnulerDemandeInscription(request):
     id_demande = request.POST.get('id_demande')
     demande = DemandeInscription.objects.get(id = id_demande)
     paiement_request = ClientPaiementsRequest.objects.get(demandes = demande)
-    paiement_request.delete()
-    demande.etat = 'rejete'
+    paiement_request.etat = "annulation"
+    paiement_request.save()
+    demande.etat = 'annulation'
     demande.save()
-    return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})    
+    return JsonResponse({'status': "success", 'message': 'Demande d\'annulation effectuée avec succès'})    
 
 def ApiRemoveDemandeInscription(request):
     if request.user.is_staff:
