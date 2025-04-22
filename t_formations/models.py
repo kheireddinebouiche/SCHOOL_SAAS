@@ -73,6 +73,14 @@ class Modules(models.Model):
     def __str__(self):
         return self.label
     
+
+class PlansCadre(models.Model):
+    pass
+
+class PlansCours(models.Model):
+    pass
+
+
 class FraisInscription(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     label = models.CharField(max_length=255, null=True, blank=True)
