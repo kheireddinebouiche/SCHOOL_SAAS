@@ -75,7 +75,32 @@ class Modules(models.Model):
     
 
 class PlansCadre(models.Model):
-    pass
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+
+    titre = models.CharField(max_length=255,null=True, blank=True)
+    objectifs = models.TextField(null=True, blank=True)
+    competences_visees = models.TextField(null=True, blank=True)
+    prerequis = models.TextField(blank=True, null=True)
+    contenus = models.TextField(null=True, blank=True)
+    volume_cours = models.PositiveIntegerField(help_text="Heures de cours magistral", default=0)
+    volume_td = models.PositiveIntegerField(help_text="Heures de travaux dirigés", default=0)
+    volume_tp = models.PositiveIntegerField(help_text="Heures de travaux pratiques", default=0)
+    methodes_pedagogiques = models.TextField(null=True, blank=True)
+    modalites_evaluation = models.TextField(null=True, blank=True)
+    bibliographie = models.TextField(blank=True, null=True)
+    responsable = models.CharField(max_length=255, null=True, blank=True)
+       
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    class Meta:
+        verbose_name="Plan cadre"
+        verbose_name_plural = "Plans cadre"
+    
+    def __str__(self):
+        return f"{self.module.label} {self.module.code}"
+
 
 class PlansCours(models.Model):
     pass
