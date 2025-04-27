@@ -29,12 +29,14 @@ class NewFormationForm(forms.ModelForm):
 class NewFormationFormMaster(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance']
+        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance']
         widgets = {
+            'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
+            'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'description': forms.Textarea(attrs={'class':'form-control'}),
             'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
-            'partenaire': forms.Select(attrs={'class': 'form-control'}),
+            'partenaire' : forms.Select(attrs={'class':'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
@@ -42,6 +44,7 @@ class NewFormationFormMaster(forms.ModelForm):
 
         labels = {
             'nom' : "Nom de la formation",
+            'code':  "Code de la formation",
             'description' : "Description de la formation",
             'duree' : "Durée de la formation",
             'partenaire' : "Partenaire",

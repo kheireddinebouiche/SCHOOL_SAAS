@@ -1,0 +1,220 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Modules - Liste des modules {% endblock title %}
+
+{% block content %}
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0">Liste des modules</h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Modules</a></li>
+                                        <li class="breadcrumb-item active">Liste des modules</li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Liste des modules</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>code #</th>
+                                                <th>Label</th>
+                                                <th>Volume H.</th>
+                                                <th>Coéfficiant</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ListItems">
+
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+    <div id="detailsModule" class="modal fade" tabindex="-1" aria-labelledby="detailsModuleLabel" aria-hidden="true" style="display: none;">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailsModuleLabel">Détails du module</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="code" class="form-label">Code</label>
+                                <input type="text" class="form-control" id="code" disabled>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="label" class="form-label">Label</label>
+                                <input type="text" class="form-control" id="label" disabled>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="dure" class="form-label">Durée</label>
+                                <input type="text" class="form-control" id="dure" disabled>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="coef" class="form-label">Coéfficiant</label>
+                                <input type="text" class="form-control" id="coef" disabled>
+                            </div>
+                        </div>
+                    </div> 
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="eliminatoire" class="form-label">Note éliminatoire</label>
+                                <input type="text" class="form-control" id="eliminatoire" disabled>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="mb-3">
+                                <label for="evaluation" class="form-label">Mode d'évaluation</label>
+                                <input type="text" class="form-control" id="evaluation" disabled>
+                            </div>
+                        </div>
+                    </div> 
+                    <hr>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <h6 class="text-muted">Plan cadre</h6>
+                            <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>N°</th>
+                                        <th>Date</th>
+                                        <th>Réalisé par</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ListItemsCadre">
+
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-lg-6">
+                            <h6 class="text-muted">Plan cours</h6>
+                            <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>N°</th>
+                                        <th>Date</th>
+                                        <th>Réalisé par</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ListItemsCours">
+
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer update-promo">
+                    
+                </div>
+    
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+<script>
+ $(document).ready(function(){
+
+
+    function loadItems(){
+        $.ajax({
+            url :"{% url 't_formations:ApiGetModules' %}",
+            dataType:'JSON',
+            type: 'GET',
+            success : function(data){
+                var row = '';
+                if(data.length > 0){
+                    for(var i = 0; i < data.length; i++){
+                        row += '<tr>';
+                        row += '<td><b>'+data[i].code+'</b></td>';
+                        row += '<td>'+data[i].label+'</td>';
+                        row += '<td>'+data[i].duree+'</td>';
+                        row += '<td>'+data[i].coef+'</td>';
+                        row += "<td style='align-items:center;'>";
+                            row += '<div class="dropdown d-inline-block">';
+                            row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                            row += '<i class="ri-more-fill align-middle"></i>';
+                            row += '</button>';
+                            row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                            row += '<li><button data-id='+data[i].id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
+                            row += '<li><button data-id='+data[i].id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                            row += '<li><button data-id='+data[i].id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                            row += "</ul></div></td>";
+                        row += '</tr>';
+                    }
+                }else{
+                    row += '<tr><td colspan="5" class="text-center">Aucun module trouvé</td></tr>';
+                }
+                $('#ListItems').html(row);
+            }
+        });
+    }
+
+    loadItems();
+
+    $(document).on('click', '#btnDetails', function(){
+        var id = $(this).data('id');
+        
+        $.ajax({
+            url : "{% url 't_formations:ApiGetModuleDetails' %}",
+            type : 'GET',
+            data : {'id':id},
+            dataType : 'JSON',
+            success : function(response){
+
+
+                $('#detailsModule').modal('show');
+            },
+        });
+    });
+ });
+</script>
+{% endblock content %}
+           
+
+
+
+    

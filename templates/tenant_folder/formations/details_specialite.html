@@ -39,13 +39,13 @@
                         <div class="col-lg-8 d-flex">
                             <div class="card w-100">
                                 <div class="card-header">
-                                    <input type="hidden" id="_specialite" value="{{object.id}}" disabled />
+                                    <input type="hidden" id="_specialite" value="{{object.code}}" disabled />
                                     <h5 class="card-title mb-0">{{object.label}}</i></h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-lg-2">
-                                            <label for="code_spec">Code de spécialitée </label>
+                                            <label for="code_spec">Code</label>
                                             <input type="text" disabled class="form-control _inputDetails" id="code_spec" value="{{object.code}}" />
                                         </div> 
                                         <div class="col-lg-5">
@@ -87,7 +87,7 @@
                                         <div class="col-lg-6">
                                             <div class="text-lg-end mt-3 mt-lg-0">
                                                 <button id="_addModuleBtn" class="btn btn-success btn-sm waves-effect waves-light me-1"><i class="mdi mdi-plus me-1"></i> Ajouter un module</button>
-                                                <button id="_repartitionModule" class="btn btn-warning btn-sm waves-effect waves-light me-1"><i class="mdi mdi-plus me-1"></i> Programme de formation</button>
+                                                <button id="_repartitionModule" class="btn btn-warning btn-sm waves-effect waves-light me-1"><i class="mdi mdi-book-clock me-1"></i> Répartition semestrielle </button>
                                             </div>
                                         </div>
                                     </div>
@@ -227,39 +227,37 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="programmeFormationLabel">Programme de formation</h5>
+                <h5 class="modal-title me-3" id="programmeFormationLabel">Réparition des modules par semetre</h5>
+                <button class="btn btn-primary me-3" id="_new_affect"><i class="mdi mdi-plus me-2"></i>Nouvelle affectation</button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               
             </div>
             <div class="modal-body">
-                <style>
-                    #rowAddModule{
-                        display: flex;
-                        align-items: center; /* Centre les éléments verticalement */
-                        gap: 10px;
-                    }
-                    .col-module{
-                        display: flex;
-                        flex-direction: column; 
-                    }
-
-                </style>
-               <div class="row" id="rowAddModule">
+               <div class="row">
                     <input type="hidden" id="_id_module" disabled />
-                    <div class="col-module">
-                        <label for="u_label">Module:</label>
-                        <select class="form-control" id='_p_module'>
+                    
+                    <div id='form_add_' class="row align-items-end">
+                        <div class="col-lg-5">
+                            <label for="_p_module">Module:</label>
+                            <select class="form-control" id="_p_module">
+                                <!-- options -->
+                            </select>
+                        </div>
+                    
+                        <div class="col-lg-4">
+                            <label for="_p_semestre">Semestre :</label>
+                            <select class="form-control" id="_p_semestre">
 
-                        </select>
+                            </select>
+                        </div>
+                    
+                        <div class="col-lg-3 d-flex justify-content-end align-items-end">
+                            <button class="btn btn-warning me-2" id="btnAffectModuleSemestre">Confirmer</button>
+                            <button class="btn btn-danger me-2 " id="dismis">Annuler</button>
+                        </div>
                     </div>
-                    <div class="col-module">
-                        <label for="u_duree">Semestre :</label>
-                        <input type="number" class="form-control" id="u_duree" />
-                    </div>
-                    <div class="col-module" style="display: flex; justify-content : center; align-items: center; height: 50px;">
-                        <button class="btn btn-warning" id="ConfirmUpdateBtn">CONFIRMER</button>
-                    </div>
-                        
                </div>
+
                <div class="row mt-3">
                 <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
                     <thead>
@@ -275,10 +273,7 @@
                 </table>
                </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" id="ConfirmUpdateBtn">Enregistrer</button>
-            </div>
-
+            
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
@@ -306,6 +301,7 @@
     $(document).ready(function(){
         var id = document.getElementById('_specialite').value;
         
+       
         loadModule();
 
         function loadModule(){
@@ -319,12 +315,13 @@
                 dataType: 'JSON',
                 success : function(data){
                     var row = "";
-                    var select = "";
-                    if(data.length > 0){
-                        $.each(data, function(index, p){
+                    var select = "<option value='0'>-------------------</option>";
+                    var selectSemestre = "<option value='0'>-------------------</option>";
+                    if(data.modules.length > 0){
+                        $.each(data.modules, function(index, p){
                             row += "<tr>";
+                            row += "<td><b>#"+p.code+"</b></td>";
                             row += "<td>"+p.label+"</td>";
-                            row += "<td>"+p.code+"</td>";
                             row += "<td>"+p.coef+"</td>";
                             row += "<td>"+p.duree+" H</td>";
                             row += "<td>";
@@ -343,14 +340,19 @@
                             row += "</tr>";
                         });
 
-                        $.each(data, function(index, item){
-                            select += "<option id="+item.id+">"+item.label+" </option>";
+                        $.each(data.modules, function(index, item){
+                            select += "<option value="+item.id+">"+item.label+" </option>";
                         });
+
+                        for(var i=0; i < data.nb_semestre; i++){
+                            selectSemestre += "<option value="+(i+1)+">Semestre "+(i+1)+"</option>";
+                        };
                         
                     }else{
                             row = "<tr><td class='text-muted text-center' colspan='5'>Aucune donnée trouvé</td></tr>";
                     }
 
+                    $('#_p_semestre').html(selectSemestre);
                     $('#table-modules').html(row);
                     $('#_p_module').html(select);
                    
@@ -475,8 +477,101 @@
 
         });
 
+        function loadModuleRepartition(){
+            $.ajax({
+                url : "{% url 't_formations:ApiGetRepartitionModule' %}",
+                type : 'GET',
+                data : {
+                    'id_specialite' : id,
+                },
+                dataType : 'JSON',
+                success : function(data){
+                    if (data.length > 0){
+                        var row = "";
+                        $.each(data, function(index, item){
+                            row += "<tr>";
+                            row += "<td>"+item.module__label+"</td>";
+                            row += "<td>"+item.semestre+"</td>";
+                            row += '<td>';
+                            row += '<div class="dropdown d-inline-block">';
+                            row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                            row += '<i class="ri-more-fill align-middle"></i>';
+                            row += '</button>';
+                            row += '<ul class="dropdown-menu dropdown-menu-end">';
+                            row += '<li><a href="#" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
+                            row += '<li><a id="updateBtn" href="#" data-id='+item.id+' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                            row += '<li><a href="#" data-id='+item.id+' id="deleteConfirmation" class="dropdown-item remove-item-btn">';
+                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </a> </li>';
+                            row += '</ul>';
+                            row += '</div>';
+                            row += "</td>";
+                            row += "</tr>";
+                        });
+                        
+                    }else {
+                        row = "<tr><td class='text-muted text-center' colspan='3'>Aucune donnée trouvé</td></tr>";
+                    }
+                    $('#tableItems').html(row);
+                },
+            });
+        }
+
         $(document).on('click', "#_repartitionModule", function(){
+            loadModuleRepartition();
+            $('#form_add_').prop('hidden', true);
+            $('#_new_affect').removeAttr('hidden');
+            $('#dismis').removeAttr('hidden');
+
+            $('#_new_affect').on('click', function(){
+                this.setAttribute('hidden', true);
+             
+                $('#form_add_').prop('hidden', false);
+               
+            });
+
+            $('#dismis').on('click', function(){
+            
+                $('#form_add_').prop('hidden', true);
+                $('#_new_affect').removeAttr('hidden');
+                $('#dismis').removeAttr('hidden');
+            });
+
             $('#programmeFormation').modal('show');
+        });
+
+        $(document).on('click', '#btnAffectModuleSemestre', function(){
+
+            if($('#_p_module').val() == 0 || $('#_p_semestre').val() == 0){
+                alertify.error("Veuillez selectionner un module et un semestre");
+                return;
+            }else{
+                var id_module = $('#_p_module').val();
+                var semestre = $('#_p_semestre').val();
+
+                $.ajax({
+                    url : "{% url 't_formations:ApiAffectModuleSemestre' %}",
+                    type : 'POST',
+                    dataType : 'JSON',
+                    data : {
+                        'id_module' : id_module,
+                        'semestre' : semestre,
+                        'id_specialite' : id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success : function(response){
+                        if(response.success){
+                            alertify.success(response.message);
+                            loadModuleRepartition();
+                        }else{
+                            alertify.error(response.message);
+                        }
+                    },
+
+                })
+                
+            }
+            
+          
         });
 
     });

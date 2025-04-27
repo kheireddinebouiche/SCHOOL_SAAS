@@ -25,6 +25,8 @@ urlpatterns = [
     path('supprimer-partenaire/<int:pk>/', deletePartenaire, name="deletePartenaire"),
 
     path('apigetmodules',ApiGetSpecialiteModule, name="ApiGeSpecialitetModules"),
+    path('ApiGetRepartitionModule', ApiGetRepartitionModule, name="ApiGetRepartitionModule"),
+    path('ApiAffectModuleSemestre', ApiAffectModuleSemestre, name="ApiAffectModuleSemestre"),
     path('deleteModule',deleteModule,name="deletemodule"),
     path('ApiAddModule', ApiAddModule, name="ApiAddModule"),
     path('ApiUpdateModule', ApiUpdateModule, name="ApiUpdateModule"),
@@ -40,5 +42,15 @@ urlpatterns = [
     path('ApiUpdatePromo',ApiUpdatePromo,name="ApiUpdatePromo"),
     path('ApiActivatePromo', ApiActivatePromo, name="ApiActivatePromo"),
     path('ApiDeletePromo',ApiDeletePromo,name="ApiDeletePromo"),
+
+    path('modules/liste-des-modules/', PageListeModules, name="PageListeModules"),
+    path('ApiGetModules', ApiGetModules, name="ApiGetModules"),
+    path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
+
+    path('liste-institut/',ListeDesInstituts, name="ListeDesInstituts"),
+
+    path('ApiGetPartenaireSync', ApiGetPartenaireSync, name="ApiGetPartenaireSync"),
+    path('ApiSyncPartenaire', ApiSyncPartenaire, name="ApiSyncPartenaire"),
+    path('mise-a-jour-partenaire<int:pk>/',UpdatePartenaire, name="UpdatePartenaire"),
 
 ]

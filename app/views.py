@@ -8,7 +8,6 @@ from django_tenants.utils import schema_context
 from django.contrib.auth.models import User
 
 
-
 @login_required(login_url='login')
 def Index(request):
     
@@ -42,7 +41,9 @@ def new_tenant(request):
                 schema_name = nom,
                 nom = nom,
                 telephone = telephone,
-                adresse = adresse
+                adresse = adresse,
+                tenant_type = 'second',
+
             )
             tenant.save()
 

@@ -3,19 +3,42 @@ from django.contrib.auth.models import User
 from institut_app.models import Entreprise
 from t_rh.models import *
 
+class Partenaires(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    nom = models.CharField(max_length=255, null=True, blank=True)
+    code = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    adresse = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    site_web = models.URLField(null=True, blank=True)
+    type_partenaire = models.CharField(max_length=100, null=True, blank=True, choices=[('national', 'National'),('etranger','Etranger')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_partenaire")
+
+    class Meta:
+        verbose_name="Partenaire"
+        verbose_name_plural="Partenaires"
+
+    def __str__(self):
+        return self.nom
 
 class Formation(models.Model):
+
+    code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     nom = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     duree = models.PositiveIntegerField()
     date_creation = models.DateTimeField(auto_now_add=True)
     entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
-    partenaire = models.ForeignKey('Partenaires', on_delete=models.SET_NULL, null=True, blank=True)
+    partenaire = models.ForeignKey(Partenaires, on_delete=models.SET_NULL, null=True, blank=True, to_field="code")
     type_formation = models.CharField(choices=[('etrangere', 'Formation étrangere'), ('national', 'Formation Etatique')], max_length=100, null=True, blank=True, default='national')
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
     frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
+
+    updated = models.BooleanField(default=False)
 
     class Meta:
         verbose_name="Formation"
@@ -25,12 +48,14 @@ class Formation(models.Model):
         return self.nom
     
 class Specialites(models.Model):
-    code = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    code = models.CharField(max_length=100, null=True, blank=True, unique =True)
     label = models.CharField(max_length=100, null=True, blank=True)
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
     duree = models.CharField(max_length=300, null=True, blank=True)
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
-    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
+
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True,to_field="code")
+
     nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
     responsable = models.ForeignKey(Employees, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -39,16 +64,20 @@ class Specialites(models.Model):
     version = models.CharField(max_length=100, null=True, blank=True)
     condition_access = models.TextField(max_length=1000, null=True, blank=True)
     dossier_inscription = models.TextField(max_length=1000, null=True, blank=True)
+
+    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('last','A jour'),('updated','Mis à jour')], default='last')
+
     class Meta:
         verbose_name="Spécialité"
         verbose_name_plural="Spécialités"
 
     def __str__(self):
-        return self.label
+        return f"{self.code} - {self.label}"
     
 class Modules(models.Model):
-    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
-    code = models.CharField(max_length=100, null=True, blank=True)
+   
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True, to_field="code")
+    code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     label = models.CharField(max_length=100, null=True, blank=True)
     
     duree = models.IntegerField(null=True, blank=True)
@@ -73,10 +102,8 @@ class Modules(models.Model):
     def __str__(self):
         return self.label
     
-
 class PlansCadre(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
-
     titre = models.CharField(max_length=255,null=True, blank=True)
     objectifs = models.TextField(null=True, blank=True)
     competences_visees = models.TextField(null=True, blank=True)
@@ -88,9 +115,7 @@ class PlansCadre(models.Model):
     methodes_pedagogiques = models.TextField(null=True, blank=True)
     modalites_evaluation = models.TextField(null=True, blank=True)
     bibliographie = models.TextField(blank=True, null=True)
-    responsable = models.CharField(max_length=255, null=True, blank=True)
-       
-
+    responsable = models.CharField(max_length=255, null=True, blank=True)       
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
@@ -101,10 +126,18 @@ class PlansCadre(models.Model):
     def __str__(self):
         return f"{self.module.label} {self.module.code}"
 
+class ProgrammePlanCadre(models.Model):
+    plan_cadre = models.ForeignKey(PlansCadre, on_delete=models.CASCADE, null=True, blank=True)
+
+    element_competence = models.TextField(null=True, blank=True)
+    criters_performance = models.TextField(null=True, blank=True)
+    contenu_pedagogique = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.plan_cadre.module.label} {self.plan_cadre.module.code} - {self.element_competence}"
 
 class PlansCours(models.Model):
     pass
-
 
 class FraisInscription(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
@@ -120,31 +153,10 @@ class FraisInscription(models.Model):
     def __str__(self):
         return self.label
     
-class Partenaires(models.Model):
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    nom = models.CharField(max_length=255, null=True, blank=True)
-    code = models.CharField(max_length=255, null=True, blank=True)
-    adresse = models.CharField(max_length=255, null=True, blank=True)
-    telephone = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
-    site_web = models.URLField(null=True, blank=True)
-    type_partenaire = models.CharField(max_length=100, null=True, blank=True, choices=[('national', 'National'),('etranger','Etranger')])
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_partenaire")
-
-    class Meta:
-        verbose_name="Partenaire"
-        verbose_name_plural="Partenaires"
-
-    def __str__(self):
-        return self.nom
-
 class ProgrammeFormation(models.Model):
-    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
-    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
-    semestre = models.CharField(choices=[('1','1'),('2','2'),('3','3'),('4','4')], max_length=1, null=True, blank=True)
-
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True,to_field="code")
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True, to_field="code")
+    semestre = models.CharField(max_length=10, null=True, blank=True)
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     

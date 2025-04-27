@@ -6,9 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
 from django.http import JsonResponse
+from django.db.models import Q
 
 TenantModel = get_tenant_model()
-tenants = TenantModel.objects.filter(tenant_type='second')
 
 def listModules(request):
     modules = Modules.objects.all()
@@ -34,42 +34,74 @@ def listFraisInscription(request):
     frais = FraisInscription.objects.all()
     return render(request, 't_formations/frais.html', {'frais': frais})
 
+def ListeDesInstituts(request):
+    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    context = {
+        'liste' : liste,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/formations/liste_des_instituts.html', context)
+
 @transaction.atomic
 def addFormation(request):
     
     if request.tenant.tenant_type == 'master':
         form = NewFormationFormMaster()
+        if request.method == 'POST':
+            form = NewFormationFormMaster(request.POST)
+            if form.is_valid():
+                formation = form.save()
+                tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+                for tenant in tenants:
+                    with schema_context(tenant.schema_name):
+                        Formation.objects.create(
+                            code = formation.code,
+                            nom = formation.nom,
+                            description = formation.description,
+                            duree = formation.duree,
+                            partenaire = formation.partenaire,
+                            type_formation = formation.type_formation,
+                            frais_inscription = formation.frais_inscription,
+                            frais_assurance = formation.frais_assurance,
+                        )
+
+                messages.success(request, 'Formation ajoutée avec succès')
+                return redirect('t_formations:listFormations')
     else:
         form = NewFormationForm()
-
-    if request.method == 'POST':
-        form = NewFormationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Formation ajoutée avec succès')
-            return redirect('t_formations:listFormations')
+        if request.method == 'POST':
+            form = NewFormationForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Formation ajoutée avec succès')
+                return redirect('t_formations:listFormations')
+        
     context = {
         'form' : form,
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/formations/nouvelle_formations.html', context)
 
-@transaction.atomic
 def AddPartenaire(request):
     form = NewPartenaireForm()
     if request.method == 'POST':
         form = NewPartenaireForm(request.POST)
         if form.is_valid():
             partenaires = form.save()
-            for tenant in tenants:
-                with schema_context(tenant.schema_name):
-                    Partenaires.objects.create(
-                        nom  = partenaires.nom,
-                        adresse = partenaires.adresse,
-                        telephone = partenaires.telephone,
-                        email = partenaires.email,
-                        site_web = partenaires.site_web,
-                    )
+            if partenaires.type_partenaire == 'etranger':
+                tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+                for tenant in tenants:
+                    with schema_context(tenant.schema_name):
+                        with transaction.atomic():
+                            Partenaires.objects.create(
+                                nom  = partenaires.nom,
+                                code = partenaires.code,
+                                adresse = partenaires.adresse,
+                                telephone = partenaires.telephone,
+                                email = partenaires.email,
+                                type_partenaire = partenaires.type_partenaire,
+                                site_web = partenaires.site_web,
+                            )
             messages.success(request, 'Partenaire ajouté avec succès')
             return redirect('t_formations:listPartenaires')
         
@@ -81,12 +113,50 @@ def AddPartenaire(request):
 
 def detailsPartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
+
     context = {
-        'partenaire' : partenaire,
-        'tenant' : request.tenant,
+        'partenaire': partenaire,           
+        'tenant': request.tenant,
     }
     return render(request, 'tenant_folder/formations/details_partenaire.html', context)
 
+def ApiGetPartenaireSync(request):
+    code = request.GET.get('code_partenaire')
+    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    instituts = []
+
+    for institut in liste:
+        with schema_context(institut.schema_name):
+            has_partenaire = Partenaires.objects.filter(code=code).exists()
+
+        instituts.append({
+            'schema_name': institut.schema_name,
+            'has_partenaire': has_partenaire,
+        })
+
+    return JsonResponse(instituts, safe=False)
+
+def ApiSyncPartenaire(request):
+
+    code_partenaire = request.POST.get('code_partenaire')
+    shema_name = request.POST.get('schema_name')
+    partenaire  = Partenaires.objects.get(code = code_partenaire)
+
+    institut = Institut.objects.get(schema_name=shema_name)
+    with schema_context(institut.schema_name):
+        sync_partenaire = Partenaires(
+            nom = partenaire.nom,
+            code = partenaire.code,
+            adresse = partenaire.adresse,
+
+            telephone = partenaire.telephone,
+            email = partenaire.email,
+            site_web = partenaire.site_web,
+            type_partenaire = partenaire.type_partenaire,
+        )
+        sync_partenaire.save()
+        return JsonResponse({'success': True, 'message': 'Partenaire synchronisé avec succès'})
+        
 def deletePartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
     partenaire.delete()
@@ -100,6 +170,44 @@ def ListeDesPartenaires(request):
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/formations/liste_des_partenaires.html', context)
+
+def UpdatePartenaire(request, pk):
+    partenaire = Partenaires.objects.get(id=pk)
+    form = NewPartenaireForm(instance=partenaire)
+
+    if request.method == "POST":
+        form = NewPartenaireForm(request.POST, instance=partenaire)
+        if form.is_valid():
+            updated_partenaire = form.save()
+            if updated_partenaire.type_partenaire == 'etranger':
+                instituts = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+                for tenant in instituts:
+                    with schema_context(tenant.schema_name):
+                        try:
+                            partenaire = Partenaires.objects.get(code=updated_partenaire.code)
+                            partenaire.nom = updated_partenaire.nom
+                            partenaire.adresse = updated_partenaire.adresse
+                            partenaire.telephone = updated_partenaire.telephone
+                            partenaire.email = updated_partenaire.email
+                            partenaire.site_web = updated_partenaire.site_web
+                            partenaire.type_partenaire = updated_partenaire.type_partenaire
+                            partenaire.save()
+                        except Partenaires.DoesNotExist:
+                            pass
+                messages.success(request, 'Partenaire mis à jour avec succès')
+                return redirect('t_formations:listPartenaires')
+            else:
+                messages.success(request, 'Partenaire mis à jour avec succès')
+                return redirect('t_formations:listPartenaires')
+        else:
+            messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+            return redirect('t_formations:UpdatePartenaire', pk)
+
+    context = {
+        'form' : form,
+        'tenant' : request.tenant,
+    }
+    return render(request,'tenant_folder/formations/update_partenaire.html',context)
 
 @transaction.atomic
 def addSpecialite(request):
@@ -209,7 +317,40 @@ def detailSpecialite(request, pk):
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
     modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree')
-    return JsonResponse(list(modules), safe=False)
+
+    specialite = Specialites.objects.get(code = id)
+
+    data  = {
+       'modules' : list(modules),
+       'nb_semestre' : specialite.nb_semestre,
+    }
+
+    return JsonResponse(data, safe=False)
+
+def ApiGetRepartitionModule(request):
+    id_specialite = request.GET.get('id_specialite')
+    object = ProgrammeFormation.objects.filter(specialite = id_specialite).values('id', 'module__label', 'semestre')
+
+    return JsonResponse(list(object), safe=False)
+
+def ApiAffectModuleSemestre(request):
+    id_module = request.POST.get('id_module')
+    semestre = request.POST.get('semestre')
+    id_specialite = request.POST.get('id_specialite')
+    try:
+        specialite = Specialites.objects.get(code = id_specialite)
+        module = Modules.objects.get(id = id_module)
+
+        repartition = ProgrammeFormation(
+           
+            module = module,
+            specialite  = specialite,
+            semestre = semestre,
+        )
+        repartition.save()
+        return JsonResponse({'success' : True, 'message' : "Le module à été affecté avec succès"})
+    except:
+        return JsonResponse({'success' : False, 'message' : "L'affectation du module existe déja"})
 
 def ApiAddModule(request):
 
@@ -219,7 +360,7 @@ def ApiAddModule(request):
     id = request.POST.get('id')
     code = request.POST.get('code_module')
 
-    specialite = Specialites.objects.get(id = id)
+    specialite = Specialites.objects.get(code = id)
 
     new_module = Modules.objects.create(
         label = label,
@@ -369,3 +510,24 @@ def SpecialitePromo(request):
         'tenant' : request.tenant
     }
     return render(request, 'tenant_folder/formations/promos/specialite_promo.html', context)
+
+def PageListeModules(request):
+    return render(request, 'tenant_folder/formations/modules/modules.html', {'tenant' : request.tenant})
+
+def ApiGetModules(request):
+    liste = Modules.objects.all().values('id', 'label', 'coef', 'duree', 'code')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiGetModuleDetails(request):
+    id = request.GET.get('id')
+    
+    details = Modules.objects.get(id = id)
+    data = {
+        'id' : details.id,
+        'label' : details.label,
+        'coef' : details.coef,
+        'duree' : details.duree,
+        'code' : details.code,
+    }
+    
+    return JsonResponse(data, safe=False)
