@@ -44,29 +44,17 @@ def ListeDesInstituts(request):
 
 @transaction.atomic
 def addFormation(request):
-    
     if request.tenant.tenant_type == 'master':
         form = NewFormationFormMaster()
         if request.method == 'POST':
             form = NewFormationFormMaster(request.POST)
             if form.is_valid():
-                formation = form.save()
-                tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
-                for tenant in tenants:
-                    with schema_context(tenant.schema_name):
-                        Formation.objects.create(
-                            code = formation.code,
-                            nom = formation.nom,
-                            description = formation.description,
-                            duree = formation.duree,
-                            partenaire = formation.partenaire,
-                            type_formation = formation.type_formation,
-                            frais_inscription = formation.frais_inscription,
-                            frais_assurance = formation.frais_assurance,
-                        )
-
+                form.save()
                 messages.success(request, 'Formation ajoutée avec succès')
                 return redirect('t_formations:listFormations')
+            else:
+                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+                return redirect('t_formations:addFormation')
     else:
         form = NewFormationForm()
         if request.method == 'POST':
@@ -75,12 +63,37 @@ def addFormation(request):
                 form.save()
                 messages.success(request, 'Formation ajoutée avec succès')
                 return redirect('t_formations:listFormations')
+            else:
+                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+                return redirect('t_formations:addFormation')
         
     context = {
         'form' : form,
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/formations/nouvelle_formations.html', context)
+
+def ApiCheckIfFormationCompleted(request):
+    code = request.GET.get('code_formation')
+    if not code:
+        return JsonResponse({'error': 'Missing code_formation'}, status=400)
+
+    formation = Formation.objects.filter(code=code).first()
+    if not formation:
+        return JsonResponse({'error': 'Formation not found'}, status=404)
+
+    specialites = Specialites.objects.filter(formation=formation)
+
+    if not specialites.exists():
+        return JsonResponse({'completed': False, 'reason': 'Aucune spécailité trouvée'})
+
+    # Vérifier que chaque spécialité a au moins un module
+    for specialite in specialites:
+        if not Modules.objects.filter(specialite=specialite).exists():
+            return JsonResponse({'completed': False, 'reason': f'Speciality {specialite.name} has no modules.'})
+
+    # Si tout est bon
+    return JsonResponse({'completed': True})
 
 def AddPartenaire(request):
     form = NewPartenaireForm()

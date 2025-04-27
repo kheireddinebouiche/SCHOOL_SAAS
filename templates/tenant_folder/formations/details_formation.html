@@ -10,7 +10,7 @@
        outline : none;
        font-weight : 700 !important;
     }
-</style>
+</style><script src="https://cdn.lordicon.com/lordicon.js"></script>
         <!-- ============================================================== -->
         <!-- Start right Content here -->
         <!-- ============================================================== -->
@@ -44,7 +44,7 @@
                                         <h5 class="card-title mb-0"><i>{{formation.nom}}</i></h5>
                                         {% if request.tenant.tenant_type != 'second' and formation.type_formation == "etrangere" %}
                                             <div class="d-flex">
-                                                <button type="button" id="syncBtn" class="btn btn-primary btn-sm float-end " title="dgfdg" > <i class='mdi mdi-sync me-2'></i>Synchroniser </button>
+                                                <button type="button" id="syncBtn" class="btn btn-primary btn-sm float-end " title="Synchroniser les formations avec l'ensemble des instituts" > <i class='mdi mdi-sync me-2'></i>Synchroniser </button>
                                             </div>
                                         {% endif %}
                                     </div>
@@ -61,7 +61,7 @@
                                         </div>   
                                         <div class="col-lg-4">
                                             <label for="partenaire_formation">Partenaire </label>
-                                            <input type="text" disabled class="form-control _inputDetails" id="partenaire_formation" value="{{formation.get_type_formation_display}}" />
+                                            <input type="text" disabled class="form-control _inputDetails" id="partenaire_formation" value="{{formation.partenaire}}" />
                                         </div>                                  
                                     </div>
                                     <div class="row mt-3">
@@ -149,15 +149,81 @@
             <!-- End Page-content -->
         </div>
 
+        <div id="showSyncState" class="modal fade" tabindex="-1" aria-labelledby="showSyncStateLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="showSyncStateLabel">Etat de synchronisation des partenaires</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="content">
+                        <table class="table table-bordered dt-responsive nowrap w-100" id="datatable">
+                            <thead>
+                                <tr>
+                                    <th>Nom de l'institut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listeItem">
+                                
+                            </tbody>
+
+                
+
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <div class="modal fade alertModal" tabindex="-1" role="dialog" aria-labelledby="alertModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <lord-icon
+                            src="https://cdn.lordicon.com/lltgvngb.json"
+                            trigger="loop"
+                            colors="primary:#e88c30,secondary:#e88c30"
+                            style="width:120px;height:120px">
+                        </lord-icon>
+                        </lord-icon>
+                        <div class="mt-4" >
+                           <h4 id="alert-modal-content"></h4>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
 <script>
     $(document).ready(function(){
 
-        var is_updated = {{ formation.updated|yesno:"true,false" }};
-        
-        if(!is_updated){
-            $('#syncBtn').removeClass('btn-primary').addClass('btn-success').html("<i class='mdi mdi-check me-2' alt='La formation est synchroniser au niveau de tous les instituts'></i>Synchronisé").attr("disabled", true);
-        }
-       
+        var code_formation = "{{formation.code}}";
+
+        $(document).on('click','#syncBtn',function(e){
+            $.ajax({
+                url : "{% url 't_formations:ApiCheckIfFormationCompleted' %}",
+                dataType: "JSON",
+                type : 'GET',
+                data : {'code_formation' : code_formation},
+                success: function(response){
+                    if(!response.completed){
+                        $('#showSyncState').modal('hide');
+                        $('#alert-modal-content').html(response.reason);
+                        $('.alertModal').modal('show');
+                    }else{
+                        $('#showSyncState').modal('show');
+                    }
+                },
+            })
+
+           
+            
+        });
     });
 </script>
 {% endblock content %}

@@ -7,6 +7,7 @@ app_name="t_formations"
 urlpatterns = [
 
     path('formations/nouvelle-formation/', addFormation, name="addFormation"),
+    path('ApiCheckIfFormationCompleted', ApiCheckIfFormationCompleted, name="ApiCheckIfFormationCompleted"),
     path('ApiListeFormation', ApiListeFormation, name="ApiListeFormation"),
     path('ApiListeSpecialiteByFormation', ApiListeSpecialiteByFormation, name="ApiListeSpecialiteByFormation"),
     path('specialites/nouvelle-specialite/', addSpecialite, name="addSpecialite"),

@@ -11,7 +11,7 @@ class Partenaires(models.Model):
     telephone = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
-    type_partenaire = models.CharField(max_length=100, null=True, blank=True, choices=[('national', 'National'),('etranger','Etranger')])
+    type_partenaire = models.CharField(max_length=100, null=True, blank=True, choices=[('national', 'Partenaire National'),('etranger','Partenaire Etranger')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_partenaire")
