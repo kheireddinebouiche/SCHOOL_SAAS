@@ -13,6 +13,10 @@ urlpatterns = [
     path('specialites/nouvelle-specialite/', addSpecialite, name="addSpecialite"),
     path('formations/liste-des-formation/', listFormations, name="listFormations"),
     path('specialites/liste-des-specialitees/',listSpecialites, name="listSpecialites"),
+    path('ApigetFormationSync', ApigetFormationSync, name="ApigetFormationSync"),
+    path('ApiSyncFormation',ApiSyncFormation, name="ApiSyncFormation"),
+    path('ApiSyncUpdateFormation', ApiSyncUpdateFormation, name="ApiSyncUpdateFormation"),
+    path('ApiCheckFormationState', ApiCheckFormationState, name="ApiCheckFormationState"),
     
     path('specialites/details-specialite/<int:pk>/', detailSpecialite, name="detailSpecialite"),
     path('formations/details-formations/<int:pk>/', detailFormation, name="detailFormation"),

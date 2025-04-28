@@ -85,12 +85,12 @@ def ApiCheckIfFormationCompleted(request):
     specialites = Specialites.objects.filter(formation=formation)
 
     if not specialites.exists():
-        return JsonResponse({'completed': False, 'reason': 'Aucune spécailité trouvée'})
+        return JsonResponse({'completed': False, 'reason': 'Aucune spécailité trouvée <br> Veuillez ajouter au moins une spécialité.'})
 
     # Vérifier que chaque spécialité a au moins un module
     for specialite in specialites:
         if not Modules.objects.filter(specialite=specialite).exists():
-            return JsonResponse({'completed': False, 'reason': f'Speciality {specialite.name} has no modules.'})
+            return JsonResponse({'completed': False, 'reason': f'<h5>la spécialité {specialite.label} n\'a aucun module </h5><br><br> <p> Veuillez ajouter au moins un module avant de pouvoir synchroniser la formation.</p>'})
 
     # Si tout est bon
     return JsonResponse({'completed': True})
@@ -148,6 +148,143 @@ def ApiGetPartenaireSync(request):
         })
 
     return JsonResponse(instituts, safe=False)
+
+def ApigetFormationSync(request):
+    code = request.GET.get('code_formation')
+    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    formation = Formation.objects.get(code=code)
+
+    instituts = []
+
+    for institut in liste:
+        with schema_context(institut.schema_name):
+            has_formation = Formation.objects.filter(code=code).exists()
+            has_partenaire = Partenaires.objects.filter(code=formation.partenaire.code).exists()
+
+        instituts.append({
+            'schema_name': institut.schema_name,
+            'has_formation': has_formation,
+            'has_partenaire': has_partenaire,
+        })
+
+    return JsonResponse(instituts, safe=False)
+
+def update_or_create_formation_in_tenant(formation, institut_schema):
+    try:
+        with schema_context(institut_schema):
+            # Chercher si la formation existe déjà dans le schéma
+            sync_formation, created = Formation.objects.update_or_create(
+                code=formation.code,
+                defaults={
+                    'nom': formation.nom,
+                    'description': formation.description,
+                    'duree': formation.duree,
+                    'partenaire': formation.partenaire,
+                    'type_formation': formation.type_formation,
+                    'frais_inscription': formation.frais_inscription,
+                    'frais_assurance': formation.frais_assurance,
+                }
+            )
+            return sync_formation
+    except IntegrityError:
+        raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour de la formation.")
+    
+def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_schema):
+    try:
+        with schema_context(institut_schema):
+            # Chercher si la spécialité existe déjà
+            sync_specialite, created = Specialites.objects.update_or_create(
+                code=specialite.code,
+                formation=sync_formation,
+                defaults={
+                    'label': specialite.label,
+                    'prix': specialite.prix,
+                    'duree': specialite.duree,
+                    'version': specialite.version,
+                    'condition_access': specialite.condition_access,
+                    'dossier_inscription': specialite.dossier_inscription,
+                }
+            )
+            return sync_specialite
+    except IntegrityError:
+        raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour de la spécialité.")
+    
+def update_or_create_module_in_tenant(module, specialite, institut_schema):
+    try:
+        with schema_context(institut_schema):
+            # Chercher si le module existe déjà
+            sync_module, created = Modules.objects.update_or_create(
+                code=module.code,
+                specialite=specialite,
+                defaults={
+                    'label': module.label,
+                    'coef': module.coef,
+                    'duree': module.duree,
+                }
+            )
+            return sync_module
+    except IntegrityError:
+        raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du module.")
+
+
+##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
+def ApiSyncFormation(request):
+    code_formation = request.POST.get('code_formation')
+    schema_name = request.POST.get('schema_name')
+
+    formation = Formation.objects.get(code=code_formation)
+    institut = Institut.objects.get(schema_name=schema_name)
+
+    with schema_context(institut.schema_name):
+        sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
+
+    specialites = Specialites.objects.filter(formation=formation)
+    for specialite in specialites:
+        with schema_context(institut.schema_name):
+            sync_specialite = update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
+
+    modules = Modules.objects.filter(specialite=specialite)
+    for module in modules:
+        with schema_context(institut.schema_name):
+            update_or_create_module_in_tenant(module, sync_specialite, institut.schema_name)
+
+    return JsonResponse({'status': True, 'message': 'Formation et spécialités synchronisées avec succès'})
+##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
+
+##### Synchronisation (Modification et création) des formations et spécialités dans tous les tenants ##################
+def ApiSyncUpdateFormation(request):
+    code_formation = request.POST.get('code_formation')
+    
+    formation = Formation.objects.get(code=code_formation)
+    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+
+    formation.updated=False
+    formation.save()
+    
+    for institut in liste:
+        with schema_context(institut.schema_name):
+            sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
+
+        specialites = Specialites.objects.filter(formation=formation)
+        for specialite in specialites:
+            with schema_context(institut.schema_name):
+                update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
+
+        modules = Modules.objects.filter(specialite=specialite)
+        for module in modules:
+            with schema_context(institut.schema_name):
+                update_or_create_module_in_tenant(module, specialite, institut.schema_name)
+    return JsonResponse({'status': True, 'message': 'Formation et spécialités ont été mises à jour avec succès dans tous les instituts.'})
+##### Synchronisation (Modification et création) des formations et spécialités dans tous les tenants ##################
+
+def ApiCheckFormationState(request):
+    code_formation = request.GET.get('code_formation')
+    formation = Formation.objects.get(code=code_formation)
+
+    if formation.updated:
+        return JsonResponse({'status': True})
+    else:
+        return JsonResponse({'status': False}) 
 
 def ApiSyncPartenaire(request):
 
@@ -245,9 +382,6 @@ def addSpecialite(request):
 
         return render(request, 'tenant_folder/formations/nouvelle_specialite.html', context)
 
-def addModule(request):
-    pass
-
 def addFraisInscription(request):
     pass
 
@@ -264,10 +398,15 @@ def updateSpecialite(request,pk):
             updated_spec = form.save()
             updated_spec.updated_by = request.user
             updated_spec.save()
+
+            formation  = specialite.formation
+            formation.updated = True
+            formation.save()
+
             messages.success(request, "Les données de la spécialitée ont été mis à jours avec succès")
             return redirect('t_formations:detailSpecialite', pk)
         else:
-            messages.err(request, "Une erreur c'est produite lors du traitement de la réquête")
+            messages.error(request, "Une erreur c'est produite lors du traitement de la réquête")
             return redirect('t_formations:detailSpecialite', pk)
     
     context = {
@@ -374,18 +513,20 @@ def ApiAddModule(request):
     code = request.POST.get('code_module')
 
     specialite = Specialites.objects.get(code = id)
+    try:
+        new_module = Modules.objects.create(
+            label = label,
+            coef = coef,
+            duree = duree,
+            specialite = specialite,
+            code = code,
+            created_by = request.user,
+        )
 
-    new_module = Modules.objects.create(
-        label = label,
-        coef = coef,
-        duree = duree,
-        specialite = specialite,
-        code = code,
-        created_by = request.user,
-    )
-
-    new_module.save()
-    return JsonResponse({'success' : True})
+        new_module.save()
+        return JsonResponse({'success' : True})
+    except IntegrityError:
+        return JsonResponse({'success' : False, 'message' : "Le module existe déja"})
     
 def deleteModule(request):
     id = request.GET.get('id')

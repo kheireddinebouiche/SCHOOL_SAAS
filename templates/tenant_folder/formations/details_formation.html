@@ -18,7 +18,7 @@
 
             <div class="page-content">
                 <div class="container-fluid">
-
+                    
                     <!-- start page title -->
                     <div class="row">
                         <div class="col-12">
@@ -35,6 +35,9 @@
                             </div>
                         </div>
                     </div>
+                    <div class="alert-content">
+                        
+                    </div>
                     <!-- end page title -->
                     <div class="row">
                         <div class="col-lg-12">
@@ -44,7 +47,11 @@
                                         <h5 class="card-title mb-0"><i>{{formation.nom}}</i></h5>
                                         {% if request.tenant.tenant_type != 'second' and formation.type_formation == "etrangere" %}
                                             <div class="d-flex">
-                                                <button type="button" id="syncBtn" class="btn btn-primary btn-sm float-end " title="Synchroniser les formations avec l'ensemble des instituts" > <i class='mdi mdi-sync me-2'></i>Synchroniser </button>
+                                                <button type="button" id="syncBtn" class="btn btn-primary btn-sm float-end me-2 " title="Synchroniser les formations avec l'ensemble des instituts" > <i class='mdi mdi-sync me-2'></i>Synchroniser </button>
+                                                <div id="update-btn-content">
+                                                    <button class="btn btn-success btn-sm me-2 " id="effectuerMiseAjour" ><i class="mdi mdi-update me-2"></i>Mise à jours des formations </button>
+                                                </div>   
+                                                
                                             </div>
                                         {% endif %}
                                     </div>
@@ -101,10 +108,8 @@
                                 <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
                                     <thead>
                                         <tr>
-                                            
-                                            <th>Label</th>
                                             <th>Code</th>
-                                            <th>Prix</th>
+                                            <th>Label</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -113,9 +118,9 @@
                                         {% if specialite.count != 0 %}
                                             {% for i in specialite %}
                                                 <tr> 
+                                                    <td><b>{{i.code}}</b></td>
                                                     <td><strong>{{i.label}}</strong></td>
-                                                    <td>{{i.code}} mois</td>
-                                                    <td>{{i.prix}} DZD</td>
+                                                    
                                                     <td>
                                                         <div class="dropdown d-inline-block">
                                                             <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -153,7 +158,7 @@
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="showSyncStateLabel">Etat de synchronisation des partenaires</h5>
+                        <h5 class="modal-title" id="showSyncStateLabel">Etat de synchronisation des formations</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body" id="content">
@@ -190,9 +195,12 @@
                             colors="primary:#e88c30,secondary:#e88c30"
                             style="width:120px;height:120px">
                         </lord-icon>
-                        </lord-icon>
+                        
                         <div class="mt-4" >
-                           <h4 id="alert-modal-content"></h4>
+                           <div id="alert-modal-content"></div>
+                        </div>
+                        <div class="hstack gap-2 justify-content-center mt-4">
+                            <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>
                 </div><!-- /.modal-content -->
@@ -203,6 +211,28 @@
     $(document).ready(function(){
 
         var code_formation = "{{formation.code}}";
+
+        function loadSyncState(){
+            $.ajax({
+                url : "{% url 't_formations:ApigetFormationSync' %}",
+                dataType: "JSON",
+                type : 'GET',
+                data : {'code_formation' : code_formation},
+                success : function(data){
+                    $('#listeItem').empty();
+                    $.each(data, function(index, item) {
+                        var row = '<tr>' +
+                            '<td>' + item.schema_name + '</td>' +
+                            '<td>' +(item.has_partenaire ? (item.has_formation 
+                                ? '<button class="btn btn-success" disabled>Déjà lié</button>'
+                                : '<button id="synBTN" class="btn btn-primary" data-name='+item.schema_name+'>Synchroniser</button>') : "Veuillez synchroniser le partenaire d'abord")+
+                            '</td>' +
+                        '</tr>';
+                        $('#listeItem').append(row);
+                    });
+                }
+            })
+        }
 
         $(document).on('click','#syncBtn',function(e){
             $.ajax({
@@ -216,14 +246,78 @@
                         $('#alert-modal-content').html(response.reason);
                         $('.alertModal').modal('show');
                     }else{
+                        loadSyncState();
                         $('#showSyncState').modal('show');
                     }
                 },
-            })
-
-           
-            
+            });        
         });
+
+        $(document).on('click','#synBTN', function(){
+            var schema = $(this).data('name');
+            $.ajax({
+                url :"{% url 't_formations:ApiSyncFormation' %}",
+                dataType: "JSON",
+                type : 'POST',
+                data : {'code_formation' : code_formation, 'schema_name' : schema,'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                success: function(response){
+                    if (response.status){
+                        alertify.success(response.message);
+                        loadSyncState();
+                    }else{
+                        alertify.error(response.message);
+                    }                   
+                },
+            });
+        });
+
+        $(document).on('click','#effectuerMiseAjour',function(){
+            $.ajax({
+                url :"{% url 't_formations:ApiSyncUpdateFormation' %}",
+                dataType: "JSON",
+                type : 'POST',
+                data : {'code_formation' : code_formation,'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                success: function(response){
+                    if (response.status){
+                        alertify.success(response.message);
+                        afficheBtnUpdat();
+                    }else{
+                        alertify.error(response.message);
+                    }                   
+                },
+            });
+        });
+
+        function afficheBtnUpdat(){
+            $.ajax({
+                url :"{% url 't_formations:ApiCheckFormationState' %}",
+                dataType: "JSON",
+                type : 'GET',
+                data : {'code_formation' : code_formation},
+                success: function(response){
+                    if(!response.status){
+                        $('#update-btn-content').hide();
+                    }else{
+                        $('#update-btn-content').show();
+
+                        $('.alert-content').html(
+                           '<div class="alert alert-warning d-flex align-items-center shadow-sm rounded-3 p-3" role="alert">'+
+                                '<div class="flex-shrink-0 me-3">'+
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">'+
+                                    '<path d="M8.982 1.566a1.5 1.5 0 0 0-2.964 0L.165 13.233c-.457.778.091 1.767.982 1.767h13.707c.89 0 1.438-.99.982-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1-2.002 0 1 1 0 0 1 2.002 0z"/>'+
+                                '</svg>'+
+                                '</div>'+
+                                '<div>'+
+                                '<strong>Attention :</strong> Des modification ont été apporter, veuillez synchroniser toutes les données avec les instituts'+
+                                '</div>'+
+                            '</div>'
+                        );
+                    }
+                },
+            })
+        }
+
+        afficheBtnUpdat();
     });
 </script>
 {% endblock content %}
