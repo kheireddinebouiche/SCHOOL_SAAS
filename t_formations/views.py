@@ -95,6 +95,34 @@ def ApiCheckIfFormationCompleted(request):
     # Si tout est bon
     return JsonResponse({'completed': True})
 
+def updateFormation(request, pk):
+    if request.tenant.tenant_type == "master":
+        formation = Formation.objects.get(pk = pk)
+        form = NewFormationFormMaster(instance = formation)
+        if request.method == "POST":
+            form = NewFormationForm(request.POST, instance=formation)
+            if form.is_valid():
+                updated_formation = form.save()
+                updated_formation.updated = True
+                updated_formation.save()
+
+                messages.success(request, 'Les informations de la formation ont été modifier avec succès')
+                return redirect('t_formations:listFormations')
+            else:
+                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+                return redirect('t_formations:updateFormation', pk)
+            
+        else:
+            context = {
+                'form' : form,
+                'tenant' : request.tenant
+            }
+            return render(request, 'tenant_folder/formations/updateFromation.html', context)
+
+
+
+
+
 def AddPartenaire(request):
     form = NewPartenaireForm()
     if request.method == 'POST':
@@ -169,6 +197,8 @@ def ApigetFormationSync(request):
 
     return JsonResponse(instituts, safe=False)
 
+
+######### methode de syncronisation des formations #############################################
 def update_or_create_formation_in_tenant(formation, institut_schema):
     try:
         with schema_context(institut_schema):
@@ -225,7 +255,7 @@ def update_or_create_module_in_tenant(module, specialite, institut_schema):
             return sync_module
     except IntegrityError:
         raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du module.")
-
+######### methode de syncronisation des formations #############################################
 
 ##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
 def ApiSyncFormation(request):
@@ -381,12 +411,6 @@ def addSpecialite(request):
         }
 
         return render(request, 'tenant_folder/formations/nouvelle_specialite.html', context)
-
-def addFraisInscription(request):
-    pass
-
-def updateFormation(request):
-    pass
 
 @transaction.atomic
 def updateSpecialite(request,pk):
