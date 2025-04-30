@@ -8,4 +8,6 @@ urlpatterns = [
 
    path('liste-des-sessions/', ListeSession, name="ListeSession"),
    path('NewSession', NewSession, name="NewSession"),
+   path('ApiListSession', ApiListSession, name="ApiListSession"),
+   path('ApiDeleteSession', ApiDeleteSession, name="ApiDeleteSession"),
 ]

@@ -32,21 +32,27 @@
                         <div class="col-lg-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h5 class="card-title mb-0">Liste des sessions</h5>
-                                    <div class="d-flex">
-                                        <button id="addNewSession" class="btn btn-primary btn-sm" data-url="{% url 't_exam:NewSession' %}"><i class='bx bx-plus me-2'></i>Crée un nouvelle session </button>
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <h5 class="card-title mb-2 mb-md-0">Liste des sessions</h5>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-2">
+                                                <input type="text" class="form-control " placeholder="Rechercher..." style="height: 30px;" />
+                                            </div>
+                                            <button id="addNewSession" class="btn btn-primary btn-sm" data-url="{% url 't_exam:NewSession' %}">
+                                                <i class='bx bx-plus me-1'></i>Créer une nouvelle session
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </div>   
                                 <div class="card-body">
                                     <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
                                         <thead>
                                             <tr>
                                                 
+                                                <th>Code #</th>
                                                 <th>Label</th>
-                                                <th>Durée</th>
-                                                <th>Partenaire</th>
-                                                <th>Frais inscription</th>
+                                                <th>Date de debut</th>
+                                                <th>Date de fin</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
@@ -84,9 +90,87 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
+        <div class="modal fade alertModal1" tabindex="-1" role="dialog" aria-labelledby="alertModal1Label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                        <lord-icon
+                            src="https://cdn.lordicon.com/fjvfsqea.json"
+                            trigger="loop"
+                            style="width:120px;height:120px">
+                        </lord-icon>
+                        <div class="mt-4">
+                           
+                            <p class="text-muted mb-4">Souhaitez-vous maintenant passer au paramétrage de cette session (dates, durée, matières, etc.) ?</p>
+                            <div class="hstack gap-2 justify-content-center">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+        <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                        </lord-icon>
+                        <div class="mt-4">
+                            <h4 class="mb-3">Vous étes sur le point de supprimer la session d'examen</h4>
+                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                            <div class="hstack gap-2 justify-content-center">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
 <script>
 
     $(document).ready(function(){
+
+        function loadSession(){
+            $.ajax({
+                url : "{% url 't_exam:ApiListSession' %}",
+                type : 'GET',
+                dataType : 'JSON',
+                success : function(data){
+                    var row = "";
+                    if (data.length > 0){
+                        $.each(data, function(index, i){
+                            row += '<tr>';
+                                row += '<td><b>'+i.code+'</b></td>';
+                                row += '<td>'+i.label+'</td>';
+                                row += '<td>'+i.date_debut+'</td>';
+                                row += '<td>'+i.date_fin+'</td>';
+                                row += "<td style='align-items:center;'>";
+                                    row += '<div class="dropdown d-inline-block">';
+                                    row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                    row += '<i class="ri-more-fill align-middle"></i>';
+                                    row += '</button>';
+                                    row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                                    row += '<li><button data-id='+i.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
+                                    row += '<li><button data-id='+i.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                                    row += '<li><button data-id='+i.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                                    row += "</ul></div>";
+                                row += "</td>";
+                            row += '</tr>';
+                        });
+                    }else{
+                        row = "<tr><td colspan='5' class='text-muted text-center'>Aucune session trouvé !</td></tr>";
+                    }
+
+                    $('#listItem').html(row);
+                }
+            });
+        }
+
+        loadSession();
 
         $(document).on('click','#addNewSession', function(){
             const url = $(this).data('url');
@@ -100,7 +184,7 @@
             e.preventDefault();
             const formData = $(this).serialize();
             $.ajax({
-                url: "{% url 't_exam:NewSession' %}",  // à créer
+                url: "{% url 't_exam:NewSession' %}",
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
@@ -108,6 +192,11 @@
                     if(response.statut == "success"){
                         $('#createSessionModal').modal('hide');
                         alertify.success("Groupe enregistré !");
+                        loadSession();
+                        var buttons = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Plus tard</button>'+
+                                      '<button id="confirmParametrage" data-id='+response.id+' class="btn btn-success btn-dark">Oui, paramétrer maintenant</a>';
+                        $('.hstack').html(buttons);
+                        $('.alertModal1').modal('show');
                         
                     } else {
                         alertify.error(response.message);
@@ -119,23 +208,36 @@
             });
         });
 
-        function loadSession(){
-            $.ajax({
-                url : "{% url 't_exam:ApiListSession' %}",
-                type : 'GET',
-                dataType : 'JSON',
-                success : function(data){
-                    var row = "";
-                    if (data.length > 0){
+        $(document).on('click','#btnDelete', function(){
+            const id = $(this).data('id');
 
-                    }else{
-                        row = "<tr><td colspan='4'>Aucune session trouvé !</td></tr>";
-                    }
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn"  class="btn btn-danger">Confirmer</a>';
 
-                    $('#listItem').html(row);
-                }
+            $('.deleteModal .hstack').html(row);
+            $('.deleteModal').modal('show');
+
+            $(document).on('click', '#confirmDeleteBtn', function(){
+                $.ajax({
+                    url : "{% url 't_exam:ApiDeleteSession' %}",
+                    dataType: 'JSON',
+                    type : 'GET',
+                    data : {'id': id},
+                    success : function(response){
+                        if (response.status){
+                            alertify.success(response.message);
+                            loadSession();
+                            $('.deleteModal').modal('hide');
+                        }else{
+                            alertify.error(response.message);
+                        }
+                    },
+
+                })
             });
-        }
+        });
+        
+        
     });
 
 </script>
