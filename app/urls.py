@@ -11,5 +11,6 @@ urlpatterns = [
     path('scolartie/groupes/',include('t_groupe.urls',namespace='t_groupe')),
     path('comptabilite/tresorerie/',include('t_tresorerie.urls',namespace='t_tresorerie')),
     path('scolarite/etudiants/', include('t_etudiants.urls', namespace='t_etudiants')),
+    path('examens/', include('t_exam.urls', namespace="t_exam")),
     
 ]

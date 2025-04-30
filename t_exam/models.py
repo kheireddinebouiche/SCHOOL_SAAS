@@ -1,5 +1,4 @@
 from django.db import models
-from .forms import *
 from django.contrib.auth.models import User
 from t_formations.models import *
 from t_groupe.models import Groupe
