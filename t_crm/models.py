@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from t_formations.models import *
+from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
 
 

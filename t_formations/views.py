@@ -95,6 +95,8 @@ def ApiCheckIfFormationCompleted(request):
     # Si tout est bon
     return JsonResponse({'completed': True})
 
+@transaction.atomic
+@login_required(login_url='institut_app:login')
 def updateFormation(request, pk):
     if request.tenant.tenant_type == "master":
         formation = Formation.objects.get(pk = pk)
@@ -111,15 +113,12 @@ def updateFormation(request, pk):
             else:
                 messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
                 return redirect('t_formations:updateFormation', pk)
-            
         else:
             context = {
                 'form' : form,
                 'tenant' : request.tenant
             }
-            return render(request, 'tenant_folder/formations/updateFromation.html', context)
-
-
+            return render(request, 'tenant_folder/formations/update_formation.html', context)
 
 
 

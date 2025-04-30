@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from institut_app.models import Entreprise
 from t_rh.models import *
 
+
 class Partenaires(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True, blank=True)
@@ -37,7 +38,6 @@ class Formation(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
     frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
-
     updated = models.BooleanField(default=False)
 
     class Meta:

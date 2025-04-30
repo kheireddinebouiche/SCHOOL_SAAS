@@ -2,6 +2,8 @@ from django.db import models
 from .forms import *
 from django.contrib.auth.models import User
 from t_formations.models import *
+from t_groupe.models import Groupe
+from t_etudiants.models import *
 
 class SessionExam(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, help_text="Code de la session d'examen")
@@ -9,8 +11,8 @@ class SessionExam(models.Model):
     type_session = models.CharField(max_length=11, null=True, blank=True, choices=[('normal' ,'Session Normal'),('rattrapage', 'Session de rattrapage')])
     date_debut = models.DateTimeField(null=True, blank=True)
     date_fin = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_updated_by")
 
     class Meta:
@@ -20,27 +22,66 @@ class SessionExam(models.Model):
     def __str__(self):
         return self.label
     
-
 class SessionExamLine(models.Model):
-    pass
-
-class BuiltinsNote(models.Model):
-    session_exam = models.ForeignKey(SessionExam, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_builtins")
-    etudiant = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="etudiant_builtins")
-
-    def __str__(self):
-        return self.etudiant.username if self.etudiant else "Etudiant non défini"
-
-class BuiltinsNotsLines(models.Model):
-    builtin = models.ForeignKey(BuiltinsNote, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="builtin_lines")
-    module = models.ForeignKey(Modules, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="builtin_module")
-    note = models.FloatField(null=True, blank=True, help_text="Note du module")
+    session = models.ForeignKey(SessionExam, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_lines")
+    groupe = models.ForeignKey(Groupe, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_groupe")
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 
     def __str__(self):
-        return f"{self.builtin} - {self.module}" if self.builtin and self.module else "Ligne de note non définie"
+        return f"{self.session} - {self.groupe}" if self.session and self.groupe else "Ligne de session d'examen non définie"
+    
+class ExamPlanification(models.Model):
+    exam_line = models.ForeignKey(SessionExamLine, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification")
+    #salle = models.ForeignKey(Salle, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification_salle")
+    date = models.DateTimeField(null=True, blank=True, help_text="Date de l'examen")
+    heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début de l'examen")
+    heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin de l'examen")
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.exam_line} - {self.module}" if self.exam_line and self.module else "Planification d'examen non définie"
+
+    
+class ModelBuilltins(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de builtins")
+    formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING)
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+
+    def __str__(self):
+        return self.labe if self.labe else "Modèle de builtins non défini"
+    
+class TypeNote(models.Model):
+    model_builtins = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="model_builtins")
+    nom = models.CharField(max_length=100, null=True, blank=True, help_text="Nom du type de note")
+
+    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+
+    def __str__(self):
+        return self.nom if self.nom else "Type de note non défini"
+    
     
 
-class Exam(models.Model):
-    pass
+class PVNotes(models.Model):
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE)
+    groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE)
+    date_creation = models.DateTimeField(auto_now_add=True,null=True, blank=True)
 
+    class Meta:
+        unique_together = ('module', 'groupe')
+
+    def __str__(self):
+        return f"PV - {self.module.nom} - {self.groupe.nom}"
+    
+class Note(models.Model):
+    etudiant = models.ForeignKey(Etudiant, on_delete=models.CASCADE, related_name='notes')
+    note_type = models.ForeignKey(TypeNote, on_delete=models.CASCADE)
+    valeur = models.FloatField()
+    pv = models.ForeignKey(PVNotes, on_delete=models.CASCADE, related_name='notes')
+
+    class Meta:
+        unique_together = ('etudiant', 'note_type', 'pv')
 
