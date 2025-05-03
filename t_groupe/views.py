@@ -3,6 +3,7 @@ from .models import *
 from .forms import *
 from django.contrib import messages
 from django.db import transaction
+from django.http import JsonResponse
 
 @transaction.atomic
 def NewGroupe(request):
@@ -45,6 +46,10 @@ def ListeGroupe(request):
         'tenant' : request.tenant,
     }
     return render(request,'tenant_folder/formations/groupe/liste_des_groupes.html', context)
+
+def ApiGetGroupeList(request):
+    liste = Groupe.objects.all().filter('id','label')
+    return JsonResponse(list(liste), safe=False)
 
 def detailsGroupe(request, pk):
     groupe = Groupe.objects.get(pk=pk)

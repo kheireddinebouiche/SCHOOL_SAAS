@@ -32,9 +32,19 @@ def NewSession(request):
         return render(request, 'tenant_folder/exams/template-session-form.html', {'form': form})
 
 def ApiListSession(request):
-    session = SessionExam.objects.all().values('id','code','label','date_debut','date_fin')
-    
-    return JsonResponse(list(session), safe=False)
+    session = SessionExam.objects.all()
+    data = []
+    for s in session:
+        data.append({
+            'id': s.id,
+            'code': s.code,
+            'label': s.label,
+            'date_debut': s.date_debut,
+            'date_fin': s.date_fin,
+            'type_session': s.type_session,
+            'type_session_label': s.get_type_session_display()
+        })
+    return JsonResponse(data, safe=False)
 
 def ApiDeleteSession(request):
     id = request.GET.get('id')
@@ -42,5 +52,24 @@ def ApiDeleteSession(request):
     obj.delete()
     return JsonResponse({'status' : True, 'message': 'La session à été supprimée avec succès'})
 
+def DetailsSession(request, pk):
+    context = {
+        'pk' : pk,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/exams/details-session.html', context)
 
+def ApiGetSessionDetails(request):
+    session_id = request.GET.get("id")
+    
+    session = SessionExam.objects.filter(id=session_id).values('label','code','date_debut','date_fin','date_fin','created_at')
+    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe')
+
+    
+    data = {
+        'session': list(session),  
+        'session_lines': list(session_lines),
+    }
+
+    return JsonResponse(data)
     

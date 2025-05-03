@@ -15,7 +15,6 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
     
-
 class CustomGroupe(Group):
     description = models.CharField(max_length=100, null=True, blank=True)
 
@@ -100,3 +99,16 @@ class Settings(models.Model):
 
     def __str__(self):
         return self.tenant.nom
+    
+class SalleClasse(models.Model):
+    label = models.CharField(max_length=100, null=True)
+    etage = models.CharField(max_length=100, null=True, blank=True)
+    nb_place = models.IntegerField(null=True, blank=True)
+    surface = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        verbose_name="Salle de classe"
+        verbose_name_plural="Salles de classe"
+
+    def __str__(self):
+        return f"{self.label} - {self.etage}"

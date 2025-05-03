@@ -120,8 +120,6 @@ def updateFormation(request, pk):
             }
             return render(request, 'tenant_folder/formations/update_formation.html', context)
 
-
-
 def AddPartenaire(request):
     form = NewPartenaireForm()
     if request.method == 'POST':

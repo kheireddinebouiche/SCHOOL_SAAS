@@ -10,4 +10,7 @@ urlpatterns = [
    path('NewSession', NewSession, name="NewSession"),
    path('ApiListSession', ApiListSession, name="ApiListSession"),
    path('ApiDeleteSession', ApiDeleteSession, name="ApiDeleteSession"),
+
+   path('details-session/<int:pk>/', DetailsSession, name="DetailsSession"),
+   path('ApiGetSessionDetails', ApiGetSessionDetails, name="ApiGetSessionDetails"),
 ]

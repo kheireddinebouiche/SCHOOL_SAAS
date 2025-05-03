@@ -12,6 +12,6 @@ class SessionForm(forms.ModelForm):
             'code' : forms.TextInput(attrs={'class' : 'form-control'}),
             'label':forms.TextInput(attrs={'class' : 'form-control'}),
             'type_session':forms.Select(attrs={'class' : 'form-control'}),
-            'date_debut':forms.DateInput(attrs={'class' : 'form-control','type' :'date'}),
-            'date_fin':forms.DateInput(attrs={'class' : 'form-control','type' :'date'}),
+            'date_debut':forms.DateInput(attrs={'class' : 'form-control','type' :'date', 'id':'id_date_debut'}),
+            'date_fin':forms.DateInput(attrs={'class' : 'form-control','type' :'date', 'id':'id_date_defin'}),
         }

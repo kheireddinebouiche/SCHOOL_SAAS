@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from t_formations.models import *
 from t_groupe.models import Groupe
 from t_etudiants.models import *
+from institut_app.models import SalleClasse
 
 class SessionExam(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, help_text="Code de la session d'examen")
@@ -32,7 +33,7 @@ class SessionExamLine(models.Model):
     
 class ExamPlanification(models.Model):
     exam_line = models.ForeignKey(SessionExamLine, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification")
-    #salle = models.ForeignKey(Salle, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification_salle")
+    salle = models.ForeignKey(SalleClasse, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification_salle")
     date = models.DateTimeField(null=True, blank=True, help_text="Date de l'examen")
     heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début de l'examen")
     heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin de l'examen")

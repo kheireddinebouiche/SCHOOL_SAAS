@@ -1,0 +1,318 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Formations - Liste des spécialitées {% endblock title %}
+
+{% block content %}
+<style>
+    ._inputDetails {
+       background-color: transparent !important;
+       border : none !important;
+       outline : none;
+       font-weight : 700 !important;
+    }
+</style>
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0">Détails de la session</h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Examens</a></li>
+                                        <li class="breadcrumb-item active">Détails de la session</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                   
+                    <div class="row align-items-stretch">
+                        <div class="col-lg-12 d-flex">
+                            <div class="card w-100">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                        <span id="card-header-title" style='font-weight:700;'> </span>
+                                        <div class="d-flex">
+                                            <button id="btnConfigureGroupes" class="btn btn-primary btn-sm" data-url="#">
+                                                <i class='bx bx-plus me-1'></i>Configurer les groupes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="code_session">Code</label>
+                                            <input type="text" disabled class="form-control _inputDetails" id="code_session"  />
+                                        </div> 
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="date_debut">Date de debut </label>
+                                            <input type="text" disabled class="form-control _inputDetails" id="date_debut" />
+                                        </div> 
+                                        <div class="col-lg-4">
+                                            <label class="form-label" for="date_fin">Date de fin </label>
+                                            <input type="text" disabled class="form-control _inputDetails" id="date_fin" />
+                                        </div>                                  
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="row">
+                                        <div class="col-lg-6">
+                                            <div class="text-lg-start">
+                                                <a href="#" class="btn btn-primary waves-effect btn-sm waves-light me-1"><i class="mdi mdi-pencil me-1"></i> Modifier</a>
+                                                <a href="#" class="btn btn-danger waves-effect btn-sm waves-light"><i class="mdi mdi-trash-can me-1"></i> Supprimer</a>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card" style="height : 500px;">
+                                <div class="card-header">
+                                    <h5 class="card-title">Liste des groupes</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive " style="height : 500px;">
+                                        <table class="table table-centered table-nowrap table-hover mb-0" >
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Groupe</th>
+                                                    <th scope="col">Date de debut</th>
+                                                    <th scope="col">Date de fin</th>
+                                                    <th scope="col">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="SessionLineItem">
+                                               
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                            
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+
+<div id="addModule" class="modal fade" tabindex="-1" aria-labelledby="addModuleLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addModuleLabel">Ajout d'un nouveau module</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="row">
+                    <div class="col-lg-3">
+                        <label for="_label">Nom du module :</label>
+                        <input type="text" class="form-control" id="_label" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="_code_module">Code Module :</label>
+                        <input type="text" class="form-control" id="_code_module" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="_coef">Coéfficiant du module :</label>
+                        <input type="text" class="form-control" id="_coef" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="_duree">Volume Horraire :</label>
+                        <input type="number" class="form-control" id="_duree" />
+                    </div>
+                    
+               </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="addBtn">Ajouter</button>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="updateModule" class="modal fade" tabindex="-1" aria-labelledby="updateModuleLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateModuleLabel">Modification des informations du module</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="row">
+                    <input type="hidden" id="_id_module" disabled />
+                    <div class="col-lg-3">
+                        <label for="u_label">Nom du module :</label>
+                        <input type="text" class="form-control" id="u_label" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="u_code_module">Code Module :</label>
+                        <input type="text" class="form-control" id="u_code_module" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="u_coef">Coéfficiant du module :</label>
+                        <input type="text" class="form-control" id="u_coef" />
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="u_duree">Volume Horraire :</label>
+                        <input type="number" class="form-control" id="u_duree" />
+                    </div>
+                    
+               </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="ConfirmUpdateBtn">Confirmer les modification</button>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="plannificationDesGroupeModal" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesGroupeModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title me-3" id="plannificationDesGroupeModalLabel">Programmation des groupes</h5>
+              
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               
+            </div>
+            <div class="modal-body">
+               <div class="row">
+                    <div id='form_add_' class="row">
+                        <div class="col-lg-4">
+                            <label for="p_groupes">Groupe</label>
+                            <select class="form-control" id="p_groupes">
+                                <!-- options -->
+                            </select>
+                        </div>
+                        <div class="col-lg-4">
+                            <label for="p_date_debut">Date de debut :</label>
+                            <input type="date" class="form-control" id="p_date_debut" />
+                        </div>
+
+                        <div class="col-lg-4">
+                            <label for="p_date_fin">Date de fin :</label>
+                            <input type="date" class="form-control" id="p_date_debut" />
+                        </div>
+                    
+                       
+                    </div>
+               </div>
+
+               
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button id="confirmDeleteBtn" data-id='+id+' class="btn btn-primary">Confirmer</a>
+            </div>
+            
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                </lord-icon>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point de supprimer le groupe</h4>
+                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                    <div class="hstack gap-2 justify-content-center">
+                        
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script>
+
+    $(document).ready(function(){
+        const id = "{{pk}}";
+        
+        function loadData() {
+            $.ajax({
+                url: "{% url 't_exam:ApiGetSessionDetails' %}",
+                dataType: 'json',
+                type: 'GET',
+                data: { 'id': id }, // Assure-toi que la variable `id` est définie globalement ou passée en paramètre
+                success: function(data) {
+                    var row = "";
+
+                    $.each(data.session, function(index, p){
+                        $('#card-header-title').html(p.label);
+                        $('#code_session').val(p.code);
+                        $('#date_debut').val(p.date_debut.split('T')[0]);
+                        $('#date_fin').val(p.date_fin.split('T')[0]);
+                    });
+        
+                    if (data.session_lines.length > 0) {
+                        $.each(data.session_lines, function(index, item) {
+                            row += "<tr>";
+                            row += "<td>" + item.id + "</td>";
+                            row += "<td>" + item.groupe + "</td>";
+                            row += "<td>" + item.id + "</td>";
+                            row += "<td style='align-items:center;'>";
+                                row += '<div class="dropdown d-inline-block">';
+                                row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                row += '<i class="ri-more-fill align-middle"></i>';
+                                row += '</button>';
+                                row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                                row += '<li><a href="#" data-id='+item.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </a></li>';
+                                row += '<li><button data-id='+item.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                                row += '<li><button data-id='+item.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                                row += "</ul></div>";
+                            row += "</td>";
+                            row += "</tr>";
+                        });
+                    } else {
+                        row = "<tr><td colspan='3' class='text-muted text-center'>Aucune information disponible</td></tr>";
+                    }
+        
+                    $('#SessionLineItem').html(row);
+                },
+                
+            });
+        }
+        
+        loadData();
+
+       $(document).on('click', '#btnConfigureGroupes', function(){
+
+            $.ajax({
+                url : "{% url '' %}"
+            })
+        $('#plannificationDesGroupeModal').modal('show');
+       });
+       
+    });
+</script>
+
+{% endblock content %}
+           
+
+
+
+    
