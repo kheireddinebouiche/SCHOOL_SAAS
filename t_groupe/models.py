@@ -7,7 +7,7 @@ from t_etudiants.models import *
 class Groupe(models.Model):
     createdy = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groupe_createdy')
 
-    label = models.CharField(max_length=100, null=True, blank=True)
+    nom = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
 
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
@@ -27,7 +27,7 @@ class Groupe(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.nom
+        return f"{self.nom} - {self.promotion}"
     
     class Meta:
         ordering = ['nom']

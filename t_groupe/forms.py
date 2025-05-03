@@ -20,6 +20,7 @@ class NewGroupeForms(forms.ModelForm):
             'max_student' : forms.TextInput(attrs={'class' : 'form-control' , 'type' : 'number'}),
             'specialite' : forms.Select(attrs={'class' : 'form-control'}),
             'annee_scolaire' : forms.TextInput(attrs={'class' : 'form-control', 'id' : '_annee_scolaire', 'placeholder' : 'Ex: 2020/2021'}),
+            'promotion' : forms.Select(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -31,5 +32,6 @@ class NewGroupeForms(forms.ModelForm):
             'max_student' : "Maximum d'étudiants pour cloturer la formation :",
             'specialite' : "Spécialité :",
             'annee_scolaire' : "Année scolaire :",
+            'promotion' : "Veuillez sélectionner la promo :",
         }
 

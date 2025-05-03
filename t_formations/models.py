@@ -183,4 +183,4 @@ class Promos(models.Model):
         verbose_name_plural="Promos"
 
     def __str__(self):
-        return self.label
+        return f"{self.label} - {self.session}"

@@ -48,7 +48,7 @@ def ListeGroupe(request):
     return render(request,'tenant_folder/formations/groupe/liste_des_groupes.html', context)
 
 def ApiGetGroupeList(request):
-    liste = Groupe.objects.all().filter('id','label')
+    liste = Groupe.objects.all().values('id','nom')
     return JsonResponse(list(liste), safe=False)
 
 def detailsGroupe(request, pk):

@@ -13,4 +13,6 @@ urlpatterns = [
     path('supprimer-groupe/<int:pk>/', deleteGroupe, name="deletegroupe"),
     path('brouilon/<int:pk>/', makeGroupeBrouillon, name="makeGroupeBrouillon"),
     path('valider-groupe/<int:pk>/',validateGroupe, name="validateGroupe"),
+
+    path('ApiGetGroupeList', ApiGetGroupeList, name="ApiGetGroupeList"),
 ]
