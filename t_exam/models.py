@@ -25,6 +25,11 @@ class SessionExam(models.Model):
 class SessionExamLine(models.Model):
     session = models.ForeignKey(SessionExam, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_lines")
     groupe = models.ForeignKey(Groupe, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_groupe")
+    semestre = models.CharField(max_length=100, null=True, choices=[('1',"1"),('2',"2"),('3',"3"),('4',"4")])
+
+    date_debut = models.DateField(null=True)
+    date_fin = models.DateField(null=True)
+
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 

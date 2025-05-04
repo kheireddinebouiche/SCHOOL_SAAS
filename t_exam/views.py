@@ -63,9 +63,8 @@ def ApiGetSessionDetails(request):
     session_id = request.GET.get("id")
     
     session = SessionExam.objects.filter(id=session_id).values('label','code','date_debut','date_fin','date_fin','created_at')
-    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe')
+    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe','semestre','date_debut','date_debut')
 
-    
     data = {
         'session': list(session),  
         'session_lines': list(session_lines),
@@ -79,7 +78,6 @@ def ApiUpdateSession(request):
     code = request.POST.get('code')
     date_debut = request.POST.get('date_debut')
     date_fin = request.POST.get('date_fin')
-
     
     if not id:
         return JsonResponse({'status' : 'error', 'message' : "ID session manquant"})
