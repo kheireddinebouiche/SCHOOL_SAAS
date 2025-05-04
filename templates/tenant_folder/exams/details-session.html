@@ -9,7 +9,22 @@
        border : none !important;
        outline : none;
        font-weight : 700 !important;
+    } 
+    
+    .is-valid {
+        border-color: #28a745 !important;
     }
+    
+    .valid-feedback {
+        color: #28a745;
+        display: block;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545;
+        display: block;
+    }
+
 </style>
         <!-- ============================================================== -->
         <!-- Start right Content here -->
@@ -68,7 +83,7 @@
                                     <div class="row">
                                         <div class="col-lg-6">
                                             <div class="text-lg-start">
-                                                <a href="#" class="btn btn-primary waves-effect btn-sm waves-light me-1"><i class="mdi mdi-pencil me-1"></i> Modifier</a>
+                                                <button id="updateSessionBtn" class="btn btn-primary waves-effect btn-sm waves-light me-1"><i class="mdi mdi-pencil me-1"></i> Modifier</button>
                                                 <a href="#" class="btn btn-danger waves-effect btn-sm waves-light"><i class="mdi mdi-trash-can me-1"></i> Supprimer</a>
                                             </div>
                                         </div>
@@ -149,36 +164,37 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div id="updateModule" class="modal fade" tabindex="-1" aria-labelledby="updateModuleLabel" aria-hidden="true" style="display: none;">
+<div id="updateSessionModal" class="modal fade" tabindex="-1" aria-labelledby="updateSessionModalLabel" aria-hidden="true" style="display: none;">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateModuleLabel">Modification des informations du module</h5>
+                <h5 class="modal-title" id="updateSessionModalLabel">Modification des informations de la session </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                <div class="row">
                     <input type="hidden" id="_id_module" disabled />
                     <div class="col-lg-3">
-                        <label for="u_label">Nom du module :</label>
+                        <label for="u_label">Label :</label>
                         <input type="text" class="form-control" id="u_label" />
                     </div>
                     <div class="col-lg-3">
-                        <label for="u_code_module">Code Module :</label>
-                        <input type="text" class="form-control" id="u_code_module" />
+                        <label for="u_code">Code session :</label>
+                        <input type="text" class="form-control" id="u_code" />
                     </div>
                     <div class="col-lg-3">
-                        <label for="u_coef">Coéfficiant du module :</label>
-                        <input type="text" class="form-control" id="u_coef" />
+                        <label for="u_date_debut">Date de début :</label>
+                        <input type="text" class="form-control" id="u_date_debut" />
                     </div>
                     <div class="col-lg-3">
-                        <label for="u_duree">Volume Horraire :</label>
-                        <input type="number" class="form-control" id="u_duree" />
+                        <label for="u_date_fin">Date de fin :</label>
+                        <input type="text" class="form-control" id="u_date_fin" />
                     </div>
-                    
+                   
                </div>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
                 <button class="btn btn-primary" id="ConfirmUpdateBtn">Confirmer les modification</button>
             </div>
 
@@ -323,6 +339,106 @@
             })
         $('#plannificationDesGroupeModal').modal('show');
        });
+
+       $(document).on('click', '#updateSessionBtn', function(){
+          var u_label = $('#card-header-title').html();
+          var u_code = $('#code_session').val();
+          var u_date_debut = $('#date_debut').val();
+          var u_date_fin   = $('#date_fin').val();
+
+          $('#u_label').val(u_label);
+          $('#u_code').val(u_code);
+          $('#u_date_debut').val(u_date_debut);
+          $('#u_date_fin').val(u_date_fin);
+
+          $('#updateSessionModal').modal('show');
+          
+       });
+
+       $(document).on('click', "#ConfirmUpdateBtn", function(){
+
+        var updated_label = $('#u_label').val();
+        var updated_code = $('#u_code').val();
+        var updated_date_debut = $('#u_date_debut').val();
+        var updated_date_fin = $('#u_date_fin').val();
+
+        $.ajax({
+            url : "{% url 't_exam:ApiUpdateSession' %}",
+            dataType: 'JSON',
+            type : 'POST',
+            data : {
+                'id' : id,
+                'label' : updated_label,
+                'code' : updated_code,
+                'date_debut' : updated_date_debut,
+                'date_fin' : updated_date_fin,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+
+            success : function(response){
+                if (response.status == "success"){
+                    alertify.success(response.message);
+                    loadData();
+                    $('#updateSessionModal').modal('hide');
+                }else{
+                    alertify.error(response.message);
+                }
+            }
+        });
+       });
+
+       const labelField = document.getElementById('u_label');
+       $(document).on('input', "#u_label", function(){
+            let currentLabel = $('#card-header-title').html();
+            let newLabel = $(this).val();
+
+            if (currentLabel !== newLabel) {
+                $.ajax({
+                    url: "{% url 't_exam:ApiCheckLabelDisponibility' %}",
+                    dataType: 'JSON',
+                    type: 'GET',
+                    data: {
+                        'newLabel': newLabel,
+                    },
+                    success: function (response) {
+                        // Supprimer tout ancien message
+                        let errorMsg = document.getElementById("error-msg");
+                        if (errorMsg) errorMsg.remove();
+        
+                        if (response.status === "success") {
+                            // Nom d'utilisateur déjà pris
+                            labelField.classList.remove("is-valid");
+                            labelField.classList.add("is-invalid");
+        
+                            let msg = document.createElement("div");
+                            msg.id = "error-msg";
+                            msg.className = "invalid-feedback";
+                            msg.innerText = "Label de la session d'examen déjà présent dans la base de données. Veuillez en choisir un autre.";
+                            labelField.parentNode.appendChild(msg);
+                        } else {
+                           
+
+                            labelField.classList.remove("is-invalid");
+                            labelField.classList.add("is-valid");
+        
+                            let msg = document.createElement("div");
+                            msg.id = "error-msg";
+                            msg.className = "valid-feedback";
+                            msg.innerText = "Label disponible";
+                            labelField.parentNode.appendChild(msg);
+                        }
+                    }
+                });
+            } else {
+                // Réinitialiser les styles si égal à l'actuel
+                labelField.classList.remove("is-invalid", "is-valid");
+                let errorMsg = document.getElementById("error-msg");
+                if (errorMsg) errorMsg.remove();
+            }
+       });
+
+       
+
        
     });
 </script>

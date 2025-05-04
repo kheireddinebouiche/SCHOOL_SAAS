@@ -72,4 +72,31 @@ def ApiGetSessionDetails(request):
     }
 
     return JsonResponse(data)
+
+def ApiUpdateSession(request):
+    id = request.POST.get('id')
+    label = request.POST.get('label')
+    code = request.POST.get('code')
+    date_debut = request.POST.get('date_debut')
+    date_fin = request.POST.get('date_fin')
+
     
+    if not id:
+        return JsonResponse({'status' : 'error', 'message' : "ID session manquant"})
+    else:    
+        obj = SessionExam.objects.get(id=id)
+        obj.label = label
+        obj.code = code
+        obj.date_debut = date_debut
+        obj.date_fin = date_fin
+        obj.save()
+        return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session on été mis à jours avec succès'})
+
+def ApiCheckLabelDisponibility(request):
+    label = request.GET.get('newLabel')
+
+    obj = SessionExam.objects.filter(label = label)
+    if obj:
+        return JsonResponse({'status' : "success"})
+    else:
+        return JsonResponse({'status' : "error"})
