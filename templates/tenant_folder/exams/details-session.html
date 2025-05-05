@@ -108,6 +108,7 @@
                                                     <th scope="col">Groupe</th>
                                                     <th scope="col">Date de debut</th>
                                                     <th scope="col">Date de fin</th>
+                                                    <th scope="col">Semestre</th>
                                                     <th scope="col">Actions</th>
                                                 </tr>
                                             </thead>
@@ -202,55 +203,47 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div id="plannificationDesGroupeModal" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesGroupeModalLabel" aria-hidden="true" style="display: none;">
+<div id="plannificationDesExamens" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesExamensLabel" aria-hidden="true" style="display: none;">
+   
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title me-3" id="plannificationDesGroupeModalLabel">Programmation des groupes</h5>
+                <h5 class="modal-title me-3" id="plannificationDesExamensLabel">Plannification des modules d'examens</h5>
               
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                
             </div>
             <div class="modal-body">
-               <div class="row">
-                    <div id='form_add_' class="row">
-                        <div class="col-lg-3">
-                            <label for="p_groupes">Groupe</label>
-                            <select class="form-control" id="p_groupes">
-                                <!-- options -->
-                            </select>
-                        </div>
-                        <div class="col-lg-3">
-                            <label for="p_date_debut">Date de debut :</label>
-                            <input type="date" class="form-control" id="p_date_debut" />
-                        </div>
-
-                        <div class="col-lg-3">
-                            <label for="p_date_fin">Date de fin :</label>
-                            <input type="date" class="form-control" id="p_date_fin" />
-                        </div>
-
-                        <div class="col-lg-3">
-                            <label for="p_semestre">Semestre :</label>
-                            <select class="form-control" id="p_semestre">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                            </select>
-                        </div>
+                <div class="row">
+                    <form method="post" id="plan-exam-form">
+                        {% csrf_token %}
+                        <input type="hidden" id="session_line_id" name="session_line_id">
+                        <table id="exam-table" class="table table-centered table-nowrap table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Date</th>
+                                <th>Heure début</th>
+                                <th>Heure fin</th>
+                                <th>Salle</th>
+                                <th>Action</th>
+                            </tr>
+                            </thead>
+                            <tbody id="table-body">
+                            
+                            </tbody>
+                        </table>
                     
-                       
-                    </div>
-               </div>
-
-               
+                       <div class="modal-footer">
+                            <button type="button" class="btn btn-success"  onclick="addRow()">Ajouter une ligne</button>
+                            <button type="submit" class="btn btn-primary" >Enregistrer</button>
+                       </div>
+                    </form>  
+                    
+                    
+                </div>         
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button id="confirmPlanNewEXam" class="btn btn-primary">Confirmer</a>
-            </div>
-            
+      
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
@@ -297,16 +290,17 @@
                     if (data.session_lines.length > 0) {
                         $.each(data.session_lines, function(index, item) {
                             row += "<tr>";
-                            row += "<td>" + item.id + "</td>";
-                            row += "<td>" + item.groupe + "</td>";
-                            row += "<td>" + item.id + "</td>";
+                            row += "<td><a href='/examens/plannification-examens/"+item.id+"'><b>" + item.groupe__nom + "</b></a></td>";
+                            row += "<td>" + item.date_debut + "</td>";
+                            row += "<td>" + item.date_fin + "</td>";
+                            row += "<td>" + item.semestre + "</td>";
                             row += "<td style='align-items:center;'>";
                                 row += '<div class="dropdown d-inline-block">';
                                 row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
                                 row += '<i class="ri-more-fill align-middle"></i>';
                                 row += '</button>';
                                 row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                row += '<li><a href="#" data-id='+item.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </a></li>';
+                                row += '<li><button data-id='+item.id+' data-date-d='+item.date_debut+' data-date-f='+item.date_fin+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
                                 row += '<li><button data-id='+item.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
                                 row += '<li><button data-id='+item.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
                                 row += "</ul></div>";
@@ -448,29 +442,185 @@
        });
 
        $(document).on('click','#confirmPlanNewEXam',function(){
+            var p_groupes = $('#p_groupes').val();
+            var p_semestre = $('#p_semestre').val();
+            var p_date_debut = $('#p_date_debut').val();
+            var p_date_fin = $('#p_date_fin').val();
 
             $.ajax({
                 url : "{% url 't_exam:ApiPlaneExam' %}",
                 dataType: "JSON",
                 type : 'POST',
                 data : {
-                    'groupe' : ,
-                    'session' : ,
-                    'semestre' : ,
-                    'date_debut': ,
-                    'date_fin' : ,
+                    'groupe' : p_groupes,
+                    'session' : id,
+                    'semestre' : p_semestre,
+                    'date_debut':p_date_debut ,
+                    'date_fin' : p_date_fin,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){
-
+                    if(response.status == 'success'){
+                        alertify.success(response.message);
+                        loadData();
+                    }else{
+                        alertify.error(response.message);
+                    }
                 }
             });
 
        });
 
-       
+       $(document).on('click', '#btnDetails', function(){
+           var id = $(this).data('id');
+           const date_d_session = $(this).data('date-d');
+           const date_f_session = $(this).data('date-f'); 
+
+           $('#session_line_id').val(id);
+
+           $.ajax({
+                url : "{% url 't_exam:ApiLoadDatasForPlanExam' %}",
+                type : "GET",
+                dataType : "JSON",
+                data : {
+                    'id' : id,
+                },
+                success: function(data){
+                    var modulesRow = "";
+                    var classRow = "";
+                    $.each(data.modules, function(index, item){
+                        modulesRow += "<option value="+item.id+">"+item.label+"</option>";
+                    });
+                    $.each(data.salles, function(index, item){
+                        classRow += "<option value="+item.id+">"+item.label+"</option>"; 
+                    });
+                    $.ajax({
+                        url: "{% url 't_exam:get_exam_plans' %}",
+                        type: "GET",
+                        dataType: "JSON",
+                        data: { 'id': id },
+                        success: function (response) {
+                            const tbody = $("#table-body");
+                            tbody.empty(); // Vider d'abord le tableau
+                            
+                            if (response.status === "success" && response.planifications.length > 0) {
+                              $.each(response.planifications, function (index, item) {
+                                tbody.append(`
+                                  <tr>
+                                    <td>
+                                     
+                                      <select class="form-control module-select" name="module[]">
+                                        ${modulesRow.replace(`value=${item.module_id}`, `value=${item.module_id} selected`)}
+                                      </select>
+                                    </td>
+                                    <td><input class="form-control" type="date" name="date[]" value="${item.date}"></td>
+                                    <td><input class="form-control" type="time" name="heure_debut[]" value="${item.heure_debut}"></td>
+                                    <td><input class="form-control" type="time" name="heure_fin[]" value="${item.heure_fin}"></td>
+                                    <td>
+                                      <select class="form-control" name="salle[]">
+                                        ${classRow.replace(`value=${item.salle_id}`, `value=${item.salle_id} selected`)}
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <button type="button" class="btn btn-light-primary btn-sm" onclick="removeRow(this)">
+                                        <i class='bx bx-trash bx-sm'></i>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                `);
+                              });
+
+                            } else {
+                             
+                              tbody.append(`
+                                <tr>
+                                  <td>
+                                    
+                                    <select class="form-control module-select" name="module[]">
+                                        ${modulesRow}
+                                    </select>
+                                  </td> 
+                                  <td><input class="form-control" id='date_exam' type="date" name="date[]"></td>
+                                  <td><input class="form-control" type="time" name="heure_debut[]"></td>
+                                  <td><input class="form-control" type="time" name="heure_fin[]"></td>
+                                  <td>
+                                    <select class="form-control" name="salle[]">
+                                         ${classRow}
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <button type="button" class="btn btn-light-primary btn-sm" onclick="removeRow(this)">
+                                      <i class='bx bx-trash bx-sm'></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              `);
+                            }   
+                        }
+                      });
+                }
+           });
+
+           $("#plannificationDesExamens").modal('show');
+
+           $(document).on('input', '#date_exam', function(){
+                
+                 var date_exam = $(this).val();
+                 
+                 if (date_exam < date_d_session || date_exam > date_f_session){
+                    alertify.error('La date ne correspond pas a la périiode d\'examen fixé pour le groupe !');
+                    $(this).val("");
+                 }
+                
+            });
+       });
+
+       $(document).on('submit', '#plan-exam-form', function(e){
+            e.preventDefault(); // Empêche le rechargement de la page
+
+            var form = $(this);
+            var formData = form.serialize(); // Sérialise les champs du formulaire
+
+            $.ajax({
+                url: "{% url 't_exam:save_exam_plan' %}",  // Remplace ceci par l'URL Django correcte pour sauvegarder les données
+                type: "POST",
+                data: formData,
+                headers: {
+                    'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val() // Ajoute le token CSRF
+                },
+                success: function(response){
+                    if(response.status === "success"){
+                        
+                        alert("Planification enregistrée avec succès !");
+                        
+                    } else {
+                        alert("Erreur : " + response.message);
+                    }
+                },
+                error: function(xhr, status, error){
+                    alert("Une erreur est survenue lors de l'enregistrement.");
+                    console.error(error);
+                }
+            });
+        });
 
        
     });
+</script>
+
+<script>
+
+    function addRow() {
+      const row = document.querySelector("#table-body tr").cloneNode(true);
+      row.querySelectorAll("input").forEach(input => input.value = "");
+      document.querySelector("#table-body").appendChild(row);
+    }
+
+    function removeRow(btn) {
+      const row = btn.closest("tr");
+      const rows = document.querySelectorAll("#table-body tr");
+      if (rows.length > 1) row.remove();  // éviter de supprimer la dernière ligne
+    }
 </script>
 
 {% endblock content %}

@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from .models import *
 from .forms import *
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
 
 
 def ListeSession(request):
@@ -63,7 +64,7 @@ def ApiGetSessionDetails(request):
     session_id = request.GET.get("id")
     
     session = SessionExam.objects.filter(id=session_id).values('label','code','date_debut','date_fin','date_fin','created_at')
-    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe','semestre','date_debut','date_debut')
+    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe__nom','semestre','date_debut','date_fin')
 
     data = {
         'session': list(session),  
@@ -98,3 +99,114 @@ def ApiCheckLabelDisponibility(request):
         return JsonResponse({'status' : "success"})
     else:
         return JsonResponse({'status' : "error"})
+
+def ApiPlaneExam(request):
+    groupe = request.POST.get('groupe')
+    session = request.POST.get('session')
+    semestre = request.POST.get('semestre')
+    date_debut = request.POST.get('date_debut')
+    date_fin = request.POST.get('date_fin')
+
+    obj = SessionExam.objects.get(id=session)
+    groupe = Groupe.objects.get(id = groupe)
+
+    new_session_line = SessionExamLine(
+        groupe = groupe,
+        date_debut = date_debut,
+        date_fin = date_fin,
+        semestre = semestre,
+        session = obj
+    )
+
+    new_session_line.save()
+    return JsonResponse({'status' : 'success', 'message' : 'Le groupe à été planifier'})
+
+def ExamConfiguration(request, pk):
+    context = {
+        'pk' : pk,
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/exams/exams_plannification.html', context)
+
+def ApiGetExamLineDetails(request):
+    pass
+
+def ApiLoadDatasForPlanExam(request):
+    id = request.GET.get('id')
+    obj = SessionExamLine.objects.get(id = id)
+    modules = Modules.objects.filter(specialite = obj.groupe.specialite).values('id','label')
+    salles = SalleClasse.objects.all().values('id','label')
+
+    data = {
+        'modules' : list(modules),
+        'salles' : list(salles)
+    }
+
+    return JsonResponse(data, safe=False)
+
+def get_exam_planifications(request):
+    session_line_id = request.GET.get("id")
+    
+    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id)
+
+    data = []
+    for plan in plans:
+        data.append({
+            "module_id": plan.module.id,
+            "module_nom": plan.module.label,
+            "date": plan.date.strftime("%Y-%m-%d") if plan.date else "",
+            "heure_debut": plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
+            "heure_fin": plan.heure_fin.strftime("%H:%M") if plan.heure_fin else "",
+            "salle_id": plan.salle.id,
+            "salle_nom": plan.salle.label
+        })
+
+    return JsonResponse({"status": "success", "planifications": data})
+
+from datetime import datetime
+@csrf_exempt  # ou utilise les en-têtes CSRF en JS
+def save_exam_plan(request):
+    if request.method == "POST":
+        
+
+        session_line_id = request.POST.get("session_line_id")
+        modules = request.POST.getlist("module[]")
+        dates = request.POST.getlist("date[]")
+        heures_debut = request.POST.getlist("heure_debut[]")
+        heures_fin = request.POST.getlist("heure_fin[]")
+        salles = request.POST.getlist("salle[]")
+
+        obj = SessionExamLine.objects.get(id =session_line_id )
+
+        planifications = []
+
+        for i in range(len(modules)):
+            date_obj = datetime.strptime(dates[i], "%Y-%m-%d")
+
+            plan, created  = ExamPlanification.objects.update_or_create(
+                exam_line=obj,
+               
+                defaults={
+                    'module' : Modules.objects.get(id=modules[i]),
+                    'date': date_obj,
+                    'heure_debut': heures_debut[i],
+                    'heure_fin': heures_fin[i],
+                    'salle': SalleClasse.objects.get(id=salles[i]),
+                }
+            )
+            planifications.append({
+                "module": plan.module.label,
+                "date": plan.date.strftime("%Y-%m-%d"),
+                "heure_debut": str(plan.heure_debut),
+                "heure_fin": str(plan.heure_fin),
+                "salle": plan.salle.label
+            })
+
+        return JsonResponse({
+            "status": "success",
+            "message": "Planifications enregistrées",
+            "data": planifications
+        })
+
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
+
