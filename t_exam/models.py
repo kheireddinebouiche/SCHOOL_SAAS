@@ -37,12 +37,15 @@ class SessionExamLine(models.Model):
         return f"{self.session} - {self.groupe}" if self.session and self.groupe else "Ligne de session d'examen non définie"
     
 class ExamPlanification(models.Model):
-    exam_line = models.ForeignKey(SessionExamLine, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification")
+    exam_line = models.ForeignKey(SessionExamLine, on_delete=models.CASCADE, null=True, blank=True, related_name="exam_planification")
     salle = models.ForeignKey(SalleClasse, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="exam_planification_salle")
     date = models.DateTimeField(null=True, blank=True, help_text="Date de l'examen")
     module = models.ForeignKey(Modules, null=True, on_delete=models.DO_NOTHING)
     heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début de l'examen")
     heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin de l'examen")
+
+    passed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 

@@ -110,16 +110,22 @@ def ApiPlaneExam(request):
     obj = SessionExam.objects.get(id=session)
     groupe = Groupe.objects.get(id = groupe)
 
-    new_session_line = SessionExamLine(
-        groupe = groupe,
-        date_debut = date_debut,
-        date_fin = date_fin,
-        semestre = semestre,
-        session = obj
-    )
+    find_groupe = SessionExamLine.objects.filter(groupe = groupe, semestre=semestre).exists()
 
-    new_session_line.save()
-    return JsonResponse({'status' : 'success', 'message' : 'Le groupe à été planifier'})
+    if find_groupe:
+        return JsonResponse({'status' : 'error', 'message' : 'Le groupe est déja planifier'})
+    else:
+
+        new_session_line = SessionExamLine(
+            groupe = groupe,
+            date_debut = date_debut,
+            date_fin = date_fin,
+            semestre = semestre,
+            session = obj
+        )
+
+        new_session_line.save()
+        return JsonResponse({'status' : 'success', 'message' : 'Le groupe à été planifier'})
 
 def ExamConfiguration(request, pk):
     context = {
