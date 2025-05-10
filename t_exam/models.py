@@ -72,7 +72,6 @@ class TypeNote(models.Model):
     def __str__(self):
         return self.nom if self.nom else "Type de note non défini"
     
-    
 
 class PVNotes(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE)

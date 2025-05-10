@@ -4,7 +4,7 @@ from .models import *
 from .forms import *
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
-
+from datetime import datetime
 
 def ListeSession(request):
     return render(request, 'tenant_folder/exams/liste-session.html', {'tenant' : request.tenant})
@@ -169,8 +169,7 @@ def get_exam_planifications(request):
 
     return JsonResponse({"status": "success", "planifications": data})
 
-from datetime import datetime
-@csrf_exempt  # ou utilise les en-têtes CSRF en JS
+@csrf_exempt 
 def save_exam_plan(request):
     if request.method == "POST":
         
@@ -191,9 +190,8 @@ def save_exam_plan(request):
 
             plan, created  = ExamPlanification.objects.update_or_create(
                 exam_line=obj,
-               
+                module = Modules.objects.get(id=modules[i]),
                 defaults={
-                    'module' : Modules.objects.get(id=modules[i]),
                     'date': date_obj,
                     'heure_debut': heures_debut[i],
                     'heure_fin': heures_fin[i],
