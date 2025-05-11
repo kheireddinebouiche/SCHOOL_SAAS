@@ -214,3 +214,37 @@ def save_exam_plan(request):
 
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
 
+def ModelBuilltinPage(request):
+    return render(request,'tenant_folder/exams/model-builtins.html',{'tenant' : request.tenant})
+
+def ApiListModeleBuilltins(request):
+    obj = ModelBuilltins.objects.all().values('id','label','formation__nom','is_default')
+    return JsonResponse(list(obj), safe=False)
+
+def NewModelBuilltin(request):
+    if request.method == "POST":
+        form = BuilltinForm(request.POST)
+        if form.is_valid():  
+            instance =  form.save()
+            id = instance.id
+            return JsonResponse({'statut' : 'success','id': id})
+        else:
+            return JsonResponse({'statut' : False, 'message' : "Une erreur c'est produite lors du traitement du formulaire"})
+    else:
+        form = BuilltinForm()
+        return render(request, 'tenant_folder/exams/template-modele-builtins.html', {'form': form})
+    
+def ApiLoadTypeNote(request):
+    id = request.GET.get('id')
+    modele = ModelBuilltins.objects.get(id=id)
+    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval')
+
+    return JsonResponse(list(listeTypeNote), safe=False)
+
+    
+def ApiDeleteModelBuitltin(request):
+    id = request.GET.get('id')
+    obj = ModelBuilltins.objects.get(id = id)
+    obj.delete()
+
+    return JsonResponse({'status' : 'success', 'message' : 'Le modéle de builltin a été supprimer avec succès .'})

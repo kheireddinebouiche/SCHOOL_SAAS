@@ -23,4 +23,11 @@ urlpatterns = [
    path("get-exam-plans/", get_exam_planifications, name="get_exam_plans"),
    path("save_exam_plan", save_exam_plan, name="save_exam_plan"),
 
+   path('models-pv/', ModelBuilltinPage, name="ModelBuilltinPage"),
+   path('ApiListModeleBuilltins', ApiListModeleBuilltins, name="ApiListModeleBuilltins"),
+
+   path('NewModelBuilltin', NewModelBuilltin, name="NewModelBuilltin"),
+   path('ApiDeleteModelBuitltin' , ApiDeleteModelBuitltin, name="ApiDeleteModelBuitltin"),
+   path('ApiLoadTypeNote', ApiLoadTypeNote, name="ApiLoadTypeNote"),
+
 ]

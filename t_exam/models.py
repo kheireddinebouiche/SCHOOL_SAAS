@@ -56,6 +56,7 @@ class ExamPlanification(models.Model):
 class ModelBuilltins(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de builtins")
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING)
+    is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 
@@ -64,7 +65,9 @@ class ModelBuilltins(models.Model):
     
 class TypeNote(models.Model):
     model_builtins = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="model_builtins")
-    nom = models.CharField(max_length=100, null=True, blank=True, help_text="Nom du type de note")
+    label = models.CharField(max_length=100, null=True, blank=True, help_text="Nom du type de note")
+
+    eval = models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
@@ -74,6 +77,7 @@ class TypeNote(models.Model):
     
 
 class PVNotes(models.Model):
+    model_builtin = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True)
     module = models.ForeignKey(Modules, on_delete=models.CASCADE)
     groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE)
     date_creation = models.DateTimeField(auto_now_add=True,null=True, blank=True)
