@@ -30,5 +30,6 @@ urlpatterns = [
    path('ApiDeleteModelBuitltin' , ApiDeleteModelBuitltin, name="ApiDeleteModelBuitltin"),
    path('ApiLoadTypeNote', ApiLoadTypeNote, name="ApiLoadTypeNote"),
    path('ApiAddNewType', ApiAddNewType, name="ApiAddNewType"),
+   path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
 
 ]

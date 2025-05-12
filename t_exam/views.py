@@ -237,7 +237,7 @@ def NewModelBuilltin(request):
 def ApiLoadTypeNote(request):
     id = request.GET.get('id')
     modele = ModelBuilltins.objects.get(id=id)
-    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval','affichage')
+    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval','affichage','model_builtins__id')
 
     return JsonResponse(list(listeTypeNote), safe=False)
 
@@ -267,3 +267,11 @@ def ApiAddNewType(request):
 
     new_type_note.save()
     return JsonResponse({'status' : 'success', 'message':"Le type de note a été ajouter avec succès"})
+
+def ApiDeleteTypeNote(request):
+    id = request.GET.get('id')
+
+    obj = TypeNote.objects.get(id = id)
+    obj.delete()
+
+    return JsonResponse({'status' : 'success', 'message' : "Le type de note à été supprimer avec succès."})

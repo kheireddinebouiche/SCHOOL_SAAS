@@ -195,6 +195,23 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
+        <div class="modal fade deleteTypeNoteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-body text-center p-5">
+                                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                                </lord-icon>
+                                <div class="mt-4">
+                                    <h4 class="mb-3">Vous étes sur le point de supprimer le type de note</h4>
+                                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                                    <div class="hstack gap-2 justify-content-center">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- /.modal-content -->
+                    </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
 <script>
 
     $(document).ready(function(){
@@ -296,9 +313,9 @@
                                     row += '<i class="ri-more-fill align-middle"></i>';
                                     row += '</button>';
                                     row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                    row += '<li><button data-id='+p.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
-                                    row += '<li><button data-id='+p.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
-                                    row += '<li><button data-id='+p.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                                    row += '<li><button data-id='+p.id+' id="btnDetailsTypeNote" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
+                                    row += '<li><button data-id='+p.id+' id="btnUpdateTypeNote" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                                    row += '<li><button data-id='+p.id+' data-model='+p.model_builtins__id+' id="btnDeleteTypeNote" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
                                     row += "</ul></div>";
                                 row += "</td>";
                             row += "</tr>";
@@ -317,7 +334,6 @@
             LoadTypeNote(id);
 
             $('#detailsModelBuiltin').modal('show');
-
             $(document).on('click', '#addNewNoteType', function(){
 
                 $('#newTypeNoteModal').modal('show').css('z-index', 1060);
@@ -327,6 +343,7 @@
                     var label = $('#type_note_label').val();
                     var evaluation = $('#evaluation_type_note').val();
                     var affichage = $('#affichage_note_label').val();
+
                     $.ajax({
                         url : "{% url 't_exam:ApiAddNewType' %}",
                         dataType: "JSON",
@@ -352,6 +369,7 @@
     
                 });
             });
+
         });
 
         $(document).on('click','#btnDelete', function(){
@@ -382,6 +400,41 @@
                 })
             });
         });
+
+        $(document).on('click', '#btnDeleteTypeNote', function(){
+            var id_type = $(this).data('id');
+            var id_model= $(this).data('model');
+
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtnTypeNote" data-model='+id_model+' data-id='+id_type+' class="btn btn-danger">Confirmer</a>';
+
+            $('.hstack').html(row);
+            $('.deleteTypeNoteModal').modal('show');
+
+            
+        }); 
+
+        $(document).on('click','#confirmDeleteBtnTypeNote', function(){
+            var id_type = $(this).data('id');
+            var id_model = $(this).data('model');
+
+            $.ajax({
+                url : "{% url 't_exam:ApiDeleteTypeNote' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                data : {'id' : id_type},
+                success : function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        LoadTypeNote(id_model);
+                        $('.deleteTypeNoteModal').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        }); 
+       
 
        
 
