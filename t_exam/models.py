@@ -66,7 +66,7 @@ class ModelBuilltins(models.Model):
 class TypeNote(models.Model):
     model_builtins = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="model_builtins")
     label = models.CharField(max_length=100, null=True, blank=True, help_text="Nom du type de note")
-
+    affichage = models.CharField(max_length=100, null=True, blank=True, help_text="Quelle text afficher dans les PV's et builltins")
     eval = models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)

@@ -88,11 +88,47 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
+        <div id="newTypeNoteModal" class="modal fade" tabindex="-1" aria-labelledby="newTypeNoteModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newTypeNoteModalLabel">Nouveau type de note</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="row mb-2">
+                            <div class="col-lg-12">
+                                <input type="text" id="type_note_label" class="form-control" placeholder="Veuillez attribuer un nom au type de note" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-lg-12">
+                                <input type="text" id="affichage_note_label" class="form-control" placeholder="Text d'affichage dans les PV's et builltins" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <input type="text" id="evaluation_type_note" class="form-control" placeholder="Total des points Ex : 10, 20" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmTypeNote"  class="btn btn-success">Confirmer</a>
+                    </div>
+                    
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
         <div id="detailsModelBuiltin" class="modal fade" tabindex="-1" aria-labelledby="detailsModelBuiltinModal" aria-hidden="true" style="display: none;">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="detailsModelBuiltinModal">Détails du modéle</h5>
+                        <h5 class="modal-title me-2" id="detailsModelBuiltinModal">Détails du modéle</h5>
+                        <button class="btn btn-primary btn-sm " id="addNewNoteType"><i class='bx bx-plus me-1'></i>Nouveau</button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body" id="modal-form-content">
@@ -100,6 +136,7 @@
                             <thead>
                                 <tr>
                                     <th>Label</th>
+                                    <th>Text d'affichage</th>
                                     <th>Mode d'evaluation</th>
                                     <th>Action</th>
                                 </tr>
@@ -235,13 +272,14 @@
             });
         });
 
-        $(document).on('click', '#btnDetails', function(){
-            var id = $(this).data('id');
+
+        function LoadTypeNote(id_Model){
+
             $.ajax({
                 url : "{% url 't_exam:ApiLoadTypeNote' %}",
                 dataType: 'JSON',
                 data : {
-                    'id' : id,
+                    'id' : id_Model,
                 },
                 type : 'GET',
                 success: function(data){
@@ -250,8 +288,19 @@
                         $.each(data, function(index, p){
                             row += "<tr>";
                                 row += "<td>"+p.label+"</td>";
+                                row += "<td>"+p.affichage+"</td>";
                                 row += "<td>"+p.eval+"</td>";
-                                row += "<td>ac</td>";
+                                row += "<td style='align-items:center;'>";
+                                    row += '<div class="dropdown d-inline-block">';
+                                    row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                    row += '<i class="ri-more-fill align-middle"></i>';
+                                    row += '</button>';
+                                    row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                                    row += '<li><button data-id='+p.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
+                                    row += '<li><button data-id='+p.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
+                                    row += '<li><button data-id='+p.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
+                                    row += "</ul></div>";
+                                row += "</td>";
                             row += "</tr>";
                         });
                     }else{
@@ -261,8 +310,48 @@
                     $('#listTypeNote').html(row);
                 }
             });
+        }
+
+        $(document).on('click', '#btnDetails', function(){
+            var id = $(this).data('id');
+            LoadTypeNote(id);
 
             $('#detailsModelBuiltin').modal('show');
+
+            $(document).on('click', '#addNewNoteType', function(){
+
+                $('#newTypeNoteModal').modal('show').css('z-index', 1060);
+    
+                $(document).on('click', '#confirmTypeNote', function(){
+    
+                    var label = $('#type_note_label').val();
+                    var evaluation = $('#evaluation_type_note').val();
+                    var affichage = $('#affichage_note_label').val();
+                    $.ajax({
+                        url : "{% url 't_exam:ApiAddNewType' %}",
+                        dataType: "JSON",
+                        type: "POST",
+                        data : {
+                            'label' : label,
+                            'evaluation' : evaluation,
+                            'id' : id,
+                            'affichage' : affichage,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success : function(response){
+                            if (response.status == "success"){
+                                alertify.success(response.message);
+                                LoadTypeNote(id);
+                                $('#newTypeNoteModal').modal('hide');
+                                $('#newTypeNoteModal').find('input').val('');
+                            }else{
+                                alertify.error(response.message);
+                            }
+                        },
+                    });
+    
+                });
+            });
         });
 
         $(document).on('click','#btnDelete', function(){
@@ -293,6 +382,8 @@
                 })
             });
         });
+
+       
 
        
         
