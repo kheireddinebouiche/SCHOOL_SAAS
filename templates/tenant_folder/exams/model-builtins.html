@@ -123,6 +123,41 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
+        <div id="updateTypeNoteModal" class="modal fade" tabindex="-1" aria-labelledby="updateTypeNoteModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="updateTypeNoteModalLabel">Mise a jour</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="row mb-2">
+                            <div class="col-lg-12">
+                                <input type="text" id="upd_type_note_label" class="form-control" placeholder="Veuillez attribuer un nom au type de note" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-lg-12">
+                                <input type="text" id="upd_affichage_note_label" class="form-control" placeholder="Text d'affichage dans les PV's et builltins" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <input type="text" id="upd_evaluation_type_note" class="form-control" placeholder="Total des points Ex : 10, 20" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmUpdateTypeNote"  class="btn btn-warning">Confirmer</a>
+                    </div>
+                    
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
         <div id="detailsModelBuiltin" class="modal fade" tabindex="-1" aria-labelledby="detailsModelBuiltinModal" aria-hidden="true" style="display: none;">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
@@ -334,11 +369,11 @@
             LoadTypeNote(id);
 
             $('#detailsModelBuiltin').modal('show');
-            $(document).on('click', '#addNewNoteType', function(){
 
+            $(document).on('click', '#addNewNoteType', function(){
                 $('#newTypeNoteModal').modal('show').css('z-index', 1060);
-    
-                $(document).on('click', '#confirmTypeNote', function(){
+            });
+            $(document).on('click', '#confirmTypeNote', function(){
     
                     var label = $('#type_note_label').val();
                     var evaluation = $('#evaluation_type_note').val();
@@ -368,7 +403,6 @@
                     });
     
                 });
-            });
 
         });
 
@@ -436,7 +470,43 @@
         }); 
        
 
-       
+        $(document).on('click', '#btnUpdateTypeNote', function(){
+            var id_type = $(this).data('id');
+            
+            $.ajax({
+                url : "{% url 't_exam:ApiGetTypeNoteDetails' %}",
+                type: 'GET',
+                dataType: 'JSON',
+                data : {'id' : id_type,},
+                success : function(data){
+                    $('#upd_type_note_label').val(data.label);
+                    $('#upd_affichage_note_label').val(data.affichage);
+                    $('#upd_evaluation_type_note').val(data.eval);
+
+                    $('#updateTypeNoteModal').modal('show').css('z-index', 1060);
+                },
+            });
+
+            $(document).on('click', '#confirmUpdateTypeNote', function(){
+                var upd_label = $('upd_type_note_label').val();
+                var upd_affichage = $('upd_affichage_note_label').val();
+                var upd_eval = $('upd_evaluation_type_note').val();
+
+                $.ajax({
+                    url : "{% url 't_exam:ApiUpdateTypeNote' %}",
+                    dataType: 'JSON',
+                    type : 'POST',
+                    data: {
+                        'label' : upd_label,
+                        'affichage' : upd_affichage,
+                        'eval' : upd_eval,
+                    },
+                    success: function(response){
+                        
+                    }
+                });
+            });
+        });
 
        
         

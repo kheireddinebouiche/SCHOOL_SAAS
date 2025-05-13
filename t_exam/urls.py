@@ -32,4 +32,7 @@ urlpatterns = [
    path('ApiAddNewType', ApiAddNewType, name="ApiAddNewType"),
    path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
 
+   path('ApiGetTypeNoteDetails',ApiGetTypeNoteDetails, name="ApiGetTypeNoteDetails"),
+   path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),
+
 ]

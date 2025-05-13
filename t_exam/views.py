@@ -275,3 +275,18 @@ def ApiDeleteTypeNote(request):
     obj.delete()
 
     return JsonResponse({'status' : 'success', 'message' : "Le type de note à été supprimer avec succès."})
+
+def ApiGetTypeNoteDetails(request):
+    id = request.GET.get('id')
+    obj = TypeNote.objects.get(id = id)
+
+    data = {
+        'label' : obj.label,
+        'eval' : obj.eval,
+        'affichage' : obj.affichage
+    }
+
+    return JsonResponse(data, safe=False)
+
+def ApiUpdateTypeNote(request):
+    pass
