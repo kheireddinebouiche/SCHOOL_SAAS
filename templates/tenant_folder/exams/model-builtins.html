@@ -133,24 +133,29 @@
                     
                     <div class="modal-body">
                         <div class="row mb-2">
+                            <input type="text" id="_updid_type" />
+                            <input type="text" id="_updid_model" />
                             <div class="col-lg-12">
+                                <label class="form-label" for="upd_type_note_label">Label :</label>
                                 <input type="text" id="upd_type_note_label" class="form-control" placeholder="Veuillez attribuer un nom au type de note" />
                             </div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-lg-12">
+                                <label class="form-label" for="upd_affichage_note_label">Affichage sur les builttins :</label>
                                 <input type="text" id="upd_affichage_note_label" class="form-control" placeholder="Text d'affichage dans les PV's et builltins" />
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-lg-12">
+                                <label class="form-label" for="upd_evaluation_type_note">Total des notes :</label>
                                 <input type="text" id="upd_evaluation_type_note" class="form-control" placeholder="Total des points Ex : 10, 20" />
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                        <button id="confirmUpdateTypeNote"  class="btn btn-warning">Confirmer</a>
+                        <button id="confirmUpdateTypeNote"  class="btn btn-warning">Confirmer les modifications</a>
                     </div>
                     
         
@@ -348,7 +353,6 @@
                                     row += '<i class="ri-more-fill align-middle"></i>';
                                     row += '</button>';
                                     row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                    row += '<li><button data-id='+p.id+' id="btnDetailsTypeNote" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
                                     row += '<li><button data-id='+p.id+' id="btnUpdateTypeNote" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
                                     row += '<li><button data-id='+p.id+' data-model='+p.model_builtins__id+' id="btnDeleteTypeNote" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
                                     row += "</ul></div>";
@@ -482,15 +486,20 @@
                     $('#upd_type_note_label').val(data.label);
                     $('#upd_affichage_note_label').val(data.affichage);
                     $('#upd_evaluation_type_note').val(data.eval);
-
+                    $('#_updid_type').val(data.id);
+                    $('#_updid_model').val(data.id_model);
                     $('#updateTypeNoteModal').modal('show').css('z-index', 1060);
                 },
             });
 
-            $(document).on('click', '#confirmUpdateTypeNote', function(){
-                var upd_label = $('upd_type_note_label').val();
-                var upd_affichage = $('upd_affichage_note_label').val();
-                var upd_eval = $('upd_evaluation_type_note').val();
+        });
+
+        $(document).on('click', '#confirmUpdateTypeNote', function(){
+
+                var upd_label = $('#upd_type_note_label').val();
+                var upd_affichage = $('#upd_affichage_note_label').val();
+                var upd_eval = $('#upd_evaluation_type_note').val();
+                var id_type = $('#_updid_type').val()
 
                 $.ajax({
                     url : "{% url 't_exam:ApiUpdateTypeNote' %}",
@@ -500,13 +509,21 @@
                         'label' : upd_label,
                         'affichage' : upd_affichage,
                         'eval' : upd_eval,
+                        'id_type' : id_type,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
                     },
                     success: function(response){
-                        
+                        if(response.status == "success"){
+                            alertify.success(response.message);
+                            LoadTypeNote(response.id_model);
+                            $('#updateTypeNoteModal').modal('hide')
+
+                        }else{  
+                            alertify.error(response.message);
+                        }
                     }
                 });
             });
-        });
 
        
         

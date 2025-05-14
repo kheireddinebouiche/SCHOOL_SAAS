@@ -61,7 +61,7 @@ class ModelBuilltins(models.Model):
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 
     def __str__(self):
-        return self.labe if self.labe else "Modèle de builtins non défini"
+        return self.label if self.label else "Modèle de builtins non défini"
     
 class TypeNote(models.Model):
     model_builtins = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="model_builtins")
@@ -75,7 +75,6 @@ class TypeNote(models.Model):
     def __str__(self):
         return self.nom if self.nom else "Type de note non défini"
     
-
 class PVNotes(models.Model):
     model_builtin = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True)
     module = models.ForeignKey(Modules, on_delete=models.CASCADE)
@@ -86,7 +85,7 @@ class PVNotes(models.Model):
         unique_together = ('module', 'groupe')
 
     def __str__(self):
-        return f"PV - {self.module.nom} - {self.groupe.nom}"
+        return f"PV - {self.module.label} - {self.groupe.nom}"
     
 class Note(models.Model):
     etudiant = models.ForeignKey(Etudiant, on_delete=models.CASCADE, related_name='notes')

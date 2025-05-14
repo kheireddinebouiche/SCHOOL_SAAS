@@ -33,6 +33,6 @@ urlpatterns = [
    path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
 
    path('ApiGetTypeNoteDetails',ApiGetTypeNoteDetails, name="ApiGetTypeNoteDetails"),
-   path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),
+   path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),  
 
 ]

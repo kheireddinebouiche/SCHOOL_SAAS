@@ -237,7 +237,7 @@ def NewModelBuilltin(request):
 def ApiLoadTypeNote(request):
     id = request.GET.get('id')
     modele = ModelBuilltins.objects.get(id=id)
-    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval','affichage','model_builtins__id')
+    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval','affichage','model_builtins__id').order_by('created_at')
 
     return JsonResponse(list(listeTypeNote), safe=False)
 
@@ -279,14 +279,31 @@ def ApiDeleteTypeNote(request):
 def ApiGetTypeNoteDetails(request):
     id = request.GET.get('id')
     obj = TypeNote.objects.get(id = id)
-
+    
     data = {
         'label' : obj.label,
         'eval' : obj.eval,
-        'affichage' : obj.affichage
+        'affichage' : obj.affichage,
+        'id' : id,
+        'id_model' : obj.model_builtins.id
     }
 
     return JsonResponse(data, safe=False)
 
+@transaction.atomic
 def ApiUpdateTypeNote(request):
-    pass
+    label = request.POST.get('label')
+    affichage = request.POST.get('affichage')
+    eval = request.POST.get('eval')
+    id = request.POST.get('id_type')
+
+    type_note = TypeNote.objects.get(id=id)
+    
+
+    type_note.label = label
+    type_note.affichage = affichage
+    type_note.eval = eval
+
+    type_note.save()
+
+    return JsonResponse({'status' : 'success','message' : "Modifications effectuer avec succès",'id_model' : type_note.model_builtins.id})
