@@ -158,6 +158,7 @@ def get_exam_planifications(request):
     data = []
     for plan in plans:
         data.append({
+            'id' : plan.id,
             "module_id": plan.module.id,
             "module_nom": plan.module.label,
             "date": plan.date.strftime("%Y-%m-%d") if plan.date else "",
