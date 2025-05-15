@@ -5,6 +5,8 @@ from .forms import *
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
+from t_etudiants.models import *
+from t_groupe.models import *
 
 def ListeSession(request):
     return render(request, 'tenant_folder/exams/liste-session.html', {'tenant' : request.tenant})
@@ -309,19 +311,23 @@ def ApiUpdateTypeNote(request):
 
     return JsonResponse({'status' : 'success','message' : "Modifications effectuer avec succès",'id_model' : type_note.model_builtins.id})
 
-def ApiExamResult(request):
-    id = request.GET.get('id')
-    exam_line_obj = ExamPlanification.objects.get(id = id)
-    
-    print(exam_line_obj.exam_line.id)
-    
+def ApiExamResult(request, pk):
+    exam_line_obj = ExamPlanification.objects.get(id = pk)
     formation = SessionExamLine.objects.get(id = exam_line_obj.exam_line.id)
-
     groupe = Groupe.objects.get(id = formation.groupe.id)
+    specialite = Specialites.objects.get(id = groupe.specialite.id) 
+    formation_obj = Formation.objects.get(id = specialite.id)
+    model_builtins = ModelBuilltins.objects.get(formation = formation_obj)
 
-    specialite = Specialites.objects.get(id = groupe.specialite.id)
+    type_note = TypeNote.objects.filter(model_builtins = model_builtins.id).order_by('created_at')
+    students = GroupeLine.objects.filter(groupe = groupe.id)
+
+    context = {
+        'type_notes': type_note,
+        'etudiants': students,
+    }
+
+    return render(request, 'tenant_folder/exams/exam_results.html', context)
+
     
-    print(specialite.label)
-   
-
    

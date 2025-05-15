@@ -55,7 +55,7 @@ class ExamPlanification(models.Model):
     
 class ModelBuilltins(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de builtins")
-    formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING)
+    formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING, related_name="model_builtin_formation")
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
@@ -73,7 +73,7 @@ class TypeNote(models.Model):
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 
     def __str__(self):
-        return self.nom if self.nom else "Type de note non défini"
+        return self.label if self.label else "Type de note non défini"
     
 class PVNotes(models.Model):
     model_builtin = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True)

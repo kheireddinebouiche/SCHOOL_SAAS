@@ -45,4 +45,4 @@ class GroupeLine(models.Model):
         verbose_name_plural = "Groupes d'etudiants"
 
     def __str__(self):
-        return f"{self.groupe.nom} - {self.student.prenom} {self.student.nom}"
+        return f"{self.groupe.nom} - {self.student.relation.prenom} {self.student.relation.nom}"

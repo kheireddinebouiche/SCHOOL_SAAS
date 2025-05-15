@@ -41,7 +41,7 @@ class Etudiant(models.Model):
         verbose_name_plural="Etudiants"
 
     def __str__(self):
-        return f"{self.prenom} {self.nom}"
+        return f"{self.relation.nom} {self.relation.prenom}"
     
 
 

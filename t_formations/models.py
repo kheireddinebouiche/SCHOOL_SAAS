@@ -54,7 +54,7 @@ class Specialites(models.Model):
     duree = models.CharField(max_length=300, null=True, blank=True)
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
 
-    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True,to_field="code")
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True,to_field="code", related_name="formation_specilite")
 
     nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
     responsable = models.ForeignKey(Employees, on_delete=models.SET_NULL, null=True, blank=True)
