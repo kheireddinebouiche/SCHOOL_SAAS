@@ -308,3 +308,20 @@ def ApiUpdateTypeNote(request):
     type_note.save()
 
     return JsonResponse({'status' : 'success','message' : "Modifications effectuer avec succès",'id_model' : type_note.model_builtins.id})
+
+def ApiExamResult(request):
+    id = request.GET.get('id')
+    exam_line_obj = ExamPlanification.objects.get(id = id)
+    
+    print(exam_line_obj.exam_line.id)
+    
+    formation = SessionExamLine.objects.get(id = exam_line_obj.exam_line.id)
+
+    groupe = Groupe.objects.get(id = formation.groupe.id)
+
+    specialite = Specialites.objects.get(id = groupe.specialite.id)
+    
+    print(specialite.label)
+   
+
+   

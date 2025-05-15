@@ -35,4 +35,6 @@ urlpatterns = [
    path('ApiGetTypeNoteDetails',ApiGetTypeNoteDetails, name="ApiGetTypeNoteDetails"),
    path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),  
 
+   path('ApiExamResult', ApiExamResult, name="ApiExamResult"),
+
 ]
