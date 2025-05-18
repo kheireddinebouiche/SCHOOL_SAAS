@@ -52,7 +52,6 @@ class ExamPlanification(models.Model):
     def __str__(self):
         return f"{self.exam_line} - {self.module}" if self.exam_line and self.module else "Planification d'examen non définie"
 
-    
 class ModelBuilltins(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de builtins")
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING, related_name="model_builtin_formation")

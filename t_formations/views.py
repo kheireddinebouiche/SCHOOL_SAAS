@@ -624,7 +624,8 @@ def ApiListeFormation(request):
 
 def ApiListeSpecialiteByFormation(request):
     id= request.GET.get('id_formation')
-    liste = Specialites.objects.filter(formation = id).values('id', 'label','code')
+    formation_obj = Formation.objects.get(id = id)
+    liste = Specialites.objects.filter(formation = formation_obj.code).values('id', 'label','code')
     return JsonResponse(list(liste), safe=False)
 
 def AddPromo(request):

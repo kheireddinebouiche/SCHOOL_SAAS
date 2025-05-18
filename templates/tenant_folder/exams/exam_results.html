@@ -53,28 +53,30 @@
                                         <tbody>
                                             {% for etudiant in etudiants %}
                                                 <tr>
-                                                    <td>{{ etudiant.student }}</td>  
-                                                    
+                                                    <td>{{ etudiant.student.relation.nom }} {{ etudiant.student.relation.prenom }}</td>  
                                                     {% for type in type_notes %}
-                                                        {% with key=etudiant.student.id|stringformat:"s"|add:"_"|add:type.id|stringformat:"s" %}
-                                                            {% with note=notes_dict|get_item:key %}
-                                                                <td>
-                                                                    <input type="number" step="0.01" class="note-input"
-                                                                        value="{{ note|default:'' }}"
-                                                                        data-etudiant="{{ etudiant.student.id }}"
-                                                                        data-type-note="{{ type.id }}"
-                                                                        data-eval="{{ type.eval|default:'20' }}"
-                                                                        data-pv="{{ pv_id }}" />
-                                                                </td>
+                                                        {% with etudiant_id=etudiant.student.id|stringformat:"s" %}
+                                                            {% with type_id=type.id|stringformat:"s" %}
+                                                                {% with key=etudiant_id|add:"_"|add:type_id %}
+                                                                    <td>
+                                                                       <input type="text" class="note-input"
+                                                                            value="{{ notes_dict|get_item:key|default:'' }}"
+                                                                            data-etudiant="{{ etudiant.student.id }}"
+                                                                            data-type-note="{{ type.id }}"
+                                                                            data-eval="{{ type.eval|default:'20' }}"
+                                                                            data-pv="{{ pv_id }}" />
+                                                                    </td>
+                                                                {% endwith %}
                                                             {% endwith %}
-                                                            
                                                         {% endwith %}
                                                     {% endfor %}
+                                                    
                                                     <td>
                                                         <strong id="moyenne-{{ etudiant.student.id }}" class="moyenne-val">-</strong>
                                                     </td>
                                                 </tr>
                                             {% endfor %}
+
                                         </tbody>
                                     </table>
 
@@ -166,6 +168,17 @@
         // Calcul initial de la moyenne
         calculateMoyenne(input.dataset.etudiant);
     });
+</script>
+
+<script>
+document.querySelectorAll('.note-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+        if (e.target.value.includes(',')) {
+            // Optionnel : remplacer la virgule par un point automatiquement
+            e.target.value = e.target.value.replace(/,/g, '.');
+        }
+    });
+});
 </script>
 {% endblock content %}
            

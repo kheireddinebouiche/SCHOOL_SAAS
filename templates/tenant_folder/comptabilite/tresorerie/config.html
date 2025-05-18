@@ -1,0 +1,206 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Trésorerie - Seuil paiement minimum {% endblock title %}
+
+{% block content %}
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0">Seuil paiement minimum</h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Trésorerie</a></li>
+                                        <li class="breadcrumb-item active">Seuil paiement minimum</li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                               <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                       <h5> Seuil minimum de paiement </h5>
+                                        <div class="d-flex">
+                                            <button id="btnNewSeuil" class="btn btn-primary btn-sm" data-url="#">
+                                                <i class='bx bx-plus me-1'></i>Nouveau
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Label</th>
+                                                <th>Spécialité</th>
+                                                <th>Valeur</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listItem">
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+
+<div id="seuilModal" class="modal fade" tabindex="-1" aria-labelledby="seuilModalLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title me-3" id="seuilModalLabel">Nouveau seuil</h5>
+              
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <label class="form-label" for="label">Label :</label>
+                        <input type="text" id="label" class='form-control' />
+                    </div>
+
+                    <div class="col-lg-4">
+                        <label class="form-label" for="specialite">Specialité :</label>
+                        <select  id="specialite" class='form-control' >
+                        </select>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <label class="form-label" for="valeur">Valeur % :</label>
+                        <input type="text" id="valeur" class='form-control' />
+                    </div>
+
+
+                </div>         
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-primary" id="confirmNewSeuil">Enregistrer</button>
+            </div>
+      
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                </lord-icon>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point de supprimer le groupe</h4>
+                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                    <div class="hstack gap-2 justify-content-center">
+                        
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script>
+    $(document).ready(function(){
+    
+
+        function loadDatas(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiListSeuilPaiement' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                success : function(data){
+                    var row = "";
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            row += "<tr>";
+                            row +="<td>" +p.label+"</td>";
+                            row +="<td>" +p.specialite+"</td>";
+                            row +="<td>" +p.valeur+" % </td>";
+                            row += "<td>";
+                            row += '<div class="dropdown d-inline-block">';
+                            row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                            row += '<i class="ri-more-fill align-middle"></i>';
+                            row += '</button>';
+                            row += '<ul class="dropdown-menu dropdown-menu-end">';
+                            row += '<li><a href="#" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
+                            row += '<li><a id="updateBtn" href="#" data-id='+p.id+' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                            row += '<li><a href="#" data-id='+p.id+' id="deleteConfirmation" class="dropdown-item remove-item-btn">';
+                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </a> </li>';
+                            row += '</ul>';
+                            row += '</div>';
+                            row += "</td>";
+                            row += "</tr>";
+
+                        });
+                    }else{
+                        row = "<tr><td colspan=4 class='text-muted text-center'>Aucune information disponible ! </td></tr>";
+                    }
+
+                    $('#listItem').html(row);
+                },
+            });
+        }
+
+        loadDatas();
+
+        function loadSpecialite(){
+            $.ajax({
+                url :"{% url 't_tresorerie:ApiListeSpecialite' %}",
+                dataType : "JSON",
+                type : 'GET',
+                success : function(data){
+                    var option = "<option value='0'>Veuillez selectionner une spécialité</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.code+'-'+p.label+"</option>";
+                    }); 
+
+                    $('#specialite').html(option);
+                }
+            }); 
+        }
+
+        $(document).on('click', '#btnNewSeuil', function(){
+            loadSpecialite(); 
+            $('#seuilModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmNewSeuil', function(){
+            $.ajax({
+
+            }); 
+        }); 
+    }); 
+</script>
+{% endblock content %}
+           
+
+
+
+    
+

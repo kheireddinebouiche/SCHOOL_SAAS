@@ -346,12 +346,9 @@ def ApiExamResult(request, pk):
     # Récupération des notes existantes
     notes = Note.objects.filter(pv=pv)
     notes_dict = {
-        f"{note.etudiant.id}_{note.note_type.id}": note.valeur
+    f"{note.etudiant.id}_{note.note_type.id}": float(note.valeur)
         for note in notes
     }
-
-    print(notes_dict)
-
     context = {
         'type_notes': type_note,
         'etudiants': students,

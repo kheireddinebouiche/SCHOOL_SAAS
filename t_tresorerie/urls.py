@@ -12,4 +12,9 @@ urlpatterns = [
     path('ApiGetDetailsDemandePaiement', ApiGetDetailsDemandePaiement, name="ApiGetDetailsDemandePaiement"),
 
     path('details-paiement-request/<int:pk>/',PageDetailsDemandePaiement, name="PageDetailsDemandePaiement"),
+
+    path('configuration/' , PageConfigPaiementSeuil, name="PageConfigPaiementSeuil"),
+    path('ApiListSeuilPaiement', ApiListSeuilPaiement, name="ApiListSeuilPaiement"),
+
+    path('ApiListeSpecialite', ApiListeSpecialite, name="ApiListeSpecialite"),
 ]

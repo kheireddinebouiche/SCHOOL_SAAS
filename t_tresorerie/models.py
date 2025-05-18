@@ -39,3 +39,14 @@ class clientPaiementsRequestLine(models.Model):
 
 class Paiements(models.Model):
     pass
+
+class SeuilPaiements(models.Model):
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
+    label = models.CharField(max_length=100, null=True)
+    valeur = models.IntegerField(null=True)
+
+    class Meta:
+        unique_together = ('specialite', 'valeur')
+
+    def __str__(self):
+        return self.specialite

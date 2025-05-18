@@ -132,8 +132,8 @@ def updateVisiteur(request,pk):
 
 def ApiGetSpecialite(request):
     formation_id = request.GET.get('formation_id')
-    
-    specialites = Specialites.objects.filter(formation = formation_id).values('id','label')
+    formation_obj = Formation.objects.get(id = formation_id)
+    specialites = Specialites.objects.filter(formation = formation_obj.code).values('id','label')
     return JsonResponse(list(specialites), safe=False)
 
 def ApiGETDemandeInscription(request):

@@ -40,3 +40,15 @@ def ApiDeleteDemandePaiement(request):
     obj.delete()
 
     return JsonResponse({'status' : 'success', "message" : "La suppréssion a été effectuer avec succès"})
+
+
+def PageConfigPaiementSeuil(request):
+    return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
+
+def ApiListSeuilPaiement(request):
+    liste = SeuilPaiements.objects.all().values('id','specialite','label','valeur')
+    return JsonResponse(list(liste), safe=False)
+
+def ApiListeSpecialite(request):
+    liste = Specialites.objects.all().values('id','label','code')
+    return JsonResponse(list(liste), safe=False)
