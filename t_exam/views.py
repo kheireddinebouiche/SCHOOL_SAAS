@@ -338,12 +338,53 @@ def ApiExamResult(request, pk):
     type_note = TypeNote.objects.filter(model_builtins = model_builtins.id).order_by('created_at')
     students = GroupeLine.objects.filter(groupe = groupe.id)
 
+    module = exam_line_obj.module
+   
+    pv = PVNotes.objects.filter(groupe=groupe, model_builtin=model_builtins).first()
+    if not pv:
+        pv = PVNotes.objects.create(groupe=groupe, model_builtin=model_builtins, module=module)
+
+    # Récupération des notes existantes
+    notes = Note.objects.filter(pv=pv)
+    notes_dict = {
+        f"{note.etudiant.id}_{note.note_type.id}": note.valeur
+        for note in notes
+    }
+
+    print(notes_dict)
+
     context = {
         'type_notes': type_note,
         'etudiants': students,
+        'notes_dict': notes_dict,
+        'pv_id': pv.id,
+
     }
 
     return render(request, 'tenant_folder/exams/exam_results.html', context)
+
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@csrf_exempt
+def SaveNoteAjax(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        etudiant_id = data.get('etudiant_id')
+        type_note_id = data.get('type_note_id')
+        valeur = float(data.get('valeur'))
+        pv_id = data.get('pv_id')
+
+    
+        note, created = Note.objects.update_or_create(
+            etudiant=Etudiant.objects.get(id= etudiant_id),
+            note_type=TypeNote.objects.get(id=type_note_id),
+            pv=PVNotes.objects.get(id = pv_id),
+            defaults={'valeur': valeur}
+        )
+
+        return JsonResponse({'status': 'success', 'valeur': note.valeur})
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
     
    

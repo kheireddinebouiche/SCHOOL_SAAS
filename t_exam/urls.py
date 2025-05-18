@@ -36,6 +36,7 @@ urlpatterns = [
    path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),  
 
    path('ApiExamResult/<int:pk>/', ApiExamResult, name="ApiExamResult"),
+   path('SaveNoteAjax', SaveNoteAjax , name="SaveNoteAjax"),
 
    path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
 

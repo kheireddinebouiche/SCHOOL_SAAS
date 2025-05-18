@@ -1,50 +1,164 @@
-<!DOCTYPE html>
-<html>
+{% load custom_filters %}
+
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
     <title>Résultats d'examen</title>
     <style>
         table {
             border-collapse: collapse;
             width: 100%;
+            margin-top: 20px;
         }
-
         th, td {
-            border: 1px solid #ddd;
+            border: 1px solid #999;
             padding: 8px;
             text-align: center;
         }
-
         th {
-            background-color: #f2f2f2;
+            background-color: #f0f0f0;
         }
-
-        td.nom-etudiant {
-            text-align: left;
+        input[type="number"] {
+            width: 80px;
+            text-align: center;
+        }
+        .low-average {
+            color: red;
+            font-weight: bold;
+        }
+        .high-average {
+            color: green;
             font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <h2>Résultats des étudiants</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Étudiant</th>
-                {% for type in type_notes %}
-                    <th>{{ type.label }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for etudiant in etudiants %}
-                <tr>
-                    <td class="nom-etudiant">{{ etudiant.student.relation.nom }} {{ etudiant.student.relation.prenom }}</td>
-                    {% for type in type_notes %}
-                        <td><!-- Ici, tu peux afficher une note si tu veux --></td>
-                    {% endfor %}
-                </tr>
+
+<h2>Résultats des étudiants</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Étudiant</th>
+            {% for type in type_notes %}
+                <th>{{ type.label }}<br><small>(/ {{ type.eval|default:"20" }})</small></th>
             {% endfor %}
-        </tbody>
-    </table>
+            <th>Moyenne (/20)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for etudiant in etudiants %}
+            <tr>
+                <td>{{ etudiant.student}}</td>
+                {% for type in type_notes %}
+                    {% with key=etudiant.id|stringformat:"s"|add:"_"|add:type.id|stringformat:"s" %}
+                        {% with note=notes_dict|get_item:key %}
+                            <td>
+                                <input type="number" step="0.01" class="note-input"
+                                    value="{{ note|default:'' }}"
+                                    data-etudiant="{{ etudiant.student.id }}"
+                                    data-type-note="{{ type.id }}"
+                                    data-eval="{{ type.eval|default:'20' }}"
+                                    data-pv="{{ pv_id }}" />
+                            </td>
+                        {% endwith %}
+                    {% endwith %}
+
+                    {% with key=type.id|stringformat:"s" %}
+                            Type ID = "{{ key }}"
+                    {% endwith %}
+                {% endfor %}
+                        
+                
+                <pre>{{ notes_dict|safe }}</pre>
+                
+                <td>
+                    <strong id="moyenne-{{ etudiant.student.id }}" class="moyenne-val">-</strong>
+                </td>
+            </tr>
+
+           <tr>
+
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function calculateMoyenne(etudiantId) {
+        let total = 0;
+        let totalMax = 0;
+
+        document.querySelectorAll(`.note-input[data-etudiant='${etudiantId}']`).forEach(input => {
+            const valeur = parseFloat(input.value);
+            const bareme = parseFloat(input.dataset.eval || 20);
+            if (!isNaN(valeur)) {
+                total += valeur;
+                totalMax += bareme;
+            }
+        });
+
+        const moyenneElement = document.getElementById(`moyenne-${etudiantId}`);
+        if (totalMax > 0) {
+            const moyenne = (total / totalMax) * 20;
+            moyenneElement.textContent = moyenne.toFixed(2);
+            moyenneElement.className = moyenne < 10 ? 'low-average' : 'high-average';
+        } else {
+            moyenneElement.textContent = '-';
+            moyenneElement.className = '';
+        }
+    }
+
+    document.querySelectorAll('.note-input').forEach(input => {
+        input.addEventListener('input', () => {
+            const etudiantId = input.dataset.etudiant;
+            const typeNoteId = input.dataset.typeNote;
+            const valeur = parseFloat(input.value);
+            const pvId = input.dataset.pv;
+
+            // Calcul de la moyenne locale
+            calculateMoyenne(etudiantId);
+
+            // Sauvegarde AJAX
+            fetch("{% url 't_exam:SaveNoteAjax' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    etudiant_id: etudiantId,
+                    type_note_id: typeNoteId,
+                    valeur: valeur,
+                    pv_id: pvId
+                })
+            }).then(res => res.json()).then(data => {
+                if (data.status !== 'success') {
+                    alert("Erreur lors de l'enregistrement.");
+                }
+            }).catch(error => {
+                console.error('Erreur AJAX :', error);
+            });
+        });
+
+        // Calcul initial de la moyenne
+        calculateMoyenne(input.dataset.etudiant);
+    });
+</script>
+
 </body>
 </html>
