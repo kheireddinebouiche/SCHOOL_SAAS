@@ -332,9 +332,8 @@ def ApiExamResult(request, pk):
     formation = SessionExamLine.objects.get(id = exam_line_obj.exam_line.id)
     groupe = Groupe.objects.get(id = formation.groupe.id)
     specialite = Specialites.objects.get(id = groupe.specialite.id) 
-    formation_obj = Formation.objects.get(id = specialite.id)
+    formation_obj = Formation.objects.get(id = specialite.formation.id)
     model_builtins = ModelBuilltins.objects.get(formation = formation_obj)
-
     type_note = TypeNote.objects.filter(model_builtins = model_builtins.id).order_by('created_at')
     students = GroupeLine.objects.filter(groupe = groupe.id)
 
