@@ -37,4 +37,6 @@ urlpatterns = [
 
    path('ApiExamResult/<int:pk>/', ApiExamResult, name="ApiExamResult"),
 
+   path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
+
 ]

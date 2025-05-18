@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from t_etudiants.models import *
 from t_groupe.models import *
+from django.db import IntegrityError
 
 def ListeSession(request):
     return render(request, 'tenant_folder/exams/liste-session.html', {'tenant' : request.tenant})
@@ -52,8 +53,14 @@ def ApiListSession(request):
 def ApiDeleteSession(request):
     id = request.GET.get('id')
     obj = SessionExam.objects.get(id = id)
-    obj.delete()
-    return JsonResponse({'status' : True, 'message': 'La session à été supprimée avec succès'})
+    try:
+        obj.delete()
+
+        return JsonResponse({'status' : True, 'message': 'La session à été supprimée avec succès'})
+    except IntegrityError as e:
+        return JsonResponse({'status' : False, 'message' : str(e)})
+    
+
 
 def DetailsSession(request, pk):
     context = {
@@ -74,6 +81,15 @@ def ApiGetSessionDetails(request):
     }
 
     return JsonResponse(data)
+
+def ApiDeleteGroupeSessionLine(request):
+    id = request.GET.get('id')
+
+    obj = SessionExamLine.objects.get(id = id)
+    obj.delete()
+
+    return JsonResponse({'status' : 'success', 'message': "Suppréssion effectuer avec succès"})
+
 
 def ApiUpdateSession(request):
     id = request.POST.get('id')
