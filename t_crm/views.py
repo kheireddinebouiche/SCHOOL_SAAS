@@ -95,7 +95,7 @@ def supprimerVisiteur(request):
 
 
 def detailsVisiteur(request, pk):
-    if not request.user.has_perm('t_crm.view_visiteurs'):
+    if request.user.has_perm('t_crm.view_visiteurs'):
         permissions = request.user.get_all_permissions()
         print(permissions)
         obj = Visiteurs.objects.get(id = pk)

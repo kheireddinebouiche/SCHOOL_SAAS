@@ -47,7 +47,7 @@ class clientPaiementsRequestLine(models.Model):
 class Paiements(models.Model):
     paiement_line = models.ForeignKey(clientPaiementsRequestLine, on_delete=models.CASCADE, null=True, blank=True)
     montant_paye = models.FloatField(null=True, blank=True)
-    data_paiement = models.DateField(null=True, blank=True)
+    date_paiement = models.DateField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,8 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from .models import *
-
-
+from django.db import transaction
 
 
 def AttentesPaiements(request):
@@ -117,3 +116,21 @@ def ApiListPaiementDone(request):
         })
 
     return JsonResponse(data, safe=False)
+
+@transaction.atomic
+def ApiStorePaiement(request):
+    due_paiements = request.POST.get('due_paiements')
+    date_paiement = request.POST.get('date_paiement')
+    received_amount = request.POST.get('received_amount')
+    observation = request.POST.get('observation')
+    
+    new_paiement = Paiements(
+        paiement_line = due_paiements,
+        montant_paye = received_amount,
+        date_paiement = date_paiement,
+        observation = observation,
+    )
+
+    new_paiement.save()
+
+    return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
