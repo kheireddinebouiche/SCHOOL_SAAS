@@ -48,6 +48,8 @@
                                                 <th>Label</th>
                                                 <th>Spécialité</th>
                                                 <th>Valeur</th>
+                                                <th>Crée le</th>
+                                                <th>Mis à jour le</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
@@ -93,8 +95,6 @@
                         <label class="form-label" for="valeur">Valeur % :</label>
                         <input type="text" id="valeur" class='form-control' />
                     </div>
-
-
                 </div>         
             </div>
 
@@ -114,7 +114,7 @@
                 <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
                 </lord-icon>
                 <div class="mt-4">
-                    <h4 class="mb-3">Vous étes sur le point de supprimer le groupe</h4>
+                    <h4 class="mb-3">Vous étes sur le point de supprimer l'enregistrement</h4>
                     <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
                     <div class="hstack gap-2 justify-content-center">
                         
@@ -140,16 +140,17 @@
                         $.each(data, function(index, p){
                             row += "<tr>";
                             row +="<td>" +p.label+"</td>";
-                            row +="<td>" +p.specialite+"</td>";
+                            row +="<td>" +p.specialite__code+' - '+p.specialite__label+"</td>";
                             row +="<td>" +p.valeur+" % </td>";
+                            row +="<td>" +p.created_at.split('T')[0]+"</td>";
+                            row +="<td>" +p.updated_at.split('T')[0]+"</td>";
                             row += "<td>";
                             row += '<div class="dropdown d-inline-block">';
                             row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
                             row += '<i class="ri-more-fill align-middle"></i>';
                             row += '</button>';
                             row += '<ul class="dropdown-menu dropdown-menu-end">';
-                            row += '<li><a href="#" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
-                            row += '<li><a id="updateBtn" href="#" data-id='+p.id+' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                            row += '<li><a id="updateBtn" href="#" data-id='+p.id+' data-specialite='+p.specialite+' data-valeur='+p.valeur+' data-label='+p.label+' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
                             row += '<li><a href="#" data-id='+p.id+' id="deleteConfirmation" class="dropdown-item remove-item-btn">';
                             row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </a> </li>';
                             row += '</ul>';
@@ -159,7 +160,7 @@
 
                         });
                     }else{
-                        row = "<tr><td colspan=4 class='text-muted text-center'>Aucune information disponible ! </td></tr>";
+                        row = "<tr><td colspan=6 class='text-muted text-center'>Aucune information disponible ! </td></tr>";
                     }
 
                     $('#listItem').html(row);
@@ -191,10 +192,88 @@
         });
 
         $(document).on('click', '#confirmNewSeuil', function(){
-            $.ajax({
 
+            var label = document.getElementById('label').value;
+            var specialite = document.getElementById('specialite').value;
+            var valeur = document.getElementById('valeur').value;
+            
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiAddNewSeuil' %}",
+                dataType: 'JSON',
+                type : 'POST',
+                data : {
+                    'label' : label,
+                    'specialite' : specialite,
+                    'valeur' : valeur,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if (response.status == "success"){
+                        alertify.success(response.message);
+                        loadDatas();
+                        $('#seuilModal').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
             }); 
         }); 
+
+        $(document).on('click', '#deleteConfirmation', function(){
+            var id = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id+' class="btn btn-danger">Confirmer</a>';
+
+            $('.hstack').html(row);
+            $('.deleteModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmDeleteBtn', function(){
+            var id = $(this).data('id');
+
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiDeleteSeuil' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                data : {'id': id},
+                success : function(response){
+                    if (response.status == "success"){
+                        alertify.success(response.message);
+                        $('.deleteModal').modal('hide');
+                        loadDatas();
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', '#updateBtn', function(){
+            
+            var label = $(this).data('label');
+            var valeur = $(this).data('valeur');
+            var specialite = $(this).data('specialite');
+
+            function loadSpecialiteForUpdate(){
+                $.ajax({
+                    url :"{% url 't_tresorerie:ApiListeSpecialite' %}",
+                    dataType : "JSON",
+                    type : 'GET',
+                    success : function(data){
+                        var option = "<option value='0'>Veuillez selectionner une spécialité</option>";
+                        $.each(data, function(index, p){
+                            option += "<option value="+p.id+" "+(p.id == specialite ? 'selected' : '')+">"+p.code+'-'+p.label+"</option>";
+                        }); 
+
+                        $('#specialite').html(option);
+                    }
+                }); 
+            }
+            loadSpecialiteForUpdate();
+            $('#seuilModalLabel').html('Modification des informations')
+            $('#label').val(label);
+            $('#valeur').val(valeur);
+            $('#seuilModal').modal('show');
+        });
+        
     }); 
 </script>
 {% endblock content %}

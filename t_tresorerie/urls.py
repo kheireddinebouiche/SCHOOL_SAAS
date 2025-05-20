@@ -17,4 +17,9 @@ urlpatterns = [
     path('ApiListSeuilPaiement', ApiListSeuilPaiement, name="ApiListSeuilPaiement"),
 
     path('ApiListeSpecialite', ApiListeSpecialite, name="ApiListeSpecialite"),
+    path('ApiAddNewSeuil', ApiAddNewSeuil, name="ApiAddNewSeuil"),
+    path('ApiDeleteSeuil', ApiDeleteSeuil, name="ApiDeleteSeuil"),
+    path('ApiGetRequestPaiementsLine', ApiGetRequestPaiementsLine, name="ApiGetRequestPaiementsLine"),
+
+    path('ApiListPaiementDone', ApiListPaiementDone, name="ApiListPaiementDone"),
 ]

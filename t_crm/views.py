@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
 from functools import wraps
+from decimal import Decimal
 
 
 def listeVisiteurs(request):
@@ -151,10 +152,11 @@ def ListeDemandeInscription(request):
     return render(request, 'tenant_folder/crm/liste_demande_inscription.html', context)
 
 def ApiGetListeDemandeInscription(request):
-    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat','visiteur__has_completed_documents')
+    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat','visiteur__has_completed_documents','motif')
     for demande in demandes:
         demande_obj = DemandeInscription.objects.get(id=demande['id'])
         demande['etat_label'] = demande_obj.get_etat_display()
+        demande['motif_label'] = demande_obj.get_motif_display()
     return JsonResponse(list(demandes), safe=False)
 
 def ApiGetGrideDemandeInscription(request):
@@ -187,6 +189,7 @@ def ApiGetGrideDemandeInscription(request):
     return JsonResponse({'specialites_demandes': specialites_demandes})
 
 def ApiAddNewDemandeInscription(request):
+
     promo = request.POST.get('_promo')
     formation = request.POST.get('_formation')
     specialite = request.POST.get('_specialite')
@@ -210,12 +213,13 @@ def ApiAddNewDemandeInscription(request):
             )
 
             new_demande.save()
-
             return JsonResponse({'status': "success", 'message': 'Demande d\'inscription ajoutée avec succès'})
     else:
         return JsonResponse({'status': "error", 'message': 'Veuillez remplir tous les champs obligatoires'})
 
+@transaction.atomic
 def ApiConfirmDemandeInscription(request):
+
     id_demande = request.GET.get('id_demande')
     demande = DemandeInscription.objects.get(id = id_demande)
     demande.etat = 'accepte'
@@ -229,12 +233,35 @@ def ApiConfirmDemandeInscription(request):
         formation = demande.formation,
         specialite = demande.specialite,
         amount = demande.formation.frais_inscription + demande.formation.frais_assurance + demande.specialite.prix,
-       
     )
 
     demande_paiement.save()
-
     demande.save()
+
+    seuil_frais_formation = SeuilPaiements.objects.get(specialite = demande.specialite)
+    valeur = seuil_frais_formation.valeur
+
+    demande_paiement_line = clientPaiementsRequestLine(
+        paiement_request = demande_paiement,
+        motif_paiement = "fin",
+        montant_paye = demande_paiement.formation.frais_inscription,
+    )
+    demande_paiement_line.save()
+
+    demande_paiement_line1 = clientPaiementsRequestLine(
+        paiement_request = demande_paiement,
+        motif_paiement = "ass",
+        montant_paye = demande_paiement.formation.frais_assurance,
+    )
+    demande_paiement_line1.save()
+
+    demande_paiement_line2 = clientPaiementsRequestLine(
+        paiement_request = demande_paiement,
+        motif_paiement = "frf",
+        montant_paye = demande.specialite.prix * (Decimal(valeur) / 100)
+    )
+    demande_paiement_line2.save()
+
     return JsonResponse({'status': 'success', 'message' : 'La demande d\'incription à été confirmer avec succès.'})
 
 def ApiAnnulerDemandeInscription(request):

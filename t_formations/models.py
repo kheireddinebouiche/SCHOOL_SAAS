@@ -25,7 +25,6 @@ class Partenaires(models.Model):
         return self.nom
 
 class Formation(models.Model):
-
     code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     nom = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
