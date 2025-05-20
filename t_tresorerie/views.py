@@ -104,8 +104,8 @@ def ApiGetRequestPaiementsLine(request):
 def ApiListPaiementDone(request):
     id = request.GET.get('id')
 
-    demande_obj = ClientPaiementsRequest.object.get(id = id)
-    listes = Paiements.objects.filter(paiement_line__id = demande_obj)
+    demande_obj = ClientPaiementsRequest.objects.get(id = id)
+    listes = Paiements.objects.filter(paiement_line__id = demande_obj.id)
 
     data = []
     for liste in listes:
