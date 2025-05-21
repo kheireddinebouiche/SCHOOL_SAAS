@@ -84,18 +84,23 @@ def ApiDeleteSeuil(request):
 def ApiGetPaiementLine(request):
     pass
 
+
+from django.db.models import Q
+
 def ApiGetRequestPaiementsLine(request):
     id= request.GET.get('id')
 
     request = ClientPaiementsRequest.objects.get(id=id)
-    lignes = clientPaiementsRequestLine.objects.filter(paiement_request=request)
+    lignes = clientPaiementsRequestLine.objects.filter(paiement_request=request).filter(Q(etat="auc") | Q(etat="part"))  
+    
 
     data = []
     for ligne in lignes:
         data.append({
             'id': ligne.id,
             'label': ligne.get_motif_paiement_display(),  
-            'montant_paye': ligne.montant_paye
+            'montant_paye': ligne.montant_paye,
+            'etat' : ligne.etat,
         })
 
     return JsonResponse(data, safe=False)
@@ -104,14 +109,15 @@ def ApiListPaiementDone(request):
     id = request.GET.get('id')
 
     demande_obj = ClientPaiementsRequest.objects.get(id = id)
-    listes = Paiements.objects.filter(paiement_line__id = demande_obj.id)
+    listes = Paiements.objects.filter(paiement_line__paiement_request__id = demande_obj.id)
 
     data = []
     for liste in listes:
         data.append({
             'id' : liste.id,
+            'label' : liste.paiement_line.get_motif_paiement_display(),
             'montant_paye' : liste.montant_paye,
-            'data_paiement' : liste.data_paiement,
+            'date_paiement' : liste.date_paiement,
             'observation' : liste.observation,
         })
 
@@ -119,13 +125,22 @@ def ApiListPaiementDone(request):
 
 @transaction.atomic
 def ApiStorePaiement(request):
+
     due_paiements = request.POST.get('due_paiements')
     date_paiement = request.POST.get('date_paiement')
     received_amount = request.POST.get('received_amount')
     observation = request.POST.get('observation')
     
+    paiement_line_obj = clientPaiementsRequestLine.objects.get(id = due_paiements)
+
+    if paiement_line_obj.montant_paye == received_amount:
+        paiement_line_obj.etat= "tot"
+    else:
+        paiement_line_obj.etat= "part"
+    paiement_line_obj.save()
+
     new_paiement = Paiements(
-        paiement_line = due_paiements,
+        paiement_line = paiement_line_obj,
         montant_paye = received_amount,
         date_paiement = date_paiement,
         observation = observation,

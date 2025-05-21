@@ -96,7 +96,7 @@
                                                             <th scope="col">Reste</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody id="ListePaiementRequestLine">
+                                                    <tbody id="ListePaiementRequestLineDone">
                                                         
                                                     </tbody>
                                                 </table>
@@ -141,13 +141,16 @@
                         <input type="text" class="form-control" id="received_amount" />
                     </div>
                 </div> 
-                <div class="row mt-2">
+                <div class="row mt-2 ">
                     <div class="col-lg-12">
                         <label for="observation" class="form-label">Observations</label>
                         <textarea class="form-control" id="observation"></textarea>
                     </div>
                 </div>
-
+                
+                <button class="btn btn-warning mt-2 mb-2 float-right" id="StorePaimentBnt">Enregistrer le paiement</button>
+                
+                
                 <div class="row mt-2">
                     <h5>Liste des paiement reçu </h5>
                     <div class="col-lg-12">
@@ -164,13 +167,14 @@
                                 
                             </tbody>
                         </table>
+                          
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button class="btn btn-primary" id="StorePaimentBnt">Enregistrer</button>
+              
             </div>
       
         </div><!-- /.modal-content -->
@@ -204,6 +208,7 @@
                 },
                 success : function(data){
                     var row = "";
+                    var option = "";
                     if (data.length > 0){
                        $.each(data, function(index, p){
                             row += "<tr>";
@@ -211,9 +216,18 @@
                             row += "<td>"+p.montant_paye+"</td>";
                             row += "</tr>";
                        });
+
+                       $.each(data, function(index, key){
+                            option += "<option value="+key.id+">"+key.label+' - '+key.montant_paye+" DA</option>";
+                       });
                        
                     }
 
+                    else{
+
+                        var row = "<tr><td colspan='3' class='text-muted text-center'>Aucune données disponible ! </td></tr>";
+                    }
+                    $('#due_paiements').html(option);
                     $('#ListePaiementRequestLine').html(row);
                 }
             });
@@ -229,22 +243,30 @@
                 success : function(data){
                     var rows = "";
                     if(data.length>0){
-
+                        $.each(data, function(index, p){
+                            rows +="<tr>";
+                            rows += "<td>"+p.label+"</td>";
+                            rows += "<td>"+p.montant_paye+"</td>";
+                            rows += "<td>"+p.date_paiement+"</td>";
+                            rows +="</tr>";
+                        });
                     }else{
                         rows = "<tr><td colspan='3' class='text-muted text-center'>Aucun paiement effectuer</td></tr>"
                     }
                     $('#receivedPaiementsLine').html(rows);
+                    $('#ListePaiementRequestLineDone').html(rows);
                 },
             }); 
         }
 
-        $(document).on('click', '#btnNewPaiement', function(){
+        listeReceivedPaiements();
 
+        $(document).on('click', '#btnNewPaiement', function(){
             listeReceivedPaiements();
             $('#paiementsModal').modal('show');
         });
 
-        $(document).on('click'; '#StorePaimentBnt', function(){
+        $(document).on('click', '#StorePaimentBnt', function(){
             var due_paiements = $('#due_paiements').val();
             var date_paiement = $('#date_paiement').val();
             var received_amount = $('#received_amount').val();
@@ -270,7 +292,7 @@
                     }
                 }
             });
-        })
+        });
     }); 
 </script>
 {% endblock content %}

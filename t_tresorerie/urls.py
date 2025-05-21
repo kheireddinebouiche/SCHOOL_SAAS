@@ -22,4 +22,5 @@ urlpatterns = [
     path('ApiGetRequestPaiementsLine', ApiGetRequestPaiementsLine, name="ApiGetRequestPaiementsLine"),
 
     path('ApiListPaiementDone', ApiListPaiementDone, name="ApiListPaiementDone"),
+    path('ApiStorePaiement', ApiStorePaiement, name="ApiStorePaiement"),
 ]
