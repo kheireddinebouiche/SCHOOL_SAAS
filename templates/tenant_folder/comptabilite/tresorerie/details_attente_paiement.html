@@ -127,22 +127,38 @@
                
             </div>
             <div class="modal-body">
+               
                 <div class="row">
                     <div class="col-lg-4">
                         <label class="form-label" for="due_paiements">Veuillez selection le paiement due :</label>
-                        <select  class="form-control" id="due_paiements" >
+                        <select  required class="form-control" id="due_paiements" >
 
                         </select>
                     </div>
                      <div class="col-lg-4">
                         <label class="form-label" for="date_paiement">Date de paiement :</label>
-                        <input type="date" class="form-control" id="date_paiement" />
+                        <input type="date" required class="form-control" id="date_paiement" />
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label" for="received_amount">Montant reçu :</label>
-                        <input type="text" class="form-control" id="received_amount" />
+                        <input type="text" required class="form-control" id="received_amount" />
                     </div>
                 </div> 
+                <div class="row mt-2">
+                    <div class="col-lg-6">
+                        <label class="form-label" for="paiement_mode">Mode de paiement:</label>
+                        <select class="form-control" id="paiement_mode">
+                            <option value="esp">Espèce</option>
+                            <option value="che">Chèque</option>
+                            <option value="vir">Virement</option>
+                        </select>
+                    </div>
+                     <div class="col-lg-6">
+                        <label for="paiement_ref" class="form-label">Référence de paiement </label>
+                        <input type="text" class="form-control" id="paiement_ref" />
+                    </div>
+                    
+                </div>
                 <div class="row mt-2 ">
                     <div class="col-lg-12">
                         <label for="observation" class="form-label">Observations</label>
@@ -155,7 +171,7 @@
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
                 <button class="btn btn-warning mt-2 mb-2 float-right" id="StorePaimentBnt">Enregistrer le paiement</button>
             </div>
-      
+       
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
@@ -216,7 +232,7 @@
                        });
 
                        $.each(data, function(index, key){
-                            option += "<option value="+key.id+">"+key.label+' - '+key.montant_paye+" DA</option>";
+                            option += "<option value="+key.id+">"+key.label+' - '+key.montant_restant+" DA</option>";
                        });
                        
                     }
@@ -281,32 +297,42 @@
         });
 
         $(document).on('click', '#StorePaimentBnt', function(){
+            
             var due_paiements = $('#due_paiements').val();
             var date_paiement = $('#date_paiement').val();
             var received_amount = $('#received_amount').val();
             var observation = $('#observation').val();
+            var mode_paiement = $('#paiement_mode').val();
+            var paiement_ref = $('#paiement_ref').val();
 
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiStorePaiement' %}",
-                dataType: 'JSON',
-                type : 'POST',
-                data : {
-                    'due_paiements' : due_paiements,
-                    'date_paiement' : date_paiement,
-                    'received_amount' : received_amount,
-                    'observation' : observation,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}',
-                },
-                success : function(response){
-                    if (response.status =="success"){
-                        alertify.success(response.message);
-                        listeReceivedPaiements();
-                        loadPaiementRequestLine();
-                    }else{
-                        alertify.error(response.message);
+            if ((mode_paiement == "che" && paiement_ref == "") || (mode_paiement == "vir" && paiement_ref == "")) {
+                alertify.error("Une référence de paiement est requise pour le type de paiement");
+            }else{
+                $.ajax({
+                    url : "{% url 't_tresorerie:ApiStorePaiement' %}",
+                    dataType: 'JSON',
+                    type : 'POST',
+                    data : {
+                        'due_paiements' : due_paiements,
+                        'date_paiement' : date_paiement,
+                        'received_amount' : received_amount,
+                        'observation' : observation,
+                        'mode_paiement' : mode_paiement,
+                        'paiement_ref' : paiement_ref,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    },
+                    success : function(response){
+                        if (response.status =="success"){
+                            alertify.success(response.message);
+                            listeReceivedPaiements();
+                            loadPaiementRequestLine();
+                        }else{
+                            alertify.error(response.message);
+                        }
                     }
-                }
-            });
+                });
+            }
+     
         });
 
         $(document).on('click','#deleteConfirmation', function(){

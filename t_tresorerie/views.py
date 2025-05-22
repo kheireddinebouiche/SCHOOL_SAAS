@@ -131,28 +131,35 @@ def ApiStorePaiement(request):
     date_paiement = request.POST.get('date_paiement')
     received_amount = request.POST.get('received_amount')
     observation = request.POST.get('observation')
+    mode_paiement = request.POST.get('mode_paiement')
+    paiement_ref = request.POST.get('paiement_ref')
     
-    paiement_line_obj = clientPaiementsRequestLine.objects.get(id = due_paiements)
-
-    if paiement_line_obj.montant_paye == received_amount:
-        paiement_line_obj.etat= "tot"
-        paiement_line_obj.montant_restant = 0
+    if not due_paiements or not date_paiement or not received_amount or not mode_paiement:
+        return JsonResponse({'status' : 'error', 'message' : "Veuillez remplir tous les champs"})
     else:
-        paiement_line_obj.etat= "part"
-        paiement_line_obj.montant_restant = paiement_line_obj.montant_paye - Decimal(received_amount)
+        paiement_line_obj = clientPaiementsRequestLine.objects.get(id = due_paiements)
 
-    paiement_line_obj.save()
+        if paiement_line_obj.montant_paye == Decimal(received_amount):
+            paiement_line_obj.etat= "ter"
+            paiement_line_obj.montant_restant = 0
+        else:
+            paiement_line_obj.etat= "part"
+            paiement_line_obj.montant_restant = paiement_line_obj.montant_paye - Decimal(received_amount)
 
-    new_paiement = Paiements(
-        paiement_line = paiement_line_obj,
-        montant_paye = received_amount,
-        date_paiement = date_paiement,
-        observation = observation,
-    )
+        paiement_line_obj.save()
 
-    new_paiement.save()
+        new_paiement = Paiements(
+            paiement_line = paiement_line_obj,
+            montant_paye = received_amount,
+            date_paiement = date_paiement,
+            observation = observation,
+            mode_paiement = mode_paiement,
+            reference_paiement = paiement_ref,
+        )
 
-    return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
+        new_paiement.save()
+
+        return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
 
 def ApiDeletePaiement(request):
     if request.user.has_perm('t_tresorerie.delete_paiements'):
