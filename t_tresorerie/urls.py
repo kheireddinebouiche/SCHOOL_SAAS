@@ -23,4 +23,5 @@ urlpatterns = [
 
     path('ApiListPaiementDone', ApiListPaiementDone, name="ApiListPaiementDone"),
     path('ApiStorePaiement', ApiStorePaiement, name="ApiStorePaiement"),
+    path('ApiDeletePaiement', ApiDeletePaiement, name="ApiDeletePaiement"),
 ]

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from .models import *
 from django.db import transaction
-
+from decimal import Decimal
 
 def AttentesPaiements(request):
     
@@ -100,6 +100,7 @@ def ApiGetRequestPaiementsLine(request):
             'id': ligne.id,
             'label': ligne.get_motif_paiement_display(),  
             'montant_paye': ligne.montant_paye,
+            'montant_restant': ligne.montant_restant,
             'etat' : ligne.etat,
         })
 
@@ -135,8 +136,11 @@ def ApiStorePaiement(request):
 
     if paiement_line_obj.montant_paye == received_amount:
         paiement_line_obj.etat= "tot"
+        paiement_line_obj.montant_restant = 0
     else:
         paiement_line_obj.etat= "part"
+        paiement_line_obj.montant_restant = paiement_line_obj.montant_paye - Decimal(received_amount)
+
     paiement_line_obj.save()
 
     new_paiement = Paiements(
@@ -149,3 +153,24 @@ def ApiStorePaiement(request):
     new_paiement.save()
 
     return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
+
+def ApiDeletePaiement(request):
+    if request.user.has_perm('t_tresorerie.delete_paiements'):
+        id= request.GET.get('id')
+        if id:
+            obj = Paiements.objects.get(id = id)
+
+            obj.paiement_line.montant_restant = obj.paiement_line.montant_restant + Decimal(obj.montant_paye)
+
+            if obj.paiement_line.montant_paye == obj.paiement_line.montant_paye:
+                obj.paiement_line.etat = "auc"
+            else:
+                obj.paiement_line.etat = "part"
+
+            obj.paiement_line.save()
+            obj.delete()
+            return JsonResponse({'status' : 'success', 'message' : "La suppression à été effectuer avec succès"})
+        else:
+            return JsonResponse({'status' : 'error', 'message' : "Erreur, l'objet n'a pas été trouvé !"})
+    else:
+        return JsonResponse({'status' : 'error', 'message' : "Vous n'avez pas le droit d'effectuer cette action"})

@@ -34,6 +34,7 @@ class ClientPaiementsRequest(models.Model):
 class clientPaiementsRequestLine(models.Model):
     paiement_request = models.ForeignKey(ClientPaiementsRequest, on_delete=models.DO_NOTHING, null=True)
     montant_paye = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    montant_restant = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     data_paiement = models.DateField(null=True)
     observation = models.CharField(max_length=1000, null=True, blank=True)
     motif_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('fin','Frais d\'incription'),('ass','Assurance'),('frf','Frais de formation')])

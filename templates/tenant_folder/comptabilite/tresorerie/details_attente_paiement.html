@@ -78,6 +78,7 @@
                                                         <tr>
                                                             <th scope="col">Label</th>
                                                             <th scope="col">Montant</th>
+                                                            <th scope="col">Montant Réstant</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLine">
@@ -93,7 +94,8 @@
                                                         <tr>
                                                             <th scope="col">Label</th>
                                                             <th scope="col">Montant</th>
-                                                            <th scope="col">Reste</th>
+                                                            <th scope="col">Date paiement</th>
+                                                            <th scope="col">Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLineDone">
@@ -147,39 +149,34 @@
                         <textarea class="form-control" id="observation"></textarea>
                     </div>
                 </div>
-                
-                <button class="btn btn-warning mt-2 mb-2 float-right" id="StorePaimentBnt">Enregistrer le paiement</button>
-                
-                
-                <div class="row mt-2">
-                    <h5>Liste des paiement reçu </h5>
-                    <div class="col-lg-12">
-                        <table class="table mb-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Label</th>
-                                    <th scope="col">Montant</th>
-                                    <th scope="col">Date de paiement</th>
-                                    
-                                </tr>
-                            </thead>
-                            <tbody id="receivedPaiementsLine">
-                                
-                            </tbody>
-                        </table>
-                          
-                    </div>
-                </div>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-              
+                <button class="btn btn-warning mt-2 mb-2 float-right" id="StorePaimentBnt">Enregistrer le paiement</button>
             </div>
       
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                        </lord-icon>
+                        <div class="mt-4">
+                            <h4 class="mb-3">Vous étes sur le point de supprimer le paiement</h4>
+                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                            <div class="hstack gap-2 justify-content-center">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
 
 <script>
     $(document).ready(function(){
@@ -214,6 +211,7 @@
                             row += "<tr>";
                             row += "<td>"+p.label+"</td>";
                             row += "<td>"+p.montant_paye+"</td>";
+                            row += "<td>"+p.montant_restant+"</td>";
                             row += "</tr>";
                        });
 
@@ -248,12 +246,28 @@
                             rows += "<td>"+p.label+"</td>";
                             rows += "<td>"+p.montant_paye+"</td>";
                             rows += "<td>"+p.date_paiement+"</td>";
+                            rows += '<td>';
+                                rows += '<div class="dropdown d-inline-block">';
+                                rows += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                rows += '<i class="ri-more-fill align-middle"></i>';
+                                rows += '</button>';
+                                rows += '<ul class="dropdown-menu dropdown-menu-end">';
+                                rows += '<li><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
+                                rows += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                rows += '<li>';
+                                rows += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
+                                rows += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
+                                rows += '</button>';
+                                rows += '</li>';
+                                rows += '</ul>';
+                                rows += '</div>';
+                                rows += '</td>';
                             rows +="</tr>";
                         });
                     }else{
-                        rows = "<tr><td colspan='3' class='text-muted text-center'>Aucun paiement effectuer</td></tr>"
+                        rows = "<tr><td colspan='4' class='text-muted text-center'>Aucun paiement effectuer</td></tr>"
                     }
-                    $('#receivedPaiementsLine').html(rows);
+                  
                     $('#ListePaiementRequestLineDone').html(rows);
                 },
             }); 
@@ -262,7 +276,7 @@
         listeReceivedPaiements();
 
         $(document).on('click', '#btnNewPaiement', function(){
-            listeReceivedPaiements();
+            
             $('#paiementsModal').modal('show');
         });
 
@@ -286,13 +300,47 @@
                 success : function(response){
                     if (response.status =="success"){
                         alertify.success(response.message);
-
+                        listeReceivedPaiements();
+                        loadPaiementRequestLine();
                     }else{
                         alertify.error(response.message);
                     }
                 }
             });
         });
+
+        $(document).on('click','#deleteConfirmation', function(){
+            var id = $(this).data('id');
+
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id+' class="btn btn-danger">Confirmer</a>';
+
+            $('.hstack').html(row);
+            $('.deleteModal').modal('show');
+
+            $(document).on('click','#confirmDeleteBtn', function(){
+                $.ajax({
+                    url : "{% url 't_tresorerie:ApiDeletePaiement' %}",
+                    dataType: 'JSON',
+                    type : 'GET',
+                    data : {
+                        'id' : id,
+                    },
+                    success : function(response){
+                        if (response.status == "success"){
+                            alertify.success(response.message);
+                            listeReceivedPaiements();
+                            loadPaiementRequestLine();
+                            $('.deleteModal').modal('hide');
+                        }else{  
+                            alertify.error(response.message);
+                        }
+                    }
+                });
+            });
+        }); 
+
+
     }); 
 </script>
 {% endblock content %}

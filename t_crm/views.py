@@ -245,6 +245,7 @@ def ApiConfirmDemandeInscription(request):
         paiement_request = demande_paiement,
         motif_paiement = "fin",
         montant_paye = demande_paiement.formation.frais_inscription,
+        montant_restant = demande_paiement.formation.frais_inscription,
     )
     demande_paiement_line.save()
 
@@ -252,13 +253,15 @@ def ApiConfirmDemandeInscription(request):
         paiement_request = demande_paiement,
         motif_paiement = "ass",
         montant_paye = demande_paiement.formation.frais_assurance,
+        montant_restant = demande_paiement.formation.frais_assurance,
     )
     demande_paiement_line1.save()
 
     demande_paiement_line2 = clientPaiementsRequestLine(
         paiement_request = demande_paiement,
         motif_paiement = "frf",
-        montant_paye = demande.specialite.prix * (Decimal(valeur) / 100)
+        montant_paye = demande.specialite.prix * (Decimal(valeur) / 100),
+        montant_restant = demande.specialite.prix * (Decimal(valeur) / 100),
     )
     demande_paiement_line2.save()
 
