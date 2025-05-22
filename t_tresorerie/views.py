@@ -161,6 +161,21 @@ def ApiStorePaiement(request):
 
         return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
 
+def ApiDetailsReceivedPaiement(request):
+    id = request.GET.get('id')
+
+    paiement_obj = Paiements.objects.get(id = id)
+
+    data = {
+        'montant_paye' : paiement_obj.montant_paye,
+        'date_paiement' : paiement_obj.date_paiement,
+        'observation' :  paiement_obj.observation,
+        'mode_paiement' : paiement_obj.mode_paiement,
+        'reference_paiement' : paiement_obj.reference_paiement,
+    }
+
+    return JsonResponse(data, safe=False)
+
 def ApiDeletePaiement(request):
     if request.user.has_perm('t_tresorerie.delete_paiements'):
         id= request.GET.get('id')

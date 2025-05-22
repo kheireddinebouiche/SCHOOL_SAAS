@@ -61,7 +61,10 @@
                                     <ul class="nav nav-tabs nav-border-top nav-border-top-primary mb-3" role="tablist">
                                         <li class="nav-item">
                                             <a class="nav-link active" data-bs-toggle="tab" href="#nav-border-top-paiement_dus" role="tab" aria-selected="false">
-                                                Paiements dus
+                                                Paiements dus 
+                                                <span class="badge bg-danger rounded-circle ms-2 d-inline-flex justify-content-center align-items-center" style="width: 24px; height: 24px;">
+                                                    <h6 id="NbrPaiementDue" class="mb-0 text-white"></h6>
+                                                </span>
                                             </a>
                                         </li>
                                         <li class="nav-item">
@@ -176,6 +179,65 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<div id="paiementsModalDetails" class="modal fade" tabindex="-1" aria-labelledby="paiementsModalDetailsLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title me-3" id="paiementsModalDetailsLabel">Détails du paiement</h5>
+              
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               
+            </div>
+            <div class="modal-body">
+               
+                <div class="row">
+                    <div class="col-lg-4">
+                        <label class="form-label" for="due_paiements">Veuillez selection le paiement due :</label>
+                        <select  required class="form-control" id="due_paiements" >
+
+                        </select>
+                    </div>
+                     <div class="col-lg-4">
+                        <label class="form-label" for="date_paiement">Date de paiement :</label>
+                        <input type="date" required class="form-control" id="date_paiement" />
+                    </div>
+                    <div class="col-lg-4">
+                        <label class="form-label" for="received_amount">Montant reçu :</label>
+                        <input type="text" required class="form-control" id="received_amount" />
+                    </div>
+                </div> 
+                <div class="row mt-2">
+                    <div class="col-lg-6">
+                        <label class="form-label" for="paiement_mode">Mode de paiement:</label>
+                        <select class="form-control" id="paiement_mode">
+                            <option value="esp">Espèce</option>
+                            <option value="che">Chèque</option>
+                            <option value="vir">Virement</option>
+                        </select>
+                    </div>
+                     <div class="col-lg-6">
+                        <label for="paiement_ref" class="form-label">Référence de paiement </label>
+                        <input type="text" class="form-control" id="paiement_ref" />
+                    </div>
+                    
+                </div>
+                <div class="row mt-2 ">
+                    <div class="col-lg-12">
+                        <label for="observation" class="form-label">Observations</label>
+                        <textarea class="form-control" id="observation"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-warning mt-2 mb-2 float-right" id="StorePaimentBnt">Enregistrer le paiement</button>
+            </div>
+       
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
 <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -192,7 +254,7 @@
                     </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+</div><!-- /.modal -->
 
 <script>
     $(document).ready(function(){
@@ -235,6 +297,8 @@
                             option += "<option value="+key.id+">"+key.label+' - '+key.montant_restant+" DA</option>";
                        });
                        
+                        $('#NbrPaiementDue').html(data.length);
+                       
                     }
 
                     else{
@@ -268,8 +332,9 @@
                                 rows += '<i class="ri-more-fill align-middle"></i>';
                                 rows += '</button>';
                                 rows += '<ul class="dropdown-menu dropdown-menu-end">';
-                                rows += '<li><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
-                                rows += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                rows += '<li><button id="DonePaiementdetailsBtn" data-id='+p.id+' class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
+                                rows += '<li><button id="DonePaiementupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                rows += '<li><button id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Remboussement </button></li>';
                                 rows += '<li>';
                                 rows += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
                                 rows += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -366,6 +431,19 @@
             });
         }); 
 
+        $(document).on('click', '#DonePaiementdetailsBtn', function(){
+            var id = $(this).data('id');
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiDetailsReceivedPaiement' %}",
+                dataType: "JSON",
+                type : 'GET',
+                data : {'id' : id},
+                success : function(data){
+
+                    $('#paiementsModalDetails').modal('show');
+                },
+            });
+        })
 
     }); 
 </script>

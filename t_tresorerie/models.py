@@ -30,7 +30,6 @@ class ClientPaiementsRequest(models.Model):
     def __str__(self):
         return f"{self.student}"
     
-    
 class clientPaiementsRequestLine(models.Model):
     paiement_request = models.ForeignKey(ClientPaiementsRequest, on_delete=models.DO_NOTHING, null=True)
     montant_paye = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -57,6 +56,19 @@ class Paiements(models.Model):
 
     def __str__(self):
         return self.montant_paye
+    
+
+class Remboussements(models.Model):
+    paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)
+    motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
+    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours de traitement'),('acp','Approuvé'),('ref','Refusé')], default="enc")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.paiements
+
 
 class SeuilPaiements(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
