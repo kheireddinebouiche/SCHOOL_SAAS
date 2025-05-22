@@ -33,6 +33,8 @@ def ApiGetDetailsDemandePaiement(request):
     data = {
         'demandeur_nom' : obj.demandes.visiteur.nom,
         'demandeur_prenom': obj.demandes.visiteur.prenom,
+        'motif' : obj.get_motif_display(),
+        'created_at' : obj.created_at,
     }
     return JsonResponse(data, safe=False)
 

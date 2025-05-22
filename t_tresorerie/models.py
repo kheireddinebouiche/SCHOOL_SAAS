@@ -57,7 +57,6 @@ class Paiements(models.Model):
     def __str__(self):
         return self.montant_paye
     
-
 class Remboussements(models.Model):
     paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)
     motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
@@ -68,7 +67,6 @@ class Remboussements(models.Model):
 
     def __str__(self):
         return self.paiements
-
 
 class SeuilPaiements(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
