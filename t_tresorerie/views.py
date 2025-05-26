@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from .models import *
 from django.db import transaction
 from decimal import Decimal
+from django.contrib.auth.decorators import login_required
 
 def AttentesPaiements(request):
     
@@ -14,7 +15,7 @@ def AttentesPaiements(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
 
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.all().values('motif','id','specialite__label','specialite__prix', 'formation__nom','formation__frais_assurance','formation__frais_inscription', 'demandes__visiteur__nom', 'demandes__visiteur__prenom','amount','created_at','etat')
+    listes = ClientPaiementsRequest.objects.all().values('motif','id','specialite__label','specialite__prix', 'formation__nom','formation__frais_assurance','formation__frais_inscription', 'client__nom', 'client__prenom','amount','created_at','etat')
     for liste in listes:
         liste_obj = ClientPaiementsRequest.objects.get(id=liste['id'])
         liste['motif_label'] = liste_obj.get_motif_display()
@@ -31,8 +32,8 @@ def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
     obj = ClientPaiementsRequest.objects.get(id = id)
     data = {
-        'demandeur_nom' : obj.demandes.visiteur.nom,
-        'demandeur_prenom': obj.demandes.visiteur.prenom,
+        'demandeur_nom' : obj.client.nom,
+        'demandeur_prenom': obj.client.prenom,
         'motif' : obj.get_motif_display(),
         'created_at' : obj.created_at,
     }
@@ -44,7 +45,6 @@ def ApiDeleteDemandePaiement(request):
     obj.delete()
 
     return JsonResponse({'status' : 'success', "message" : "La suppréssion a été effectuer avec succès"})
-
 
 def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
@@ -119,6 +119,8 @@ def ApiListPaiementDone(request):
         data.append({
             'id' : liste.id,
             'label' : liste.paiement_line.get_motif_paiement_display(),
+            'etat_label' : liste.get_etat_display(),
+            'etat' : liste.etat,
             'montant_paye' : liste.montant_paye,
             'date_paiement' : liste.date_paiement,
             'observation' : liste.observation,
@@ -195,7 +197,6 @@ def ApiDetailsReceivedPaiement(request):
 
     return JsonResponse(data, safe=False)
 
-
 def ApiDeletePaiement(request):
     if request.user.has_perm('t_tresorerie.delete_paiements'):
         id= request.GET.get('id')
@@ -216,3 +217,18 @@ def ApiDeletePaiement(request):
             return JsonResponse({'status' : 'error', 'message' : "Erreur, l'objet n'a pas été trouvé !"})
     else:
         return JsonResponse({'status' : 'error', 'message' : "Vous n'avez pas le droit d'effectuer cette action"})
+    
+@login_required(login_url='institut_app:login')
+def PageRemboursement(request):
+    return render(request, 'tenant_folder/comptabilite/tresorerie/remboursement.html',{'tenant' : request.tenant})
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiSetRembourssement(request):
+    id = request.GET.get('id')
+    paiement = Paiements.objects.get(id = id)
+
+    paiement.etat = "dmr"
+    paiement.save()
+
+    return JsonResponse({'status' : 'success', 'message' : "La demande de remboursement à été enregistrer avec succès"})

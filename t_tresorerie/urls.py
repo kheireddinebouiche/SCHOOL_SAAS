@@ -26,4 +26,7 @@ urlpatterns = [
     path('ApiDeletePaiement', ApiDeletePaiement, name="ApiDeletePaiement"),
 
     path('ApiDetailsReceivedPaiement', ApiDetailsReceivedPaiement, name="ApiDetailsReceivedPaiement"),
+
+    path('remboursements/', PageRemboursement , name="PageRemboursement"),
+    path('ApiSetRembourssement', ApiSetRembourssement, name="ApiSetRembourssement"),
 ]

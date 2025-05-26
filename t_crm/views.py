@@ -152,11 +152,11 @@ def ListeDemandeInscription(request):
     return render(request, 'tenant_folder/crm/liste_demande_inscription.html', context)
 
 def ApiGetListeDemandeInscription(request):
-    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat','visiteur__has_completed_documents','motif')
+    demandes = DemandeInscription.objects.all().values('id','visiteur__nom','visiteur__prenom','specialite__label','specialite__code','created_at','etat','visiteur__has_completed_documents')
     for demande in demandes:
         demande_obj = DemandeInscription.objects.get(id=demande['id'])
         demande['etat_label'] = demande_obj.get_etat_display()
-        demande['motif_label'] = demande_obj.get_motif_display()
+        
     return JsonResponse(list(demandes), safe=False)
 
 def ApiGetGrideDemandeInscription(request):
@@ -229,9 +229,10 @@ def ApiConfirmDemandeInscription(request):
     user.save()
 
     demande_paiement = ClientPaiementsRequest(
-        demandes = demande,
+        client = user,
         formation = demande.formation,
         specialite = demande.specialite,
+        motif = "frais",
         amount = demande.formation.frais_inscription + demande.formation.frais_assurance + demande.specialite.prix,
     )
 

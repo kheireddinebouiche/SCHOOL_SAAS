@@ -7,10 +7,12 @@ from django.contrib.auth.models import User
 
 
 class ClientPaiementsRequest(models.Model):
-    #Uniquement quand il s'agit du paiement des frais d'admission
-    demandes = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
+    
+    client = models.ForeignKey(Visiteurs, on_delete=models.DO_NOTHING, null=True, blank=True)
+
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
+
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid = models.BooleanField(default=False)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('tranche','Tranche'), ('mensuelle','Mensuelle'), ('totalite','Paiement unique')])
@@ -51,16 +53,21 @@ class Paiements(models.Model):
     observation = models.CharField(max_length=100, null=True, blank=True)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('che','Chèque'),('esp','Espece'),('vir','Virement Bancaire')])
     reference_paiement = models.CharField(max_length=100, null=True, blank=True)
+
+    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('val','Valider'),('dmr','Demande de remboursement'),('rem','Rembourssement approuvé')], default='val')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.montant_paye
     
-class Remboussements(models.Model):
+class Rembourssements(models.Model):
     paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)
     motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours de traitement'),('acp','Approuvé'),('ref','Refusé')], default="enc")
+
+    is_approuved = models.BooleanField(default=False)
+    observation = models.CharField(max_length=1000, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

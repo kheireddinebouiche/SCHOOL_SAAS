@@ -35,9 +35,13 @@
                                     <div class="d-flex justify-content-between align-items-center flex-wrap">
                                        <h5> Demande de paiement </h5>
                                         <div class="d-flex">
-                                            <button id="btnNewPaiement" class="btn btn-success btn-sm " data-url="#">
+                                             <button id="btnNewRefund" class="btn btn-warning btn-sm  me-2 " data-url="#">
+                                                <i class='mdi mdi-account-cash me-2'></i> Demande de rembourssement
+                                            </button>   
+                                            <button id="btnNewPaiement" class="btn btn-success btn-sm" data-url="#">
                                                 <i class='mdi mdi-account-cash me-2'></i> Nouveau paiement
                                             </button>
+                                           
                                         </div>
                                     </div>
                                 </div>
@@ -55,6 +59,7 @@
                                             <label for="created_at" class="form-label">Date de demande :</label>
                                             <input disabled type="text" class="form-control" id="created_at" />
                                         </div>
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -109,6 +114,7 @@
                                                             <th scope="col">Label</th>
                                                             <th scope="col">Montant</th>
                                                             <th scope="col">Date paiement</th>
+                                                            <th scope="col">Etat</th>
                                                             <th scope="col">Action</th>
                                                         </tr>
                                                     </thead>
@@ -249,7 +255,7 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-body text-center p-5">
@@ -258,6 +264,30 @@
                         <div class="mt-4">
                             <h4 class="mb-3">Vous étes sur le point de supprimer le paiement</h4>
                             <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                            <div class="hstack gap-2 justify-content-center">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div class="modal fade refundModal" tabindex="-1" role="dialog" aria-labelledby="refundModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-5">
+                        <script src="https://cdn.lordicon.com/lordicon.js"></script>
+                        <lord-icon
+                            src="https://cdn.lordicon.com/jzzzcrxv.json"
+                            trigger="loop"
+                            delay="2000"
+                            style="width:120px;height:120px">
+                        </lord-icon>
+                        </lord-icon>
+                        <div class="mt-4">
+                            <h4 class="mb-3">Vous étes sur le point de faire une demande de rembourssement</h4>
+                            <p class="text-muted mb-4">La demande de remboussement doit être valider par un compe de niveau supérieur. </p>
                             <div class="hstack gap-2 justify-content-center">
                                 
                             </div>
@@ -339,6 +369,9 @@
                             rows += "<td>"+p.label+"</td>";
                             rows += "<td>"+p.montant_paye+"</td>";
                             rows += "<td>"+p.date_paiement+"</td>";
+                            rows += "<td>"+(p.etat == "val" ? '<span class="badge bg-success">'+p.etat_label+'</span>' 
+                                           :p.etat == "dmr" ? '<span class="badge bg-warning">'+p.etat_label+'</span>' 
+                                           :p.etat == "rem" ? '<span class="badge bg-primary">'+p.etat_label+'</span>' : '')+"</td>";
                             rows += '<td>';
                                 rows += '<div class="dropdown d-inline-block">';
                                 rows += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
@@ -347,7 +380,10 @@
                                 rows += '<ul class="dropdown-menu dropdown-menu-end">';
                                 rows += '<li><button id="DonePaiementdetailsBtn" data-id='+p.id+' class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
                                 rows += '<li><button id="DonePaiementupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
-                                rows += '<li><button id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Remboussement </button></li>';
+                                
+                                rows += '<li><button '+(p.etat == "val" ? '' : 'hidden')+' id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Remboussement </button></li>';
+                                rows += '<li><button '+(p.etat == "dmr" ? '' : 'hidden')+' id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Annuler la demande </button></li>';
+                                
                                 rows += '<li>';
                                 rows += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
                                 rows += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -460,8 +496,39 @@
                     $('#paiementsModalDetails').modal('show');
                 },
             });
-        })
+        });
 
+        $(document).on('click', '#AskRefundupdateBtn', function(){
+            var id = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="AskRefund" data-id='+id+' class="btn btn-warning">Confirmer la demande de rembourssement</a>';
+
+            $('.refundModal .hstack').html(row);
+            $('.refundModal').modal('show');
+        });
+
+        $(document).on('click', '#AskRefund', function(){
+            var id = $(this).data('id');
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiSetRembourssement' %}",
+                dataType: 'JSON',
+                type : 'GET',
+                data : {'id' : id},
+                success : function(response){
+                    if (response.status == "success"){
+                        alertify.success(response.message);    
+                        listeReceivedPaiements();
+                         $('.refundModal').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        });
+
+        $('#btnNewRefund').prop('hidden', true);
+        $('#btnNewRefund').prop('disabled', true);
+    
     }); 
 </script>
 {% endblock content %}

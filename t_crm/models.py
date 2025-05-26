@@ -54,20 +54,13 @@ class Visiteurs(models.Model):
         return f"{self.nom} {self.prenom}"
     
 class DemandeInscription(models.Model):
-
     visiteur = models.ForeignKey(Visiteurs, on_delete=models.CASCADE, null=True, blank=True)
-
     formation = models.ForeignKey(Formation, on_delete=models.SET_NULL, null=True, blank=True)
-
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
-
     promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_demande_inscription", limit_choices_to={'etat':'active'})
-
     formule = models.CharField(max_length=255, null=True, blank=True, choices=[('week', 'Week-End'), ('jour', 'Cours du jour'), ('soir', 'Cours du soir')])
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'mars')])
-
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('annulation_approuver' , 'Demande d\'annulation approuvée'),('annulation', 'Demande d\'annulation'),('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté'),('paiment','Procédure de paiement')])
-
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,related_name="created_by_demande_inscription")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
