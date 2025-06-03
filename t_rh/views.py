@@ -6,6 +6,10 @@ from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 
+
+def view_contrat(request):
+    return render(request, 'tenant_folder/rh/contrats/contrat_template.html')
+
 def listeEmployes(request):
     liste = Employees.objects.prefetch_related('contrats').all()
    
