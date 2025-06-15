@@ -47,6 +47,7 @@ urlpatterns = [
     path('liste-des-postes/', ListeDesPostes , name="ListeDesPostes"),
     path('ApiAddPoste', ApiAddPoste, name="ApiAddPoste"),
     path('ApiListePostes', ApiListePostes, name="ApiListePostes"),
+    path('ApiGetPostDetails', ApiGetPostDetails, name="ApiGetPostDetails"),
     path('ApiGetListContratForEmploye', ApiGetListContratForEmploye, name="ApiGetListContratForEmploye"),
     path('mise-a-jours-poste/<int:pk>/',UpdatePoste, name="updatePoste"),
 

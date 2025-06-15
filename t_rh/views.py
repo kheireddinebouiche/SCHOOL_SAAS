@@ -393,6 +393,20 @@ def UpdatePoste(request, pk):
     }
     return render(request, 'tenant_folder/rh/postes/update_poste.html', context)
 
+def ApiGetPostDetails(request):
+    id=  request.GET.get('id')
+    obj = Posts.objects.get(id = id)
+
+    data= {
+        'id' : obj.id,
+        'label' : obj.label,
+        'description' : obj.description
+    }
+
+    return JsonResponse(data, safe=False)
+
+def ApiGetListPostTraches(request):
+    pass
 
 def ApiUpdateCategorie(request):
     pass
