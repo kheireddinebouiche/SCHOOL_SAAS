@@ -390,6 +390,7 @@ def UpdatePoste(request, pk):
     context = {
         'form' : form,
         'tenant' : request.tenant,
+        'pk' : pk
     }
     return render(request, 'tenant_folder/rh/postes/update_poste.html', context)
 
@@ -405,8 +406,18 @@ def ApiGetPostDetails(request):
 
     return JsonResponse(data, safe=False)
 
-def ApiGetListPostTraches(request):
-    pass
+def ApiGetListPostTaches(request):
+    id = request.GET.get('postId')
+    liste = TachesPoste.objects.filter(poste = Posts.objects.get(id=id))
+
+    data = []
+    for tache in liste:
+        data.append({
+            'id' : tache.id,
+            'label' : tache.label,
+        })
+
+    return JsonResponse(data, safe=False)
 
 def ApiUpdateCategorie(request):
     pass
