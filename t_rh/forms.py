@@ -21,6 +21,9 @@ class NouveauEmploye(forms.ModelForm):
             'date_naissance' : forms.TextInput(attrs={'class' : 'form-control', 'type' : 'date'}),
             'lieu_naissance' : forms.TextInput(attrs={'class' : 'form-control'}),
             'bank' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'prenom_pere' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'nom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'prenom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
         }
         labels = {
             'civilite' : "Civilité :",

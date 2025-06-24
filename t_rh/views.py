@@ -354,6 +354,23 @@ def ApiGetListContratForEmploye(request):
 
     return JsonResponse(list(liste), safe=False)
 
+def ApiGetCategorieContratDetails(request):
+    id = request.GET.get('id')
+
+    obj = CategoriesContrat.objects.get(id = id)
+
+    data = {
+        'id' : obj.id,
+        'label'  :obj.label,
+        'entite_id' : obj.entite_legal.id,
+        'entite' : obj.entite_legal.designation,
+        'description' : obj.description
+    }
+
+    return JsonResponse(data, safe=False)
+
+    
+
 def ApiListePostes(request):
     liste = Posts.objects.filter().values('id', 'label', 'description')
     return JsonResponse(list(liste), safe=False)

@@ -102,9 +102,45 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
+        <div id="updateModal" class="modal fade" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addModalLabel">Modification des informations de la catégorie</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Titre :</strong></label>  
+                            <input type="text" class="form-control" name="update_label" id="update_label" />
+                        </div>
+
+                        <div class="form-groupe mb-3">
+                            <label for="label"><strong>Entité légale (Définissez pour quelle entreprise vous allez appliquer la catégorie) :</strong></label>  
+                            <select name="entite" id="update_entite" class="form-control">
+
+                            </select>
+                        </div>
+                       
+                        <span id="tags-container"></span>
+                        <div class="form-groupe mt-3">
+                            <label for="description"><strong>Description : </strong></label>
+                            <textarea class="form-control" rows="10" name="update_description" id="update_description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer add-btns">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmAddButton"  class="btn btn-warning">Confirmer les modifications</a>
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
 <script>
 
 $(document).ready(function(){
+
     function loadItems(){
         $.ajax({
             url : "{% url 't_rh:ApiListCategorie' %}",
@@ -115,8 +151,8 @@ $(document).ready(function(){
                 if (data.length > 0){
                     $.each(data, function(index, p){
                         row += "<tr>";
-                        row += "<td>"+p.label+"</td>";
-                        row += "<td><strong>"+p.entite_legal__designation+"</strong></td>";
+                        row += "<td><strong>"+p.label+"</strong></td>";
+                        row += "<td>"+p.entite_legal__designation+"</td>";
                         row += '<td>';
                             row += '<div class="dropdown d-inline-block">';
                                 row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
@@ -124,7 +160,7 @@ $(document).ready(function(){
                                 row += '</button>';
                                 row += '<ul class="dropdown-menu dropdown-menu-end">';
                                     row += '<li><a href="/rh/details-catagories/'+p.id+'" class="dropdown-item"><i class="ri-file-list-line align-bottom me-2 text-muted"></i>Types de contrat</a></li>';
-                                    row += '<li><button id="updateBtn" data-id='+p.id+' data-titre="'+p.label+'" data-contenu="'+p.description+'" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                                    row += '<li><button id="updateBtn" data-id='+p.id+'  class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
                                     row += '<li>';
                                         row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
                                             row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -147,7 +183,6 @@ $(document).ready(function(){
     loadItems();
 
     $(document).on('click', '#btnAdd', function(){
-
         $.ajax({
             url :"{% url 't_rh:ApiGetEntite' %}",
             dataType: "JSON",
@@ -196,6 +231,41 @@ $(document).ready(function(){
         });
     });
 
+    function loadSelectedEntite(id_entite){
+        $.ajax({
+            url :"{% url 't_rh:ApiGetEntite' %}",
+            dataType: "JSON",
+            type : "GET",
+            success: function(data){
+                var row = "";
+               
+                $.each(data, function(index, p){
+                    row += "<option value='0'>--------------</option>";
+                    row += "<option "+(p.id == id_entite ? 'selected' : '')+" value='"+p.id+"'>"+p.designation+"</option>";
+                });
+                $('#update_entite').html(row);
+            }
+        });
+    }
+
+    $(document).on('click', '#updateBtn', function(){
+
+        var id = $(this).data('id');
+
+        $.ajax({
+            url : "{% url 't_rh:ApiGetCategorieContratDetails' %}",
+            dataType: 'JSON',
+            type : 'GET',
+            data : {'id':id},
+            success : function(data){
+                loadSelectedEntite(data.entite_id);
+                $('#update_label').val(data.label);
+                $('#update_description').val(data.description);
+                $('#updateModal').modal('show');
+            }
+        });
+
+    });
 
 });
 </script>
