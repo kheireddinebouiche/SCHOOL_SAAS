@@ -369,7 +369,21 @@ def ApiGetCategorieContratDetails(request):
 
     return JsonResponse(data, safe=False)
 
+def ApiUpdateCategorieGroupe(request):
+    update_label = request.POST.get('update_label')
+    update_description = request.POST.get('update_description')
+    update_entite = request.POST.get('update_entite')
+    categorieId = request.POST.get('_categorieId')
+
+    obj = CategoriesContrat.objects.get(id = categorieId)
     
+    obj.label = update_label
+    obj.description = update_description
+    obj.entite_legal = Entreprise.objects.get(id = update_entite)
+
+    obj.save()
+
+    return JsonResponse({"status" : 'success', "message" : "Les informations ont été mis à jours"})
 
 def ApiListePostes(request):
     liste = Posts.objects.filter().values('id', 'label', 'description')
