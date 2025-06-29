@@ -56,5 +56,6 @@ urlpatterns = [
 
     path('ApiGetEntite', ApiGetEntite, name="ApiGetEntite"),
 
-    path('contrat_temp/',view_contrat, name="view_contrat"),
+    path('contrat_temp/<int:pk>/',view_contrat, name="view_contrat"),
+    path('ApiGetDetailsOfContract', ApiGetDetailsOfContract, name="ApiGetDetailsOfContract"),
 ]

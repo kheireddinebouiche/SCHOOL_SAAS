@@ -54,67 +54,78 @@
     </style>
 </head>
 <body>
-    <h1>Contrat de Travail à Durée Indéterminée</h1>
+    <button type="button" id="printPDF">Imprimer</button>
+    <div class="printArea">
+        <h1>Contrat de Travail à Durée Indéterminée</h1>
 
-    <p>Entre les soussignés :</p>
+        <p>Entre les soussignés :</p>
+        
+        <p><strong>L'Employeur :</strong> <b>{{ contrat.type_contrat.categorie.entite_legal}}</b>, dont le siège est situé à {{ contrat.type_contrat.categorie.entite_legal.adresse}}.</p>
 
-    <p><strong>L’Employeur :</strong> {{ employeur_nom }}, dont le siège est situé à {{ employeur_adresse }}.</p>
+        <p><strong>Et l'Employé :</strong> <b>{{ employe.get_civilite_display }} {{ employe.nom }} {{ employe.prenom }} </b>, né(e) le <b>{{ employe.date_naissance }} </b>à <b>{{ employe.lieu_naissance}}</b>, domicilié(e) à <b>{{ employe.adresse }}</b>.</p>
+        
+        {% for article in articles %}
+            <div class="article">
+                <h2>{{article.titre}}</h2>
+                <p>{{article.contenu_remplace|safe}}</p>
+            </div>
+        {% endfor %}
+    
+        <p class="date">Fait à , le <strong> {{ contrat.created_at|date:"d-m-Y" }}</strong>.</p>
 
-    <p><strong>Et l’Employé :</strong> {{ employe_nom }}, né(e) le {{ employe_naissance }}, domicilié(e) à {{ employe_adresse }}.</p>
-
-    <div class="article">
-        <h2>Article 1 – Fonction</h2>
-        <p>L’employé est engagé en qualité de <strong>{{ poste }}</strong>. Il exercera ses fonctions sous la responsabilité de son supérieur hiérarchique.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 2 – Durée</h2>
-        <p>Le présent contrat est conclu pour une durée <strong>indéterminée</strong> à compter du <strong>{{ date_debut }}</strong>.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 3 – Période d’essai</h2>
-        <p>Une période d’essai de <strong>{{ periode_essai }}</strong> est convenue à compter de la date de début du contrat.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 4 – Rémunération</h2>
-        <p>L’employé percevra une rémunération mensuelle brute de <strong>{{ salaire }} €</strong>, payable en fin de mois.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 5 – Lieu de travail</h2>
-        <p>L’employé exercera ses fonctions à l’adresse suivante : <strong>{{ lieu_travail }}</strong>.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 6 – Temps de travail</h2>
-        <p>La durée hebdomadaire de travail est fixée à <strong>{{ heures_semaine }} heures</strong>.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 7 – Congés</h2>
-        <p>L’employé bénéficiera des congés payés conformément à la législation en vigueur.</p>
-    </div>
-
-    <div class="article">
-        <h2>Article 8 – Résiliation</h2>
-        <p>Chaque partie pourra mettre fin au contrat en respectant les dispositions légales en matière de préavis.</p>
-    </div>
-
-    <p class="date">Fait à {{ ville_signature }}, le {{ date_signature }}.</p>
-
-    <div class="signature">
-        <div>
-            <p><strong>L’Employeur</strong></p>
-            <p>__________________________</p>
-            <p>Signature</p>
-        </div>
-        <div>
-            <p><strong>L’Employé</strong></p>
-            <p>__________________________</p>
-            <p>Signature</p>
+        <div class="signature">
+            <div>
+                <p><strong>L'Employeur</strong></p>
+                <p>__________________________</p>
+                <p>Signature</p>
+            </div>
+            <div>
+                <p><strong>L'Employé</strong></p>
+                <p>__________________________</p>
+                <p>Signature</p>
+            </div>
         </div>
     </div>
+    
+<script>
+    document.getElementById('printPDF').addEventListener('click', function () {
+        // Récupérer le contenu HTML du div
+        var content = document.querySelector('.printArea').innerHTML;
+
+        // Créer une nouvelle fenêtre
+        var printWindow = window.open('', '', 'width=800,height=600');
+
+        // Insérer le contenu dans la nouvelle fenêtre
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Impression Contrat</title>
+                <style>
+                    body { font-family: Times, sans-serif; padding: 20px; }
+                    .signature { display: flex; justify-content: space-between; margin-top: 50px; }
+                    .signature div { width: 45%; text-align: center; }
+                    
+                    h1 {font-size : 16px; text-align : center;}
+                    h2 {font-size : 14px;}
+                    .date { margin-top: 30px; text-align: right; }
+                    .article { margin-top: 20px; }
+                    p {font-size : 12px;}
+                </style>
+            </head>
+            <body>
+                ${content}
+            </body>
+            </html>
+        `);
+
+        // Attendre que le contenu soit chargé puis imprimer
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+
+        
+    });
+</script>
 </body>
+
 </html>

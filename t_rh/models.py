@@ -196,7 +196,7 @@ class Contrats(models.Model):
 
     has_essai = models.BooleanField(null=True, blank=True)
     periode_essai = models.CharField(max_length=100, null=True, blank=True)
-    
+    mode_essei = models.CharField(max_length=100, null=True, blank=True, choices=[('m','Mois'),('a','Années')], default='m')
     observations = models.CharField(max_length=1000, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

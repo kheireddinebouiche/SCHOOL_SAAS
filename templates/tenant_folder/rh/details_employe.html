@@ -51,7 +51,7 @@
                                                 </button>
                                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                                                     {% if employe.has_contract %}
-                                                        <a class="dropdown-item" href="{% url 't_rh:view_contrat' %}" target="_blank">Contrat de travail</a>
+                                                        <a class="dropdown-item" href="{% url 't_rh:view_contrat' pk=employe.id %}" target="_blank">Contrat de travail</a>
                                                         <a class="dropdown-item" href="#">Attestion de travail</a>
                                                         <a class="dropdown-item" href="#">Badge</a> 
                                                     {% else  %}
@@ -219,6 +219,82 @@
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
+
+        <div id="detailsContratModal" class="modal fade" tabindex="-1" aria-labelledby="detailsContratModal" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="detailsContratModal">Détails du contrat</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <div class="row">
+                            <div class="col-lg-3 mb-3">
+                                <label for="d_entite_legal" class="form-label" ><strong>Employeur :</strong></label>  
+                                <input disabled type="text" class="form-control" id="d_entite_legal" />
+                            </div>
+    
+                            <div class="col-lg-3 mb-3">
+                                <label for="d_categorie_contrat" class="form-label"><strong>Catégorie de contrat :</strong></label>  
+                                <input disabled type="text" id="d_categorie_contrat" class="form-control" />
+                            </div>
+    
+                            <div class="col-lg-3 mb-3">
+                                <label for="d_type_contrat" class="form-label"><strong>Type de contrat :</strong></label>  
+                                <input disabled type="text" id="d_type_contrat" class="form-control" />
+                            </div>
+
+                            <div class="col-lg-3">
+                                <label for="d_duree_contrat" class="form-label"> Durée (Durée du contrat): </label>
+                                <input disabled type="text" id="d_duree_contrat" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-lg-6">
+                                <label for="d_services" class="form-label">Service : </label>
+                                <input disabled type="text" id="d_services" class="form-control">
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="posts" class="form-label">Poste : </label>
+                                <input disabled type="text" id="d_posts" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-4">
+                                <label for="data_embauche" class="form-label"> Date de recrutement : </label>
+                                <input type="date" id="date_embauche" class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="periode_essaie" class="form-label"> Période d'essai ? : </label>
+                                <select id="periode_essaie" class="form-control" >
+                                    <option value="0" > Non </option>
+                                    <option value="1" > Oui </option>
+                                </select>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="duree_essaie" class="form-label"> Durée (Durée de la période d'essai): </label>
+                                <input type="text" id="duree_essaie" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label for="contenu"><strong>Contenu : </strong></label>
+                            <textarea class="form-control" rows="10" name="contenu" id="contenu"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer add-btns">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button id="confirmBtn" class="btn btn-primary">Confirmer</a>
+                    </div>
+        
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+
+
 
 <script>
     $(document).ready(function(){
@@ -390,7 +466,7 @@
                                         row += '<i class="ri-more-fill align-middle"></i>';
                                     row += '</button>';
                                     row += '<ul class="dropdown-menu dropdown-menu-end">';
-                                        row += '<li><button id="detailsBtn" class="dropdown-item"><i class="ri-eye align-bottom me-2 text-muted"></i>Détails</button></li>';
+                                        row += '<li><button id="detailsContratBtn" data-id='+p.id+' class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i>Détails</button></li>';
                                         row += '<li><button id="updateBtn" data-id='+p.id+' data-titre="'+p.label+'" data-contenu="'+p.description+'" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
                                         row += '<li>';
                                             row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
@@ -414,6 +490,28 @@
 
         loadContrats();
 
+        $(document).on('click', '#detailsContratBtn', function(){
+
+            var id_contrat = $(this).data('id');
+
+            $.ajax({
+                url : '{% url "t_rh:ApiGetDetailsOfContract" %}',
+                dataType : 'JSON',
+                type : 'GET',
+                data : {'id' : id_contrat},
+                success : function(data){
+                    $('#d_entite_legal').val(data.employeur);
+                    $('#d_categorie_contrat').val(data.categorie_contrat);
+                    $('#d_type_contrat').val(data.type_contrat);
+                    // $('#d_duree_contrat').val(data.);
+                    // $('#d_services').val(data.);
+                    // $('#d_posts').val(data.);
+                    $('#detailsContratModal').modal('show');
+                }
+            });
+
+            
+        }); 
     });
 </script>
 {% endblock content %}

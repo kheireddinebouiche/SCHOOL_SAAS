@@ -7,8 +7,49 @@ from django.contrib import messages
 from django.db import transaction
 
 
-def view_contrat(request):
-    return render(request, 'tenant_folder/rh/contrats/contrat_template.html')
+def remplacer_tags(contenu, employe, contrat):
+    tags = {
+        '[date_debut]': f"<strong>{contrat.date_embauche.strftime('%d/%m/%Y') if contrat.date_embauche else ''}</strong>",
+        '[nom_employe]': f"<strong>{employe.nom}</strong>",
+        '[prenom_employe]': f"<strong>{employe.prenom}</strong>",
+        '[poste]': f"<strong>{contrat.poste.label}</strong>",
+        '[periode_essai]': f"<strong>{contrat.periode_essai}</strong>",
+    }
+
+    for tag, valeur in tags.items():
+        contenu = contenu.replace(tag, valeur)
+
+    return contenu
+
+def view_contrat(request, pk):
+    employe = Employees.objects.get(id=pk)
+    contrat = Contrats.objects.get(employee=employe)
+    articles = ArticlesContratStandard.objects.filter(type_contrat=contrat.type_contrat)
+
+    articles_personnalises = []
+    for article in articles:
+        contenu_remplace = remplacer_tags(article.contenu, employe,contrat)
+        article.contenu_remplace = contenu_remplace  
+        articles_personnalises.append(article)
+
+    context = {
+        'employe': employe,
+        'contrat': contrat,
+        'articles': articles_personnalises,
+    }
+    return render(request, 'tenant_folder/rh/contrats/contrat_template.html', context)
+
+# def view_contrat(request, pk):
+
+#     employe = Employees.objects.get(id = pk)
+#     contrat = Contrats.objects.get(employee = employe)
+#     articles = ArticlesContratStandard.objects.filter(type_contrat = contrat.type_contrat)
+#     context = {
+#         'employe' : employe,
+#         'contrat' : contrat,
+#         'articles' : articles,
+#     }
+#     return render(request, 'tenant_folder/rh/contrats/contrat_template.html', context)
 
 def listeEmployes(request):
     liste = Employees.objects.prefetch_related('contrats').all()
@@ -373,17 +414,37 @@ def ApiUpdateCategorieGroupe(request):
     update_label = request.POST.get('update_label')
     update_description = request.POST.get('update_description')
     update_entite = request.POST.get('update_entite')
-    categorieId = request.POST.get('_categorieId')
+    categorieId = request.POST.get('id_cat')
 
-    obj = CategoriesContrat.objects.get(id = categorieId)
+   
+    try:
+        obj = CategoriesContrat.objects.get(id = categorieId)
     
-    obj.label = update_label
-    obj.description = update_description
-    obj.entite_legal = Entreprise.objects.get(id = update_entite)
+        obj.label = update_label
+        obj.description = update_description
+        obj.entite_legal = Entreprise.objects.get(id = update_entite)
+        obj.save()
 
-    obj.save()
+        return JsonResponse({"status" : 'success', "message" : "Les informations ont été mis à jours"})
+    except:
+        return JsonResponse({'status' : "error", "message" : "Une erreur est survenue lors du traitement de la réquete"})
 
-    return JsonResponse({"status" : 'success', "message" : "Les informations ont été mis à jours"})
+def ApiGetDetailsOfContract(request):
+    id = request.GET.get('id')
+
+    obj = Contrats.objects.get(id = id)
+    data = {
+        'id' : obj.id,
+        'employee_nom' : obj.employee.nom,
+        'employee_prenom' : obj.employee.prenom,
+        'type_contrat' : obj.type_contrat.label,
+        'categorie_contrat' : obj.type_contrat.categorie.label,
+        'employeur' : obj.type_contrat.categorie.entite_legal.designation,
+        'service' : obj.service.label,
+        'poste' : obj.poste.label,
+       
+    }
+    return JsonResponse(data, safe=False)
 
 def ApiListePostes(request):
     liste = Posts.objects.filter().values('id', 'label', 'description')
@@ -400,7 +461,6 @@ def ApiAddPoste(request):
     new_poste.save()
     messages.success(request, 'Le poste à été ajouté avec succès')
     return JsonResponse({'status' : "success", "message" : "Le poste à été ajouter avec suucès",'id' : new_poste.id})
-
 
 def ListeDesPostes(request):
     context = {
