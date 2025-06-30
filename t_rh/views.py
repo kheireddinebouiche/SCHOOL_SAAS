@@ -442,6 +442,8 @@ def ApiGetDetailsOfContract(request):
         'employeur' : obj.type_contrat.categorie.entite_legal.designation,
         'service' : obj.service.label,
         'poste' : obj.poste.label,
+        'duree' : obj.duree,
+        'date_embauche' : obj.date_embauche,
        
     }
     return JsonResponse(data, safe=False)
