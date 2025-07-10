@@ -45,7 +45,17 @@ class Formation(models.Model):
 
     def __str__(self):
         return self.nom
-    
+
+class DossierInscription(models.Model):
+    formation = models.ForeignKey(Formation, on_delete=models.DO_NOTHING, null=True, blank=True)
+    label = models.CharField(max_length=100, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+
 class Specialites(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, unique =True)
     label = models.CharField(max_length=100, null=True, blank=True)

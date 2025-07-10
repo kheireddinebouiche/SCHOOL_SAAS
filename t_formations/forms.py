@@ -53,6 +53,9 @@ class NewFormationFormMaster(forms.ModelForm):
             'frais_assurance' : "Frais d'assurance",
         }
 
+class NewDossierInscriptionForm(forms.ModelForm):
+    pass
+
 class NewPartenaireForm(forms.ModelForm):
     class Meta:
         model = Partenaires
