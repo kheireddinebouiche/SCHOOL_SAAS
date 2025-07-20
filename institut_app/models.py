@@ -7,7 +7,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
     role = models.CharField(max_length=100, null=True, blank=True, choices=[('admin', 'Admin'), ('user', 'User'),('tresorier', 'Trésorier'),('rh', 'Ressources Humaines'),('crm', 'Chargé(e) clientèle')])
-
+    image = models.ImageField(upload_to='profile_images', null=True, blank=True, default='profile_images/default1.png')
     class Meta:
         verbose_name="Profile"
         verbose_name_plural="Profiles"

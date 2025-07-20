@@ -275,7 +275,6 @@ def ApiCheckUsernameDisponibility(request):
     except:
          return JsonResponse({'status' : 'error'})
 
-
 def ApiGetUpdateGroupForm(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -338,3 +337,34 @@ def ApiDeleteGroup(request):
     obj = CustomGroupe.objects.get(id = id)
     obj.delete()
     return JsonResponse({'status' : 'success' , 'message' : "Le groupe à été supprimé avec succès" })
+
+def GetMyProfile(request):
+    try:
+        obj = Profile.objects.get(user = request.user)
+
+        context = {
+            'obj' : obj,
+        }
+        return render(request, 'tenant_folder/users/mon-profile.html', context)
+    
+    except:
+
+        return render(request, 'tenant_folder/users/mon-profile.html')
+    
+def UpdateMyProfile(request):
+    form = ProfileUpdateForm(instance=request.user.profile)
+    if request.method == "POST":
+        form = ProfileUpdateForm(request.POST, request.FILES)
+        if form.is_valid():
+            
+            messages.success(request, "Votre profile a été mis à jour avec succès")
+            return redirect('institut_app:profile')
+        else:
+            messages.error(request, "Une erreur est survenue lors de la mise à jour de votre profile")
+
+    context ={
+        'form' : form,
+        'tenant' : request.tenant,
+    }
+
+    return render(request, 'tenant_folder/users/update_profile.html', context)

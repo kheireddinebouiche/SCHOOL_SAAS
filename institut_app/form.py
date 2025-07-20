@@ -102,3 +102,16 @@ class CustomUpdateGroupForm(forms.ModelForm):
             'name' : forms.TextInput(attrs={"class" : "form-control"}),
             'description' : forms.TextInput(attrs={"class" : 'form-control'})
         }
+
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['adresse', 'image']
+
+        widgets = {
+            
+            'adresse' : forms.TextInput(attrs={'class' : 'form-control'}),
+          
+            'image' : forms.ClearableFileInput(attrs={'class' : 'form-control'})
+        }

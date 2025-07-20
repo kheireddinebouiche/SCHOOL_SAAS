@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 from django.contrib.auth.views import LoginView
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 app_name="institut_app"
@@ -44,5 +45,12 @@ urlpatterns = [
     path('modification-details-utilisateur/<int:pk>/', PageUpdateUserDetails, name="PageUpdateUserDetails"),
     path('ApiCheckUsernameDisponibility',ApiCheckUsernameDisponibility, name="ApiCheckUsernameDisponibility"),
 
+    path('profile/',GetMyProfile, name="profile"),
+    path('mise-a-jour-profile/', UpdateMyProfile, name="UpdateProfile"),
+
     
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
