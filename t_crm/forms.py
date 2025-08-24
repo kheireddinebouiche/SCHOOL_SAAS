@@ -78,6 +78,7 @@ class NewProspecFormEntreprise(forms.ModelForm):
     class Meta:
         model = Prospets
         fields = '__all__'
+        exclude = ['created_at', 'updated_at','type_prospect','etat','nom','prenom']
 
         exclude = ['created_at', 'updated_at']
 
