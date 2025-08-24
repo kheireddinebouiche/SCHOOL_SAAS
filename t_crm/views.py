@@ -342,7 +342,25 @@ def InscriptionParticulier(request):
     return render(request, 'tenant_folder/crm/inscription_particulier.html', context)
 
 def InscriptionEntreprise(request):
-    pass
+    form = NewProspecFormEntreprise()
+    if request.method == "POST":
+        form = NewProspecFormEntreprise(request.POST)
+        if form.is_valid():
+            donnee = form.save()
+            donnee.type_prospect = "entreprise"
+            donnee.etat
+            donnee.save()
+            messages.success(request, "Prospect ajouté avec succès")
+            return redirect('t_crm:ListeDesProspects')
+        else:
+            messages.error(request, "Une erreur s'est produite lors de l'enregistrement du prospect")
+
+    context = {
+        'tenant' : request.tenant,
+        'form' : form,
+
+    }
+    return render(request, 'tenant_folder/crm/inscription_entreprise.html', context)
 
 @login_required(login_url='institut_app:login')
 def ListeDesProspects(request):
