@@ -120,26 +120,28 @@ def updateFormation(request, pk):
             }
             return render(request, 'tenant_folder/formations/update_formation.html', context)
 
+@transaction.atomic
+@login_required(login_url='institut_app:login')
 def AddPartenaire(request):
     form = NewPartenaireForm()
     if request.method == 'POST':
         form = NewPartenaireForm(request.POST)
         if form.is_valid():
             partenaires = form.save()
-            if partenaires.type_partenaire == 'etranger':
-                tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
-                for tenant in tenants:
-                    with schema_context(tenant.schema_name):
-                        with transaction.atomic():
-                            Partenaires.objects.create(
-                                nom  = partenaires.nom,
-                                code = partenaires.code,
-                                adresse = partenaires.adresse,
-                                telephone = partenaires.telephone,
-                                email = partenaires.email,
-                                type_partenaire = partenaires.type_partenaire,
-                                site_web = partenaires.site_web,
-                            )
+            # if partenaires.type_partenaire == 'etranger':
+            #     tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+            #     for tenant in tenants:
+            #         with schema_context(tenant.schema_name):
+            #             with transaction.atomic():
+            #                 Partenaires.objects.create(
+            #                     nom  = partenaires.nom,
+            #                     code = partenaires.code,
+            #                     adresse = partenaires.adresse,
+            #                     telephone = partenaires.telephone,
+            #                     email = partenaires.email,
+            #                     type_partenaire = partenaires.type_partenaire,
+            #                     site_web = partenaires.site_web,
+            #                 )
             messages.success(request, 'Partenaire ajouté avec succès')
             return redirect('t_formations:listPartenaires')
         

@@ -10,6 +10,7 @@ from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
+from django.contrib.auth.decorators import login_required
 
 
 def listeVisiteurs(request):
@@ -318,3 +319,41 @@ def filter_visiteur(request):
         })
     return JsonResponse({'filtred': data})
 
+@login_required(login_url='institut_app:login')
+def InscriptionParticulier(request):
+    form = NewProspecFormParticulier()
+    if request.method == "POST":
+        form = NewProspecFormParticulier(request.POST)
+        if form.is_valid():
+            donnee = form.save()
+            donnee.type_prospect = "particulier"
+            donnee.etat
+            donnee.save()
+            messages.success(request, "Prospect ajouté avec succès")
+            return redirect('t_crm:ListeDesProspects')
+        else:
+            messages.error(request, "Une erreur s'est produite lors de l'enregistrement du prospect")
+
+    context = {
+        'tenant' : request.tenant,
+        'form' : form,
+
+    }
+    return render(request, 'tenant_folder/crm/inscription_particulier.html', context)
+
+def InscriptionEntreprise(request):
+    pass
+
+@login_required(login_url='institut_app:login')
+def ListeDesProspects(request):
+    context = {
+        'tenant' : request.tenant,
+    }
+    return render(request, 'tenant_folder/crm/liste-des-prospects.html')
+
+
+@login_required(login_url='institut_app:login')
+def ApiLoadProspects(request):
+    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
+
+    return JsonResponse(list(prospects), safe=False)

@@ -54,7 +54,32 @@ class VisiteurForm(forms.ModelForm):
             'specialite' : 'Spécialité',
         }
     
-    
+class NewProspecFormParticulier(forms.ModelForm):
+    class Meta:
+        model = Prospets
+        fields = '__all__'
+        exclude = ['created_at', 'updated_at','type_prospect']
+
+        labels = {
+            'nom' : "Nom :",
+            'prenom' : "Prénom :",
+        }
+        widgets = {
+            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name'}),
+            "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_last_name'}),
+            "email" : forms.EmailInput(attrs={'class':'form-control'}),
+            "telephone" : forms.TextInput(attrs={'class':'form-control'}),
+            "canal" : forms.Select(attrs={'class':'form-control'}),
+            "observation" : forms.Textarea(attrs={'class':'form-control'}),
+            
+        }
+
+class NewProspecFormEntreprise(forms.ModelForm):
+    class Meta:
+        model = Prospets
+        fields = '__all__'
+
+        exclude = ['created_at', 'updated_at']
 
 class DemandeInscriptionForm(forms.ModelForm):
     

@@ -112,3 +112,15 @@ class SalleClasse(models.Model):
 
     def __str__(self):
         return f"{self.label} - {self.etage}"
+
+class ConfigurationDesDocument(models.Model):
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
+    prefix_devis = models.CharField(max_length=50, null=True, blank=True, help_text="Préfixe pour les devis")
+    prefix_facture = models.CharField(max_length=50, null=True, blank=True, help_text="Préfixe pour les factures")
+
+    class Meta:
+        verbose_name = "Configuration des documents"
+        verbose_name_plural = "Configurations des documents"
+
+    def __str__(self):
+        return f"Configuration des documents pour {self.entreprise.designation}" if self.entreprise else "Configuration des documents sans entreprise"

@@ -26,4 +26,10 @@ urlpatterns = [
     path('ApiRemoveDemandeInscription', ApiRemoveDemandeInscription, name="ApiRemoveDemandeInscription"),
 
     path('filter_visiteur', filter_visiteur, name="filter_visiteur"),
+
+    path('inscription-particulier/', InscriptionParticulier, name="inscription_particulier"),
+    path('inscription-entreprise/', InscriptionEntreprise, name="inscription_entreprise"),
+    path('liste-des-prospects/',ListeDesProspects, name="ListeDesProspects"),
+    path('ApiLoadProspects',ApiLoadProspects, name="ApiLoadProspects" ),
+    
 ]

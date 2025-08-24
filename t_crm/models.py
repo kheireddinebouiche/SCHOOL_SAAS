@@ -4,6 +4,41 @@ from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
 
 
+class Prospets(models.Model):
+    nin = models.CharField(max_length=255, null=True, blank=True)
+    nom = models.CharField(max_length=255, null=True)
+    prenom = models.CharField(max_length=255, null=True)
+    email = models.EmailField(null=True)
+    telephone = models.CharField(max_length=15, null=True)
+    type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
+    canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre')])
+    etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
+
+    observation = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Prospect"
+        verbose_name_plural = "Prospects"
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom}"
+
+class FicheDeVoeux(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Fiche de Voeux"
+        verbose_name_plural = "Fiches de Voeux"
+    
+    def __str__(self):
+        return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
 
 class Visiteurs(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -73,3 +108,31 @@ class DemandeInscription(models.Model):
     def __str__(self):
         return f"{self.visiteur.nom} + {self.visiteur.prenom} - {self.specialite.label}"
 
+class DocumentsDemandeInscription(models.Model):
+    demande_inscription = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
+    cin = models.FileField(upload_to='documents/cin/', null=True, blank=True)
+    bac = models.FileField(upload_to='documents/bac/', null=True, blank=True)
+    diplome = models.FileField(upload_to='documents/diplome/', null=True, blank=True)
+    photo = models.FileField(upload_to='documents/photo/', null=True, blank=True)
+    cv = models.FileField(upload_to='documents/cv/', null=True, blank=True)
+
+    class Meta:
+        verbose_name="Documents de la demande d'inscription"
+        verbose_name_plural = "Documents de la demande d'inscription"
+
+    def __str__(self):
+        return f"Documents for {self.demande_inscription.visiteur.nom} {self.demande_inscription.visiteur.prenom}"
+
+class RelancesProspet(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    date_relance = models.DateField(null=True, blank=True)
+    canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre')])
+    observation = models.TextField(null=True, blank=True)
+    etat = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Relance de Prospect"
+        verbose_name_plural = "Relances de Prospects"
+
+    def __str__(self):
+        return f"Relance for {self.prospect.nom} {self.prospect.prenom}"

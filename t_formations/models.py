@@ -17,6 +17,9 @@ class Partenaires(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_by_partenaire")
 
+    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')], default='active')
+    observation = models.TextField(null=True, blank=True)
+
     class Meta:
         verbose_name="Partenaire"
         verbose_name_plural="Partenaires"
