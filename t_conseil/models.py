@@ -17,9 +17,15 @@ class Client(models.Model):
     def __str__(self):
         return self.nom if self.nom else "Client sans nom"
 
+class FormateurConseil(models.Model):
+    pass
+
 class Thematiques(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True, help_text="Label de la thématique")
     description = models.TextField(null=True, blank=True, help_text="Description de la thématique")
+    prix = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Prix de la thématique")
+    duree = models.PositiveIntegerField(null=True, blank=True, help_text="Durée en minutes")
+    etat = models.CharField(max_length=50, choices=[('archive', 'Archivé'), ('active', 'Active')], default='active')
     
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)

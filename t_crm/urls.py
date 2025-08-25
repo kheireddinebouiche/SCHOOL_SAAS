@@ -33,5 +33,9 @@ urlpatterns = [
     path('ApiLoadProspects',ApiLoadProspects, name="ApiLoadProspects" ),
     path('ApiDeleteProspect', ApiDeleteProspect, name="ApiDeleteProspect"),
     path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),
+    path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
+    path('details-prospect/<int:pk>/', DetailsProspect, name="DetailsProspect"),
+
+    path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
     
 ]

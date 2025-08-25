@@ -10,5 +10,17 @@ urlpatterns = [
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
 
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),
+
+  path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
+
+  path('ApiLoadThematique' , ApiLoadThematique, name="ApiLoadThematique"),
+
+  path('ApiLoadThematiqueDetails', ApiLoadThematiqueDetails, name="ApiLoadThematiqueDetails"),
+
+  path('archive-thematique/', ArchiveThematique, name="ArchiveThematique"),
+
+  path('ApiLoadArchivedThematique', ApiLoadArchivedThematique, name="ApiLoadArchivedThematique"),
+  path('ApiArchiveThematique', ApiArchiveThematique, name="ApiArchiveThematique"),
+  path('ApiActivateThematique', ApiActivateThematique, name="ApiActivateThematique"),
    
 ]

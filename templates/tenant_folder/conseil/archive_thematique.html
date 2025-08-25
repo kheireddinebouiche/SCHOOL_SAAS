@@ -15,12 +15,12 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Liste des thématiques</h4>
+                                <h4 class="mb-sm-0">Archive thématiques</h4>
 
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
                                         <li class="breadcrumb-item"><a href="javascript: void(0);">Conseil</a></li>
-                                        <li class="breadcrumb-item active">Liste des thématiques</li>
+                                        <li class="breadcrumb-item active">Archive thématiques</li>
                                     </ol>
                                 </div>
 
@@ -33,14 +33,9 @@
                         <div class="col-lg-12">
                             <div class="card">
                                  <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h5 class="card-title mb-0"> Liste des thématiques </h5>
-                                        <div class="d-flex">
-                                            <button type="button" class="btn btn-primary btn-sm" id="btnAddThematique">
-                                                <i class="ri-add-line align-middle me-2"></i>Nouvelle thématique
-                                            </button>
-                                        </div>
-                                    </div>
+                                    
+                                    <h5 class="card-title mb-0"> Archives </h5>
+                                       
                                 </div>
                                 <div class="card-body">
                                     <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
@@ -186,7 +181,7 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div class="modal fade archiveModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+<div class="modal fade activeModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center p-5">
@@ -198,7 +193,7 @@
                     style="width:120px;height:120px">
                 </lord-icon>
                 <div class="mt-4">
-                    <h4 class="mb-3">Vous étes sur le point d'archivé la formation</h4>
+                    <h4 class="mb-3">Vous étes sur le point de réactiver la formation</h4>
                     <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
                     <div class="hstack gap-2 justify-content-center">
                         
@@ -214,7 +209,7 @@
 
     function loadThematique(){
         $.ajax({
-            url : "{% url 't_conseil:ApiLoadThematique' %}",
+            url : "{% url 't_conseil:ApiLoadArchivedThematique' %}",
             type : "GET",
             dataType : 'JSON',
             success : function(data){
@@ -234,7 +229,7 @@
                                 row += '</button>';
                                 row += '<ul class="dropdown-menu dropdown-menu-end">';
                                     row += '<li><button id="detailsBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-eye-line align-bottom me-2 text-muted"></i>Détails</button></li>';
-                                    row += '<li><button id="archiveBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-inbox-archive-line me-2 text-muted"></i>Archiver</button></li>';
+                                    row += '<li><button id="activateBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-play-circle-line me-2 text-muted"></i>Active</button></li>';
                                     row += '<li><button data-id="'+p.id+'" id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
                                     row += '<li>';
                                         row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
@@ -256,90 +251,40 @@
     }
 
     loadThematique();
-    $(document).on('click', '#btnAddThematique', function(){
-        $('#newThematique').modal('show');
-    });
-
-    $(document).on('click', '#saveThematique', function(){
-        var label = $('#labelThematique').val();
-        var duree = $('#dureeThematique').val();
-        var prix  = $('#prixThematique').val();
-        var description = $('#descriptionThematique').val();
-
-        if(label == "" || duree == ""){
-            alertify.error('Veuillez remplir tous les champs obligatoires');
-            return false;
-        }
-
-        $.ajax({
-            url: "{% url 't_conseil:ApiSaveThematique' %}",
-            method: "POST",
-            data: {
-                'label': label,
-                'duree': duree,
-                'prix' : prix,
-                'description' : description,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function(response){
-                if(response.status == 'success'){
-                    alertify.success(response.message);
-                    loadThematique
-                } else {
-                    alertify.error('Une erreur est survenue lors de l\'enregistrement de la thématique.');
-                }
-            }
-        });
-    });
-
-    $(document).on('click', '#btnUpdate', function(){
-        var id_thematique = $(this).data('id');
-        $.ajax({
-            url : "{% url 't_conseil:ApiLoadThematiqueDetails' %}",
-            dataType: "JSON",
-            type: 'GET',
-            data : {'id_thematique': id_thematique },
-            success : function(data){
-                $('#updatelabelThematique').val(data.label);
-                $('#updatedureeThematique').val(data.duree);
-                $('#updatedescriptionThematique').val(data.description);
-                $('#updateprixThematique').val(data.prix);
-            }
-        });
-        $('#updateThematique').modal('show');
-    });
-
-    $(document).on('click', '#archiveBtn', function(){
+   
+    $(document).on('click', '#activateBtn', function(){
         var id_thematique = $(this).data('id');
         var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmArchiveBtn" data-id='+id_thematique+' class="btn btn-danger">Confirmer</a>';
+                   '<button id="confirmActivateBtn" data-id='+id_thematique+' class="btn btn-danger">Confirmer</a>';
 
         $('.hstack').html(row);
-        $('.archiveModal').modal('show');
+        $('.activeModal').modal('show');
     });
 
-    $(document).on('click', '#confirmArchiveBtn', function(){
+    $(document).on('click', '#confirmActivateBtn', function(){
         var id_thematique = $(this).data('id');
         $.ajax({
-            url: "{% url 't_conseil:ApiArchiveThematique' %}",
-            method: "POST",
-            data: {
-                'id_thematique': id_thematique,
-                'archive': true,
+            url : "{% url 't_conseil:ApiActivateThematique' %}",
+            type : "POST",
+            data : {
+                'id_thematique' : id_thematique,
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
-            success: function(response){
-                if(response.status == 'success'){
-                    alertify.success(response.message);
+            dataType : 'JSON',
+            success : function(data){
+                if (data.status == 'success'){
+                    alertify.success(data.message);
+                    $('.activeModal').modal('hide');
                     loadThematique();
-                    $('.archiveModal').modal('hide');
-                } else {
-                    alertify.error('Une erreur est survenue lors de l\'archivage de la thématique.');
+                    
+                }else{
+                    $('.activeModal').modal('hide');
+                    alertify.error("Une erreur s'est produite lors de l'activation de la thématique. Veuillez réessayer.");
+                    
                 }
             }
         });
     });
-  
   });
 </script>
 {% endblock content %}

@@ -50,47 +50,43 @@
                     {{ form.prenom }}
                   </div>
                 </div>
-
-                <div class="form-group">
-                  <label for="id_email">Email</label>
-                  {{ form.email }}
-                </div>
-                <div class="form-group">
-                  <label for="id_telephone">Téléphone</label>
-                  {{ form.telephone }}
-                </div>
-                <div class="form-group">
-                  <label for="id_canal">Canal</label>
-                  {{ form.canal }}
-                </div>
-
-                
-                <div class="form-group">
+                <div class="row">
+                  <div class="col-lg-4 form-group mt-3">
+                    <label for="id_email">Email</label>
+                    {{ form.email }}
+                  </div>
+                  <div class="col-lg-4 form-group mt-3">
+                    <label for="id_telephone">Téléphone</label>
+                    {{ form.telephone }}
+                  </div>
+                  <div class="col-lg-4 form-group mt-3">
+                    <label for="id_canal">Canal</label>
+                    {{ form.canal }}
+                  </div>
+                </div>                
+                <div class="form-group mt-3">
                   <label for="id_observation">Observation</label>
                   {{ form.observation }}
                 </div>
 
                 <div class="row form-group mb-5 mt-3">
+                  <h4 class="card-title mb-3">Voeux de formation</h4> 
                   <div class="col-lg-6">
                     <label for="id_voeux_formation">Veuillez selectionner une formation :</label>
-                  <select class="form-control" id="id_voeux_formation" name="voeux">
-                    <option value="">---------</option>
-                    
-                  </select>
+                    <select class="form-control" id="id_voeux_formation" name="voeux_formation">
+                      <option value="">---------</option>
+                      
+                    </select>
                   </div>
                   <div class="col-lg-6">
                     <label for="id_voeux_specialite">Veuillez selectionner une spécialité :</label>
-                    <select class="form-control" id="id_voeux_specialite" name="voeux">
+                    <select class="form-control" id="id_voeux_specialite" name="voeux_specialite">
                       <option value="">---------</option>
 
-                  </select>
+                    </select>
                   </div>
                 </div>
-                <input
-                  type="submit"
-                  class="btn btn-primary"
-                  value="Enregistrer"
-                />
+                <input type="submit" class="btn btn-primary" value="Enregistrer" />
               </form>
             </div>
           </div>
@@ -107,12 +103,53 @@
     $(document).ready(function () {
 
       function loadformation(){
+        $.ajax({
+          url : "{% url 't_crm:ApiLoadFormation' %}",
+          type : 'GET',
+          dataType : 'JSON',
+          success : function(data){
+            var option = "<option value=''>---------</option>";
+            $.each(data, function(index, item){
+              option += "<option value='"+item.id+"'>"+item.code+' - '+item.nom+"</option>";
+            });
+            $('#id_voeux_formation').html(option);
 
+          },
+          error : function(xhr, status, error){
+            console.log("Une erreur est survenue lors du chargement des formations.");
+          }
+        });
       }
 
-      function loadSpecialite(){
-
+      function loadSpecialite(id_formation_value){
+        $.ajax({
+          url : "{% url 't_crm:ApiLoadSpecialite' %}",
+          dataType : 'JSON',
+          type : 'GET',
+          data : {
+            'id_formation' : id_formation_value
+          },
+          success : function(data){
+            var options = "<option value=''>---------</option>";
+            $.each(data, function(index, item){
+              options += "<option value='"+item.id+"'>"+item.code+' - '+item.label+"</option>";
+            });
+            $('#id_voeux_specialite').html(options);
+          },
+          error : function(xhr, status, error){
+            console.log("Une erreur est survenue lors du chargement des specialites.");
+          }
+        });
       }
+
+      loadformation();
+
+      $(document).on('change', '#id_voeux_formation', function(){
+        var value = $(this).val();
+
+        loadSpecialite(value);
+      });
+     
     });
   </script>
   {% endblock content %}

@@ -329,6 +329,16 @@ def InscriptionParticulier(request):
             donnee.type_prospect = "particulier"
             donnee.etat
             donnee.save()
+
+            voeux_specialite = request.POST.get('voeux_specialite')
+
+            specialite = Specialites.objects.get(id=voeux_specialite)
+            
+            FicheDeVoeux.objects.create(
+                prospect=donnee,
+                specialite=specialite
+            )
+
             messages.success(request, "Prospect ajouté avec succès")
             return redirect('t_crm:ListeDesProspects')
         else:
@@ -373,8 +383,11 @@ def ListeDesProspects(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
-
+    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    for l in prospects:
+        l_obj = Prospets.objects.get(id=l['id'])
+        l['type_prospect_label'] = l_obj.get_type_prospect_display()
+        l['etat_label'] = l_obj.get_etat_display()
     return JsonResponse(list(prospects), safe=False)
 
 @login_required(login_url='institut_app:login')
@@ -384,7 +397,7 @@ def ApiDeleteProspect(request):
 
     return JsonResponse({'status': 'success', 'message': 'Prospect supprimé avec succès'})
 
-
+@login_required(login_url='institut_app:login')
 def ApiFilterProspect(request):
     filter_option = request.GET.get('filter_option')
     value = request.GET.get('value')
@@ -395,4 +408,24 @@ def ApiFilterProspect(request):
         prospects = Prospets.objects.order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
 
     return JsonResponse(list(prospects), safe=False)
-        
+
+@login_required(login_url='institut_app:login')
+def ApiLoadFormation(request):
+    liste = Formation.objects.all().values('id','nom','code')
+    return JsonResponse(list(liste), safe=False) 
+
+@login_required(login_url='institut_app:login')
+def ApiLoadSpecialite(request):
+    id_formation = request.GET.get('id_formation')
+
+    specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label')
+
+    return JsonResponse(list(specialites), safe=False)
+
+@login_required(login_url='institut_app:login')
+def DetailsProspect(request, pk):
+    context = {
+        'tenant' : request.tenant,
+        'pk' : pk,
+    }
+    return render(request, 'tenant_folder/crm/details_prospect.html', context)
