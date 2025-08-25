@@ -10,6 +10,8 @@ from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
+from t_crm.models import Prospets
+
 
 
 @login_required(login_url='institut_app:login')
@@ -17,11 +19,26 @@ def Index(request):
     tenant = getattr(request, 'tenant', None)
     # Get the schema name or set it to "Unknown" if no tenant is found
     schema_name = tenant.schema_name if tenant else "Unknown"
-    context = {
-        'schema_name' : schema_name,
-        'tenant' : tenant,
-    }
-    return render(request, 'tenant_folder/index.html', context)
+    is_crm = request.user.groups.filter(name="CRM").exists()
+
+    if is_crm:
+        prospects = Prospets.objects.all()
+
+        context = {
+            'prospects': prospects,
+            'tenant': request.tenant,
+        }
+
+        return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)
+    
+    else:
+
+        context = {
+            'schema_name' : schema_name,
+            'tenant' : tenant,
+            'is_crm' : is_crm,
+        }
+        return render(request, 'tenant_folder/index.html', context)
 
 def logout_view(request):
     logout(request)

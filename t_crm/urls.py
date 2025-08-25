@@ -31,5 +31,7 @@ urlpatterns = [
     path('inscription-entreprise/', InscriptionEntreprise, name="inscription_entreprise"),
     path('liste-des-prospects/',ListeDesProspects, name="ListeDesProspects"),
     path('ApiLoadProspects',ApiLoadProspects, name="ApiLoadProspects" ),
+    path('ApiDeleteProspect', ApiDeleteProspect, name="ApiDeleteProspect"),
+    path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),
     
 ]

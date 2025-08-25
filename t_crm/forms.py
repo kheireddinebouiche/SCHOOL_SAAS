@@ -78,9 +78,27 @@ class NewProspecFormEntreprise(forms.ModelForm):
     class Meta:
         model = Prospets
         fields = '__all__'
-        exclude = ['created_at', 'updated_at','type_prospect','etat','nom','prenom']
+        exclude = ['created_at', 'updated_at','type_prospect','etat','nin']
 
-        exclude = ['created_at', 'updated_at']
+        labels = {
+            "email" : "Email :",
+            "telephone" : "N° de téléphone",
+            "canal" : "Canal :",
+            "observation" : "Observation :",
+            "entreprise" : "Désignation de l'entreprise :",
+            "nom" : "Nom :",
+            "prenom" : "Prénom :",
+        }
+
+        widgets = {
+            "email" : forms.EmailInput(attrs={'class':'form-control'}),
+            "telephone" : forms.TextInput(attrs={'class':'form-control'}),
+            "canal" : forms.Select(attrs={'class':'form-control'}),
+            "observation" : forms.Textarea(attrs={'class':'form-control'}),
+            "entreprise": forms.TextInput(attrs={'class':'form-control', 'id' : 'id_entreprise'}),
+            "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_nom'}),
+            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_prenom'}), 
+        }
 
 class DemandeInscriptionForm(forms.ModelForm):
     

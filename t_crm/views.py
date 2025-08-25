@@ -341,6 +341,7 @@ def InscriptionParticulier(request):
     }
     return render(request, 'tenant_folder/crm/inscription_particulier.html', context)
 
+@login_required(login_url='institut_app:login') 
 def InscriptionEntreprise(request):
     form = NewProspecFormEntreprise()
     if request.method == "POST":
@@ -375,3 +376,23 @@ def ApiLoadProspects(request):
     prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
 
     return JsonResponse(list(prospects), safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiDeleteProspect(request):
+    id_prospect = Prospets.objects.get(id = request.POST.get('id_prospect'))
+    id_prospect.delete()
+
+    return JsonResponse({'status': 'success', 'message': 'Prospect supprimé avec succès'})
+
+
+def ApiFilterProspect(request):
+    filter_option = request.GET.get('filter_option')
+    value = request.GET.get('value')
+
+    if (filter_option == "filter-prospect"):
+        prospects = Prospets.objects.filter(type_prospect=value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
+    elif (filter_option == "date_filter-prospect"):
+        prospects = Prospets.objects.order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
+
+    return JsonResponse(list(prospects), safe=False)
+        
