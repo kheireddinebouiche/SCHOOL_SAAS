@@ -432,4 +432,48 @@ def DetailsProspect(request, pk):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectDetails(request):
-    pass
+    id_prospect = request.GET.get('id_prospect')
+    prospect = Prospets.objects.get(id = id_prospect)
+    fiche_voeux = FicheDeVoeux.objects.filter(prospect = prospect)
+    fiche_voeux_list = []
+    for fiche in fiche_voeux:
+        fiche_voeux_list.append({
+            'id': fiche.id,
+            'specialite_code': fiche.specialite.code,
+            'specialite_label': fiche.specialite.label,
+            'specialite_id' : fiche.specialite.id,
+        })
+    data = {
+        'id': prospect.id,
+        'nin': prospect.nin,
+        'nom': prospect.nom,
+        'prenom': prospect.prenom,
+        'email': prospect.email,
+        'telephone': prospect.telephone,
+        'canal': prospect.canal,
+        'observation' : prospect.observation,
+    }
+
+    return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list})
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdatePropectDetails(request):
+    id_prospect = request.POST.get('id_prospect')
+    last_name = request.POST.get('nom')
+    first_name = request.POST.get('prenom')
+    email = request.POST.get('email')
+    telephone = request.POST.get('telephone')
+    canal = request.POST.get('canal')
+    observation = request.POST.get('observation')
+
+    prospect = Prospets.objects.get(id = id_prospect)
+    prospect.nom = last_name
+    prospect.prenom = first_name
+    prospect.email = email
+    prospect.telephone = telephone
+    prospect.canal = canal
+    prospect.observation = observation
+    prospect.save()
+
+    return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})
