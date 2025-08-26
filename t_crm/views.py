@@ -429,3 +429,7 @@ def DetailsProspect(request, pk):
         'pk' : pk,
     }
     return render(request, 'tenant_folder/crm/details_prospect.html', context)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadProspectDetails(request):
+    pass
