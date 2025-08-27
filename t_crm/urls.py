@@ -39,5 +39,6 @@ urlpatterns = [
     path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
     path('ApiLoadProspectDetails', ApiLoadProspectDetails, name="ApiLoadProspectDetails"),
     path('ApiUpdatePropectDetails', ApiUpdatePropectDetails, name="ApiUpdatePropectDetails"),
+    path('ApiUpdateProspectEtsDetails', ApiUpdateProspectEtsDetails, name="ApiUpdateProspectEtsDetails"),
     
 ]

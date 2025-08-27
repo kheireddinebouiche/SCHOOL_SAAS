@@ -403,9 +403,17 @@ def ApiFilterProspect(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
+        prospects = Prospets.objects.filter(type_prospect=value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        for l in prospects:
+            l_obj = Prospets.objects.get(id=l['id'])
+            l['type_prospect_label'] = l_obj.get_type_prospect_display()
+            l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at')
+        prospects = Prospets.objects.order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        for l in prospects:
+            l_obj = Prospets.objects.get(id=l['id'])
+            l['type_prospect_label'] = l_obj.get_type_prospect_display()
+            l['etat_label'] = l_obj.get_etat_display()
 
     return JsonResponse(list(prospects), safe=False)
 
@@ -472,6 +480,7 @@ def ApiLoadProspectDetails(request):
         'telephone': prospect.telephone,
         'canal': prospect.canal,
         'observation' : prospect.observation,
+        'entreprise' : prospect.entreprise,
     }
     return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
 
@@ -508,5 +517,25 @@ def ApiUpdatePropectDetails(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
-def ApiUpdateEntreprisePerospectDetails(request):
-    pass
+def ApiUpdateProspectEtsDetails(request):
+    id_prospect = request.POST.get('id_prospect')
+    
+    entreprise = request.POST.get('entreprise_informations')
+    last_name = request.POST.get('last_name_ets')
+    first_name = request.POST.get('first_name_ets')
+    email = request.POST.get('email_ets')
+    telephone = request.POST.get('telephone_ets')
+    canal = request.POST.get('canal_ets')
+    observation = request.POST.get('observation_ets')
+
+    prospect = Prospets.objects.get(id = id_prospect)
+    prospect.entreprise = entreprise
+    prospect.nom = last_name
+    prospect.prenom = first_name
+    prospect.email = email
+    prospect.telephone = telephone
+    prospect.canal = canal
+    prospect.observation = observation
+    prospect.save()
+
+    return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})

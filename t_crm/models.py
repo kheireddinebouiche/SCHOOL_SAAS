@@ -42,6 +42,19 @@ class FicheDeVoeux(models.Model):
     def __str__(self):
         return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
 
+class NotesProcpects(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    tage = models.CharField(max_length=255, null=True, blank=True,choices=[('important', 'Important'), ('a_revoir', 'A revoir'), ('a_contacte', 'A contacter'), ('a_relancer', 'A relancer')])
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Note de Prospect"
+        verbose_name_plural = "Notes de Prospects"
+
+    def __str__(self):
+        return f"Note for {self.prospect.nom} {self.prospect.prenom}"
 class Visiteurs(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
