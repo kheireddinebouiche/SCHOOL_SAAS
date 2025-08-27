@@ -22,7 +22,7 @@ def Index(request):
     is_crm = request.user.groups.filter(name="CRM").exists()
 
     if is_crm:
-        prospects = Prospets.objects.all()
+        prospects = Prospets.objects.all().count()
 
         context = {
             'prospects': prospects,

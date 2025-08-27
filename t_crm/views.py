@@ -473,9 +473,6 @@ def ApiLoadProspectDetails(request):
         'canal': prospect.canal,
         'observation' : prospect.observation,
     }
-
-    
-
     return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
 
 @login_required(login_url='institut_app:login')
@@ -488,15 +485,14 @@ def ApiUpdatePropectDetails(request):
     telephone = request.POST.get('telephone')
     canal = request.POST.get('canal')
     observation = request.POST.get('observation')
-    voeux_formation = request.POST.get('voeux_formation')
     voeux_specialite = request.POST.get('voeux_specialite')
 
-    fiche_voeux = FicheDeVoeux.objects.filter(prospect__id=id_prospect)
+    prospect_obj = Prospets.objects.get(id=id_prospect)
+    fiche_voeux = FicheDeVoeux.objects.filter(prospect=prospect_obj)
     fiche_voeux.delete()
     fiche_voeux = FicheDeVoeux.objects.create(
-        prospect=prospect,
-        specialite_id=voeux_specialite,
-        formation_id=voeux_formation
+        prospect=prospect_obj,
+        specialite=Specialites.objects.get(id=voeux_specialite),
     )
 
     prospect = Prospets.objects.get(id = id_prospect)
@@ -509,3 +505,8 @@ def ApiUpdatePropectDetails(request):
     prospect.save()
 
     return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdateEntreprisePerospectDetails(request):
+    pass
