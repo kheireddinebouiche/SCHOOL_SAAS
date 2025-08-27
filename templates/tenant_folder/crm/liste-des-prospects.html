@@ -307,7 +307,11 @@
                 row += '</button>';
                 row += '<ul class="dropdown-menu dropdown-menu-end">';
                 row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
-                row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                if(item.type_prospect === "particulier"){
+                  row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                }else{
+                  row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
+                }
                 row += '<li>';
                 row += '<button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item remove-item-btn">';
                 row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
@@ -417,7 +421,10 @@
      
     });
 
+   
+
     function loadProspectDetails(id_prospect){
+
       $.ajax({
         url : "{% url 't_crm:ApiLoadProspectDetails' %}",
         dataType : 'JSON',
@@ -428,22 +435,23 @@
           $('#id_first_name').val(data.prospect.prenom);
           $('#id_email').val(data.prospect.email);
           $('#id_telephone').val(data.prospect.telephone);
-          
           $('#id_observation').val(data.prospect.observation);
           
-          // var formationOptions = '<option value="">---------</option>';
-          // $.each(data.formations, function(index, item){
-          //   formationOptions += '<option value="'+item.id+'">'+item.nom_formation+'</option>';
-          // });
-          // $('#id_voeux_formation').html(formationOptions);
-          // $('#id_voeux_formation').val(data.voeux_formation);
+          var id_selection_formation = data.fiche_voeux[0].specialite_id_formation;
+          var id_selection_specialite = data.fiche_voeux[0].specialite_id;
 
-          // var specialiteOptions = '<option value="">---------</option>';
-          // $.each(data.specialites, function(index, item){
-          //   specialiteOptions += '<option value="'+item.id+'">'+item.nom_specialite+'</option>';
-          // });
-          // $('#id_voeux_specialite').html(specialiteOptions);
-          // $('#id_voeux_specialite').val(data.voeux_specialite);
+          var formationOptions = '<option value="">---------</option>';
+          $.each(data.formations, function(index, item){
+            formationOptions += '<option '+(item.id === id_selection_formation ? 'selected' : '')+' value="'+item.id+'">'+item.id+'- '+item.nom+'</option>';
+          });
+          $('#id_voeux_formation').html(formationOptions);
+
+          var specialiteOptions = '<option value="">---------</option>';
+          $.each(data.specialites, function(index, item){
+            specialiteOptions += '<option '+(item.id === id_selection_specialite ? 'selected' : '')+ ' value="'+item.id+'">'+item.code+' - '+item.label+'</option>';
+          });
+          $('#id_voeux_specialite').html(specialiteOptions);
+         
 
           var canalOptions = '<option value="">---------</option>';
 
@@ -469,6 +477,11 @@
       $('#btnUpdate').data('id', id_prospect);
     });
 
+    $(document).on('click','#btnUpdateEntreprise', function(){
+      var id_prospect = $(this).data('id');
+      alertify.success('entreprise');
+    });
+
     $(document).on('click','#updateInfoProspectBtn', function(){
       var id_prospect = $('#btnUpdate').data('id');
       console.log(id_prospect);
@@ -478,8 +491,8 @@
       var telephone = $('#id_telephone').val();
       var canal = $('#id_canal').val();
       var observation = $('#id_observation').val();
-      // var voeux_formation = $('#id_voeux_formation').val();
-      // var voeux_specialite = $('#id_voeux_specialite').val();
+      var voeux_formation = $('#id_voeux_formation').val();
+      var voeux_specialite = $('#id_voeux_specialite').val();
 
       $.ajax({
         url : "{% url 't_crm:ApiUpdatePropectDetails' %}",
@@ -493,8 +506,8 @@
           'telephone' : telephone,
           'canal' : canal,
           'observation' : observation,
-          // 'voeux_formation' : voeux_formation,
-          // 'voeux_specialite' : voeux_specialite,
+          'voeux_formation' : voeux_formation,
+          'voeux_specialite' : voeux_specialite,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         success : function(response){

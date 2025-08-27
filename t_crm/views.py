@@ -435,6 +435,25 @@ def ApiLoadProspectDetails(request):
     id_prospect = request.GET.get('id_prospect')
     prospect = Prospets.objects.get(id = id_prospect)
     fiche_voeux = FicheDeVoeux.objects.filter(prospect = prospect)
+
+    data_formation=[]
+    formation = Formation.objects.all()
+    for f in formation:
+        data_formation.append({
+            'id': f.id,
+            'nom': f.nom,
+            'code': f.code,
+        })
+
+    data_specialite=[]
+    specialites = Specialites.objects.all()
+    for s in specialites:
+        data_specialite.append({
+            'id': s.id,
+            'code': s.code,
+            'label': s.label,
+        })
+
     fiche_voeux_list = []
     for fiche in fiche_voeux:
         fiche_voeux_list.append({
@@ -442,6 +461,7 @@ def ApiLoadProspectDetails(request):
             'specialite_code': fiche.specialite.code,
             'specialite_label': fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
+            'specialite_id_formation': fiche.specialite.formation.id
         })
     data = {
         'id': prospect.id,
@@ -454,7 +474,9 @@ def ApiLoadProspectDetails(request):
         'observation' : prospect.observation,
     }
 
-    return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list})
+    
+
+    return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -466,6 +488,16 @@ def ApiUpdatePropectDetails(request):
     telephone = request.POST.get('telephone')
     canal = request.POST.get('canal')
     observation = request.POST.get('observation')
+    voeux_formation = request.POST.get('voeux_formation')
+    voeux_specialite = request.POST.get('voeux_specialite')
+
+    fiche_voeux = FicheDeVoeux.objects.filter(prospect__id=id_prospect)
+    fiche_voeux.delete()
+    fiche_voeux = FicheDeVoeux.objects.create(
+        prospect=prospect,
+        specialite_id=voeux_specialite,
+        formation_id=voeux_formation
+    )
 
     prospect = Prospets.objects.get(id = id_prospect)
     prospect.nom = last_name
