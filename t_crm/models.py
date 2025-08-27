@@ -142,6 +142,7 @@ class RelancesProspet(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     date_relance = models.DateField(null=True, blank=True)
     canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre')])
+    objet = models.CharField(max_length=255, null=True, blank=True)
     observation = models.TextField(null=True, blank=True)
     etat = models.BooleanField(default=False)
 

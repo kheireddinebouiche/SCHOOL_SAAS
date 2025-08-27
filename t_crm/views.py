@@ -380,7 +380,6 @@ def ListeDesProspects(request):
     }
     return render(request, 'tenant_folder/crm/liste-des-prospects.html')
 
-
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
     prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
@@ -539,3 +538,56 @@ def ApiUpdateProspectEtsDetails(request):
     prospect.save()
 
     return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})
+
+
+################################### Gestion des notes ##################################################
+@login_required(login_url='institut_app:login')
+def ApiLoadNote(request):
+    prospect_id = request.GET.get('id_prospect')
+    notes = NotesProcpects.objects.filter(id = prospect_id).values('id','prospect','created_by','created_at','note')
+    return JsonResponse(list(notes), safe=False)
+    
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiStoreNote(request):
+    pass
+
+@login_required(login_url='institut_app:login')
+def ApiDeleteNote(request):
+    pass
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdateNote(request):
+    pass
+
+
+################################### !Gestion des notes##################################################
+
+###################################Fiche de voeux prospect #############################################
+@login_required(login_url='institut_app:login')
+def ApiLoadFicheVoeuxProspect(request):
+    id_prospect = request.GET.get('id_prospect')
+    prospect = Prospets.objects.get(id = id_prospect)
+    fiche_voeux = FicheDeVoeux.objects.filter(prospect = prospect)
+
+    fiche_voeux_list = []
+    for fiche in fiche_voeux:
+        fiche_voeux_list.append({
+            'id': fiche.id,
+            'specialite_code': fiche.specialite.code,
+            'specialite_label': fiche.specialite.label,
+            'specialite_id' : fiche.specialite.id,
+            'specialite_id_formation': fiche.specialite.formation.id
+        })
+    return JsonResponse({'fiche_voeux': fiche_voeux_list})
+
+@login_required(login_url='institut_app:login')
+def ApiUpdateFicheVoeuxProspect(request):
+    pass
+
+def ApiDeleteFicheVoeuxProspect(request):
+    pass
+
+###################################Fiche de voeux prospect #############################################

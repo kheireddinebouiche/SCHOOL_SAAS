@@ -40,5 +40,18 @@ urlpatterns = [
     path('ApiLoadProspectDetails', ApiLoadProspectDetails, name="ApiLoadProspectDetails"),
     path('ApiUpdatePropectDetails', ApiUpdatePropectDetails, name="ApiUpdatePropectDetails"),
     path('ApiUpdateProspectEtsDetails', ApiUpdateProspectEtsDetails, name="ApiUpdateProspectEtsDetails"),
+
+
+    ########################################## Gestion des notes ###################################################
+    path('ApiLoadNote', ApiLoadNote, name="ApiLoadNote"),
+    path('ApiStoreNote', ApiStoreNote, name="ApiStoreNote"),
+    path('ApiDeleteNote', ApiDeleteNote, name="ApiDeleteNote"),
+    path('ApiUpdateNote', ApiUpdateNote, name="ApiUpdateNote"),
+    ########################################## !Gestion des notes###################################################
+
+    ########################################## Fiche des voeux###################################################
+    path('ApiLoadFicheVoeuxProspect', ApiLoadFicheVoeuxProspect, name="ApiLoadFicheVoeuxProspect"),
+    ########################################## Fiche des voeux###################################################
+    
     
 ]
