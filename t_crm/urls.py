@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from .views import *
+from .f_views.prospects import *
 
 app_name="t_crm"
 
@@ -53,5 +54,7 @@ urlpatterns = [
     path('ApiLoadFicheVoeuxProspect', ApiLoadFicheVoeuxProspect, name="ApiLoadFicheVoeuxProspect"),
     ########################################## Fiche des voeux###################################################
     
+
+    path('ApiLoadProspectPerosnalInfos', ApiLoadProspectPerosnalInfos, name="ApiLoadProspectPerosnalInfos"),
     
 ]
