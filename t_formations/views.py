@@ -127,7 +127,7 @@ def AddPartenaire(request):
     if request.method == 'POST':
         form = NewPartenaireForm(request.POST)
         if form.is_valid():
-            partenaires = form.save()
+            form.save()
             # if partenaires.type_partenaire == 'etranger':
             #     tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
             #     for tenant in tenants:
@@ -141,6 +141,7 @@ def AddPartenaire(request):
             #                     email = partenaires.email,
             #                     type_partenaire = partenaires.type_partenaire,
             #                     site_web = partenaires.site_web,
+            #                     observation = partenaires.observation,
             #                 )
             messages.success(request, 'Partenaire ajouté avec succès')
             return redirect('t_formations:listPartenaires')

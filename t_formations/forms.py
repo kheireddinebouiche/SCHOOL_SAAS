@@ -4,7 +4,7 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','nom', 'description', 'duree','frais_inscription','frais_assurance']
+        fields = ['entite_legal','nom', 'partenaire','description', 'duree','frais_inscription','frais_assurance']
 
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
@@ -14,6 +14,7 @@ class NewFormationForm(forms.ModelForm):
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
+            'partenaire' : forms.Select(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -70,6 +71,7 @@ class NewPartenaireForm(forms.ModelForm):
             'telephone':  forms.TextInput(attrs={'class': 'form-control'}),
             'email' : forms.TextInput(attrs={'class': 'form-control'}),
             'site_web' : forms.TextInput(attrs={'class': 'form-control'}),
+            'observation' : forms.Textarea(attrs={'class': 'form-control'}),
         }
         exclude = ['updated_by']
 

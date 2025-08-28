@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
+from t_formations.models import DossierInscription
 
 
 class Prospets(models.Model):
@@ -55,6 +56,7 @@ class NotesProcpects(models.Model):
 
     def __str__(self):
         return f"Note for {self.prospect.nom} {self.prospect.prenom}"
+
 class Visiteurs(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -125,11 +127,9 @@ class DemandeInscription(models.Model):
 
 class DocumentsDemandeInscription(models.Model):
     demande_inscription = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
-    cin = models.FileField(upload_to='documents/cin/', null=True, blank=True)
-    bac = models.FileField(upload_to='documents/bac/', null=True, blank=True)
-    diplome = models.FileField(upload_to='documents/diplome/', null=True, blank=True)
-    photo = models.FileField(upload_to='documents/photo/', null=True, blank=True)
-    cv = models.FileField(upload_to='documents/cv/', null=True, blank=True)
+    id_document = models.ForeignKey(DossierInscription, on_delete=models.CASCADE, null=True, blank=True)
+    file = models.FileField(upload_to='documents_demande_inscription/dossiers/', null=True, blank=True)
+   
 
     class Meta:
         verbose_name="Documents de la demande d'inscription"

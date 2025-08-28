@@ -52,6 +52,7 @@ class Formation(models.Model):
 class DossierInscription(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.DO_NOTHING, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
+    is_required = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
