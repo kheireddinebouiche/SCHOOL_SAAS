@@ -19,6 +19,8 @@ class Prospets(models.Model):
     poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Résponsable'),('directeur','Directeur'),('gerant','Gérant')])
     observation = models.TextField(null=True, blank=True)
 
+    motif_rejet = models.CharField(max_length=100, null=True, blank=True)
+
     statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance'),('convertit','Convertit')])
 
     created_at = models.DateTimeField(auto_now_add=True)

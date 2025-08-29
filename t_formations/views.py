@@ -548,7 +548,8 @@ def ApiAddModule(request):
         return JsonResponse({'success' : True})
     except IntegrityError:
         return JsonResponse({'success' : False, 'message' : "Le module existe déja"})
-    
+
+@login_required(login_url='insitut_app:login')
 def deleteModule(request):
     id = request.GET.get('id')
     

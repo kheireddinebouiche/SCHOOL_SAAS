@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 from .f_views.prospects import *
+from .f_views.prinscrits import *
 
 app_name="t_crm"
 
@@ -64,4 +65,9 @@ urlpatterns = [
     path('ApiDeleteRappel', ApiDeleteRappel, name="ApiDeleteRappel"),
     path('ApiValidateProspect', ApiValidateProspect, name="ApiValidateProspect"),
     path('ApiUpdateRappel', ApiUpdateRappel, name="ApiUpdateRappel"),
+
+    path('liste-des-preinscrits/', ListeDesPrinscrits, name="ListeDesPrinscrits"),
+    path('ApiLoadPrinscrits', ApiLoadPrinscrits, name="ApiLoadPrinscrits"),
+
+    path('ApiCheckStatutProspect', ApiCheckStatutProspect, name="ApiCheckStatutProspect"),
 ]

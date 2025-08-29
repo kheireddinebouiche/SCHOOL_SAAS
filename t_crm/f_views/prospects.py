@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','etat','entreprise','poste_dans_entreprise','observation').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
     return JsonResponse(prospect, safe=False)
 
 @login_required(login_url='institut_app:login')
@@ -210,9 +210,22 @@ def ApiValidateProspect(request):
         id_prospect = request.POST.get('id_prospect')
         try:
             prospect = Prospets.objects.get(id=id_prospect)
-            prospect.is_validated = True
+            prospect.etat = "accepte"
+            prospect.statut = "prinscrit"
             prospect.save()
             return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
+
+
+@login_required(login_url='institut_app:login')
+def ApiCheckStatutProspect(request):
+    
+    prospect = Prospets.objects.get(id=request.GET.get('id_prospect'))
+
+    data = {
+        'id': prospect.id,
+        'etat': prospect.etat  # <-- ici on renvoie le champ attendu
+    }
+    return JsonResponse({'data': data})
