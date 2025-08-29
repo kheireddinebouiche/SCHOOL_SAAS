@@ -65,12 +65,14 @@ class EntrepriseForm(forms.ModelForm):
             'pays' : "Pays :",
             'email' : "Email :",
             'site_web' : "Site WEB :",
+            'entete' : "Entête :"
         }
 
         widgets = {
             'designation' : forms.TextInput(attrs={'class':'form-control'}),
             'rc' : forms.TextInput(attrs={'class':'form-control'}),
             'nif' : forms.TextInput(attrs={'class':'form-control'}),
+            'entete' : forms.Textarea(attrs={'class':'form-control'}),
             'art' : forms.TextInput(attrs={'class':'form-control'}),
             'nis' : forms.TextInput(attrs={'class':'form-control'}),
             'adresse' : forms.TextInput(attrs={'class':'form-control'}),

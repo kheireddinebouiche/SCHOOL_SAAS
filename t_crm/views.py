@@ -431,11 +431,19 @@ def ApiLoadSpecialite(request):
 
 @login_required(login_url='institut_app:login')
 def DetailsProspect(request, pk):
-    context = {
-        'tenant' : request.tenant,
-        'pk' : pk,
-    }
-    return render(request, 'tenant_folder/crm/details_prospect.html', context)
+    prospect = Prospets.objects.get(id=pk)
+    if prospect.type_prospect == "particulier":
+        context = {
+            'tenant' : request.tenant,
+            'pk' : pk,
+        }
+        return render(request, 'tenant_folder/crm/details_prospect.html', context)
+    else:
+        context = {
+            'tenant' : request.tenant,
+            'pk' : pk,
+        }
+        return render(request, 'tenant_folder/crm/details_prospect_ets.html', context)
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectDetails(request):

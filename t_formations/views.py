@@ -465,9 +465,6 @@ def deleteSpecialite(request, pk):
         messages.success(request, 'Spécialité supprimée avec succès')
         return redirect('t_formations:listSpecialites')
     
-def deleteModule(request):
-    pass
-
 def deleteFraisInscription(request):
     pass
 
@@ -557,7 +554,7 @@ def deleteModule(request):
     
     obj = Modules.objects.get(id = id)
     obj.is_archived = True
-    obj.updated_by = request.user,
+    # obj.updated_by = request.user,
     obj.save()
    
     return JsonResponse({'success' : True, 'message' : "Le module à été supprimé avec succès"})

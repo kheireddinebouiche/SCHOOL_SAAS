@@ -19,6 +19,8 @@ class Prospets(models.Model):
     poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Résponsable'),('directeur','Directeur'),('gerant','Gérant')])
     observation = models.TextField(null=True, blank=True)
 
+    statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance'),('convertit','Convertit')])
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -152,3 +154,21 @@ class RelancesProspet(models.Model):
 
     def __str__(self):
         return f"Relance for {self.prospect.nom} {self.prospect.prenom}"
+
+class RendezVous(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    type = models.CharField(max_length=255, null=True, choices=[('appel', 'Appel'), ('email', 'Email'),('rendez_vous','Rendez-vous'), ('autre', 'Autre')])
+    object = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    statut = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('confirme', 'Confirmé'), ('annule', 'Annulé'), ('termine', 'Terminé')])
+
+    date_rendez_vous = models.DateField(null=True, blank=True)
+    heure_rendez_vous = models.TimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Rendez-vous {self.id} - {self.type} - {self.date_rendez_vous} {self.heure_rendez_vous}"
+

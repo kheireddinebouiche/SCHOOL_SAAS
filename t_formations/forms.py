@@ -4,7 +4,7 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','nom', 'partenaire','description', 'duree','frais_inscription','frais_assurance']
+        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','frais_assurance']
 
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
@@ -15,6 +15,8 @@ class NewFormationForm(forms.ModelForm):
             'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'partenaire' : forms.Select(attrs={'class' : 'form-control'}),
+            'code' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'type_formation' : forms.Select(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -25,6 +27,8 @@ class NewFormationForm(forms.ModelForm):
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
             'frais_assurance' : "Frais d'assurance",
+            'code' : 'Code de la formation',
+            'type_formation' : "Type de formation",
         }
         
 class NewFormationFormMaster(forms.ModelForm):

@@ -17,28 +17,57 @@ from django.contrib.auth.decorators import login_required
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
     prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','etat','entreprise','poste_dans_entreprise','observation').first()
-
     return JsonResponse(prospect, safe=False)
 
-
+@login_required(login_url='institut_app:login')
 def ApiLoadProspectRendezVous(request):
-   pass
+   id_prospect = request.GET.get('id_prospect')
+   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
+   for l in rendez_vous:
+       l_obj = RendezVous.objects.get(id = l['id'])
+       l['status_label'] = l_obj.get_statut_display()
+       l['type_label'] = l_obj.get_type_display()
+       l['created_at'] = l_obj.created_at
+   return JsonResponse(list(rendez_vous), safe=False)
 
 ################################### Gestion des notes ##################################################
 @login_required(login_url='institut_app:login')
 def ApiLoadNote(request):
     prospect_id = request.GET.get('id_prospect')
-    notes = NotesProcpects.objects.filter(id = prospect_id).values('id','prospect','created_by','created_at','note')
+    notes = NotesProcpects.objects.filter(prospect__id = prospect_id).values('id','prospect','created_by__username','created_at','note','tage')
+    for l in notes:
+        l_obj = NotesProcpects.objects.get(id = l['id'])
+        l['tage'] = l_obj.get_tage_display()
     return JsonResponse(list(notes), safe=False)
     
 @login_required(login_url='institut_app:login')
 @transaction.atomic
 def ApiStoreNote(request):
-    pass
+    id_prospect = request.POST.get('id_prospect')
+    content = request.POST.get('content')
+    tags = request.POST.get('tags')
+
+    if not content:
+        return JsonResponse({'status': 'error', 'message': 'Le contenu de la note est requis.'}, status=400)
+
+    note = NotesProcpects.objects.create(
+        prospect=Prospets.objects.get(id=id_prospect),
+        created_by=request.user,
+        note=content,
+        tage = tags,
+    )
+    note.save()
+    return JsonResponse({'status': 'success', 'message': 'Note enregistrée avec succès.'})
 
 @login_required(login_url='institut_app:login')
 def ApiDeleteNote(request):
-    pass
+    id_note = request.POST.get('id_note')
+    try:
+        note = NotesProcpects.objects.get(id=id_note)
+        note.delete()
+        return JsonResponse({'status': 'success', 'message': 'Note supprimée avec succès.'})
+    except NotesProcpects.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Note non trouvée.'}, status=404)
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -63,7 +92,9 @@ def ApiLoadFicheVoeuxProspect(request):
             'specialite_code': fiche.specialite.code,
             'specialite_label': fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
-            'specialite_id_formation': fiche.specialite.formation.id
+            'specialite_id_formation': fiche.specialite.formation.id,
+            'created_at' : fiche.created_at,
+            'updated_at' : fiche.updated_at
         })
     return JsonResponse({'fiche_voeux': fiche_voeux_list})
 
@@ -71,7 +102,117 @@ def ApiLoadFicheVoeuxProspect(request):
 def ApiUpdateFicheVoeuxProspect(request):
     pass
 
+@login_required(login_url='institut_app:login')
 def ApiDeleteFicheVoeuxProspect(request):
     pass
 
 ###################################Fiche de voeux prospect #############################################
+
+
+###################################Gestion des rappels #############################################
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiStoreRappel(request):
+    type = request.POST.get('type')
+    subject = request.POST.get('subject')
+    date = request.POST.get('date')
+    time = request.POST.get('time')
+    description = request.POST.get('description')
+    id_prospect = request.POST.get('id_prospect')
+
+    if not all([type, subject, date, time, description, id_prospect]):
+        return JsonResponse({'status': 'error', 'message': 'Tous les champs sont requis.'})
+
+    rappel = RendezVous.objects.create(
+        type=type,
+        object=subject,
+        date_rendez_vous=date,
+        heure_rendez_vous=time,
+        description=description,
+        prospect=Prospets.objects.get(id=id_prospect),
+        created_by=request.user,
+    )
+    rappel.save()
+    return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
+
+@login_required(login_url='institut_app:login')
+def ApiLoadRappel(request):
+    id_prospect = request.GET.get('id_prospect')
+    rappel = RendezVous.objects.filter(prospect__id=id_prospect).values(
+        'id', 'type','objet', 'date_rendez_vous', 'heure_rendez_vous', 'description', 'created_at','created_by'
+    )
+    for l in rappel:
+        l_obj = RendezVous.objects.get(id = l['id'])
+        l['type_label'] = l_obj.get_type_display()
+        
+    return JsonResponse(list(rappel), safe=False)
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiDeleteRappel(request):
+    id_rappel = request.POST.get('id_rappel')
+    try:
+        rappel = RendezVous.objects.get(id=id_rappel)
+        rappel.delete()
+        return JsonResponse({'status': 'success', 'message': 'Rappel supprimé avec succès.'})
+    except RendezVous.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Rappel non trouvé.'}, status=404)
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdateRappel(request):
+    id_rappel = request.POST.get('id_rappel')
+    type = request.POST.get('type')
+    subject = request.POST.get('subject')
+    date = request.POST.get('date')
+    time = request.POST.get('time')
+    description = request.POST.get('description')
+
+    if not all([id_rappel, type, subject, date, time, description]):
+        return JsonResponse({'status': 'error', 'message': 'Tous les champs sont requis.'}, status=400)
+
+    try:
+        rappel = RendezVous.objects.get(id=id_rappel)
+        rappel.type = type
+        rappel.object = subject
+        rappel.date_rendez_vous = date
+        rappel.heure_rendez_vous = time
+        rappel.description = description
+        rappel.save()
+        return JsonResponse({'status': 'success', 'message': 'Rappel mis à jour avec succès.'})
+    except RendezVous.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Rappel non trouvé.'}, status=404)
+    
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiChangeStateRappel(request):
+    pass
+
+@login_required(login_url='institut_app:login')
+def ApiLoadRendezVousDetails(request):
+    id_rendez_vous = request.GET.get('id_rendez_vous')
+    object = RendezVous.objects.filter(id=id_rendez_vous).values('id','type','object','description','statut','date_rendez_vous','heure_rendez_vous')
+
+    for i in object:
+        i_obj = RendezVous.objects.get(id = i['id'])
+        i['type_label'] = i_obj.get_type_display()
+        i['statut_label'] = i_obj.get_statut_display()
+
+    return JsonResponse(list(object), safe=False)
+
+###################################Fiche de voeux prospect #############################################
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiValidateProspect(request):
+    if request.method == 'POST':
+        id_prospect = request.POST.get('id_prospect')
+        try:
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.is_validated = True
+            prospect.save()
+            return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})

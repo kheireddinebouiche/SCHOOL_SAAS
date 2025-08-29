@@ -61,6 +61,7 @@ class Entreprise(models.Model):
     pays = CountryField(null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
+    entete = models.TextField(null=True, blank=True)
 
 
     created_at = models.DateTimeField(auto_now_add=True)

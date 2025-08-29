@@ -56,5 +56,12 @@ urlpatterns = [
     
 
     path('ApiLoadProspectPerosnalInfos', ApiLoadProspectPerosnalInfos, name="ApiLoadProspectPerosnalInfos"),
-    
+
+    path('ApiLoadProspectRendezVous', ApiLoadProspectRendezVous, name="ApiLoadProspectRendezVous"),
+    path('ApiLoadRendezVousDetails', ApiLoadRendezVousDetails, name="ApiLoadRendezVousDetails"),
+
+    path('ApiStoreRappel', ApiStoreRappel, name="ApiStoreRappel"),
+    path('ApiDeleteRappel', ApiDeleteRappel, name="ApiDeleteRappel"),
+    path('ApiValidateProspect', ApiValidateProspect, name="ApiValidateProspect"),
+    path('ApiUpdateRappel', ApiUpdateRappel, name="ApiUpdateRappel"),
 ]
