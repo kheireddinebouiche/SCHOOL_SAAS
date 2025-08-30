@@ -424,9 +424,7 @@ def ApiLoadFormation(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadSpecialite(request):
     id_formation = request.GET.get('id_formation')
-
     specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label')
-
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')

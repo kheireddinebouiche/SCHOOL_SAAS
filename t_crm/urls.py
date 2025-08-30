@@ -70,4 +70,14 @@ urlpatterns = [
     path('ApiLoadPrinscrits', ApiLoadPrinscrits, name="ApiLoadPrinscrits"),
 
     path('ApiCheckStatutProspect', ApiCheckStatutProspect, name="ApiCheckStatutProspect"),
+
+
+    path('details-preinscrit/<int:pk>/', DetailsPrinscrit, name="DetailsPrinscrit"),
+
+    path('ApiLoadFormationAndSpecialite', ApiLoadFormationAndSpecialite, name="ApiLoadFormationAndSpecialite"),
+
+    path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
+    path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
+    path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
+   
 ]

@@ -229,3 +229,77 @@ def ApiCheckStatutProspect(request):
         'etat': prospect.etat  # <-- ici on renvoie le champ attendu
     }
     return JsonResponse({'data': data})
+
+
+@login_required(login_url="institut_app:login")
+def ApiLoadFormationAndSpecialite(request):
+    formation = Formation.objects.all()
+    specialite = Specialites.objects.all()
+
+    formation_liste = []
+    for i in formation:
+        formation_liste.append({
+            'id' : i.id,
+            'code' : i.code,
+            'nom' : i.nom,
+        })
+    
+    specialite_liste = []
+    for i in specialite:
+        specialite_liste.append({
+            'id' : i.id,
+            'code' : i.code,
+            'label' : i.label
+        })
+
+    return JsonResponse({'formation' : formation_liste, 'specialite' : specialite_liste})
+
+@login_required(login_url="institut_app:login")
+def ApiLoadFormation(request):
+    formation = Formation.objects.all()
+    
+    formation_liste = []
+    for i in formation:
+        formation_liste.append({
+            'id' : i.id,
+            'code' : i.code,
+            'nom' : i.nom,
+        })
+
+    return JsonResponse({'formation':formation_liste})
+
+@login_required(login_url="institut_app:login")
+def ApiLoadSpecialite(request):
+    id_formation = request.GET.get('id_formation')
+    formation = Formation.objects.get(id = id_formation)
+    obj = Specialites.objects.filter(formation__code = formation.code)
+
+    data = []
+    for i in obj:
+        data.append({
+            "id" : i.id,
+            "label" : i.label
+        })
+
+    return JsonResponse({'specialite' : data}, safe=False)
+
+@login_required(login_url="intitut_app:login")
+@transaction.atomic
+def ApiUpdateVoeux(request):
+    id_prospect = request.POST.get('id_prospect')
+    id_specialite = request.POST.get('specialite')
+    id_fiche = request.POST.get('id_voeux')
+    
+    if not id_prospect or not id_specialite or not id_fiche:
+        return JsonResponse({"status" : "error", 'message': "Veuillez remplir tous les champs"})
+    
+    fiche = FicheDeVoeux.objects.get(id = id_fiche, prospect = Prospets.objects.get(id=id_prospect))    
+    fiche.specialite = Specialites.objects.get(id = id_specialite)
+    fiche.save()
+    return JsonResponse({'status' : "success", 'message' : "Fiche de voeux mis a jours avec succès"})
+
+
+    
+
+
+    

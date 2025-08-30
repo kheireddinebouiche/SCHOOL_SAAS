@@ -23,6 +23,7 @@ class Prospets(models.Model):
 
     statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance'),('convertit','Convertit')])
 
+    has_completed_doc = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,6 +37,8 @@ class Prospets(models.Model):
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
+
+    commentaire = models.CharField(max_length=1000, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -53,6 +56,9 @@ class NotesProcpects(models.Model):
     tage = models.CharField(max_length=255, null=True, blank=True,choices=[('important', 'Important'), ('a_revoir', 'A revoir'), ('a_contacte', 'A contacter'), ('a_relancer', 'A relancer')])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    context= models.CharField(max_length=100, null=True, blank=True)
+    is_done = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Note de Prospect"
@@ -167,6 +173,8 @@ class RendezVous(models.Model):
 
     date_rendez_vous = models.DateField(null=True, blank=True)
     heure_rendez_vous = models.TimeField(null=True, blank=True)
+
+    context= models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

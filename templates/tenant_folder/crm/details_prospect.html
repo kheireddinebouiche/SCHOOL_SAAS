@@ -30,7 +30,7 @@
                                 </ol>
                             </nav>
                             <div class="btn-group">
-                                <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" id="validateProspectBtn">
+                                <button  type="button" hidden class="btn btn-success px-4 py-2" data-bs-toggle="modal" id="validateProspectBtn">
                                     <i class="ri-check-line me-2"></i>Valider le prospect
                                 </button>
                                 <button type="button" class="btn btn-primary px-4 py-2" id="udapteProspectDetailsBtn" >
@@ -125,7 +125,7 @@
                                         <p class="text-muted small mb-0">Orientation académique du prospect</p>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-info px-4 py-2" id="editVoeuxBtn">
+                                <button type="button" class="btn btn-info px-4 py-2" disabled id="editVoeuxBtn">
                                     <i class="ri-edit-line me-2"></i>Modifier les voeux
                                 </button>
                             </div>
@@ -918,26 +918,20 @@
                         <div class="modal-body p-4">
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <label class="form-label fw-medium">Spécialité</label>
-                                    <select id="specialite_voeux" class="form-select border-0 bg-light py-2">
-                                        <option value="">Sélectionnez une spécialité</option>
+                                    <label class="form-label fw-medium">Formation:</label>
+                                    <select id="formation_voeux" class="form-select border-0 bg-light py-2">
+                                        
                                         <!-- Options à charger dynamiquement -->
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-medium">Niveau d'étude</label>
-                                    <select id="niveau_etude_voeux" class="form-select border-0 bg-light py-2">
-                                        <option value="">Sélectionnez un niveau</option>
-                                        <option value="bac">Baccalauréat</option>
-                                        <option value="licence">Licence</option>
-                                        <option value="master">Master</option>
-                                        <option value="doctorat">Doctorat</option>
+                                    <label class="form-label fw-medium">Spécialité</label>
+                                    <select id="specialite_voeux" class="form-select border-0 bg-light py-2">
+                                        
+                                        <!-- Options à charger dynamiquement -->
                                     </select>
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-medium">Établissement souhaité</label>
-                                    <input type="text" id="etablissement_voeux" class="form-control border-0 bg-light py-2" placeholder="Entrez l'établissement souhaité">
-                                </div>
+                                
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Commentaires</label>
                                     <textarea id="commentaires_voeux" class="form-control border-0 bg-light" rows="4" placeholder="Entrez vos commentaires..."></textarea>
@@ -1068,7 +1062,12 @@
                                         
                                     html += '</div>';
                                 html += '</div>';
+
+                                $('#editVoeuxBtn').data('id',item.id);
                         });
+
+                        
+
                     }else{
                         html += '<div class="col-12 text-center py-5">';
                         html += '<div class="avatar-lg mx-auto mb-4">';
@@ -1210,9 +1209,14 @@
                 data: {'id_prospect' : id},
                 success : function(response){
                     if (response.data.etat == "accepte"){
-                        $('#validateProspectBtn').css("visibility", "hidden");
+                        //$('#validateProspectBtn').setAttribute("hidden", "true");
+                        document.getElementById('validateProspectBtn').setAttribute("hidden", "true");
+                        document.getElementById('editVoeuxBtn').setAttribute('disabled', "true");
+
                     } else {
-                        $('#validateProspectBtn').css("visibility", "visible");
+                        document.getElementById('validateProspectBtn').setAttribute("hidden", "false");
+                        document.getElementById('editVoeuxBtn').setAttribute('disabled', "false");
+
                     }
                 }
                 
@@ -1220,11 +1224,28 @@
 
         }
 
+        function loadFormations(){
+            $.ajax({
+                url: "{% url 't_crm:ApiLoadFormation' %}",
+                dataType: "JSON",
+                type : "GET",
+                success : function(data){
+                    var row = "<option value='0'>Sélectionnez une formation</option>";
+                    $.each(data.formation, function(index, item){
+                        row += "<option value="+item.id+">"+item.nom+"</option>";
+                    });
+                    $('#formation_voeux').html(row);
+                }
+            })
+        }
+
+
         CheckPropspectStatut();
         loadNotes();
         loadFicheVoeux();
         loadPersonalInfos();
         loadRappelRendezVous();
+        
 
 
         $(document).on('click', '#addNoteModalBtn', function(){
@@ -1407,33 +1428,58 @@
 
         // Gestion de la modification des voeux
         $(document).on('click', '#editVoeuxBtn', function(){
-            // Charger les données existantes dans la modale
-            loadVoeuxData();
+            var id_voeux = $(this).data('id');
+            console.log(id_voeux);
+            loadFormations();
             $('#editVoeuxModal').modal('show');
+            $('#saveVoeuxBtn').data('id', id_voeux);
+
         });
 
-        function loadVoeuxData(){
-            // Ici, vous pouvez charger les données existantes de la fiche de voeux
-            // via un appel AJAX si nécessaire
-            
-            // Pour l'instant, je laisse les champs vides
-            $('#specialite_voeux').val('');
-            $('#niveau_etude_voeux').val('');
-            $('#etablissement_voeux').val('');
-            $('#commentaires_voeux').val('');
-        }
+        $(document).on('change', '#formation_voeux', function(){
+            var id_formation = $(this).val();
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadSpecialite' %}",
+                dataType: "JSON",
+                type : "GET",
+                data : {"id_formation" : id_formation},
+                success : function(data){
+                    var row = "<option value='0'>Sélectionnez une spécialité</option>";
+                    $.each(data.specialite, function(index, item){
+                        row += "<option value="+item.id+">"+item.label+"</option>";
+                    });
+                    $('#specialite_voeux').html(row);
+                }
+            });
+        });
 
+        
         $(document).on('click', '#saveVoeuxBtn', function(){
             var specialite = $('#specialite_voeux').val();
-            var niveau_etude = $('#niveau_etude_voeux').val();
-            var etablissement = $('#etablissement_voeux').val();
             var commentaires = $('#commentaires_voeux').val();
+            var id_voeux = $(this).data('id');
             
-            
-            
-            // Pour l'instant, je ferme simplement la modale
-            $('#editVoeuxModal').modal('hide');
-            alertify.success('Fiche de voeux mise à jour avec succès');
+            $.ajax({
+                url : "{% url 't_crm:ApiUpdateVoeux' %}",
+                dataType: "JSON",
+                type : "POST",
+                data : {
+                    'specialite' : specialite,
+                    'id_prospect' : id,
+                    'id_voeux' : id_voeux,
+                    "comment" : commentaires,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if (response.status == "success"){
+                        alertify.success(response.message);
+                        loadFicheVoeux()
+                        $('#editVoeuxModal').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            });
         });
 
         $(document).on('click', '#ConfirmDeleteReminderBtn', function(){
