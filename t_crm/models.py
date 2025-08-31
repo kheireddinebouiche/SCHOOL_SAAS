@@ -8,6 +8,7 @@ from t_formations.models import DossierInscription
 class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True)
+    
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
     telephone = models.CharField(max_length=15, null=True)
@@ -22,9 +23,29 @@ class Prospets(models.Model):
     motif_rejet = models.CharField(max_length=100, null=True, blank=True)
 
     groupe_sanguin = models.CharField(max_length=100, null=True, blank=True, choices=[('a-','A-'),('a+','A+'),('b+','B+'),('b-','B+'),('ab-','AB-'),('ab+','AB+'),('o-','o-'),('o+','o+')])
+    nom_arabe = models.CharField(max_length=100, null=True, blank=True)
+    prenom_arabe = models.CharField(max_length=100, null=True, blank=True)
+    
+    prenom_pere = models.CharField(max_length=100, null=True, blank=True)
+    tel_pere = models.CharField(max_length=100, null=True, blank=True)
 
+    nom_mere = models.CharField(max_length=100, null=True, blank=True)
+    prenom_mere = models.CharField(max_length=100, null=True, blank=True)
+    tel_mere = models.CharField(max_length=100, null=True, blank=True)
+
+    has_endicap = models.BooleanField(default=False, null=True, blank=True)
+    type_handicap = models.CharField(max_length=1000, null=True, blank=True)
+
+    adresse = models.TextField(null=True, blank=True)
+
+    date_naissance = models.DateField(null=True, blank=True)
+        
+    niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 am'),('2_am','2 am'),('3_am', '3_am'),('4_am','4 am'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminal'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','Licence'),('m','Master')])
+    diplome = models.CharField(max_length=100, null=True, blank=True)
+    etablissement = models.CharField(max_length=100, null=True, blank=True)
     statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance'),('convertit','Convertit')])
 
+    profile_completed = models.BooleanField(default=False)
     has_completed_doc = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -35,6 +56,8 @@ class Prospets(models.Model):
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"
+
+  
 
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)

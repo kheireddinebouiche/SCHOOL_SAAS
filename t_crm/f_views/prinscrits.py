@@ -66,3 +66,23 @@ def ApiLoadNotePr(request):
         l_obj = NotesProcpects.objects.get(id = l['id'])
         l['tage'] = l_obj.get_tage_display()
     return JsonResponse(list(notes), safe=False)
+
+
+@login_required(login_url='intitut_app:login')
+def ApiCheckHasCompletedProfile(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+    pass
+
+@login_required(login_url='institut_app:login')
+def ApiCheckCompletedDoc(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+    statut = Prospets.objects.get(id = id_preinscrit)
+
+    data = {
+        'has_completed_doc': str(statut.has_completed_doc).lower(),
+    }
+    return JsonResponse(data)
+
+@login_required(login_url='intitut_app:login')
+def ApiUpdatePreinscritInfos(request):
+    pass

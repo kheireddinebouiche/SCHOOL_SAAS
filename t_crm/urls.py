@@ -85,6 +85,8 @@ urlpatterns = [
     path('ApiLoadPreinscrisPerosnalInfos', ApiLoadPreinscrisPerosnalInfos, name="ApiLoadPreinscrisPerosnalInfos"),
     path('ApiLoadPreinscritRendezVous', ApiLoadPreinscritRendezVous, name="ApiLoadPreinscritRendezVous"),
     path('ApiLoadNotePr', ApiLoadNotePr, name="ApiLoadNotePr"),
+    path('ApiCheckHasCompletedProfile', ApiCheckHasCompletedProfile, name="ApiCheckHasCompletedProfile"),
+    path('ApiCheckCompletedDoc', ApiCheckCompletedDoc, name="ApiCheckCompletedDoc"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]
