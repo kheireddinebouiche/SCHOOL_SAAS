@@ -38,3 +38,9 @@ def DetailsPrinscrit(request, pk):
         'tenant' : request.tenant
     }
     return render(request, 'tenant_folder/crm/preinscrits/details-preinscrit.html', context)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadPreinscrisPerosnalInfos(request):
+    id_prospect = request.GET.get('id_prospect')
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
+    return JsonResponse(prospect, safe=False)

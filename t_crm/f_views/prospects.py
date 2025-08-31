@@ -228,7 +228,7 @@ def ApiCheckStatutProspect(request):
 
     data = {
         'id': prospect.id,
-        'etat': prospect.etat  # <-- ici on renvoie le champ attendu
+        'etat': prospect.etat
     }
     return JsonResponse({'data': data})
 

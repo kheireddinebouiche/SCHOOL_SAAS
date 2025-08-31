@@ -79,5 +79,10 @@ urlpatterns = [
     path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
     path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
     path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
+
+    ################################################### Gestion des pre inscrits ##########################################################
+
+    path('ApiLoadPreinscrisPerosnalInfos', ApiLoadPreinscrisPerosnalInfos, name="ApiLoadPreinscrisPerosnalInfos"),
+    ################################################### Gestion des pre inscrits ##########################################################
    
 ]
