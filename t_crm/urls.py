@@ -83,6 +83,8 @@ urlpatterns = [
     ################################################### Gestion des pre inscrits ##########################################################
 
     path('ApiLoadPreinscrisPerosnalInfos', ApiLoadPreinscrisPerosnalInfos, name="ApiLoadPreinscrisPerosnalInfos"),
+    path('ApiLoadPreinscritRendezVous', ApiLoadPreinscritRendezVous, name="ApiLoadPreinscritRendezVous"),
+    path('ApiLoadNotePr', ApiLoadNotePr, name="ApiLoadNotePr"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]

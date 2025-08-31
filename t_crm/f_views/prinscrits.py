@@ -43,4 +43,26 @@ def DetailsPrinscrit(request, pk):
 def ApiLoadPreinscrisPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
     prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
+    
     return JsonResponse(prospect, safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadPreinscritRendezVous(request):
+   id_prospect = request.GET.get('id_prospect')
+   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect, context="prinscrit").values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
+   for l in rendez_vous:
+       l_obj = RendezVous.objects.get(id = l['id'])
+       l['status_label'] = l_obj.get_statut_display()
+       l['type_label'] = l_obj.get_type_display()
+       l['created_at'] = l_obj.created_at
+   return JsonResponse(list(rendez_vous), safe=False)
+
+
+@login_required(login_url='institut_app:login')
+def ApiLoadNotePr(request):
+    prospect_id = request.GET.get('id_prospect')
+    notes = NotesProcpects.objects.filter(prospect__id = prospect_id, context="prinscrit").values('id','prospect','created_by__username','created_at','note','tage')
+    for l in notes:
+        l_obj = NotesProcpects.objects.get(id = l['id'])
+        l['tage'] = l_obj.get_tage_display()
+    return JsonResponse(list(notes), safe=False)

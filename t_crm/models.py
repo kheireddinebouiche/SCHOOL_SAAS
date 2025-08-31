@@ -21,6 +21,8 @@ class Prospets(models.Model):
 
     motif_rejet = models.CharField(max_length=100, null=True, blank=True)
 
+    groupe_sanguin = models.CharField(max_length=100, null=True, blank=True, choices=[('a-','A-'),('a+','A+'),('b+','B+'),('b-','B+'),('ab-','AB-'),('ab+','AB+'),('o-','o-'),('o+','o+')])
+
     statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance'),('convertit','Convertit')])
 
     has_completed_doc = models.BooleanField(default=False)
