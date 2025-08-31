@@ -34,7 +34,7 @@ def ApiLoadProspectRendezVous(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadNote(request):
     prospect_id = request.GET.get('id_prospect')
-    notes = NotesProcpects.objects.filter(prospect__id = prospect_id).values('id','prospect','created_by__username','created_at','note','tage')
+    notes = NotesProcpects.objects.filter(prospect__id = prospect_id, context="prospect").values('id','prospect','created_by__username','created_at','note','tage')
     for l in notes:
         l_obj = NotesProcpects.objects.get(id = l['id'])
         l['tage'] = l_obj.get_tage_display()
@@ -55,6 +55,7 @@ def ApiStoreNote(request):
         created_by=request.user,
         note=content,
         tage = tags,
+        context = "prospect",
     )
     note.save()
     return JsonResponse({'status': 'success', 'message': 'Note enregistrée avec succès.'})
@@ -132,6 +133,7 @@ def ApiStoreRappel(request):
         description=description,
         prospect=Prospets.objects.get(id=id_prospect),
         created_by=request.user,
+        context = "prospect",
     )
     rappel.save()
     return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
@@ -139,7 +141,7 @@ def ApiStoreRappel(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadRappel(request):
     id_prospect = request.GET.get('id_prospect')
-    rappel = RendezVous.objects.filter(prospect__id=id_prospect).values(
+    rappel = RendezVous.objects.filter(prospect__id=id_prospect, context="prospect").values(
         'id', 'type','objet', 'date_rendez_vous', 'heure_rendez_vous', 'description', 'created_at','created_by'
     )
     for l in rappel:
