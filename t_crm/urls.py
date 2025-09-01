@@ -87,6 +87,7 @@ urlpatterns = [
     path('ApiLoadNotePr', ApiLoadNotePr, name="ApiLoadNotePr"),
     path('ApiCheckHasCompletedProfile', ApiCheckHasCompletedProfile, name="ApiCheckHasCompletedProfile"),
     path('ApiCheckCompletedDoc', ApiCheckCompletedDoc, name="ApiCheckCompletedDoc"),
+    path('ApiUpdatePreinscritInfos', ApiUpdatePreinscritInfos, name="ApiUpdatePreinscritInfos"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]

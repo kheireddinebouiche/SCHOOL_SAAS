@@ -42,7 +42,7 @@ def DetailsPrinscrit(request, pk):
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscrisPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('etablissement','diplome','niveau_scolaire','date_naissance','adresse','type_handicap','has_endicap','tel_mere','prenom_mere','nom_mere','tel_pere','groupe_sanguin','nom_arabe','prenom_arabe','prenom_pere','created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
     
     return JsonResponse(prospect, safe=False)
 
@@ -71,7 +71,12 @@ def ApiLoadNotePr(request):
 @login_required(login_url='intitut_app:login')
 def ApiCheckHasCompletedProfile(request):
     id_preinscrit = request.GET.get('id_preinscrit')
-    pass
+    obj = Prospets.objects.get(id = id_preinscrit)
+
+    data = {
+        'profile_completed' : str(obj.profile_completed).lower(),
+    }
+    return JsonResponse({'profile_completed' : data})
 
 @login_required(login_url='institut_app:login')
 def ApiCheckCompletedDoc(request):
@@ -85,4 +90,44 @@ def ApiCheckCompletedDoc(request):
 
 @login_required(login_url='intitut_app:login')
 def ApiUpdatePreinscritInfos(request):
-    pass
+    nom_arabe = request.POST.get('nom_arabe')
+    prenom_arabe = request.POST.get('prenom_arabe')
+    date_naissance = request.POST.get('date_naissance')
+    prenom_pere = request.POST.get('prenom_pere')
+    tel_pere = request.POST.get('tel_pere')
+    nom_mere = request.POST.get('nom_mere')
+    prenom_mere = request.POST.get('prenom_mere')
+    tel_mere = request.POST.get('tel_mere')
+    has_handicap = request.POST.get('has_handicap')
+    type_handicap = request.POST.get('type_handicap')
+    groupe_sanguin = request.POST.get('groupe_sanguin')
+    adresse = request.POST.get('adresse')
+    niveau_scolaire = request.POST.get('niveau_scolaire')
+    diplome = request.POST.get('diplome')
+    etablissement_diplome = request.POST.get('etablissement_diplome')
+    id_preinscrit = request.POST.get('id_preinscrit')
+    nin = request.POST.get('nin')
+
+    preinscrit = Prospets.objects.get(id = id_preinscrit)
+
+    preinscrit.nom_arabe = nom_arabe
+    preinscrit.prenom_arabe = prenom_arabe
+    preinscrit.date_naissance = date_naissance
+    preinscrit.prenom_pere = prenom_pere
+    preinscrit.tel_pere = tel_pere
+    preinscrit.nom_mere = nom_mere
+    preinscrit.prenom_mere = prenom_mere
+    preinscrit.tel_mere = tel_mere
+    preinscrit.has_endicap = has_handicap
+    preinscrit.type_handicap = type_handicap
+    preinscrit.groupe_sanguin = groupe_sanguin
+    preinscrit.adresse = adresse
+    preinscrit.niveau_scolaire = niveau_scolaire
+    preinscrit.diplome = diplome
+    preinscrit.etablissement = etablissement_diplome
+    preinscrit.nin = nin
+    preinscrit.profile_completed= True
+
+    preinscrit.save()
+
+    return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mis à jours avec succès"})
