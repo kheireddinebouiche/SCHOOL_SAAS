@@ -57,7 +57,6 @@ class Prospets(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}"
 
-  
 
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
