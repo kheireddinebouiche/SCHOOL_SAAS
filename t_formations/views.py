@@ -708,3 +708,33 @@ def ApiGetModuleDetails(request):
     }
     
     return JsonResponse(data, safe=False)
+
+@login_required(login_url='intitut_app:login')
+def ApiLoadDocuments(request):
+    code_formation = request.GET.get('code_formation')
+    documents = DossierInscription.objects.filter(formation__code = code_formation).values('id','label')
+
+
+    return JsonResponse(list(documents), safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiAddDocument(request):
+    label = request.POST.get('nom_doc')
+    required = request.POST.get('required')
+    code_formation = request.POST.get('code_formation')
+    
+    if required == "false":
+        _required = False
+    else:
+        _required = True
+
+    DossierInscription.objects.create(
+        formation = Formation.objects.get(code = code_formation),
+        label = label,
+        is_required = _required
+    )
+
+    return JsonResponse({"status" : "success","message" : "Le document à été ajouter avec succès"})
+
+    
+

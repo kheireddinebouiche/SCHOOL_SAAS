@@ -186,19 +186,7 @@
                                 </div>
                                 <div class="card-body p-4">
                                     <div id="listeDossiers">
-                                        <!-- Liste des dossiers sera chargée ici -->
-                                        <div class="text-center py-5">
-                                            <div class="avatar-lg mx-auto mb-4">
-                                                <div class="avatar-title bg-light text-muted display-5 rounded-circle">
-                                                    <i class="ri-file-list-line"></i>
-                                                </div>
-                                            </div>
-                                            <h5 class="mb-3">Aucun document requis</h5>
-                                            <p class="text-muted mb-4">Aucun document n'a été configuré pour cette formation.</p>
-                                            <button class="btn btn-soft-info px-4 py-2" data-bs-toggle="modal" data-bs-target="#configDossierModal">
-                                                <i class="ri-settings-3-line me-2"></i>Configurer le dossier
-                                            </button>
-                                        </div>
+                                       
                                     </div>
                                 </div>
                             </div>
@@ -365,6 +353,15 @@
                     <div class="modal-body p-4">
                         <div class="row mb-4">
                             <div class="col-12">
+                                <label class="form-label fw-medium">Champs requis ?</label>
+                                <select id="configDossierSelect" class="form-select border-0 bg-light py-2 mb-3">
+                                    <option value="true">Oui, le document est un champs requis</option>
+                                    <option value="false">Non</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-12">
                                 <div class="d-flex align-items-center">
                                     <input type="text" class="form-control border-0 bg-light me-2" id="nomDocument" placeholder="Nom du document">
                                     <button class="btn btn-primary" id="ajouterDocument">
@@ -382,13 +379,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="listeDocumentsConfig">
-                                    <!-- Liste des documents configurés -->
-                                    <tr>
-                                        <td colspan="2" class="text-center text-muted py-4">
-                                            <i class="ri-file-list-line fs-1 d-block mb-2"></i>
-                                            Aucun document configuré
-                                        </td>
-                                    </tr>
+                                    
                                 </tbody>
                             </table>
                         </div>
@@ -514,87 +505,114 @@
                 },
             })
         }
-
-        afficheBtnUpdat();
-
-        // Gestion de la configuration du dossier d'inscription
-        var documentsConfig = [];
-
+        
+        
         function afficherListeDocuments() {
-            var html = '';
-            if (documentsConfig.length > 0) {
-                html += '<div class="vstack gap-3">';
-                $.each(documentsConfig, function(index, doc) {
-                    html += '<div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-3">';
-                    html += '<div class="d-flex align-items-center">';
-                    html += '<div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">';
-                    html += '<i class="ri-file-line text-info"></i>';
-                    html += '</div>';
-                    html += '<span class="fw-medium">' + doc.nom + '</span>';
-                    html += '</div>';
-                    html += '<button class="btn btn-soft-danger btn-sm remove-doc" data-index="' + index + '">';
-                    html += '<i class="ri-delete-bin-line"></i>';
-                    html += '</button>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            } else {
-                html += '<div class="text-center py-5">';
-                html += '<div class="avatar-lg mx-auto mb-4">';
-                html += '<div class="avatar-title bg-light text-muted display-5 rounded-circle">';
-                html += '<i class="ri-file-list-line"></i>';
-                html += '</div>';
-                html += '</div>';
-                html += '<h5 class="mb-3">Aucun document requis</h5>';
-                html += '<p class="text-muted mb-4">Aucun document n\'a été configuré pour cette formation.</p>';
-                html += '<button class="btn btn-soft-info px-4 py-2" data-bs-toggle="modal" data-bs-target="#configDossierModal">';
-                html += '<i class="ri-settings-3-line me-2"></i>Configurer le dossier';
-                html += '</button>';
-                html += '</div>';
-            }
-            $('#listeDossiers').html(html);
+            $.ajax({
+                url : "{% url 't_formations:ApiLoadDocuments' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data : {'code_formation' : code_formation },
+                success : function(data){
+                    var html = '';
+                    if (data.length > 0){
+                        html += '<div class="vstack gap-3">';
+                        $.each(data, function(index, doc) {
+                            html += '<div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-3">';
+                            html += '<div class="d-flex align-items-center">';
+                            html += '<div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">';
+                            html += '<i class="ri-file-line text-info"></i>';
+                            html += '</div>';
+                            html += '<span class="fw-medium">' + doc.nom + '</span>';
+                            html += '</div>';
+                            html += '<button class="btn btn-soft-danger btn-sm remove-doc" data-index="' + index + '">';
+                            html += '<i class="ri-delete-bin-line"></i>';
+                            html += '</button>';
+                            html += '</div>';
+                        });
+                    }else{
+                        html += '<div class="text-center py-5">';
+                        html += '<div class="avatar-lg mx-auto mb-4">';
+                        html += '<div class="avatar-title bg-light text-muted display-5 rounded-circle">';
+                        html += '<i class="ri-file-list-line"></i>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<h5 class="mb-3">Aucun document requis</h5>';
+                        html += '<p class="text-muted mb-4">Aucun document n\'a été configuré pour cette formation.</p>';
+                        html += '<button id="configureDossierBtn" class="btn btn-soft-info px-4 py-2">';
+                        html += '<i class="ri-settings-3-line me-2"></i>Configurer le dossier';
+                        html += '</button>';
+                        html += '</div>';
+                    }
+                     $('#listeDossiers').html(html);
+                }
+            });         
         }
+
+        afficherListeDocuments();
 
         $(document).on('click', '#ajouterDocument', function() {
             var nomDoc = $('#nomDocument').val();
-            if (nomDoc.trim() !== '') {
-                documentsConfig.push({nom: nomDoc});
-                $('#nomDocument').val('');
-                mettreAJourListeDocumentsConfig();
-            }
+            var required = $('#configDossierSelect').val();
+
+            $.ajax({
+                url : "{% url 't_formations:ApiAddDocument' %}",
+                dataType : "JSON",
+                type : 'POST',
+                data : {
+                    'nom_doc' : nomDoc,
+                    'required' : required,
+                    'code_formation' : code_formation,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if(response.status =="success"){
+                        alertify.success(response.message);
+                        mettreAJourListeDocumentsConfig();
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+                    }
+                }
+            })
+            
+        });
+        
+        
+        function mettreAJourListeDocumentsConfig() {
+            $.ajax({
+                url : "{% url 't_formations:ApiLoadDocuments' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data : {'code_formation' : code_formation },
+                success : function(data){
+                    var html = '';
+                    if (data.length > 0){
+                        html += '<div class="vstack gap-3">';
+                        $.each(data, function(index, doc) {
+                             html += '<tr>';
+                        html += '<td colspan="2">';
+                        html += '<p class="text-muted mb-4 text-center">Aucun document n\'a été configuré</p>';
+                        html += '</td>';
+                        html += '</tr>';
+                        });
+                    }else{
+                        html += '<tr>';
+                        html += '<td colspan="2">';
+                        html += '<p class="text-muted mb-4 text-center">Aucun document n\'a été configuré</p>';
+                        html += '</td>';
+                        html += '</tr>';
+                    }
+                     $('#listeDocumentsConfig').html(html);
+                }
+            });         
+        };
+
+        $(document).on('click', '#configureDossierBtn', function(){
+            $('#configDossierModal').modal('show');
+            mettreAJourListeDocumentsConfig();
         });
 
-        function mettreAJourListeDocumentsConfig() {
-            var html = '';
-            if (documentsConfig.length > 0) {
-                $.each(documentsConfig, function(index, doc) {
-                    html += '<tr>';
-                    html += '<td>';
-                    html += '<div class="d-flex align-items-center">';
-                    html += '<div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">';
-                    html += '<i class="ri-file-line text-info"></i>';
-                    html += '</div>';
-                    html += '<span class="fw-medium">' + doc.nom + '</span>';
-                    html += '</div>';
-                    html += '</td>';
-                    html += '<td class="text-end">';
-                    html += '<button class="btn btn-soft-danger btn-sm remove-doc-config" data-index="' + index + '">';
-                    html += '<i class="ri-delete-bin-line"></i>';
-                    html += '</button>';
-                    html += '</td>';
-                    html += '</tr>';
-                });
-            } else {
-                html += '<tr>';
-                html += '<td colspan="2" class="text-center text-muted py-4">';
-                html += '<i class="ri-file-list-line fs-1 d-block mb-2"></i>';
-                html += 'Aucun document configuré';
-                html += '</td>';
-                html += '</tr>';
-            }
-            $('#listeDocumentsConfig').html(html);
-        }
-
+        
         $(document).on('click', '.remove-doc-config', function() {
             var index = $(this).data('index');
             documentsConfig.splice(index, 1);
@@ -616,8 +634,7 @@
            
         });
 
-        // Initialisation de l'affichage
-        afficherListeDocuments();
+        
     });
 </script>
 {% endblock content %}

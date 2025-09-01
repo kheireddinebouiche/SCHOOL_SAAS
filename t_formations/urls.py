@@ -60,4 +60,7 @@ urlpatterns = [
     path('ApiSyncPartenaire', ApiSyncPartenaire, name="ApiSyncPartenaire"),
     path('mise-a-jour-partenaire<int:pk>/',UpdatePartenaire, name="UpdatePartenaire"),
 
+    path('ApiLoadDocuments', ApiLoadDocuments , name="ApiLoadDocuments"),
+    path('ApiAddDocument', ApiAddDocument, name="ApiAddDocument"),
+
 ]
