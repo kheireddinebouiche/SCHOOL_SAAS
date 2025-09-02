@@ -123,32 +123,18 @@ def updateFormation(request, pk):
 @transaction.atomic
 @login_required(login_url='institut_app:login')
 def AddPartenaire(request):
-    form = NewPartenaireForm()
     if request.method == 'POST':
-        form = NewPartenaireForm(request.POST)
+        form = NewPartenaireForm(request.POST, current_tenant=request.tenant)
         if form.is_valid():
             form.save()
-            # if partenaires.type_partenaire == 'etranger':
-            #     tenants = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
-            #     for tenant in tenants:
-            #         with schema_context(tenant.schema_name):
-            #             with transaction.atomic():
-            #                 Partenaires.objects.create(
-            #                     nom  = partenaires.nom,
-            #                     code = partenaires.code,
-            #                     adresse = partenaires.adresse,
-            #                     telephone = partenaires.telephone,
-            #                     email = partenaires.email,
-            #                     type_partenaire = partenaires.type_partenaire,
-            #                     site_web = partenaires.site_web,
-            #                     observation = partenaires.observation,
-            #                 )
             messages.success(request, 'Partenaire ajouté avec succès')
             return redirect('t_formations:listPartenaires')
-        
+    else:
+        form = NewPartenaireForm(current_tenant=request.tenant)
+
     context = {
-        'form' : form,
-        'tenant' : request.tenant,
+        'form': form,
+        'tenant': request.tenant,
     }
     return render(request, 'tenant_folder/formations/new_partenaire.html', context)
 

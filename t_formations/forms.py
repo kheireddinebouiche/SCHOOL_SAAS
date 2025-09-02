@@ -79,6 +79,21 @@ class NewPartenaireForm(forms.ModelForm):
         }
         exclude = ['updated_by']
 
+    def __init__(self, *args, **kwargs):
+        current_tenant = kwargs.pop('current_tenant', None)  # récupère le tenant passé
+        super().__init__(*args, **kwargs)
+
+        if current_tenant:
+            if current_tenant.tenant_type == "second":
+                self.fields['type_partenaire'].choices = [
+                    ('national', 'Partenaire National')
+                ]
+            elif current_tenant.tenant_type == "master":
+                self.fields['type_partenaire'].choices = [
+                    ('national', 'Partenaire National'),
+                    ('etranger', 'Partenaire Etranger')
+                ]
+
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
