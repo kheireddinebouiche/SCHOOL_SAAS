@@ -57,6 +57,29 @@ class NewFormationFormMaster(forms.ModelForm):
             'frais_inscription' : "Frais d'inscription",
             'frais_assurance' : "Frais d'assurance",
         }
+    def __init__(self, *args, **kwargs):
+        current_tenant = kwargs.pop('current_tenant', None)
+        super().__init__(*args, **kwargs)
+
+        if current_tenant:
+            if current_tenant.tenant_type == "second":
+                self.fields['type_formation'].choices = [
+                    ('national', 'Formation Etatique')
+                ]
+                
+                self.fields['partenaire'].queryset = Partenaires.objects.filter(
+                    type_partenaire="national",
+                    etat="active"
+                )
+            elif current_tenant.tenant_type == "master":
+                self.fields['type_formation'].choices = [
+                    ('national', 'Formation Etatique'),
+                    ('etrangere', 'Formation étrangere')
+                ]
+                
+                self.fields['partenaire'].queryset = Partenaires.objects.filter(
+                    etat="active"
+                )
 
 class NewDossierInscriptionForm(forms.ModelForm):
     pass

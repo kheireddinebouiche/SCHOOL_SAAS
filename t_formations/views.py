@@ -44,29 +44,17 @@ def ListeDesInstituts(request):
 
 @transaction.atomic
 def addFormation(request):
-    if request.tenant.tenant_type == 'master':
-        form = NewFormationFormMaster()
-        if request.method == 'POST':
-            form = NewFormationFormMaster(request.POST)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Formation ajoutée avec succès')
-                return redirect('t_formations:listFormations')
-            else:
-                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
-                return redirect('t_formations:addFormation')
-    else:
-        form = NewFormationForm()
-        if request.method == 'POST':
-            form = NewFormationForm(request.POST)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Formation ajoutée avec succès')
-                return redirect('t_formations:listFormations')
-            else:
-                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
-                return redirect('t_formations:addFormation')
-        
+    form = NewFormationFormMaster(current_tenant = request.tenant)
+    if request.method == 'POST':
+        form = NewFormationFormMaster(request.POST, current_tenant =request.tenant)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Formation ajoutée avec succès')
+            return redirect('t_formations:listFormations')
+        else:
+            messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+            return redirect('t_formations:addFormation')
+
     context = {
         'form' : form,
         'tenant' : request.tenant,

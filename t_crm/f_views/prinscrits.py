@@ -157,7 +157,8 @@ def add_document(request):
                 id_document=DossierInscription.objects.get(id=doc_type),
                 file=file,
                 prospect = Prospets.objects.get(id = id_prospect),
-                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect)
+                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
+                label = name,
             )
 
             return JsonResponse({"success": True, "id": document.id})
@@ -190,3 +191,32 @@ def DeleteDocumentPreinscrit(request):
     obj.delete()
 
     return JsonResponse({'status' : "success",'message' : "La suppression a été effectuer avec succès"})
+
+def check_all_required_docs(request):
+    prospect_id = request.GET.get("id_prospect")
+    try:
+        fiche_voeux = FicheDeVoeux.objects.get(prospect_id=prospect_id)
+        formation = fiche_voeux.specialite.formation
+    except FicheDeVoeux.DoesNotExist:
+        return False, []
+
+    # Tous les documents obligatoires de la formation
+    required_docs = DossierInscription.objects.filter(
+        formation=formation,
+        is_required=True
+    )
+
+    # Documents déjà fournis par le prospect
+    provided_docs = DocumentsDemandeInscription.objects.filter(
+        prospect_id=prospect_id,
+        id_document__in=required_docs
+    ).exclude(file="")
+
+    # Vérification
+    missing_docs = required_docs.exclude(
+        id__in=provided_docs.values_list("id_document_id", flat=True)
+    )
+
+    if missing_docs.exists():
+        return False, list(missing_docs.values_list("label", flat=True))
+    return True, []
