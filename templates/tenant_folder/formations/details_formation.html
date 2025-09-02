@@ -70,7 +70,7 @@
                                             <div class="d-flex gap-2">
                                                 <button type="button" id="syncBtn" class="btn btn-primary px-4 py-2" title="Synchroniser les formations avec l'ensemble des instituts">
                                                     <i class='ri-sync-line me-2'></i>Synchroniser
-                                                </button>da
+                                                </button>
                                                 <div id="update-btn-content">
                                                     <button class="btn btn-success px-4 py-2" id="effectuerMiseAjour">
                                                         <i class="ri-refresh-line me-2"></i>Mise à jour
@@ -179,7 +179,7 @@
                                                 <p class="text-muted small mb-0">Documents requis pour l'inscription</p>
                                             </div>
                                         </div>
-                                        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#configDossierModal">
+                                        <button id="secondeBtnConfigDocs" class="btn btn-info btn-sm">
                                             <i class="ri-settings-3-line me-1"></i>Configurer
                                         </button>
                                     </div>
@@ -375,7 +375,6 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="border-0 rounded-start">Document</th>
-                                        <th class="border-0 rounded-end text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="listeDocumentsConfig">
@@ -396,10 +395,51 @@
             </div>
         </div>
 
+        <!-- Modal Confirmation Suppression Document -->
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-lg border-0">
+                    <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-delete-bin-line text-danger fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-semibold text-danger mb-1" id="confirmDeleteModalLabel">Confirmation de suppression</h5>
+                                <p class="text-muted small mb-0">Êtes-vous sûr de vouloir supprimer ce document ?</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="text-center">
+                            <p class="mb-4">Cette action est irréversible. Le document sera définitivement supprimé.</p>
+                            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                <i class="ri-alert-line me-2"></i>
+                                <div>
+                                    Voulez-vous vraiment supprimer ce document ?
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light px-4 py-3">
+                        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                            <i class="ri-close-line me-2"></i>Annuler
+                        </button>
+                        <button type="button" class="btn btn-danger px-4 py-2" id="confirmDeleteBtn">
+                            <i class="ri-delete-bin-line me-2"></i>Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <script>
     $(document).ready(function(){
 
         var code_formation = "{{formation.code}}";
+        // Variable pour stocker l'index du document à supprimer
+        var documentIndexToDelete = null;
 
         function loadSyncState(){
             $.ajax({
@@ -507,29 +547,30 @@
         }
         
         
-        function afficherListeDocuments() {
+        function afficherListeDocuments() { 
             $.ajax({
                 url : "{% url 't_formations:ApiLoadDocuments' %}",
                 dataType: 'JSON',
                 type: 'GET',
                 data : {'code_formation' : code_formation },
                 success : function(data){
-                    var html = '';
-                    if (data.length > 0){
+                    var html = ''; 
+                    if (data.length > 0){ 
                         html += '<div class="vstack gap-3">';
-                        $.each(data, function(index, doc) {
-                            html += '<div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-3">';
-                            html += '<div class="d-flex align-items-center">';
+                        $.each(data, function(index, doc) {  
+                            html += '<div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-3">';  
+                            html += '<div class="d-flex align-items-center">'; 
                             html += '<div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">';
                             html += '<i class="ri-file-line text-info"></i>';
+                            html += '</div>'; 
+                            html += '<span class="fw-medium">' + doc.label + '</span>';
                             html += '</div>';
-                            html += '<span class="fw-medium">' + doc.nom + '</span>';
-                            html += '</div>';
-                            html += '<button class="btn btn-soft-danger btn-sm remove-doc" data-index="' + index + '">';
+                            html += '<button class="btn btn-soft-danger btn-sm remove-doc" data-id='+doc.id+' >';
                             html += '<i class="ri-delete-bin-line"></i>';
                             html += '</button>';
                             html += '</div>';
                         });
+                        html += '</div>';
                     }else{
                         html += '<div class="text-center py-5">';
                         html += '<div class="avatar-lg mx-auto mb-4">';
@@ -538,18 +579,36 @@
                         html += '</div>';
                         html += '</div>';
                         html += '<h5 class="mb-3">Aucun document requis</h5>';
-                        html += '<p class="text-muted mb-4">Aucun document n\'a été configuré pour cette formation.</p>';
-                        html += '<button id="configureDossierBtn" class="btn btn-soft-info px-4 py-2">';
-                        html += '<i class="ri-settings-3-line me-2"></i>Configurer le dossier';
-                        html += '</button>';
-                        html += '</div>';
-                    }
-                     $('#listeDossiers').html(html);
-                }
-            });         
+                        html += '<p class="text-muted mb-4">Aucun document n\'a été configuré pour cette formation.</p>';                        
+                        html += '<button id="configureDossierBtn" class="btn btn-soft-info px-4 py-2">';                        
+                        html += '<i class="ri-settings-3-line me-2"></i>Configurer le dossier';                        
+                        html += '</button>';                        
+                        html += '</div>';                    
+                    }                     
+                    $('#listeDossiers').html(html);}
+            });
         }
 
         afficherListeDocuments();
+
+        function DeleteDocs(id_doc){
+            $.ajax({
+                url :"{% url 't_formations:ApiDeleteDoc' %}",
+                dataType: "JSON",
+                type : 'POST',
+                data : {'id_doc' : id_doc,'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                success : function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        afficherListeDocuments();
+                        mettreAJourListeDocumentsConfig();
+                        $('#confirmDeleteModal').modal('hide');
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        }
 
         $(document).on('click', '#ajouterDocument', function() {
             var nomDoc = $('#nomDocument').val();
@@ -580,50 +639,67 @@
         
         function mettreAJourListeDocumentsConfig() {
             $.ajax({
-                url : "{% url 't_formations:ApiLoadDocuments' %}",
-                dataType: 'JSON',
-                type: 'GET',
-                data : {'code_formation' : code_formation },
-                success : function(data){
-                    var html = '';
-                    if (data.length > 0){
-                        html += '<div class="vstack gap-3">';
-                        $.each(data, function(index, doc) {
-                             html += '<tr>';
-                        html += '<td colspan="2">';
-                        html += '<p class="text-muted mb-4 text-center">Aucun document n\'a été configuré</p>';
-                        html += '</td>';
-                        html += '</tr>';
-                        });
-                    }else{
-                        html += '<tr>';
-                        html += '<td colspan="2">';
-                        html += '<p class="text-muted mb-4 text-center">Aucun document n\'a été configuré</p>';
-                        html += '</td>';
-                        html += '</tr>';
-                    }
-                     $('#listeDocumentsConfig').html(html);
-                }
-            });         
-        };
+                url : "{% url 't_formations:ApiLoadDocuments' %}", 
+                dataType: 'JSON',                
+                type: 'GET',                
+                data : {'code_formation' : code_formation },                
+                success : function(data){                    
+                    var html = '';                    
+                    if (data.length > 0){                        
+                        html += '<div class="vstack gap-3">';                        
+                            $.each(data, function(index, doc) {                            
+                                html += '<div class="d-flex justify-content-between align-items-center bg-light rounded-3 p-3">';                            
+                                html += '<div class="d-flex align-items-center">';                            
+                                html += '<div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">';                            
+                                html += '<i class="ri-file-line text-info"></i>';                            
+                                html += '</div>';                           
+                                html += '<span class="fw-medium">' + doc.label + '</span>';                            
+                                html += '</div>';                           
+                                html += '<button class="btn btn-soft-danger btn-sm remove-doc-config">';                            
+                                html += '<i class="ri-delete-bin-line"></i>';                            
+                                html += '</button>';                            
+                                html += '</div>';                        
+                            });                    
+                        }else{                        
+                            html += '<tr>';                        
+                            html += '<td colspan="2">';                        
+                            html += '<p class="text-muted mb-4 text-center">Aucun document n\'a été configuré</p>';                        
+                            html += '</td>';                        
+                            html += '</tr>';                    
+                        }                     
+                        $('#listeDocumentsConfig').html(html);                
+                    }            
+                });                 
+            };
 
         $(document).on('click', '#configureDossierBtn', function(){
             $('#configDossierModal').modal('show');
             mettreAJourListeDocumentsConfig();
         });
 
-        
-        $(document).on('click', '.remove-doc-config', function() {
-            var index = $(this).data('index');
-            documentsConfig.splice(index, 1);
+        $(document).on('click', '#secondeBtnConfigDocs', function(){
+            $('#configDossierModal').modal('show');
             mettreAJourListeDocumentsConfig();
         });
 
+        
+        $(document).on('click', '.remove-doc-config', function() {
+            documentIndexToDelete = $(this).data('index');
+            $('#confirmDeleteModal').modal('show');
+        });
+
+        // Variable pour stocker l'index du document à supprimer
+        var documentIndexToDelete = null;
+
         $(document).on('click', '.remove-doc', function() {
-            var index = $(this).data('index');
-            documentsConfig.splice(index, 1);
-            afficherListeDocuments();
-            mettreAJourListeDocumentsConfig();
+            documentIndexToDelete = $(this).data('id');
+            $('#confirmDeleteBtn').data('id', documentIndexToDelete);
+            $('#confirmDeleteModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmDeleteBtn', function() {
+            DeleteDocs($(this).data('id'));
+            
         });
 
         $(document).on('click', '#enregistrerDossierBtn', function() {

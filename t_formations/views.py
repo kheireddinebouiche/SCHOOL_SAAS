@@ -736,5 +736,16 @@ def ApiAddDocument(request):
 
     return JsonResponse({"status" : "success","message" : "Le document à été ajouter avec succès"})
 
+@login_required(login_url="institu_app:login")
+@transaction.atomic
+def ApiDeleteDoc(request):
+    id_doc = request.POST.get('id_doc')
+    if id_doc:
+        obj = DossierInscription.objects.get(id = id_doc)
+        obj.delete()
+        return JsonResponse({'status' : 'success', 'message' : 'Document supprimer avec succès' })
+    else:
+        return JsonResponse({'status' : 'error', 'message' : 'Une erreur est survenue lors du traitement de la requete' })
+
     
 

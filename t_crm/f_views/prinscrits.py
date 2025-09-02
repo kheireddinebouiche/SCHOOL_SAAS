@@ -67,7 +67,6 @@ def ApiLoadNotePr(request):
         l['tage'] = l_obj.get_tage_display()
     return JsonResponse(list(notes), safe=False)
 
-
 @login_required(login_url='intitut_app:login')
 def ApiCheckHasCompletedProfile(request):
     id_preinscrit = request.GET.get('id_preinscrit')
@@ -131,3 +130,60 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.save()
 
     return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mis à jours avec succès"})
+
+@login_required(login_url='institut_app:login')
+def ApiLoadRequiredDocs(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+
+    specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
+    formation_id = specialites.specialite.formation.id
+
+    files = DossierInscription.objects.filter(formation = formation_id).values('id','label','is_required')
+    return JsonResponse(list(files), safe=False)
+
+@login_required(login_url='institut_app:login')
+def add_document(request):
+    if request.method == "POST":
+        try:
+            name = request.POST.get("name")
+            doc_type = request.POST.get("type")
+            file = request.FILES.get("file")
+            id_prospect = request.POST.get('id_prospect')
+
+            if not name or not doc_type or not file:
+                return JsonResponse({"success": False, "error": "Champs manquants"})
+
+            document = DocumentsDemandeInscription.objects.create(
+                id_document=DossierInscription.objects.get(id=doc_type),
+                file=file,
+                prospect = Prospets.objects.get(id = id_prospect),
+                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect)
+            )
+
+            return JsonResponse({"success": True, "id": document.id})
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    
+    return JsonResponse({"success": False, "error": "Méthode non autorisée"})
+
+@login_required(login_url='institut_app:login')
+def LoadPresinscritDocs(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+    
+    docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_preinscrit))
+    data = [{
+        "id": doc.id,
+        "label": doc.label,
+        "id_document__label": doc.id_document.label if doc.id_document else "",
+        "created_at": doc.created_at.strftime("%d/%m/%Y %H:%M"),
+        "file": doc.file.url if doc.file else "",
+    } for doc in docs]
+
+    return JsonResponse(data, safe=False)
+
+
+
+@login_required(login_url='intitut_app:login')
+def DeleteDocumentPreinscrit(request):
+    pass

@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
 from t_formations.models import DossierInscription
-
+from .tenant_path import *
 
 class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
@@ -57,12 +57,13 @@ class Prospets(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}"
 
-
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
 
     commentaire = models.CharField(max_length=1000, null=True, blank=True)
+
+    is_confirmed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -161,10 +162,15 @@ class DemandeInscription(models.Model):
 
 class DocumentsDemandeInscription(models.Model):
     demande_inscription = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
+    fiche_voeux = models.ForeignKey(FicheDeVoeux, blank=True, null=True, on_delete=models.CASCADE)
+    prospect = models.ForeignKey(Prospets, null=True, blank=True, on_delete=models.CASCADE)
     id_document = models.ForeignKey(DossierInscription, on_delete=models.CASCADE, null=True, blank=True)
-    file = models.FileField(upload_to='documents_demande_inscription/dossiers/', null=True, blank=True)
-   
+    file = models.FileField(upload_to=tenant_directory_path, null=True, blank=True)
+    label = models.CharField(max_length=100, null=True, blank=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+   
     class Meta:
         verbose_name="Documents de la demande d'inscription"
         verbose_name_plural = "Documents de la demande d'inscription"

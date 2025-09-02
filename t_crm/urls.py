@@ -88,6 +88,10 @@ urlpatterns = [
     path('ApiCheckHasCompletedProfile', ApiCheckHasCompletedProfile, name="ApiCheckHasCompletedProfile"),
     path('ApiCheckCompletedDoc', ApiCheckCompletedDoc, name="ApiCheckCompletedDoc"),
     path('ApiUpdatePreinscritInfos', ApiUpdatePreinscritInfos, name="ApiUpdatePreinscritInfos"),
+    path('ApiLoadRequiredDocs', ApiLoadRequiredDocs, name="ApiLoadRequiredDocs"),
+    path('add_document', add_document, name="add_document"),
+    path('LoadPresinscritDocs', LoadPresinscritDocs, name="LoadPresinscritDocs"),
+    path("DeleteDocumentPreinscrit",DeleteDocumentPreinscrit,name="DeleteDocumentPreinscrit"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]

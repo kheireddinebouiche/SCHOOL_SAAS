@@ -62,5 +62,6 @@ urlpatterns = [
 
     path('ApiLoadDocuments', ApiLoadDocuments , name="ApiLoadDocuments"),
     path('ApiAddDocument', ApiAddDocument, name="ApiAddDocument"),
+    path('ApiDeleteDoc', ApiDeleteDoc, name="ApiDeleteDoc"),
 
 ]
