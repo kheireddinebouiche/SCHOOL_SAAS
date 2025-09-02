@@ -150,6 +150,15 @@ def add_document(request):
             file = request.FILES.get("file")
             id_prospect = request.POST.get('id_prospect')
 
+            check_aleardy_existe = DocumentsDemandeInscription.objects.get(
+                prospect__id = id_prospect, 
+                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
+                id_document__id=doc_type
+            )
+            
+            if check_aleardy_existe:
+                return JsonResponse({'success' : False, "error" : "Document déja présent !"})
+
             if not name or not doc_type or not file:
                 return JsonResponse({"success": False, "error": "Champs manquants"})
 
