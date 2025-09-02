@@ -8,6 +8,7 @@ from .tenant_path import *
 class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True)
+    photo = models.ImageField(upload_to=tenant_directory_path_for_image, null=True, blank=True)
     
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
