@@ -92,6 +92,7 @@ urlpatterns = [
     path('add_document', add_document, name="add_document"),
     path('LoadPresinscritDocs', LoadPresinscritDocs, name="LoadPresinscritDocs"),
     path("DeleteDocumentPreinscrit",DeleteDocumentPreinscrit,name="DeleteDocumentPreinscrit"),
+    path('ApiStoreNotePreinscrit', ApiStoreNotePreinscrit, name="ApiStoreNotePreinscrit"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]

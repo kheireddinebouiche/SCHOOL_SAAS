@@ -65,7 +65,8 @@ class EntrepriseForm(forms.ModelForm):
             'pays' : "Pays :",
             'email' : "Email :",
             'site_web' : "Site WEB :",
-            'entete' : "Entête :"
+            'entete' : "Entête :",
+            'logo' : "Logo :"
         }
 
         widgets = {
@@ -81,6 +82,7 @@ class EntrepriseForm(forms.ModelForm):
             'pays' : forms.Select(attrs={'class':'form-control'}),
             'email' : forms.EmailInput(attrs={'class':'form-control'}),
             'site_web' : forms.URLInput(attrs={'class':'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 class CustomGroupForm(forms.ModelForm):

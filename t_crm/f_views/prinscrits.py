@@ -229,3 +229,23 @@ def check_all_required_docs(request):
     if missing_docs.exists():
         return False, list(missing_docs.values_list("label", flat=True))
     return True, []
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiStoreNotePreinscrit(request):
+    id_prospect = request.POST.get('id_prospect')
+    content = request.POST.get('content')
+    tags = request.POST.get('tags')
+
+    if not content:
+        return JsonResponse({'status': 'error', 'message': 'Le contenu de la note est requis.'}, status=400)
+
+    note = NotesProcpects.objects.create(
+        prospect=Prospets.objects.get(id=id_prospect),
+        created_by=request.user,
+        note=content,
+        tage = tags,
+        context = "prinscrit",
+    )
+    note.save()
+    return JsonResponse({'status': 'success', 'message': 'Note enregistrée avec succès.'})

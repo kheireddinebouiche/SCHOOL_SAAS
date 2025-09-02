@@ -85,11 +85,11 @@ def register(request):
 def NewEntreprise(request):
     form = EntrepriseForm()
     if request.method == 'POST':
-        form = EntrepriseForm(request.POST)
+        form = EntrepriseForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, 'Entreprise créée avec succès')
-            return redirect('institut_app:index')
+            return redirect('institut_app:liste_entreprise')
     
     context = {
         'form' : form,

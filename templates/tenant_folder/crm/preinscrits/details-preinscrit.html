@@ -1969,15 +1969,35 @@
         });
 
         $(document).on('click', '#saveNoteBtn', function(){
-            var content = $('#content_note').val();
-            if (content === ""){
-                alert("Le contenu de la note ne peut pas être vide.");
-                return;
-            }
-            // Simulation d'enregistrement d'une note
-            $('#addNoteModal').modal('hide');
-            $('#content_note').val('');
-            alertify.success("Note enregistrée avec succès");
+            var type = $('#reminderType').val();
+            var subject = $('#reminderSubject').val();
+            var date = $('#reminderDate').val();
+            var time = $('#reminderTime').val();
+            var description = $('#reminderDescription').val();
+
+            $.ajax({
+                url: "{% url 't_crm:ApiStoreRappel' %}",
+                dataType: 'JSON',
+                type: 'POST',
+                data: {
+                    'type': type,
+                    'subject': subject,
+                    'date': date,
+                    'time': time,
+                    'description': description,
+                    'id_prospect' : id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        $('#addReminderModal').modal('hide');
+                        loadRappelRendezVous();
+                        alertify.success(data.message);
+                    } else {
+                        alertify.error(data.message);
+                    }
+                }
+            });
         });
 
         $(document).on('click', '#validatePreinscritBtn', function(){

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from app.models import Institut
 from django_countries.fields import CountryField
+from t_crm.tenant_path import *
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -49,6 +50,7 @@ class Roles(models.Model):
 class Entreprise(models.Model):
     tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
     designation = models.CharField(max_length=255, null=True, blank=True)
+    logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
 
     rc = models.CharField(max_length=255, null=True, blank=True)
     nif = models.CharField(max_length=255, null=True, blank=True)
