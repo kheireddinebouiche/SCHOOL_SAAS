@@ -1,9 +1,6 @@
 {% extends "tenant_folder/base.html" %}
-
 {% load static %}
-
 {% block title %}Détails du pré-inscrit {% endblock title %}
-
 {% block content %}
 
 <div class="main-content">
@@ -362,6 +359,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
         <!-- container-fluid -->
     </div>
@@ -1530,6 +1528,16 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
+                <div class="alert alert-info d-flex align-items-center rounded-3 mb-4">
+                    <div class="flex-shrink-0 me-2">
+                        <i class="ri-information-line fs-5"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-0">
+                            <strong>Restrictions :</strong> Les fichiers ne doivent pas dépasser 400 Ko et seuls les fichiers PDF et JPEG sont autorisés.
+                        </p>
+                    </div>
+                </div>
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-medium">Nom du document</label>
@@ -1848,29 +1856,32 @@
                     'id_preinscrit' : id,
                 },
                 success : function(data){
-
                     var row = "";
-                    $.each(data, function(index, item){
-                        row += "<tr>";
-                            row +="<td>"+item.label+"</td>";
-                            row +="<td>"+item.id_document__label+"</td>";
-                            row +="<td>"+item.created_at+"</td>";
-                            row +="<td class='text-end'>";
-                                row +="<div class='d-flex justify-content-end gap-2'>";
-                                    row +="<button data-url='"+item.file+"' class='btn btn-soft-info btn-sm view-doc' title='Voir'>";
-                                        row +="<i class='ri-eye-line'></i>";
-                                    row +="</button>";
-                                    row +="<button class='btn btn-soft-success btn-sm download-doc' data-url='"+item.file+"' title='Télécharger'>";
-                                        row +="<i class='ri-download-line'></i>";
-                                    row +="</button>";
-                                    row +="<button class='btn btn-soft-danger btn-sm delete-doc' data-id='"+item.id+"' title='Supprimer'>";
-                                        row +="<i class='ri-delete-bin-line'></i>";
-                                    row +="</button>";
-                                row +="</div>";
-                            row +="</td>";
+                    if(data.length > 0){
+                        $.each(data, function(index, item){
+                            row += "<tr>";
+                                row +="<td>"+item.label+"</td>";
+                                row +="<td>"+item.id_document__label+"</td>";
+                                row +="<td>"+item.created_at+"</td>";
+                                row +="<td class='text-end'>";
+                                    row +="<div class='d-flex justify-content-end gap-2'>";
+                                        row +="<button data-url='"+item.file+"' class='btn btn-soft-info btn-sm view-doc' title='Voir'>";
+                                            row +="<i class='ri-eye-line'></i>";
+                                        row +="</button>";
+                                        row +="<button class='btn btn-soft-success btn-sm download-doc' data-url='"+item.file+"' title='Télécharger'>";
+                                            row +="<i class='ri-download-line'></i>";
+                                        row +="</button>";
+                                        row +="<button class='btn btn-soft-danger btn-sm delete-doc' data-id='"+item.id+"' title='Supprimer'>";
+                                            row +="<i class='ri-delete-bin-line'></i>";
+                                        row +="</button>";
+                                    row +="</div>";
+                                row +="</td>";
 
-                        row += "</tr>";
-                    });
+                            row += "</tr>";
+                        });
+                    }else{
+                        var row = "<tr><td colspan='4' class='text-muted text-center'>Aucun document n'a été enregistrer</td></tr>";
+                    }
                     $('#listeDesDocuments').html(row);
                 }
             });
@@ -2010,9 +2021,11 @@
         $(document).on('click', '.delete-doc', function(){
             documentIdToDelete = $(this).data('id');
             $('#deleteDocumentModal').modal('show');
+            $('#confirmDeleteDocumentBtn').data('id', documentIdToDelete);
         });
 
         $(document).on('click', '#confirmDeleteDocumentBtn', function(){
+            var confirmDeleteDocumentBtn = $(this).data('id')
             if(documentIdToDelete !== null){
                 // Appel AJAX pour supprimer le document
                 $.ajax({

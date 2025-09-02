@@ -182,8 +182,11 @@ def LoadPresinscritDocs(request):
 
     return JsonResponse(data, safe=False)
 
-
-
 @login_required(login_url='intitut_app:login')
 def DeleteDocumentPreinscrit(request):
-    pass
+    id_document = request.POST.get('id_document')
+    obj = DocumentsDemandeInscription.objects.get(id = id_document)
+
+    obj.delete()
+
+    return JsonResponse({'status' : "success",'message' : "La suppression a été effectuer avec succès"})
