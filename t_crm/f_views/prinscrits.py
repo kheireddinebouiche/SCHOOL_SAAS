@@ -149,28 +149,26 @@ def add_document(request):
             doc_type = request.POST.get("type")
             file = request.FILES.get("file")
             id_prospect = request.POST.get('id_prospect')
-
-            check_aleardy_existe = DocumentsDemandeInscription.objects.get(
-                prospect__id = id_prospect, 
-                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
-                id_document__id=doc_type
-            )
-            
-            if check_aleardy_existe:
+            try :
+                check_aleardy_existe = DocumentsDemandeInscription.objects.get(
+                    prospect__id = id_prospect, 
+                    fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
+                    id_document__id=doc_type
+                )
                 return JsonResponse({'success' : False, "error" : "Document déja présent !"})
+            except:
+                if not name or not doc_type or not file:
+                    return JsonResponse({"success": False, "error": "Champs manquants"})
 
-            if not name or not doc_type or not file:
-                return JsonResponse({"success": False, "error": "Champs manquants"})
+                document = DocumentsDemandeInscription.objects.create(
+                    id_document=DossierInscription.objects.get(id=doc_type),
+                    file=file,
+                    prospect = Prospets.objects.get(id = id_prospect),
+                    fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
+                    label = name,
+                )
 
-            document = DocumentsDemandeInscription.objects.create(
-                id_document=DossierInscription.objects.get(id=doc_type),
-                file=file,
-                prospect = Prospets.objects.get(id = id_prospect),
-                fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
-                label = name,
-            )
-
-            return JsonResponse({"success": True, "id": document.id})
+                return JsonResponse({"success": True, "id": document.id})
 
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
@@ -228,6 +226,8 @@ def check_all_required_docs(request):
 
     if missing_docs.exists():
         return False, list(missing_docs.values_list("label", flat=True))
+    
+
     return True, []
 
 @login_required(login_url='institut_app:login')
