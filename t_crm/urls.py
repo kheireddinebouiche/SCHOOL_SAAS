@@ -94,6 +94,7 @@ urlpatterns = [
     path("DeleteDocumentPreinscrit",DeleteDocumentPreinscrit,name="DeleteDocumentPreinscrit"),
     path('ApiStoreNotePreinscrit', ApiStoreNotePreinscrit, name="ApiStoreNotePreinscrit"),
     path('check_all_required_docs', check_all_required_docs, name="check_all_required_docs"),
+    path('ApiStoreRappelPreinscrit', ApiStoreRappelPreinscrit, name="ApiStoreRappelPreinscrit"),
     ################################################### Gestion des pre inscrits ##########################################################
    
 ]

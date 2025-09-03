@@ -257,3 +257,30 @@ def ApiStoreNotePreinscrit(request):
     )
     note.save()
     return JsonResponse({'status': 'success', 'message': 'Note enregistrée avec succès.'})
+
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiStoreRappelPreinscrit(request):
+    type = request.POST.get('type')
+    subject = request.POST.get('subject')
+    date = request.POST.get('date')
+    time = request.POST.get('time')
+    description = request.POST.get('description')
+    id_prospect = request.POST.get('id_prospect')
+
+    if not all([type, subject, date, time, description, id_prospect]):
+        return JsonResponse({'status': 'error', 'message': 'Tous les champs sont requis.'})
+
+    rappel = RendezVous.objects.create(
+        type=type,
+        object=subject,
+        date_rendez_vous=date,
+        heure_rendez_vous=time,
+        description=description,
+        prospect=Prospets.objects.get(id=id_prospect),
+        created_by=request.user,
+        context = "prinscrit",
+    )
+    rappel.save()
+    return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
