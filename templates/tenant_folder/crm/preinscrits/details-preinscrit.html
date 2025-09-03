@@ -77,6 +77,11 @@
                             <h5 class="alert-heading mb-1">Dossier incomplet</h5>
                             <p class="mb-0">Certaines informations obligatoires sont manquantes. Veuillez compléter le dossier pour continuer.</p>
                         </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-danger px-4 py-2" data-bs-toggle="modal" data-bs-target="#missingDocumentsModal">
+                                <i class="ri-file-list-line me-2"></i>Voir les documents manquants
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1632,6 +1637,67 @@
   </div>
 </div>
 
+<!-- Modal Documents Manquants -->
+<div class="modal fade" id="missingDocumentsModal" tabindex="-1" aria-labelledby="missingDocumentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-list-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="missingDocumentsModalLabel">
+                            Documents manquants
+                        </h5>
+                        <p class="text-muted small mb-0">Liste des documents obligatoires non fournis</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info d-flex align-items-center rounded-3 mb-4">
+                    <div class="flex-shrink-0 me-2">
+                        <i class="ri-information-line fs-5"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-0">
+                            Veuillez fournir tous les documents ci-dessous pour compléter le dossier du pré-inscrit.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 rounded-start">Document requis</th>
+                                <th class="border-0 rounded-end text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="missingDocumentsList">
+                            <!-- Les documents manquants seront chargés ici dynamiquement -->
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    Chargement des documents manquants...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+                <button type="button" class="btn btn-danger px-4 py-2" id="refreshMissingDocsBtn">
+                    <i class="ri-refresh-line me-2"></i>Actualiser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
@@ -2475,6 +2541,68 @@
             $("#previewDocumentModal").modal("show");
         });
 
+        // Fonction pour charger les documents manquants
+        function loadMissingDocuments() {
+            $.ajax({
+                url: "{% url 't_crm:check_all_required_docs' %}",
+                dataType: "JSON",
+                type: 'GET',
+                data: {'id_prospect': id},
+                success: function(data) {
+                    var html = "";
+                    
+                    if (data.missing_docs && data.missing_docs.length > 0) {
+                        $.each(data.missing_docs, function(index, doc) {
+                            html += "<tr>";
+                            html += "<td>" + doc.label + "</td>";
+                            html += "<td class='text-center'>";
+                            html += "<button class='btn btn-sm btn-primary add-missing-doc' data-doc-id='" + doc.id + "'>";
+                            html += "<i class='ri-add-line me-1'></i>Ajouter";
+                            html += "</button>";
+                            html += "</td>";
+                            html += "</tr>";
+                        });
+                    } else {
+                        html += "<tr>";
+                        html += "<td colspan='2' class='text-center text-success'>";
+                        html += "<i class='ri-checkbox-circle-line fs-4 me-2'></i>";
+                        html += "Tous les documents requis ont été fournis";
+                        html += "</td>";
+                        html += "</tr>";
+                    }
+                    
+                    $('#missingDocumentsList').html(html);
+                },
+                error: function() {
+                    $('#missingDocumentsList').html(
+                        "<tr><td colspan='2' class='text-center text-danger'>Erreur lors du chargement des documents</td></tr>"
+                    );
+                }
+            });
+        }
+
+        // Charger les documents manquants quand la modale s'ouvre
+        $('#missingDocumentsModal').on('shown.bs.modal', function () {
+            loadMissingDocuments();
+        });
+
+        // Rafraîchir la liste des documents manquants
+        $(document).on('click', '#refreshMissingDocsBtn', function() {
+            loadMissingDocuments();
+        });
+
+        // Gestion du clic sur "Ajouter un document"
+        $(document).on('click', '.add-missing-doc', function() {
+            var docId = $(this).data('doc-id');
+            // Charger les types de documents dans la modale d'ajout
+            loadSelectDocuement();
+            // Sélectionner automatiquement le document concerné
+            $('#documentType').val(docId);
+            // Fermer la modale des documents manquants
+            $('#missingDocumentsModal').modal('hide');
+            // Ouvrir la modale d'ajout de document
+            $('#addDocumentModal').modal('show');
+        });
 
 
     });

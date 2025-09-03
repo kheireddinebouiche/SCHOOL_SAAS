@@ -150,7 +150,7 @@ def add_document(request):
             file = request.FILES.get("file")
             id_prospect = request.POST.get('id_prospect')
             try :
-                check_aleardy_existe = DocumentsDemandeInscription.objects.get(
+                DocumentsDemandeInscription.objects.get(
                     prospect__id = id_prospect, 
                     fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
                     id_document__id=doc_type
@@ -199,36 +199,44 @@ def DeleteDocumentPreinscrit(request):
 
     return JsonResponse({'status' : "success",'message' : "La suppression a été effectuer avec succès"})
 
+@login_required(login_url="institut_app:login")
 def check_all_required_docs(request):
     prospect_id = request.GET.get("id_prospect")
     try:
         fiche_voeux = FicheDeVoeux.objects.get(prospect_id=prospect_id)
         formation = fiche_voeux.specialite.formation
     except FicheDeVoeux.DoesNotExist:
-        return False, []
+        return JsonResponse({
+            "success": False,
+            "missing_docs": [],
+            "error": "Aucune fiche de vœux trouvée pour ce prospect"
+        })
 
-    # Tous les documents obligatoires de la formation
     required_docs = DossierInscription.objects.filter(
         formation=formation,
         is_required=True
     )
 
-    # Documents déjà fournis par le prospect
     provided_docs = DocumentsDemandeInscription.objects.filter(
         prospect_id=prospect_id,
         id_document__in=required_docs
     ).exclude(file="")
 
-    # Vérification
     missing_docs = required_docs.exclude(
         id__in=provided_docs.values_list("id_document_id", flat=True)
     )
 
     if missing_docs.exists():
-        return False, list(missing_docs.values_list("label", flat=True))
-    
+        return JsonResponse({
+            "success": False,
+            #"missing_docs": list(missing_docs.values_list("label", flat=True))
+            "missing_docs": list(missing_docs.values("id", "label"))
+        })
 
-    return True, []
+    return JsonResponse({
+        "success": True,
+        "missing_docs": []
+    })
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
