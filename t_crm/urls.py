@@ -39,7 +39,7 @@ urlpatterns = [
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
     path('details-prospect/<int:pk>/', DetailsProspect, name="DetailsProspect"),
 
-    path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
+    #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
     path('ApiLoadProspectDetails', ApiLoadProspectDetails, name="ApiLoadProspectDetails"),
     path('ApiUpdatePropectDetails', ApiUpdatePropectDetails, name="ApiUpdatePropectDetails"),
     path('ApiUpdateProspectEtsDetails', ApiUpdateProspectEtsDetails, name="ApiUpdateProspectEtsDetails"),
@@ -78,7 +78,7 @@ urlpatterns = [
     path('ApiLoadFormationAndSpecialite', ApiLoadFormationAndSpecialite, name="ApiLoadFormationAndSpecialite"),
 
     path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
-    path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
+    #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
     path('ApiLoadSpecialiteProspect', ApiLoadSpecialiteProspect, name="ApiLoadSpecialiteProspect"),
     path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
 
