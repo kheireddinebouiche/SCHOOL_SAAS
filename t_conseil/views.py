@@ -112,6 +112,8 @@ def ApiActivateThematique(request):
     thematique.save()
     return JsonResponse({'status': 'success', 'message': 'Thématique activée avec succès.'})
 
-
 def make_prospect_client(request):
+    pass
+
+def ApiUpdateThematique(request):
     pass

@@ -22,5 +22,7 @@ urlpatterns = [
   path('ApiLoadArchivedThematique', ApiLoadArchivedThematique, name="ApiLoadArchivedThematique"),
   path('ApiArchiveThematique', ApiArchiveThematique, name="ApiArchiveThematique"),
   path('ApiActivateThematique', ApiActivateThematique, name="ApiActivateThematique"),
+  path('ApiUpdateThematique', ApiUpdateThematique, name="ApiUpdateThematique"),
+  
    
 ]
