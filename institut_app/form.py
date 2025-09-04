@@ -51,7 +51,6 @@ class EntrepriseForm(forms.ModelForm):
     class Meta:
         model = Entreprise
         fields = "__all__"
-        exclude = ['tenant']
 
         labels = {
             'designation' : "Désignation :",

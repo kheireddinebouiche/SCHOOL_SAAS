@@ -54,7 +54,7 @@ class Roles(models.Model):
         return self.label
 
 class Entreprise(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+   
     designation = models.CharField(max_length=255, null=True, blank=True)
     logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
 
@@ -83,7 +83,7 @@ class Entreprise(models.Model):
         return self.designation
 
 class BankAccount(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+   
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
     label = models.CharField(max_length=255, null=True, blank=True)
     num = models.CharField(max_length=255, null=True, blank=True)
@@ -100,7 +100,7 @@ class BankAccount(models.Model):
         return self.label
 
 class Settings(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+    
     
     class Meta:
         verbose_name="Paramètre"

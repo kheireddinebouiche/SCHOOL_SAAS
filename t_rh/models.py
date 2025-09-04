@@ -5,7 +5,7 @@ from institut_app.models import *
 
 
 class Employees(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+    
     nom = models.CharField(max_length=255, null=True, blank=True)
     prenom = models.CharField(max_length=255, null=True, blank=True)
     civilite = models.CharField(max_length=100, null=True, blank=True, choices=[('mr','Mr.'),('mme','Mme'),('mlle','Mlle')])
@@ -92,7 +92,7 @@ class TachesPoste(models.Model):
         return self.label
 
 class Conges(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
+    
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
 
     date_debut = models.DateField()
@@ -111,7 +111,6 @@ class Conges(models.Model):
         return f"{self.employee.nom} {self.employee.prenom}"
     
 class Paie(models.Model):
-    tenant = models.ForeignKey(Institut, on_delete=models.CASCADE, null=True, blank=True)
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
 
     salaire = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)

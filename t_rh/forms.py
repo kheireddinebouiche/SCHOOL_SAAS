@@ -5,7 +5,7 @@ class NouveauEmploye(forms.ModelForm):
     class Meta:
         model = Employees
         fields = '__all__'
-        exclude = ['has_contract','tenant','created_by','updated_by','created_at','updated_at']
+        exclude = ['has_contract','created_by','updated_by','created_at','updated_at']
         widgets = {
             'civilite' : forms.Select(attrs={'class' : 'form-control'}),
             'nom' : forms.TextInput(attrs={'class' : 'form-control'}),
