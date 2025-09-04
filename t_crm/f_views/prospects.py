@@ -271,7 +271,7 @@ def ApiLoadFormation(request):
     return JsonResponse({'formation':formation_liste})
 
 @login_required(login_url="institut_app:login")
-def ApiLoadSpecialite(request):
+def ApiLoadSpecialiteProspect(request):
     id_formation = request.GET.get('id_formation')
     formation = Formation.objects.get(id = id_formation)
     obj = Specialites.objects.filter(formation__code = formation.code)
@@ -280,7 +280,8 @@ def ApiLoadSpecialite(request):
     for i in obj:
         data.append({
             "id" : i.id,
-            "label" : i.label
+            "label" : i.label,
+            "code" : i.code,
         })
 
     return JsonResponse({'specialite' : data}, safe=False)

@@ -416,7 +416,6 @@ def ApiFilterProspect(request):
 
     return JsonResponse(list(prospects), safe=False)
 
-@login_required(login_url='institut_app:login')
 def ApiLoadFormation(request):
     liste = Formation.objects.all().values('id','nom','code')
     return JsonResponse(list(liste), safe=False) 
