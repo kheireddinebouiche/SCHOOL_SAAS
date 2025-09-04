@@ -5,6 +5,7 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
 from two_factor.urls import urlpatterns as tf_urls
+from .f_views.entreprise import *
 
 app_name="institut_app"
 
@@ -23,7 +24,7 @@ urlpatterns = [
     path('details-entreprise/<int:pk>/', detailsEntreprise, name="details_entreprise"),
     path('liste-des-entreprise/', ListeEntreprises, name="liste_entreprise"),
     path('modification-entreprise/<int:id>/', ModifierEntreprise, name="modifier_entreprise"),
-    path('update-entreprise/', ApiUpdateEntreprise, name="update_entreprise"),
+    #path('update-entreprise/', ApiUpdateEntreprise, name="update_entreprise"),
 
     path('utilisateurs/',UsersListePage, name="UsersListePage"),
     path('ApiListeUsers',ApiListeUsers,name="ApiListeUsers"),
@@ -50,6 +51,10 @@ urlpatterns = [
 
     path('profile/',GetMyProfile, name="profile"),
     path('mise-a-jour-profile/', UpdateMyProfile, name="UpdateProfile"),
+
+
+    path('ApiLoadEntrepriseData', ApiLoadEntrepriseData , name="ApiLoadEntrepriseData"),
+    path('ApiUpdateEntrepriseData', ApiUpdateEntrepriseData , name="ApiUpdateEntrepriseData"),
     
     
 

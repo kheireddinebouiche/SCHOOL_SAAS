@@ -45,12 +45,6 @@ def Index(request):
         }
         return render(request, 'tenant_folder/index.html', context)
 
-# def logout_view(request):
-#     logout(request)
-#     messages.success(request,'Vous étes maintenant déconnecter')
-#     return redirect('institut_app:login')
-
-
 def logout_view(request):
     if request.user.is_authenticated:
         try:
@@ -60,23 +54,6 @@ def logout_view(request):
             pass
         logout(request)
     return redirect('institut_app:login')
-
-# def login_view(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#         user = authenticate(request, username=username, password=password)
-
-#         if user is not None:
-#             login(request, user)
-#             messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
-#             return redirect('institut_app:index')  # Redirigez vers une page de votre choix
-#         else:
-#             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
-    
-#     return render(request, 'registration/login.html')
-
-# 
 
 
 def login_view(request):

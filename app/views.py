@@ -9,7 +9,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth import logout, authenticate, login
 
 
-
 @login_required(login_url='login')
 def Index(request):
     
