@@ -6,6 +6,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib import messages
 from django_tenants.utils import schema_context
 from django.contrib.auth.models import User
+from django.contrib.auth import logout, authenticate, login
+
 
 
 @login_required(login_url='login')
@@ -15,7 +17,10 @@ def Index(request):
     # Get the schema name or set it to "Unknown" if no tenant is found
     schema_name = tenant.schema_name if tenant else "Unknown"
 
-    return HttpResponse(f"<h4>Bienvenue sur votre site public {schema_name}</h4>")
+    context = {
+        'tenant' : request.tenant
+    }
+    return render(request, 'public_folder/index.html', context)
 
 def new_tenant(request):
     form = NewTenantForm()
@@ -104,3 +109,26 @@ def CreateSuperUser(request):
             'form' : form,
         }
         return render(request,'public_folder/new_user.html', context)
+    
+def logout_view(request):
+    logout(request)
+    messages.success(request,'Vous étes maintenant déconnecter')
+    return redirect('login')
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
+            return redirect('index') 
+        else:
+            messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+    
+    return render(request, 'registration/login.html')
+
+def profile(request):
+    pass

@@ -5,6 +5,7 @@ from .admin import tenant_admin_site
 from django.contrib.auth.views import LoginView, LogoutView
 
 
+
 app_name="app"
 
 urlpatterns = [
@@ -15,9 +16,13 @@ urlpatterns = [
     path('liste-comptes/', tenant_list, name="tenant_list"),
     
     path('nouveau-utilisateur/', CreateSuperUser, name="CreateSuperUser"),
+    path('login/', login_view, name="login"),
+    path('logout/', logout_view, name="logout"),
+    path('profile', profile, name="profile"),
     
-    path('login/',LoginView.as_view(), name="login"),
-    path('logout/',LogoutView.as_view(), name="logout"),
+    # path('login/',LoginView.as_view(), name="login"),
+    # path('logout/',LogoutView.as_view(), name="logout"),
+
     
 
 ]

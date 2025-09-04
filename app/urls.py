@@ -2,8 +2,8 @@ from django.contrib import admin
 from django.urls import path,include
 from .views import *
 from two_factor.urls import urlpatterns as tf_urls
-
-
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',include('institut_app.urls',namespace='institut_app')),
@@ -15,7 +15,11 @@ urlpatterns = [
     path('scolarite/etudiants/', include('t_etudiants.urls', namespace='t_etudiants')),
     path('examens/', include('t_exam.urls', namespace="t_exam")),
     path('conseil/', include('t_conseil.urls', namespace='t_conseil')),
-    path('', include(tf_urls)),
+    
     
     
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

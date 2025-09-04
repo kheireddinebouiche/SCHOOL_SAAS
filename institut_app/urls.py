@@ -50,7 +50,7 @@ urlpatterns = [
 
     path('profile/',GetMyProfile, name="profile"),
     path('mise-a-jour-profile/', UpdateMyProfile, name="UpdateProfile"),
-    #path("", include(("two_factor.urls", "two_factor"), namespace="two_factor")),
+    
     
 
     
