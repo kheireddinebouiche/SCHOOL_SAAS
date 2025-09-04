@@ -107,7 +107,6 @@ class CustomUpdateGroupForm(forms.ModelForm):
             'description' : forms.TextInput(attrs={"class" : 'form-control'})
         }
 
-
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = Profile

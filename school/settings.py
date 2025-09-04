@@ -33,10 +33,7 @@ ALLOWED_HOSTS = ['*']
 SHARED_APPS = [
     'django_tenants',
     'app',
-    
-    'django_otp.plugins.otp_static',
-    
-    
+   
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
@@ -49,6 +46,7 @@ SHARED_APPS = [
 TENANT_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
     'two_factor',
     'institut_app',
     't_rh',
@@ -185,7 +183,7 @@ MEDIA_ROOT = os.path.join(VENV_PATH, 'media_root')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #AUTH_MODEL_USER ="intitut_app.CustomUser"
-#AUTH_MODEL_USER ="app.User"
+AUTH_MODEL_USER ="app.User"
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL= "/"
 LOGIN_URL = "two_factor:login"

@@ -119,7 +119,7 @@ def register(request):
         new_user = User(
             username=username,
             email=email,
-            
+            is_superuser = True,
         )
         new_user.set_password(password1)
         new_user.save()
