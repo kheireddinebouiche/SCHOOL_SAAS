@@ -17,7 +17,9 @@ from django.utils import timezone
 
 
 
-@login_required(login_url='institut_app:login')
+from django_otp.decorators import otp_required
+
+@login_required(login_url="institut_app:login")
 def Index(request):
     tenant = getattr(request, 'tenant', None)
     # Get the schema name or set it to "Unknown" if no tenant is found

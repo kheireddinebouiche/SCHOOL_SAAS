@@ -89,6 +89,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
+    
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -182,11 +183,16 @@ MEDIA_ROOT = os.path.join(VENV_PATH, 'media_root')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-#AUTH_MODEL_USER ="intitut_app.CustomUser"
 AUTH_MODEL_USER ="app.User"
+
+
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL= "/"
-LOGIN_URL = "two_factor:login"
+
+
+#LOGIN_URL = "two_factor:login"
+#LOGIN_REDIRECT_URL = "institut_app:index"
+#LOGOUT_REDIRECT_URL = "two_factor:login"
 
 from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {

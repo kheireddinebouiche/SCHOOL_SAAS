@@ -1,0 +1,41 @@
+{# templates/two_factor/core/login.html #}
+{% extends "two_factor/_base.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h2 class="auth-header">{% trans "Connexion avec 2FA" %}</h2>
+
+  <form method="post" novalidate class="auth-form">
+    {% csrf_token %}
+
+    {# REQUIRED for the form wizard to work #}
+    {{ wizard.management_form }}
+
+    {# Steps form fields #}
+    {{ form.non_field_errors }}
+    
+    <div class="form-group">
+      {{ form.username.label_tag }}
+      {{ form.username }}
+    </div>
+    
+    <div class="form-group">
+      {{ form.password.label_tag }}
+      {{ form.password }}
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">{% trans "Continuer" %}</button>
+  </form>
+
+  {# Optionnel : lister les autres devices de secours proposés par le login #}
+  {% if other_devices %}
+    <h3>{% trans "Ou utiliser un appareil de secours" %}</h3>
+    <ul class="nav-links">
+      {% for device in other_devices %}
+        <li>
+          <a href="?device={{ device.persistent_id }}">{{ device }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

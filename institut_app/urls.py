@@ -4,7 +4,7 @@ from .views import *
 from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
-
+from two_factor.urls import urlpatterns as tf_urls
 
 app_name="institut_app"
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('register/', register, name="register"),
     path('logout/',logout_view, name="logout"),
     path('blocked/', ShowBlockedConnexion, name="ShowBlockedConnexion"),
+    path('', include(tf_urls, namespace='two_factor')),
     
 
     path('nouvelle-entreprise/', NewEntreprise, name="new_entreprise"),
