@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path,include
 from .views import *
+from two_factor.urls import urlpatterns as tf_urls
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -13,5 +15,7 @@ urlpatterns = [
     path('scolarite/etudiants/', include('t_etudiants.urls', namespace='t_etudiants')),
     path('examens/', include('t_exam.urls', namespace="t_exam")),
     path('conseil/', include('t_conseil.urls', namespace='t_conseil')),
+    path('', include(tf_urls)),
+    
     
 ]

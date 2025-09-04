@@ -11,6 +11,9 @@ from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
 from t_crm.models import Prospets
+from .models import UserSession
+from django.contrib.sessions.models import Session
+from django.utils import timezone
 
 
 
@@ -40,10 +43,39 @@ def Index(request):
         }
         return render(request, 'tenant_folder/index.html', context)
 
+# def logout_view(request):
+#     logout(request)
+#     messages.success(request,'Vous étes maintenant déconnecter')
+#     return redirect('institut_app:login')
+
+
 def logout_view(request):
-    logout(request)
-    messages.success(request,'Vous étes maintenant déconnecter')
+    if request.user.is_authenticated:
+        try:
+            request.user.session_info.last_session_key = None
+            request.user.session_info.save(update_fields=["last_session_key"])
+        except UserSession.DoesNotExist:
+            pass
+        logout(request)
     return redirect('institut_app:login')
+
+# def login_view(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#         user = authenticate(request, username=username, password=password)
+
+#         if user is not None:
+#             login(request, user)
+#             messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
+#             return redirect('institut_app:index')  # Redirigez vers une page de votre choix
+#         else:
+#             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+    
+#     return render(request, 'registration/login.html')
+
+# 
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -52,12 +84,29 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
+            # Vérifier UserSession
+            session_info, _ = UserSession.objects.get_or_create(user=user)
+
+            if session_info.last_session_key:
+                try:
+                    session = Session.objects.get(session_key=session_info.last_session_key)
+                    if session.expire_date > timezone.now():
+                        request.session["allow_blocked_page"] = True
+                        return redirect('institut_app:ShowBlockedConnexion')
+                except Session.DoesNotExist:
+                    pass
+
+            # Nouvelle connexion
             login(request, user)
+            session_info.last_session_key = request.session.session_key
+            session_info.save(update_fields=["last_session_key"])
+
             messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
-            return redirect('institut_app:index')  # Redirigez vers une page de votre choix
+            return redirect('institut_app:index')
+
         else:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
-    
+
     return render(request, 'registration/login.html')
 
 def register(request):
@@ -79,6 +128,14 @@ def register(request):
         return redirect('institut_app:login')
  
     return render(request, 'registration/register.html')
+
+
+def ShowBlockedConnexion(request):
+    if not request.session.get("allow_blocked_page"):
+        return redirect("institut_app:index")  
+    
+    request.session.pop("allow_blocked_page")
+    return render(request, "tenant_folder/blocked_connexion.html")
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -281,6 +338,8 @@ def ApiSaveUser(request):
             return JsonResponse({'success' : True, 'message' : "L'utilisateur à été ajouter avec succès"})
         else:
             return JsonResponse({'success' : False, 'message' : "Erreur de traitement du formulaire"})
+    else:
+        return JsonResponse({"success" : False, 'message' : "Erreur"})
 
 def ApiCheckUsernameDisponibility(request):
     username = request.GET.get('username')

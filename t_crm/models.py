@@ -48,6 +48,7 @@ class Prospets(models.Model):
 
     profile_completed = models.BooleanField(default=False)
     has_completed_doc = models.BooleanField(default=False)
+    has_derogation = models.BooleanField(default = False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

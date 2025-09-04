@@ -33,16 +33,23 @@ ALLOWED_HOSTS = ['*']
 SHARED_APPS = [
     'django_tenants',
     'app',
+    
+    'django_otp.plugins.otp_static',
+    
+    
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'django.contrib.sessions',
-   
+    
 ]
 
 TENANT_APPS = [
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'two_factor',
     'institut_app',
     't_rh',
     't_formations',
@@ -56,6 +63,9 @@ TENANT_APPS = [
     't_groupe',
     't_exam',
     't_conseil',
+
+   
+
     'django_countries',
     'django.contrib.auth',
     'django.contrib.admin',
@@ -63,6 +73,7 @@ TENANT_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'django.contrib.sessions',
+   
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -76,8 +87,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    "django_otp.middleware.OTPMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -171,9 +184,11 @@ MEDIA_ROOT = os.path.join(VENV_PATH, 'media_root')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_MODEL_USER ="app.User"
+#AUTH_MODEL_USER ="intitut_app.CustomUser"
+#AUTH_MODEL_USER ="app.User"
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL= "/"
+LOGIN_URL = "two_factor:login"
 
 from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {

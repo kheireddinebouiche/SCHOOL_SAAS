@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from .views import *
 from django.contrib.auth.views import LoginView
 from django.conf import settings
@@ -15,6 +15,8 @@ urlpatterns = [
     path('login/',login_view, name="login"),
     path('register/', register, name="register"),
     path('logout/',logout_view, name="logout"),
+    path('blocked/', ShowBlockedConnexion, name="ShowBlockedConnexion"),
+    
 
     path('nouvelle-entreprise/', NewEntreprise, name="new_entreprise"),
     path('details-entreprise/<int:pk>/', detailsEntreprise, name="details_entreprise"),
@@ -47,6 +49,8 @@ urlpatterns = [
 
     path('profile/',GetMyProfile, name="profile"),
     path('mise-a-jour-profile/', UpdateMyProfile, name="UpdateProfile"),
+    #path("", include(("two_factor.urls", "two_factor"), namespace="two_factor")),
+    
 
     
 ]

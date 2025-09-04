@@ -3,6 +3,7 @@ from django.urls import path
 from .views import *
 from .f_views.prospects import *
 from .f_views.prinscrits import *
+from .f_views.derogations import *
 
 app_name="t_crm"
 
@@ -96,5 +97,9 @@ urlpatterns = [
     path('check_all_required_docs', check_all_required_docs, name="check_all_required_docs"),
     path('ApiStoreRappelPreinscrit', ApiStoreRappelPreinscrit, name="ApiStoreRappelPreinscrit"),
     ################################################### Gestion des pre inscrits ##########################################################
+    
+    ################################################### Gestion des dérogations ##########################################################
+    path('liste-derogations/', liste_derogations, name="liste_derogations"),
+    ################################################### Gestion des dérogations ##########################################################
    
 ]

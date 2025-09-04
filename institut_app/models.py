@@ -3,6 +3,12 @@ from django.contrib.auth.models import User, Group
 from app.models import Institut
 from django_countries.fields import CountryField
 from t_crm.tenant_path import *
+from django.contrib.auth.models import User
+
+
+class UserSession(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="session_info")
+    last_session_key = models.CharField(max_length=40, null=True, blank=True)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
