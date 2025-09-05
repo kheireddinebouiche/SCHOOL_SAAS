@@ -131,3 +131,9 @@ def login_view(request):
 
 def profile(request):
     pass
+
+def NombreLead(request):
+    return render(request, 'public_folder/marketing/nombres_leads.html')
+
+def socialEngagement(request):
+    return render(request, 'public_folder/marketing/social_engagment.html')

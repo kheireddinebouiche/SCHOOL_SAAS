@@ -302,7 +302,38 @@ def ApiUpdateVoeux(request):
     return JsonResponse({'status' : "success", 'message' : "Fiche de voeux mis a jours avec succès"})
 
 
-    
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdateProspectData(request):
+    nom = request.POST.get('nom')
+    prenom = request.POST.get('prenom')
+    email = request.POST.get('email')
+    telephone = request.POST.get('telephone')
+    observation = request.POST.get('observation')
+    id_prospect = request.POST.get('id_prospect')
 
+    prospect = Prospets.objects.get(id = id_prospect)
 
-    
+    prospect.nom = nom
+    prospect.prenom = prenom
+    prospect.email = email
+    prospect.observation = observation
+    prospect.telephone = telephone
+
+    prospect.save()
+
+    return JsonResponse({'status' : 'success', 'message' : "Les informations du prospect ont été mise à jour"})
+
+@login_required(login_url="institut_app:login")
+def ApiCreateVoeux(request):
+    specialite = request.POST.get('specialite')
+    id_prospect = request.POST.get('id_prospect')
+    comment = request.POST.get('comment')
+
+    FicheDeVoeux.objects.create(
+        prospect = Prospets.objects.get(id = id_prospect),
+        specialite = Specialites.objects.get(id = specialite),
+        commentaire = comment
+    )
+
+    return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrer avec succès"})

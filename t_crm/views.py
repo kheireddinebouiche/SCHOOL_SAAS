@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
+from datetime import datetime, timedelta
 
 
 def listeVisiteurs(request):
@@ -332,12 +333,12 @@ def InscriptionParticulier(request):
 
             voeux_specialite = request.POST.get('voeux_specialite')
 
-            specialite = Specialites.objects.get(id=voeux_specialite)
-            
-            FicheDeVoeux.objects.create(
-                prospect=donnee,
-                specialite=specialite
-            )
+            if voeux_specialite is not None and voeux_specialite != "":
+                specialite = Specialites.objects.get(id=voeux_specialite)
+                FicheDeVoeux.objects.create(
+                    prospect=donnee,
+                    specialite=specialite
+                )
 
             messages.success(request, "Prospect ajouté avec succès")
             return redirect('t_crm:ListeDesProspects')
@@ -378,7 +379,7 @@ def ListeDesProspects(request):
     context = {
         'tenant' : request.tenant,
     }
-    return render(request, 'tenant_folder/crm/liste-des-prospects.html')
+    return render(request, 'tenant_folder/crm/liste-des-prospects.html', context)
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
@@ -416,15 +417,15 @@ def ApiFilterProspect(request):
 
     return JsonResponse(list(prospects), safe=False)
 
-# def ApiLoadFormation(request):
-#     liste = Formation.objects.all().values('id','nom','code')
-#     return JsonResponse(list(liste), safe=False) 
+def ApiLoadFormation(request):
+    liste = Formation.objects.all().values('id','nom','code')
+    return JsonResponse(list(liste), safe=False) 
 
-# @login_required(login_url='institut_app:login')
-# def ApiLoadSpecialite(request):
-#     id_formation = request.GET.get('id_formation')
-#     specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label')
-#     return JsonResponse(list(specialites), safe=False)
+@login_required(login_url='institut_app:login')
+def ApiLoadSpecialite(request):
+    id_formation = request.GET.get('id_formation')
+    specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label')
+    return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
 def DetailsProspect(request, pk):
@@ -446,7 +447,19 @@ def DetailsProspect(request, pk):
 def ApiLoadProspectDetails(request):
     id_prospect = request.GET.get('id_prospect')
     prospect = Prospets.objects.get(id = id_prospect)
+
+   
     fiche_voeux = FicheDeVoeux.objects.filter(prospect = prospect)
+    fiche_voeux_list = []
+    for fiche in fiche_voeux:
+        fiche_voeux_list.append({
+            'id': fiche.id,
+            'specialite_code': fiche.specialite.code,
+            'specialite_label': fiche.specialite.label,
+            'specialite_id' : fiche.specialite.id,
+            'specialite_id_formation': fiche.specialite.formation.id
+        })
+   
 
     data_formation=[]
     formation = Formation.objects.all()
@@ -466,15 +479,7 @@ def ApiLoadProspectDetails(request):
             'label': s.label,
         })
 
-    fiche_voeux_list = []
-    for fiche in fiche_voeux:
-        fiche_voeux_list.append({
-            'id': fiche.id,
-            'specialite_code': fiche.specialite.code,
-            'specialite_label': fiche.specialite.label,
-            'specialite_id' : fiche.specialite.id,
-            'specialite_id_formation': fiche.specialite.formation.id
-        })
+    
     data = {
         'id': prospect.id,
         'nin': prospect.nin,
@@ -544,6 +549,14 @@ def ApiUpdateProspectEtsDetails(request):
 
     return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})
 
+@login_required(login_url="institut_app:login")
+def ApiCheckIfVoeuxExiste(request):
+    id_prospoect = request.GET.get('id_prospect')
+    fiche_voeux  = FicheDeVoeux.objects.filter(prospect = Prospets.objects.get(id=id_prospoect), is_confirmed = False)
 
+    if fiche_voeux:
+        return JsonResponse({'status' : 'success'})
+    else:
+        return JsonResponse({'status' : 'error'})
 
 

@@ -1,0 +1,831 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}CRM - Dossiers Incomplets{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Fix dropdown z-index issue - clean approach */
+  .table .dropdown {
+    position: relative;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+  
+  /* Additional fix for dropdown positioning in tables */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  /* Stats cards */
+  .stats-card {
+    border-left: 4px solid #0d6efd;
+  }
+  .stats-card.warning {
+    border-left-color: #ffc107;
+  }
+  .stats-card.danger {
+    border-left-color: #dc3545;
+  }
+  .stats-card.success {
+    border-left-color: #198754;
+  }
+  
+  /* Status indicators */
+  .status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  .status-incomplet {
+    background-color: #ffc107;
+  }
+  .status-complet {
+    background-color: #198754;
+  }
+  
+  /* Document progress */
+  .progress {
+    height: 8px;
+  }
+  .progress-bar {
+    transition: width 0.6s ease;
+  }
+  
+  /* Card hover effect */
+  .candidate-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+  }
+  .candidate-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    border-left-color: #0d6efd;
+  }
+  
+  /* Missing document badge */
+  .missing-doc-badge {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+              </div>
+              <h4 class="mb-0 text-warning">Dossiers Incomplets</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">CRM</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="{% url 't_crm:ListeDesPrinscrits' %}">Préinscrits</a>
+                  </li>
+                  <li class="breadcrumb-item active">Dossiers incomplets</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm h-100 stats-card warning">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="ri-folder-warning-line text-warning fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 text-muted">Dossiers Incomplets</h5>
+                  <h3 class="mb-0 fw-bold">{{ data|length }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm h-100 stats-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="ri-group-line text-primary fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 text-muted">Particuliers</h5>
+                  <h3 class="mb-0 fw-bold">
+                    {% with individual_count=data|length %}
+                      {{ individual_count }}
+                    {% endwith %}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm h-100 stats-card danger">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="ri-file-close-line text-danger fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 text-muted">Urgent à traiter</h5>
+                  <h3 class="mb-0 fw-bold">3</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm h-100 stats-card success">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="ri-time-line text-success fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 text-muted">À rappeler</h5>
+                  <h3 class="mb-0 fw-bold">7</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-warning me-2"></i>
+                  <h5 class="card-title mb-0 text-warning">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                  
+                  <select id="filter-type" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par type de client</option>
+                    <option value="particulier">Particulier</option>
+                    <option value="entreprise">Entreprise</option>
+                  </select>
+
+                  <select id="date_filter" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par date de création</option>
+                    <option value="-created_at">Date (récent)</option>
+                    <option value="created_at">Date (ancien)</option>
+                  </select>
+                  
+                  <button type="button" class="btn btn-primary rounded-pill" onclick="refreshList()">
+                    <i class="ri-refresh-line me-1"></i> Actualiser
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-body p-3">
+              <div class="alert alert-warning d-flex align-items-center" role="alert">
+                <i class="ri-alert-line fs-4 me-2"></i>
+                <div>
+                  <strong>Attention !</strong> Les dossiers ci-dessous sont incomplets. Veuillez contacter les candidats pour compléter leur documentation.
+                </div>
+              </div>
+              
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Nom & Prénom</th>
+                      <th class="border-0">Entreprise</th>
+                      <th class="border-0">Téléphone</th>
+                      <th class="border-0">Email</th>
+                      <th class="border-0">Type client</th>
+                      <th class="border-0">Détails du dossier</th>
+                      <th class="border-0">Progression</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeItem" class="border-top-0">
+                    {% for item in data %}
+                    <tr class="candidate-card">
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ item.prospect.nom }} {{ item.prospect.prenom }}</h6>
+                            <small class="text-muted">ID: {{ item.prospect.id }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="fw-medium">
+                          {% if item.prospect.entreprise %}
+                            <span class="text-info fw-semibold">{{ item.prospect.entreprise }}</span>
+                          {% else %}
+                            <span class="text-muted">N/A</span>
+                          {% endif %}
+                        </div>
+                      </td>
+                      <td>
+                        <div class="text-body">
+                          <i class="ri-phone-line text-muted me-2"></i> {{ item.prospect.telephone|default:"N/A" }}
+                        </div>
+                      </td>
+                      <td>
+                        <div class="text-body">
+                          <i class="ri-mail-line text-muted me-2"></i> {{ item.prospect.email|default:"N/A" }}
+                        </div>
+                      </td>
+                      <td>
+                        {% if item.prospect.type_prospect == 'particulier' %}
+                          <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                            <i class="ri-user-line me-1"></i> Particulier
+                          </span>
+                        {% else %}
+                          <span class="badge bg-danger-subtle text-danger px-2 py-1">
+                            <i class="ri-building-line me-1"></i> Entreprise
+                          </span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div>
+                          <span class="badge bg-info-subtle text-info px-2 py-1">
+                            <i class="ri-folder-line me-1"></i> Dossier #{{ item.prospect.id }}
+                          </span>
+                          <div class="mt-1">
+                            <span class="badge bg-light text-muted me-1">
+                              <i class="ri-calendar-line me-1"></i> {{ item.prospect.created_at|date:"d/m/Y" }}
+                            </span>
+                            <span class="badge bg-light text-muted">
+                              <i class="ri-time-line me-1"></i> {{ item.prospect.created_at|time:"H:i" }}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            {% if item.progression >= 80 %}
+                              <div class="progress-bar bg-success" role="progressbar" style="width: {{ item.progression }}%"></div>
+                            {% elif item.progression >= 60 %}
+                              <div class="progress-bar bg-warning" role="progressbar" style="width: {{ item.progression }}%"></div>
+                            {% else %}
+                              <div class="progress-bar bg-danger" role="progressbar" style="width: {{ item.progression }}%"></div>
+                            {% endif %}
+                          </div>
+                          <span class="text-muted small">{{ item.progression }}%</span>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <div class="dropdown d-inline-block">
+                          <button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ri-more-2-fill"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                            <li>
+                              <button class="dropdown-item d-flex align-items-center px-3 py-2" onclick="showDossierDetails({{ item.prospect.id }})">
+                                <i class="ri-eye-line text-info me-2"></i>Consulter le dossier
+                              </button>
+                            </li>
+                            <li>
+                              <button class="dropdown-item d-flex align-items-center px-3 py-2" onclick="definirRappel({{ item.prospect.id }})">
+                                <i class="ri-calendar-line text-primary me-2"></i>Définir un rappel
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="8" class="text-center text-muted py-5">
+                        <i class="ri-checkbox-circle-line fs-1 d-block mb-3 text-success"></i>
+                        <h5 class="mb-2">Aucun dossier incomplet trouvé</h5>
+                        <p class="mb-0">Tous les dossiers sont complets. Félicitations !</p>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reminder Modal -->
+<div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-calendar-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="reminderModalLabel">
+              Définir un rappel
+            </h5>
+            <p class="text-muted small mb-0">Planifier un rappel pour ce candidat</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="reminderForm">
+        <input type="hidden" id="prospectId" name="prospect_id">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-medium">Type de rappel</label>
+            <select class="form-select border-0 bg-light" id="reminderType" name="type">
+              <option value="appel">Appel</option>
+              <option value="email">Email</option>
+              <option value="rendez_vous" selected>Rendez-vous</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-medium">Date du rappel</label>
+              <input type="date" class="form-control border-0 bg-light" id="reminderDate" name="date_rendez_vous" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-medium">Heure du rappel</label>
+              <input type="time" class="form-control border-0 bg-light" id="reminderTime" name="heure_rendez_vous" required>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">Objet</label>
+            <input type="text" class="form-control border-0 bg-light" id="reminderObject" name="subject" placeholder="Objet du rappel" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-medium">Description</label>
+            <textarea class="form-control border-0 bg-light" id="reminderDescription" name="description" rows="3" placeholder="Détails du rappel..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light px-4 py-3">
+          <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="submit" class="btn btn-primary px-4 py-2">
+            <i class="ri-calendar-check-line me-2"></i>Enregistrer le rappel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Dossier Details Modal -->
+<div class="modal fade" id="dossierDetailsModal" tabindex="-1" aria-labelledby="dossierDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-folder-info-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="dossierDetailsModalLabel">
+              Détails du dossier
+            </h5>
+            <p class="text-muted small mb-0">Informations complètes sur le dossier incomplet</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row">
+          <div class="col-lg-8">
+            <!-- Informations personnelles -->
+            <div class="card border-0 shadow-sm mb-4">
+              <div class="card-header bg-white border-0 pb-0">
+                <h6 class="card-title text-primary mb-0">
+                  <i class="ri-user-line me-2"></i>Informations personnelles
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="text-muted small mb-1">Nom complet</label>
+                    <div class="fw-medium" id="detailNomComplet">-</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small mb-1">Email</label>
+                    <div class="fw-medium" id="detailEmail">-</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small mb-1">Téléphone</label>
+                    <div class="fw-medium" id="detailTelephone">-</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small mb-1">Type de client</label>
+                    <div class="fw-medium" id="detailTypeClient">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Documents manquants -->
+            <div class="card border-0 shadow-sm mb-4">
+              <div class="card-header bg-white border-0 pb-0">
+                <h6 class="card-title text-warning mb-0">
+                  <i class="ri-file-list-line me-2"></i>Documents manquants
+                </h6>
+              </div>
+              <div class="card-body">
+                <div id="documentsManquantsList">
+                  <div class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status">
+                      <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted">Chargement des documents manquants...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-lg-4">
+            <!-- Statut du dossier -->
+            <div class="card border-0 shadow-sm mb-4">
+              <div class="card-header bg-white border-0 pb-0">
+                <h6 class="card-title text-info mb-0">
+                  <i class="ri-bar-chart-line me-2"></i>Statut du dossier
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="text-center mb-3">
+                  <div class="rounded-circle bg-warning bg-opacity-10 p-3 d-inline-block mb-3">
+                    <i class="ri-folder-warning-line text-warning fs-2"></i>
+                  </div>
+                  <h5 class="mb-1">Dossier incomplet</h5>
+                  <p class="text-muted small mb-0">En attente de documents</p>
+                </div>
+                
+                <div class="progress mb-3" style="height: 10px;">
+                  <div class="progress-bar bg-warning" role="progressbar" style="width: 40%" id="progressBar"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between small">
+                  <span>Progression</span>
+                  <span id="progressText">40%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white border-0 pb-0">
+                <h6 class="card-title text-success mb-0">
+                  <i class="ri-flashlight-line me-2"></i>Actions rapides
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="d-grid gap-2">
+                  <button type="button" class="btn btn-outline-primary" onclick="sendReminderFromModal()">
+                    <i class="ri-calendar-line me-2"></i>Définir un rappel
+                  </button>
+                  <a href="#" class="btn btn-outline-info" id="viewFullDossierLink">
+                    <i class="ri-eye-line me-2"></i>Voir le dossier complet
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simple fix for dropdown positioning
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ensure table responsive container doesn't hide dropdowns
+    var tableResponsive = document.querySelector('.table-responsive');
+    if (tableResponsive) {
+      tableResponsive.style.overflowX = 'visible';
+    }
+    
+    // Handle dropdown show events
+    document.addEventListener('show.bs.dropdown', function(e) {
+      var dropdownMenu = e.target.querySelector('.dropdown-menu');
+      if (dropdownMenu) {
+        dropdownMenu.style.zIndex = '1050';
+        dropdownMenu.style.position = 'absolute';
+      }
+    });
+    
+    // Initialize the reminder form
+    initializeReminderForm();
+  });
+  
+  function initializeReminderForm() {
+    const reminderForm = document.getElementById('reminderForm');
+    if (reminderForm) {
+      reminderForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitReminder();
+      });
+    }
+  }
+  
+  function definirRappel(candidateId) {
+    // Reset form
+    document.getElementById('reminderForm').reset();
+    
+    // Set the prospect ID
+    document.getElementById('prospectId').value = candidateId;
+    
+    // Set default object for incomplete folder
+    document.getElementById('reminderObject').value = "Compléter le dossier incomplet";
+    
+    // Set default date to today + 3 days
+    const today = new Date();
+    const reminderDate = new Date();
+    reminderDate.setDate(today.getDate() + 3);
+    
+    // Format date as YYYY-MM-DD
+    const formattedDate = reminderDate.toISOString().split('T')[0];
+    document.getElementById('reminderDate').value = formattedDate;
+    
+    // Set default time to 10:00
+    document.getElementById('reminderTime').value = "10:00";
+    
+    // Show the reminder modal
+    var reminderModal = new bootstrap.Modal(document.getElementById('reminderModal'));
+    reminderModal.show();
+  }
+  
+  function submitReminder() {
+    // Get form data
+    const formData = new FormData(document.getElementById('reminderForm'));
+    
+    // Create data object for API
+    const data = {
+      type: formData.get('type'),
+      subject: formData.get('subject'),
+      date: formData.get('date_rendez_vous'),
+      time: formData.get('heure_rendez_vous'),
+      description: formData.get('description'),
+      id_prospect: formData.get('prospect_id')
+    };
+    
+    // Send data to API
+    $.ajax({
+      url: "{% url 't_crm:ApiStoreRappelPreinscrit' %}",
+      type: "POST",
+      data: data,
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      success: function(response) {
+        if (response.status === 'success') {
+          alertify.success(response.message);
+          // Hide the modal
+          bootstrap.Modal.getInstance(document.getElementById('reminderModal')).hide();
+          // Refresh the page to show the new reminder
+          location.reload();
+        } else {
+          alertify.error(response.message || "Erreur lors de l'enregistrement du rappel");
+        }
+      },
+      error: function(xhr, status, error) {
+        alertify.error("Erreur lors de l'enregistrement du rappel: " + error);
+      }
+    });
+  }
+  
+  function sendReminderFromModal() {
+    // Get the prospect ID from the hidden field
+    const prospectId = document.getElementById('prospectId').value;
+    
+    // Close the dossier details modal
+    bootstrap.Modal.getInstance(document.getElementById('dossierDetailsModal')).hide();
+    
+    // Open the reminder modal
+    definirRappel(prospectId);
+  }
+  
+  function showDossierDetails(candidateId) {
+    // Show loading state
+    document.getElementById('documentsManquantsList').innerHTML = `
+      <div class="text-center py-5">
+        <div class="spinner-border text-warning" role="status">
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-2 mb-0 text-muted">Chargement des informations du dossier...</p>
+      </div>
+    `;
+    
+    // Store the candidate ID for use in reminder modal
+    document.getElementById('prospectId').value = candidateId;
+    
+    // Set the candidate ID in the modal
+    document.getElementById('viewFullDossierLink').href = "/crm/details-preinscrit/" + candidateId + "/";
+    
+    // Fetch candidate details via AJAX
+    fetchDossierDetails(candidateId);
+  }
+  
+  function fetchDossierDetails(candidateId) {
+    // Make AJAX call to fetch real data
+    $.ajax({
+      url: "{% url 't_crm:ApiGetDossierDetails' %}",
+      type: "GET",
+      data: { 'id_prospect': candidateId },
+      dataType: "JSON",
+      beforeSend: function() {
+        // Show loading state
+        document.getElementById('documentsManquantsList').innerHTML = `
+          <div class="text-center py-5">
+            <div class="spinner-border text-warning" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2 mb-0 text-muted">Chargement des informations du dossier...</p>
+          </div>
+        `;
+      },
+      success: function(response) {
+        if (response.success) {
+          populateDossierModal(response.data);
+        } else {
+          // Handle error - show error message in modal
+          document.getElementById('documentsManquantsList').innerHTML = 
+            '<div class="text-center py-3 text-danger"><p class="mb-0">Erreur: ' + response.message + '</p></div>';
+        }
+      },
+      error: function(xhr, status, error) {
+        // Handle error - show error message in modal
+        document.getElementById('documentsManquantsList').innerHTML = 
+          '<div class="text-center py-3 text-danger"><p class="mb-0">Erreur lors du chargement des données</p></div>';
+      }
+    });
+  }
+  
+  function populateDossierModal(data) {
+    // Populate personal information
+    document.getElementById('detailNomComplet').textContent = data.prenom + " " + data.nom;
+    document.getElementById('detailEmail').textContent = data.email || "N/A";
+    document.getElementById('detailTelephone').textContent = data.telephone || "N/A";
+    
+    // Set type client badge
+    const typeClientElement = document.getElementById('detailTypeClient');
+    if (data.type_prospect === 'particulier') {
+      typeClientElement.innerHTML = '<span class="badge bg-primary"><i class="ri-user-line me-1"></i>Particulier</span>';
+    } else {
+      typeClientElement.innerHTML = '<span class="badge bg-danger"><i class="ri-building-line me-1"></i>Entreprise</span>';
+    }
+    
+    // Set progression
+    const progression = data.progression || 0;
+    document.getElementById('progressText').textContent = progression + "%";
+    document.getElementById('progressBar').style.width = progression + "%";
+    
+    // Set progress bar color based on progression
+    const progressBar = document.getElementById('progressBar');
+    if (progression >= 80) {
+      progressBar.className = "progress-bar bg-success";
+    } else if (progression >= 60) {
+      progressBar.className = "progress-bar bg-warning";
+    } else {
+      progressBar.className = "progress-bar bg-danger";
+    }
+    
+    // Populate documents list
+    let documentsHtml = '';
+    if (data.documents_manquants && data.documents_manquants.length > 0) {
+      documentsHtml = '<ul class="list-group list-group-flush">';
+      data.documents_manquants.forEach(function(doc) {
+        documentsHtml += `
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <i class="ri-file-text-line text-warning me-2"></i>
+              <span class="fw-medium">${doc.label}</span>
+            </div>
+            <span class="badge bg-warning">Manquant</span>
+          </li>
+        `;
+      });
+      documentsHtml += '</ul>';
+    } else {
+      documentsHtml = '<div class="text-center py-3"><p class="text-muted mb-0">Aucun document manquant</p></div>';
+    }
+    
+    document.getElementById('documentsManquantsList').innerHTML = documentsHtml;
+    
+    // Show the dossier details modal
+    var dossierModal = new bootstrap.Modal(document.getElementById('dossierDetailsModal'));
+    dossierModal.show();
+  }
+  
+  function refreshList() {
+    // Refresh the list of incomplete files
+    alertify.success("Liste actualisée");
+  }
+  
+  // Search functionality
+  document.getElementById('table-filter').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#listeItem tr');
+    
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+  
+  // Filter functionality
+  document.getElementById('filter-type').addEventListener('change', function() {
+    // In a real implementation, this would filter the data
+    alertify.success("Filtre appliqué: " + this.value);
+  });
+  
+  document.getElementById('date_filter').addEventListener('change', function() {
+    // In a real implementation, this would sort the data
+    alertify.success("Tri appliqué: " + this.value);
+  });
+</script>
+
+{% endblock content %}

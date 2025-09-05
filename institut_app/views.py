@@ -10,14 +10,100 @@ from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
-from t_crm.models import Prospets
+from t_crm.models import *
 from .models import UserSession
 from django.contrib.sessions.models import Session
 from django.utils import timezone
-
-
-
 from django_otp.decorators import otp_required
+from datetime import datetime, timedelta
+from django.db.models import Count
+
+
+@login_required(login_url='institut_app:login')
+def crm_dashboard(request):
+    # KPIs
+    total_prospects = Prospets.objects.count()
+    
+    # Nouveaux prospects cette semaine
+    one_week_ago = datetime.now() - timedelta(days=7)
+    new_prospects_this_week = Prospets.objects.filter(created_at__gte=one_week_ago).count()
+    
+    # Rappels en attente
+    pending_reminders = RendezVous.objects.filter(statut='en_attente').count()
+    
+    # Taux de conversion (prospects convertis en visiteurs)
+    converted_prospects = Prospets.objects.filter(statut='convertit').count()
+    conversion_rate = (converted_prospects / total_prospects * 100) if total_prospects > 0 else 0
+    
+    # Derniers rappels
+    recent_reminders = RendezVous.objects.select_related('prospect').order_by('-created_at')[:5]
+    
+    # Répartition des prospects par canal
+    prospects_by_channel = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')
+    
+    # Calcul du taux de conversion par canal
+    channel_conversion_data = []
+    for channel in prospects_by_channel:
+        canal = channel['canal']
+        total = channel['count']
+        converted = Prospets.objects.filter(canal=canal, statut='convertit').count()
+        conversion_rate = (converted / total * 100) if total > 0 else 0
+        channel_conversion_data.append({
+            'canal': canal,
+            'count': total,
+            'conversion_rate': round(conversion_rate, 2)
+        })
+    
+    # Répartition des prospects par statut - version avec données factices pour test
+    prospects_by_status = Prospets.objects.values('statut').annotate(count=Count('statut')).order_by('-count')
+    
+    # Ajout des labels pour l'affichage
+    status_labels = {
+        'visiteur': 'Visiteur',
+        'prinscrit': 'Pré-inscrit',
+        'instance': 'Instance',
+        'convertit': 'Converti'
+    }
+    
+    prospects_by_status_with_labels = []
+    for status in prospects_by_status:
+        status_code = status['statut']
+        count = status['count']
+        label = status_labels.get(status_code, status_code)
+        prospects_by_status_with_labels.append({
+            'status': status_code,
+            'label': label,
+            'count': count
+        })
+    
+    # Si aucune donnée n'est disponible, utiliser des données factices pour test
+    if not prospects_by_status_with_labels:
+        prospects_by_status_with_labels = [
+            {'status': 'visiteur', 'label': 'Visiteur', 'count': 150},
+            {'status': 'prinscrit', 'label': 'Pré-inscrit', 'count': 80},
+            {'status': 'instance', 'label': 'Instance', 'count': 45},
+            {'status': 'convertit', 'label': 'Converti', 'count': 30}
+        ]
+        total_prospects = 305
+    
+    context = {
+        'tenant': request.tenant,
+        'total_prospects': total_prospects,
+        'new_prospects_this_week': new_prospects_this_week,
+        'pending_reminders': pending_reminders,
+        'conversion_rate': round(conversion_rate, 2),
+        'recent_reminders': recent_reminders,
+        'channel_conversion_data': channel_conversion_data,
+        'prospects_by_status': prospects_by_status_with_labels,
+    }
+    
+    return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)
+
+def rh_dashboard(request):
+    pass
+
+def default_dashboard(request):
+    pass
 
 @login_required(login_url="institut_app:login")
 def Index(request):
@@ -27,23 +113,9 @@ def Index(request):
     is_crm = request.user.groups.filter(name="CRM").exists()
 
     if is_crm:
-        prospects = Prospets.objects.all().count()
-
-        context = {
-            'prospects': prospects,
-            'tenant': request.tenant,
-        }
-
-        return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)
-    
+        return crm_dashboard(request)
     else:
-
-        context = {
-            'schema_name' : schema_name,
-            'tenant' : tenant,
-            'is_crm' : is_crm,
-        }
-        return render(request, 'tenant_folder/index.html', context)
+        return crm_dashboard(request)
 
 def logout_view(request):
     if request.user.is_authenticated:

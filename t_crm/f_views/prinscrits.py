@@ -42,9 +42,27 @@ def DetailsPrinscrit(request, pk):
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscrisPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('etablissement','diplome','niveau_scolaire','date_naissance','adresse','type_handicap','has_endicap','tel_mere','prenom_mere','nom_mere','tel_pere','groupe_sanguin','nom_arabe','prenom_arabe','prenom_pere','created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
-    
-    return JsonResponse(prospect, safe=False)
+
+    try:
+        prospect = Prospets.objects.get(id=id_prospect)
+    except Prospets.DoesNotExist:
+        return JsonResponse({'error': 'Prospect non trouvé'}, status=404)
+
+    data = {
+        'id': prospect.id,
+        'statut': prospect.get_statut_display(),  # fonctionne car on a l'objet
+        'nom': prospect.nom,
+        'prenom': prospect.prenom,
+        'email': prospect.email,
+        'telephone': prospect.telephone,
+        'canal': prospect.get_canal_display() if hasattr(prospect, "get_canal_display") else prospect.canal,
+        'adresse': prospect.adresse,
+        'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
+        'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
+    }
+
+    return JsonResponse(data, safe=False)
+
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscritRendezVous(request):
@@ -258,7 +276,6 @@ def ApiStoreNotePreinscrit(request):
     note.save()
     return JsonResponse({'status': 'success', 'message': 'Note enregistrée avec succès.'})
 
-
 @login_required(login_url='institut_app:login')
 @transaction.atomic
 def ApiStoreRappelPreinscrit(request):
@@ -284,3 +301,140 @@ def ApiStoreRappelPreinscrit(request):
     )
     rappel.save()
     return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
+
+
+def get_prospects_incomplets():
+    # Tous les prospects préinscrits
+    prospects = Prospets.objects.filter(statut="prinscrit", type_prospect="particulier")
+    results = []
+
+    for prospect in prospects:
+        # Récupérer la fiche de voeux confirmée ou non
+        try:
+            fiche_voeux = FicheDeVoeux.objects.get(prospect=prospect)
+        except FicheDeVoeux.DoesNotExist:
+            continue  # si pas de fiche, on ignore
+
+        formation = fiche_voeux.specialite.formation
+        if not formation:
+            continue  # si pas de formation, on ignore
+
+        # Documents requis pour cette formation
+        docs_requis = DossierInscription.objects.filter(formation=formation)
+        total_docs = docs_requis.count()
+
+        # Documents déjà uploadés par le prospect
+        docs_fournis = DocumentsDemandeInscription.objects.filter(
+            prospect=prospect,
+            fiche_voeux=fiche_voeux,
+            file__isnull=False
+        ).values_list("id_document_id", flat=True)
+
+        provided_docs = len(docs_fournis)
+
+        # Documents manquants
+        docs_manquants = docs_requis.exclude(id__in=docs_fournis)
+
+        # Calculate progression (percentage of completed documents)
+        progression = int((provided_docs / total_docs) * 100) if total_docs > 0 else 0
+
+        if not docs_fournis:
+            results.append({
+                "prospect": prospect,
+                "cas": "aucun document fourni",
+                "documents_manquants": list(docs_requis.values("id", "label")),
+                "progression": progression,
+                "total_docs": total_docs,
+                "provided_docs": provided_docs
+            })
+        elif docs_manquants.exists():
+            results.append({
+                "prospect": prospect,
+                "cas": "documents manquants",
+                "documents_manquants": list(docs_manquants.values("id", "label")),
+                "progression": progression,
+                "total_docs": total_docs,
+                "provided_docs": provided_docs
+            })
+
+    return results
+
+@login_required(login_url="institut_app:login")
+def ApiGetDossierDetails(request):
+    id_prospect = request.GET.get('id_prospect')
+    
+    try:
+        prospect = Prospets.objects.get(id=id_prospect, statut="prinscrit")
+        
+        # Get the fiche de voeux
+        try:
+            fiche_voeux = FicheDeVoeux.objects.get(prospect=prospect)
+        except FicheDeVoeux.DoesNotExist:
+            fiche_voeux = None
+            
+        # Get formation and required documents
+        formation = None
+        docs_manquants = []
+        docs_fournis = []
+        total_docs = 0
+        provided_docs = 0
+        progression = 0
+        
+        if fiche_voeux:
+            formation = fiche_voeux.specialite.formation
+            
+            if formation:
+                # Documents requis pour cette formation
+                docs_requis = DossierInscription.objects.filter(formation=formation)
+                total_docs = docs_requis.count()
+                
+                # Documents déjà uploadés par le prospect
+                docs_fournis_qs = DocumentsDemandeInscription.objects.filter(
+                    prospect=prospect,
+                    fiche_voeux=fiche_voeux,
+                    file__isnull=False
+                ).values_list("id_document_id", flat=True)
+                
+                docs_fournis = list(docs_fournis_qs)
+                provided_docs = len(docs_fournis)
+                
+                # Documents manquants
+                docs_manquants_qs = docs_requis.exclude(id__in=docs_fournis)
+                docs_manquants = list(docs_manquants_qs.values("id", "label"))
+                
+                # Calculate progression (percentage of completed documents)
+                if total_docs > 0:
+                    progression = int((provided_docs / total_docs) * 100)
+        
+        response_data = {
+            'id': prospect.id,
+            'nom': prospect.nom,
+            'prenom': prospect.prenom,
+            'email': prospect.email,
+            'telephone': prospect.telephone,
+            'type_prospect': prospect.type_prospect,
+            'entreprise': prospect.entreprise,
+            'created_at': prospect.created_at.strftime('%Y-%m-%d') if prospect.created_at else None,
+            'documents_manquants': docs_manquants,
+            'documents_fournis': docs_fournis,
+            'progression': progression,
+            'total_documents': total_docs,
+            'documents_fournis_count': provided_docs
+        }
+        
+        return JsonResponse({'success': True, 'data': response_data})
+        
+    except Prospets.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Prospect non trouvé'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+def prospects_incomplets_view(request):
+    data = get_prospects_incomplets()
+    context = {
+        'data': data,
+        'tenant': request.tenant
+    }
+    return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)
+

@@ -78,9 +78,14 @@ urlpatterns = [
     path('ApiLoadFormationAndSpecialite', ApiLoadFormationAndSpecialite, name="ApiLoadFormationAndSpecialite"),
 
     path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
-    #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
+    path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
     path('ApiLoadSpecialiteProspect', ApiLoadSpecialiteProspect, name="ApiLoadSpecialiteProspect"),
     path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
+
+    path('ApiCheckIfVoeuxExiste', ApiCheckIfVoeuxExiste, name="ApiCheckIfVoeuxExiste"),
+
+    path('ApiUpdateProspectData', ApiUpdateProspectData, name="ApiUpdateProspectData"),
+    path('ApiCreateVoeux', ApiCreateVoeux, name="ApiCreateVoeux"),
 
     ################################################### Gestion des pre inscrits ##########################################################
 
@@ -97,10 +102,14 @@ urlpatterns = [
     path('ApiStoreNotePreinscrit', ApiStoreNotePreinscrit, name="ApiStoreNotePreinscrit"),
     path('check_all_required_docs', check_all_required_docs, name="check_all_required_docs"),
     path('ApiStoreRappelPreinscrit', ApiStoreRappelPreinscrit, name="ApiStoreRappelPreinscrit"),
-    ################################################### Gestion des pre inscrits ##########################################################
-    
     ################################################### Gestion des dérogations ##########################################################
+    
+    path('ApiGetDossierDetails', ApiGetDossierDetails, name="ApiGetDossierDetails"),
+    
     path('liste-derogations/', liste_derogations, name="liste_derogations"),
     ################################################### Gestion des dérogations ##########################################################
+
+
+    path('suivie-des-dossiers/', prospects_incomplets_view, name="prospects_incomplets_view"),
    
 ]
