@@ -107,6 +107,7 @@ urlpatterns = [
     path('ApiGetDossierDetails', ApiGetDossierDetails, name="ApiGetDossierDetails"),
     
     path('liste-derogations/', liste_derogations, name="liste_derogations"),
+    path('ApiLoadDerogation/', ApiLoadDerogation, name="ApiLoadDerogation"),
     ################################################### Gestion des dérogations ##########################################################
 
 

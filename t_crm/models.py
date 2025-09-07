@@ -218,3 +218,15 @@ class RendezVous(models.Model):
     def __str__(self):
         return f"Rendez-vous {self.id} - {self.type} - {self.date_rendez_vous} {self.heure_rendez_vous}"
 
+class Derogations(models.Model):
+    demandeur = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    type = models.CharField(max_length=100, null=True, blank=True)
+    motif = models.CharField(max_length=100, null=True, blank=True)
+    date_de_demande = models.DateField(auto_now_add=True)
+    statut = models.CharField(max_length=100, null=True, blank=True, choices=[('en_attente','En attente'),('acceptee','Acceptée'),('rejetee','Rejetée')])
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __stre__(self):
+        return f"{self.demandeur.nom} {self.demandeur.prenom}"

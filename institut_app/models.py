@@ -5,7 +5,6 @@ from django_countries.fields import CountryField
 from t_crm.tenant_path import *
 from django.contrib.auth.models import User
 
-
 class UserSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="session_info")
     last_session_key = models.CharField(max_length=40, null=True, blank=True)
@@ -135,5 +134,3 @@ class ConfigurationDesDocument(models.Model):
         return f"Configuration des documents pour {self.entreprise.designation}" if self.entreprise else "Configuration des documents sans entreprise"
 
 
-class Derogations(models.Model):
-    pass
