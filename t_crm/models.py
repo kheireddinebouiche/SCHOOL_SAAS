@@ -37,7 +37,7 @@ class Prospets(models.Model):
     has_endicap = models.BooleanField(default=False, null=True, blank=True)
     type_handicap = models.CharField(max_length=1000, null=True, blank=True)
 
-    adresse = models.TextField(null=True, blank=True)
+    adresse = models.CharField(null=True, blank=True)
 
     date_naissance = models.DateField(null=True, blank=True)
         
