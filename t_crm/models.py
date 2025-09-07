@@ -71,6 +71,7 @@ class FicheDeVoeux(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
 
     commentaire = models.CharField(max_length=1000, null=True, blank=True)
+    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
 
     is_confirmed = models.BooleanField(default=False)
 
