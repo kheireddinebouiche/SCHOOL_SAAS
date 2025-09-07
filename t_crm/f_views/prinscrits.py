@@ -73,7 +73,8 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'type_handicap' : prospect.type_handicap,
         'adresse' : prospect.adresse,
         'date_naissance' : prospect.date_naissance,
-        'niveau_scolaire' : prospect.niveau_scolaire,
+        'niveau_scolaire' : prospect.get_niveau_scolaire_display(),
+        'niveau_scolaire_pure' : prospect.niveau_scolaire,
         'diplome' : prospect.diplome,
         'etablissement' : prospect.etablissement,
     }
