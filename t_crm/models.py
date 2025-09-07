@@ -9,6 +9,7 @@ class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True)
     photo = models.ImageField(upload_to=tenant_directory_path_for_image, null=True, blank=True)
+
     
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
@@ -37,9 +38,13 @@ class Prospets(models.Model):
     has_endicap = models.BooleanField(default=False, null=True, blank=True)
     type_handicap = models.CharField(max_length=1000, null=True, blank=True)
 
-    adresse = models.CharField(null=True, blank=True)
+    adresse = models.CharField(max_length=1000, null=True, blank=True)
+    pays = models.CharField(max_length=100, null=True, blank=True)
+    wilaya = models.CharField(max_length=100, null=True, blank=True)
+    code_zip = models.CharField(max_length=100, null=True, blank=True)
 
     date_naissance = models.DateField(null=True, blank=True)
+    lieu_naissance = models.CharField(null=True, blank=True)
         
     niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 am'),('2_am','2 am'),('3_am', '3_am'),('4_am','4 am'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminal'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','Licence'),('m','Master')])
     diplome = models.CharField(max_length=100, null=True, blank=True)

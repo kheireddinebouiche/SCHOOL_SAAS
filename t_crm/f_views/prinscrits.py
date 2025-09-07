@@ -77,6 +77,13 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'niveau_scolaire_pure' : prospect.niveau_scolaire,
         'diplome' : prospect.diplome,
         'etablissement' : prospect.etablissement,
+
+        'pays' : prospect.pays,
+        'wilaya' : prospect.wilaya,
+        'code_zip' : prospect.code_zip,
+        'lieu_naissance' : prospect.lieu_naissance,
+
+        
     }
 
     return JsonResponse(data, safe=False)
@@ -142,6 +149,10 @@ def ApiUpdatePreinscritInfos(request):
     etablissement_diplome = request.POST.get('etablissement_diplome')
     id_preinscrit = request.POST.get('id_preinscrit')
     nin = request.POST.get('nin')
+    pays = request.POST.get('pays')
+    wilaya = request.POST.get('wilaya')
+    code_zip = request.POST.get('code_zip')
+    lieu_naissance = request.POST.get('lieu_naissance')
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
@@ -162,6 +173,11 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.etablissement = etablissement_diplome
     preinscrit.nin = nin
     preinscrit.profile_completed= True
+    preinscrit.pays = pays
+    preinscrit.wilaya = wilaya
+    preinscrit.code_zip = code_zip
+    preinscrit.lieu_naissance = lieu_naissance
+
 
     preinscrit.save()
 
