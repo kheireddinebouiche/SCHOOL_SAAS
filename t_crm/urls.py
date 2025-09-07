@@ -36,6 +36,7 @@ urlpatterns = [
     path('ApiLoadProspects',ApiLoadProspects, name="ApiLoadProspects" ),
     path('ApiDeleteProspect', ApiDeleteProspect, name="ApiDeleteProspect"),
     path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),
+    path('ApiFilterPrinscrit', ApiFilterPrinscrit, name="ApiFilterPrinscrit"),
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
     path('details-prospect/<int:pk>/', DetailsProspect, name="DetailsProspect"),
 
@@ -108,6 +109,8 @@ urlpatterns = [
     
     path('liste-derogations/', liste_derogations, name="liste_derogations"),
     path('ApiLoadDerogation/', ApiLoadDerogation, name="ApiLoadDerogation"),
+    path('ApiCheckDerogationStatus', ApiCheckDerogationStatus, name="ApiCheckDerogationStatus"),
+    path('ApiStoreDerogation', ApiStoreDerogation, name="ApiStoreDerogation"),
     ################################################### Gestion des dérogations ##########################################################
 
 

@@ -185,7 +185,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <h5 class="alert-heading mb-1">Dérogation en attente</h5>
-                            <p class="mb-0">Une demande de dérogation est en cours de traitement. Veuillez patienter jusqu'à la décision finale.</p>
+                            <p class="mb-0">La demande de dérogation est en cours de traitement. Veuillez attendre la décision finale.</p>
                         </div>
                         <div class="d-flex gap-2">
                             <span class="badge bg-warning px-3 py-2">
@@ -2917,9 +2917,9 @@
             confirmationHtml += '<div class="col-12 mt-3"><h5 class="text-success fw-bold border-bottom pb-2 mb-3">Informations des parents</h5></div>';
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Prénom père</p><h6 class="mb-0">' + (formData.prenom_pere || '-') + '</h6></div></div>';
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Téléphone père</p><h6 class="mb-0">' + (formData.tel_pere || '-') + '</h6></div></div>';
-            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Nom mère</p><h6 class="mb-0">' + (formData.nom_mere || '-') + '</h6></div></div>';
-            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Prénom mère</p><h6 class="mb-0">' + (formData.prenom_mere || '-') + '</h6></div></div>';
-            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Téléphone mère</p><h6 class="mb-0">' + (formData.tel_mere || '-') + '</h6></div></div>';
+            confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Nom mère</p><h6 class="mb-0">' + (formData.nom_mere || '-') + '</h6></div></div>';
+            confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Prénom mère</p><h6 class="mb-0">' + (formData.prenom_mere || '-') + '</h6></div></div>';
+            confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Téléphone mère</p><h6 class="mb-0">' + (formData.tel_mere || '-') + '</h6></div></div>';
             
             // Médical
             confirmationHtml += '<div class="col-12 mt-3"><h5 class="text-warning fw-bold border-bottom pb-2 mb-3">Informations médicales</h5></div>';
@@ -3193,7 +3193,25 @@
             $('#addDocumentModal').modal('show');
         });
 
-       
+        // Gérer la soumission de la demande de validation par un responsable
+        $(document).on('click', '#submitValidationRequestBtn', function() {
+            var reason = $('#validationRequestReason').val();
+            
+            if (reason.trim() === '') {
+                alertify.error("Veuillez fournir un motif pour votre demande.");
+                return;
+            }
+            
+            // Ici, vous pouvez envoyer la demande au serveur
+            // Pour l'instant, nous simulons l'envoi
+            alertify.success("Demande de validation envoyée avec succès. Un responsable examinera votre demande.");
+            
+            // Fermer la modale
+            $('#requestManagerValidationModal').modal('hide');
+            
+            // Réinitialiser le champ
+            $('#validationRequestReason').val('');
+        });
         
         // Fonction pour vérifier l'état de la dérogation
         function checkDerogationStatus() {
@@ -3207,70 +3225,31 @@
                         document.getElementById('derogation_acceptee').hidden = false;
                         document.getElementById('derogation_refusee').hidden = true;
                         document.getElementById('derogation_attente').hidden = true;
-                        document.getElementById('requestValidationBtn').disabled = false;
-
-                        
                     } else if (response.status === 'refusee') {
                         document.getElementById('derogation_acceptee').hidden = true;
                         document.getElementById('derogation_refusee').hidden = false;
                         document.getElementById('derogation_attente').hidden = true;
-                        document.getElementById('requestValidationBtn').disabled = false;
-
-
-                    } else if(response.status === "en_attente"){
-                        document.getElementById('derogation_attente').hidden = false;
+                    } else if (response.status === 'attente') {
                         document.getElementById('derogation_acceptee').hidden = true;
                         document.getElementById('derogation_refusee').hidden = true;
-                        document.getElementById('requestValidationBtn').disabled = true;
-                    }else{
-
+                        document.getElementById('derogation_attente').hidden = false;
+                    } else {
+                        document.getElementById('derogation_acceptee').hidden = true;
+                        document.getElementById('derogation_refusee').hidden = true;
+                        document.getElementById('derogation_attente').hidden = true;
                     }
                 },
                 error: function() {
-                    // En cas d'erreur, cacher les deux notifications
+                    // En cas d'erreur, cacher toutes les notifications
                     document.getElementById('derogation_acceptee').hidden = true;
                     document.getElementById('derogation_refusee').hidden = true;
                     document.getElementById('derogation_attente').hidden = true;
-                        document.getElementById('requestValidationBtn').disabled     = false;
-
                 }
             });
         }
 
         // Charger l'état de la dérogation au chargement de la page
         checkDerogationStatus();
-
-         // Gérer la soumission de la demande de validation par un responsable
-        $(document).on('click', '#submitValidationRequestBtn', function() {
-            var reason = $('#validationRequestReason').val();
-            
-            if (reason.trim() === '') {
-                alertify.error("Veuillez fournir un motif pour votre demande.");
-                return;
-            }
-
-            $.ajax({
-                url : '{% url "t_crm:ApiStoreDerogation" %}',
-                dataType: 'JSON',
-                type: 'POST',
-                data : {
-                    'id_preinscrit' : id,
-                    'valeur' : reason,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}',
-                },
-                success : function(response){
-                    if (response.status === "success") {
-                        alertify.success(response.message);
-                        checkDerogationStatus();
-                        $('#requestManagerValidationModal').modal('hide');
-                        $('#validationRequestReason').val('');
-
-                    }else{
-                        alertify.error(response.message);
-                    }
-                }
-            });      
-        });
 
     });
 </script>

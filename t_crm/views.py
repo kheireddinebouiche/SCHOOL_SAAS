@@ -403,19 +403,40 @@ def ApiFilterProspect(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
 
     return JsonResponse(list(prospects), safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiFilterPrinscrit(request):
+    filter_option = request.GET.get('filter_option')
+    value = request.GET.get('value')
+
+    if (filter_option == "filter-prospect"):
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        for l in prospects:
+            l_obj = Prospets.objects.get(id=l['id'])
+            l['type_prospect_label'] = l_obj.get_type_prospect_display()
+            l['etat_label'] = l_obj.get_etat_display()
+    elif (filter_option == "date_filter-prospect"):
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        for l in prospects:
+            l_obj = Prospets.objects.get(id=l['id'])
+            l['type_prospect_label'] = l_obj.get_type_prospect_display()
+            l['etat_label'] = l_obj.get_etat_display()
+
+    return JsonResponse(list(prospects), safe=False)
+
 
 def ApiLoadFormation(request):
     liste = Formation.objects.all().values('id','nom','code')

@@ -5,8 +5,7 @@ from django.views.generic import ListView, DetailView
 from django.http import JsonResponse
 from django.db.models import Q
 from datetime import datetime
-from ..models import Derogations
-
+from ..models import *
 
 # Modèles (à adapter selon votre structure de données)
 # from .models import Derogation
@@ -35,3 +34,32 @@ def ApiLoadDerogation(request):
         })
 
     return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiCheckDerogationStatus(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+    status = []
+    try:
+        obj = Derogations.objects.get(demandeur__id = id_preinscrit, etat = False )
+        status = {
+            'status' : obj.statut,
+        }
+        return JsonResponse(status, safe=False)
+    except:
+        return JsonResponse(status, safe=False)
+    
+@login_required(login_url="institut_app:login")
+def ApiStoreDerogation(request):
+    id_preinscrit = request.POST.get('id_preinscrit')
+    reason = request.POST.get('valeur')
+
+    preinscrit = Prospets.objects.get(id = id_preinscrit)
+   
+    Derogations.objects.create(
+        demandeur = preinscrit,
+        motif = reason,
+        
+    )
+
+    return JsonResponse({"status" : 'success', 'message' : "La demande de dérogation est en attente de traitement."})
+

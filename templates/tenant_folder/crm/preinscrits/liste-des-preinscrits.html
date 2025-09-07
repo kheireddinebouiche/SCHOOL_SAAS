@@ -119,7 +119,7 @@
                       <th class="border-0">Email</th>
                       <th class="border-0">Type client</th>
                       <th class="border-0">État</th>
-                      <th class="border-0 rounded-end text-center">Actions</th>
+                      
                     </tr>
                   </thead>
                   <tbody id="listeItem" class="border-top-0">
@@ -572,7 +572,7 @@
           success : function(data){
             var row = "";
             if (data.length === 0) {
-              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
+              row += "<tr><td colspan='6' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
             }else{
               $.each(data, function(index, item){
                 row += "<tr class='align-middle'>";
@@ -586,30 +586,7 @@
                 row += "<td>" + (item.etat === 'en_attente' ? 
                     "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
                     "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
-                row += '<td class="text-end">';
-                row += '<div class="dropdown d-inline-block">';
-                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                row += '<i class="ri-more-2-fill"></i>';
-                row += '</button>';
-                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-                row += '<li><a href="/crm/details-preinscrit/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
-                row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
-                if(item.type_prospect === "particulier"){
-                  row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }else{
-                  row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }
-                if(item.etat != "accepte"){
-                  row += '<li><hr class="dropdown-divider my-1"></li>';
-                  row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                  row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                  row += '</button></li>';
-                }
-                row += '</ul>';
-                row += '</div>';
-                row += '</td>';
+              
                 row += "</tr>";
             });
             
@@ -622,38 +599,10 @@
 
     loadProspects();
 
-    $(document).on('click','#deleteConfirmation', function(){
-      var id_prospect = $(this).data('id');
-      var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtn" data-id='+id_prospect+' class="btn btn-danger">Confirmer</a>';
-
-      $('.hstack').html(row);
-      $('.deleteModal').modal('show');
-    });
-
-    $(document).on('click', '#confirmDeleteBtn', function(){
-      var id_prospect = $(this).data('id');
-
-      $.ajax({
-        url : "{% url 't_crm:ApiDeleteProspect' %}",
-        type : "POST",
-        dataType : "JSON",
-        data : {'id_prospect' : id_prospect,'csrfmiddlewaretoken': '{{ csrf_token }}'},
-        success : function(response){
-          if (response.status === "success"){
-            alertify.success(response.message);
-            loadProspects();
-            $('.deleteModal').modal('hide');
-          }else{
-            alertify.error(response.message);
-          }
-        }
-      });
-    });
-    
+   
     function loadFiltredProspect(filter_option, value){
       $.ajax({
-        url : "{% url 't_crm:ApiFilterProspect' %}",
+        url : "{% url 't_crm:ApiFilterPrinscrit' %}",
         type : "GET",
         dataType : "JSON",
         data : {'filter_option' : filter_option, 'value' : value},
@@ -674,28 +623,7 @@
                 row += "<td>" + (item.etat === 'en_attente' ? 
                     "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
                     "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
-                row += '<td class="text-end">';
-                row += '<div class="dropdown d-inline-block">';
-                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                row += '<i class="ri-more-2-fill"></i>';
-                row += '</button>';
-                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-                row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
-                row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
-                if(item.type_prospect === "particulier"){
-                  row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }else{
-                  row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }
-                row += '<li><hr class="dropdown-divider my-1"></li>';
-                row += '<li><button '+(item.etat == "accepte" ? 'hidden' : '')+' id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                row += '</button></li>';
-                row += '</ul>';
-                row += '</div>';
-                row += '</td>';
+              
                 row += "</tr>";
               });
             }
@@ -721,180 +649,7 @@
     });
 
    
-    function loadProspectDetails(id_prospect){
-
-      $.ajax({
-        url : "{% url 't_crm:ApiLoadProspectDetails' %}",
-        dataType : 'JSON',
-        type: 'GET',
-        data : {'id_prospect' : id_prospect},
-        success : function(data){
-          $('#id_last_name').val(data.prospect.nom);
-          $('#id_first_name').val(data.prospect.prenom);
-          $('#id_email').val(data.prospect.email);
-          $('#id_telephone').val(data.prospect.telephone);
-          $('#id_observation').val(data.prospect.observation);
-          
-          var id_selection_formation = data.fiche_voeux[0].specialite_id_formation;
-          var id_selection_specialite = data.fiche_voeux[0].specialite_id;
-
-          var formationOptions = '<option value="">---------</option>';
-          $.each(data.formations, function(index, item){
-            formationOptions += '<option '+(item.id === id_selection_formation ? 'selected' : '')+' value="'+item.id+'">'+item.id+'- '+item.nom+'</option>';
-          });
-          $('#id_voeux_formation').html(formationOptions);
-
-          var specialiteOptions = '<option value="">---------</option>';
-          $.each(data.specialites, function(index, item){
-            specialiteOptions += '<option '+(item.id === id_selection_specialite ? 'selected' : '')+ ' value="'+item.id+'">'+item.code+' - '+item.label+'</option>';
-          });
-          $('#id_voeux_specialite').html(specialiteOptions);
-         
-
-          var canalOptions = '<option value="">---------</option>';
-
-          canalOptions += '<option '+(data.prospect.canal === "email" ? 'selected' : '')+' value="email">Email</option>';
-          canalOptions += '<option '+(data.prospect.canal === "telephone" ? 'selected' : '')+' value="telephone">Téléphone</option>';
-          canalOptions += '<option '+(data.prospect.canal === "autre" ? 'selected' : '')+' value="autre">Autre</option>';
-          canalOptions += '<option '+(data.prospect.canal === "facebook" ? 'selected' : '')+' value="facebook">Facebook</option>';
-          canalOptions += '<option '+(data.prospect.canal === "linkedin" ? 'selected' : '')+' value="linkedin">LinkedIn</option>';
-          canalOptions += '<option '+(data.prospect.canal === "instagram" ? 'selected' : '')+' value="instagram">Instagram</option>';
-          canalOptions += '<option '+(data.prospect.canal === "tiktok" ? 'selected' : '')+' value="tiktok">TikTok</option>';
-           
-          $('#id_canal').html(canalOptions);
-
-
-          $('#updateInfoProspect').modal('show');
-        }
-      });
-    }
-
-    function loadProspectEntrepriseDetails(id_prospect_ets){
-      $.ajax({
-        url : "{% url 't_crm:ApiLoadProspectDetails' %}",
-        dataType : 'JSON',
-        type: 'GET',
-        data : {'id_prospect' : id_prospect_ets},
-        success : function(data){
-          $('#id_last_name_ets').val(data.prospect.nom);
-          $('#id_first_name_ets').val(data.prospect.prenom);
-          $('#id_email_ets').val(data.prospect.email);
-          $('#id_telephone_ets').val(data.prospect.telephone);
-          $('#id_observation_ets').val(data.prospect.observation);
-          $('#entreprise_informations').val(data.prospect.entreprise);
-                       
-          var canalOptions = '<option value="">---------</option>';
-
-          canalOptions += '<option '+(data.prospect.canal === "email" ? 'selected' : '')+' value="email">Email</option>';
-          canalOptions += '<option '+(data.prospect.canal === "telephone" ? 'selected' : '')+' value="telephone">Téléphone</option>';
-          canalOptions += '<option '+(data.prospect.canal === "autre" ? 'selected' : '')+' value="autre">Autre</option>';
-          canalOptions += '<option '+(data.prospect.canal === "facebook" ? 'selected' : '')+' value="facebook">Facebook</option>';
-          canalOptions += '<option '+(data.prospect.canal === "linkedin" ? 'selected' : '')+' value="linkedin">LinkedIn</option>';
-          canalOptions += '<option '+(data.prospect.canal === "instagram" ? 'selected' : '')+' value="instagram">Instagram</option>';
-          canalOptions += '<option '+(data.prospect.canal === "tiktok" ? 'selected' : '')+' value="tiktok">TikTok</option>';
-           
-          $('#id_canal_ets').html(canalOptions);
-
-
-          $('#updateInfoProspectEntreprise').modal('show');
-        }
-      });
-
-      
-    }
-
-    $(document).on('click','#btnUpdate', function(){
-      var id_prospect = $(this).data('id');
-      loadProspectDetails(id_prospect);
-      $('#btnUpdate').data('id', id_prospect);
-    });
-
-    $(document).on('click','#btnUpdateEntreprise', function(){
-      var id_prospect = $(this).data('id');
-      loadProspectEntrepriseDetails(id_prospect);
-      $('#btnUpdateEntreprise').data('id', id_prospect);
-      
-    });
-
-    $(document).on('click', '#updateInfoProspectEntrepriseBtn', function(){
-      var id_perospect = $('#btnUpdateEntreprise').data('id')
-
-      var last_name_ets = $('#id_last_name_ets').val();
-      var first_name_ets = $('#id_first_name_ets').val();
-      var email_ets = $('#id_email_ets').val();
-      var telephone_ets = $('#id_telephone_ets').val();
-      var observation_ets = $('#id_observation_ets').val();
-      var canal_ets = $('#id_canal_ets').val();
-      var entreprise_informations = $('#entreprise_informations').val();
-
-      $.ajax({
-        url : "{% url 't_crm:ApiUpdateProspectEtsDetails' %}",
-        dataType : "JSON",
-        type: 'POST',
-        data : {
-          'id_prospect' : id_perospect,
-          'last_name_ets' : last_name_ets,
-          'first_name_ets' : first_name_ets,
-          'email_ets' : email_ets,
-          'telephone_ets' : telephone_ets,
-          'observation_ets' : observation_ets,
-          'canal_ets' : canal_ets,
-          'entreprise_informations' : entreprise_informations,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success : function(response){
-          if (response.status === "success"){
-            alertify.success(response.message);
-            loadProspects();
-            $('#updateInfoProspectEntreprise').modal('hide');
-          }else{
-            alertify.error(response.message);
-          }
-        }
-      })
-      
-    })
-
-    $(document).on('click','#updateInfoProspectBtn', function(){
-      var id_prospect = $('#btnUpdate').data('id');
-     
-      var nom = $('#id_last_name').val();
-      var prenom = $('#id_first_name').val();
-      var email = $('#id_email').val();
-      var telephone = $('#id_telephone').val();
-      var canal = $('#id_canal').val();
-      var observation = $('#id_observation').val();
-      var voeux_formation = $('#id_voeux_formation').val();
-      var voeux_specialite = $('#id_voeux_specialite').val();
-
-      $.ajax({
-        url : "{% url 't_crm:ApiUpdatePropectDetails' %}",
-        type : "POST",
-        dataType : "JSON",
-        data : {
-          'id_prospect' : id_prospect,
-          'nom' : nom,
-          'prenom' : prenom,
-          'email' : email,
-          'telephone' : telephone,
-          'canal' : canal,
-          'observation' : observation,
-          'voeux_formation' : voeux_formation,
-          'voeux_specialite' : voeux_specialite,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success : function(response){
-          if (response.status === "success"){
-            alertify.success(response.message);
-            loadProspects();
-            $('#updateInfoProspect').modal('hide');
-          }else{
-            alertify.error(response.message);
-          }
-        }
-      });
-    
-    });
+ 
 
   });
 </script>
