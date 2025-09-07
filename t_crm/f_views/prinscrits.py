@@ -50,7 +50,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
 
     data = {
         'id': prospect.id,
-        'statut': prospect.get_statut_display(),  # fonctionne car on a l'objet
+        'statut': prospect.get_statut_display(), 
         'nom': prospect.nom,
         'prenom': prospect.prenom,
         'email': prospect.email,
@@ -59,6 +59,23 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'adresse': prospect.adresse,
         'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
         'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
+
+        'nin' : prospect.nin,
+        'groupe_sanguin' : prospect.groupe_sanguin,
+        'nom_arabe' : prospect.nom_arabe,
+        'prenom_arabe' : prospect.prenom_arabe,
+        'prenom_pere' : prospect.prenom_pere,
+        'tel_pere' : prospect.tel_pere,
+        'nom_mere' : prospect.nom_mere,
+        'prenom_mere' : prospect.prenom_mere,
+        'tel_mere' : prospect.tel_mere,
+        'has_endicap' : prospect.has_endicap,
+        'type_handicap' : prospect.type_handicap,
+        'adresse' : prospect.adresse,
+        'date_naissance' : prospect.date_naissance,
+        'niveau_scolaire' : prospect.niveau_scolaire,
+        'diplome' : prospect.diplome,
+        'etablissement' : prospect.etablissement,
     }
 
     return JsonResponse(data, safe=False)
@@ -305,7 +322,7 @@ def ApiStoreRappelPreinscrit(request):
 
 def get_prospects_incomplets():
     # Tous les prospects préinscrits
-    prospects = Prospets.objects.filter(statut="prinscrit", type_prospect="particulier")
+    prospects = Prospets.objects.filter(type_prospect="particulier")
     results = []
 
     for prospect in prospects:
@@ -364,7 +381,7 @@ def ApiGetDossierDetails(request):
     id_prospect = request.GET.get('id_prospect')
     
     try:
-        prospect = Prospets.objects.get(id=id_prospect, statut="prinscrit")
+        prospect = Prospets.objects.get(id=id_prospect)
         
         # Get the fiche de voeux
         try:

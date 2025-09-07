@@ -133,3 +133,7 @@ class ConfigurationDesDocument(models.Model):
 
     def __str__(self):
         return f"Configuration des documents pour {self.entreprise.designation}" if self.entreprise else "Configuration des documents sans entreprise"
+
+
+class Derogations(models.Model):
+    pass
