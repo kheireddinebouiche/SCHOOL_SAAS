@@ -11,12 +11,19 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
+from django.utils.dateformat import format
 
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
     prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
+    
+    if prospect:
+        obj = Prospets.objects.get(id= prospect['id'])
+        prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M")
+        prospect['statut_label'] = obj.get_statut_display()   
+
     return JsonResponse(prospect, safe=False)
 
 @login_required(login_url='institut_app:login')
@@ -79,6 +86,7 @@ def ApiUpdateNote(request):
 ################################### !Gestion des notes##################################################
 
 
+
 ###################################Fiche de voeux prospect #############################################
 @login_required(login_url='institut_app:login')
 def ApiLoadFicheVoeuxProspect(request):
@@ -94,8 +102,9 @@ def ApiLoadFicheVoeuxProspect(request):
             'specialite_label': fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
             'specialite_id_formation': fiche.specialite.formation.id,
-            'created_at' : fiche.created_at,
-            'updated_at' : fiche.updated_at
+            'created_at' : format(fiche.created_at,"Y-m-d H:i"),
+            'updated_at' : format(fiche.updated_at,"Y-m-d H:i"),
+            
         })
     return JsonResponse({'fiche_voeux': fiche_voeux_list})
 

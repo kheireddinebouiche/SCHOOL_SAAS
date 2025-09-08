@@ -413,21 +413,7 @@
 
                         <!-- Body -->
                         <div class="card-body p-4">
-                            <!-- Filtres -->
-                            <div class="d-flex align-items-center mb-4">
-                                <div class="btn-group flex-grow-1" role="group">
-                                    <button type="button" class="btn btn-light active py-2 px-3">
-                                        <i class="ri-list-unordered me-1"></i>Toutes
-                                    </button>
-                                    <button type="button" class="btn btn-light py-2 px-3">
-                                        <i class="ri-time-line me-1"></i>Récentes
-                                    </button>
-                                    <button type="button" class="btn btn-light py-2 px-3">
-                                        <i class="ri-alert-line me-1"></i>Important
-                                    </button>
-                                </div>
-                            </div>
-
+                           
                             <!-- Liste des notes -->
                             <div class="vstack gap-4" id="ListeDesNotes">
                                 <button type="button" class="border-start border-4 border-dashed border-warning ps-4 py-4 bg-white rounded-end text-start w-100" data-bs-toggle="modal" data-bs-target="#addNoteModal">
@@ -449,6 +435,7 @@
                 </div>
             </div>
             <!-- Fin Section Notes-->
+             
 
 
                     </div>
@@ -3272,6 +3259,83 @@
             });      
         });
 
+        function loadRemiderDetailsForUpdate(id_rendez_vous){
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadRendezVousDetails' %}",
+                dataType: "JSON",
+                type: "GET",
+                data : {'id_rendez_vous' : id_rendez_vous},
+                success: function(data){
+                    $('#editDescriptionRemider').val(data[0].description);
+                    $('#editDateReminder').val(data[0].date_rendez_vous);
+                    $('#editTimeReminer').val(data[0].heure_rendez_vous);
+                    $('#editObjectReminder').val(data[0].object);
+                    $('#editTypeReminder').val(data[0].type);
+                    
+                }
+            });
+        }
+
+        $(document).on('click', '#editReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            loadRemiderDetailsForUpdate(id_reminder);
+            $('#editReminderBtnSave').data('id', id_reminder);
+            $('#editReminderModal').modal('show');
+        });
+
+        $(document).on('click','#editReminderBtnSave', function(){
+            var editedDescription = $('#editDescriptionRemider').val();
+            var editedType = $('#editTypeReminder').val();
+            var editedDate = $('#editDateReminder').val();
+            var editedTime = $('#editTimeReminer').val();
+            var editedObject = $('#editObjectReminder').val();
+            var id_rappel = $(this).data('id');
+            $.ajax({
+                url : "{% url 't_crm:ApiUpdateRappel' %}",
+                dataType : 'JSON',
+                type: 'POST',
+                data : {
+                    'id_rappel' : id_rappel,
+                    'type' : editedType,
+                    'subject' : editedObject,
+                    'date' : editedDate,
+                    'time' : editedTime,
+                    'description' : editedDescription,
+                    'csrfmiddlewaretoken' : '{{ csrf_token }}'
+                },
+
+                success : function(response){
+                    if(response.status == "success"){
+                        alertify.success(response.message);
+                        loadRappelRendezVous();
+                        $('#editReminderModal').modal('hide');
+                        
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            })
+        });
+
+        $(document).on('click', '#detailsReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            $('#detailsReminderModal').modal('show');
+        });
+
+        $(document).on('click', '#validateReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            $('#validateReminderModal').modal('show');
+        });
+
+        $(document).on('click', '#deleteReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            $('#deleteReminderModal').modal('show');
+        });
+
+
+        
+
+       
     });
 </script>
 

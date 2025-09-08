@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
+from django.utils.dateformat import format
 
 
 @login_required(login_url='intitut_app:login')
@@ -89,6 +90,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
     return JsonResponse(data, safe=False)
 
 
+
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscritRendezVous(request):
    id_prospect = request.GET.get('id_prospect')
@@ -97,7 +99,7 @@ def ApiLoadPreinscritRendezVous(request):
        l_obj = RendezVous.objects.get(id = l['id'])
        l['status_label'] = l_obj.get_statut_display()
        l['type_label'] = l_obj.get_type_display()
-       l['created_at'] = l_obj.created_at
+       l['created_at'] = format(l_obj.created_at, "Y-m-d H:i"),
    return JsonResponse(list(rendez_vous), safe=False)
 
 

@@ -381,6 +381,8 @@ def ListeDesProspects(request):
     }
     return render(request, 'tenant_folder/crm/liste-des-prospects.html', context)
 
+from django.utils.dateformat import format
+
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
     prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
@@ -388,6 +390,7 @@ def ApiLoadProspects(request):
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()
         l['etat_label'] = l_obj.get_etat_display()
+        l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
     return JsonResponse(list(prospects), safe=False)
 
 @login_required(login_url='institut_app:login')
