@@ -245,23 +245,6 @@ def ApiGetEntrepriseDetails(request):
     entreprise = Entreprise.objects.filter(id=id).values('id','designation','rc','nif','art','nis','adresse','telephone','wilaya','pays','email','site_web')
     return JsonResponse(list(entreprise), safe=False)
 
-@login_required(login_url='institut_app:login')
-def detailsEntreprise(request, pk):
-    entreprise = Entreprise.objects.get(id=pk)
-    updateForm = EntrepriseForm(instance=entreprise)
-    if request.method == "POST":
-        updateForm = EntrepriseForm(request.POST, instance=entreprise)
-        if updateForm.is_valid():
-            updateForm.save()
-            messages.success(request, "Les informations ont été modifier avec succès")
-            return redirect("institut_app:details_entreprise", pk)
-    context = {
-        'entreprise' : entreprise,
-        'tenant' : request.tenant,
-        'updateForm' : updateForm,
-    }
-    return render(request, 'tenant_folder/entreprise/details_entreprise.html', context)
-
 def UsersListePage(request):
     context = {
         'tenant' : request.tenant,

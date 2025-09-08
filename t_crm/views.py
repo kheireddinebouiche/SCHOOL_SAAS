@@ -502,8 +502,6 @@ def ApiLoadProspectDetails(request):
             'code': s.code,
             'label': s.label,
         })
-
-    
     data = {
         'id': prospect.id,
         'nin': prospect.nin,

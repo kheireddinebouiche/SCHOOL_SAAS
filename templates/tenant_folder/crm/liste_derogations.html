@@ -53,6 +53,25 @@
     justify-content: center;
     font-size: 1.5rem;
   }
+  
+  /* Fix dropdown z-index issue */
+  .dropdown {
+    position: relative;
+    z-index: 1000;
+  }
+  .dropdown-menu {
+    z-index: 1050;
+  }
+  
+  /* Ensure table container doesn't hide dropdown */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  /* Fix for dropdown in table cells */
+  .table td .dropdown {
+    position: static;
+  }
 </style>
 
 <div class="main-content">
@@ -198,6 +217,7 @@
                       <th class="border-0">Type</th>
                       <th class="border-0">Motif</th>
                       <th class="border-0">Date de demande</th>
+                      <th class="border-0">Traitée le</th>
                       <th class="border-0">Statut</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
@@ -214,17 +234,7 @@
                 </table>
               </div>
               
-              <!-- Pagination -->
-              <div class="d-flex justify-content-between align-items-center mt-3">
-                <div class="text-muted">
-                  Affichage de <span id="start-item">0</span> à <span id="end-item">0</span> sur <span id="total-items">0</span> dérogations
-                </div>
-                <nav>
-                  <ul class="pagination mb-0" id="pagination-container">
-                    <!-- La pagination sera générée ici dynamiquement -->
-                  </ul>
-                </nav>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -273,12 +283,6 @@
                   </div>
                   <div class="col-md-6">
                     <div class="d-flex">
-                      <div class="text-muted fw-medium me-2">Type:</div>
-                      <div id="detail-type">-</div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="d-flex">
                       <div class="text-muted fw-medium me-2">Date de demande:</div>
                       <div id="detail-date-demande">-</div>
                     </div>
@@ -320,39 +324,14 @@
               </div>
             </div>
           </div>
-          
-          <!-- Documents joints -->
-          <div class="col-12">
-            <div class="card border-0 shadow-sm">
-              <div class="card-header bg-success bg-opacity-10 border-0 py-2">
-                <h6 class="card-title text-success mb-0">
-                  <i class="ri-folder-line me-2"></i>Documents joints
-                </h6>
-              </div>
-              <div class="card-body p-3">
-                <div class="table-responsive">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                      <tr>
-                        <th class="border-0 rounded-start">Nom du document</th>
-                        <th class="border-0 rounded-end">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="detail-documents">
-                      <tr>
-                        <td colspan="2" class="text-center text-muted">Aucun document joint</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       <div class="modal-footer border-0 bg-light-subtle px-4 py-3">
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
           <i class="ri-close-line me-2"></i>Fermer
+        </button>
+        <button type="button" class="btn btn-warning px-4 py-2 btn-traiter-modal" id="traiteDerogBtn" data-id="">
+          <i class="ri-edit-line me-2"></i>Traiter
         </button>
       </div>
     </div>
@@ -468,82 +447,70 @@
   $(document).ready(function () {
     // Variables globales
     let currentDerogationId = null;
-    
-    // Fonction pour charger les dérogations
+    let derogationsData =[];
+   
     function loadDerogations() {
-      // Simulation de chargement des dérogations
-      // Dans une vraie application, cela ferait un appel AJAX au backend
-      
-      // Exemple de données (à remplacer par un appel AJAX)
-      const derogations = [
-        {
-          id: 1,
-          demandeur: "Jean Martin",
-          type: "Dérogation de frais",
-          motif: "Situation financière difficile",
-          date_demande: "2024-05-15",
-          statut: "en_attente"
-        },
-        {
-          id: 2,
-          demandeur: "Marie Dubois",
-          type: "Dérogation d'âge",
-          motif: "Expérience professionnelle",
-          date_demande: "2024-05-10",
-          statut: "acceptee"
-        },
-        {
-          id: 3,
-          demandeur: "Pierre Lambert",
-          type: "Dérogation de diplôme",
-          motif: "Formation alternative",
-          date_demande: "2024-05-05",
-          statut: "rejetee"
-        },
-        {
-          id: 4,
-          demandeur: "Sophie Bernard",
-          type: "Dérogation de frais",
-          motif: "Perte d'emploi récente",
-          date_demande: "2024-05-20",
-          statut: "en_attente"
-        },
-        {
-          id: 5,
-          demandeur: "Thomas Moreau",
-          type: "Dérogation d'âge",
-          motif: "Retraité souhaitant se reconvertir",
-          date_demande: "2024-04-28",
-          statut: "acceptee"
+      $.ajax({
+        url : "{% url 't_crm:ApiLoadDerogation' %}",
+        dataType: "JSON",
+        type : "GET",
+        success : function(data){
+            derogationsData = data;
+            renderDerogationTable(data);
         }
-      ];
-      
-      renderDerogations(derogations);
-      updateStatistics(derogations);
+      });
+
     }
     
-    // Fonction pour mettre à jour les statistiques
-    function updateStatistics(derogations) {
-      const total = derogations.length;
-      const enAttente = derogations.filter(d => d.statut === "en_attente").length;
-      const acceptees = derogations.filter(d => d.statut === "acceptee").length;
-      const rejetees = derogations.filter(d => d.statut === "rejetee").length;
-      
-      $('#total-derogations').text(total);
-      $('#en-attente').text(enAttente);
-      $('#acceptees').text(acceptees);
-      $('#rejetees').text(rejetees);
+    loadDerogations();
+
+    function loadDerogationDetails(id_derogation){
+        $.ajax({
+          url : "{% url 't_crm:ApiGetDerogationDetails' %}",
+          dataType : 'JSON',
+          type: 'GET',
+          data :{'id_derogation' : id_derogation},
+          success : function(data){
+
+            let statutBadgeDerogation = "";
+            switch(data.statut){
+              case "en_attente":
+                statutBadgeDerogation = "<span class='badge bg-warning-subtle text-warning px-2 py-1'>En attente</span>";
+              break;
+
+              case "acceptee":
+                statutBadgeDerogation = "<span class='badge bg-success-subtle text-success px-2 py-1'>Acceptée</span>";
+                document.getElementById('traiteDerogBtn').hidden = true;
+              break;
+
+
+              case "rejetee":
+                statutBadgeDerogation = "<span class='badge bg-danger-subtle text-danger px-2 py-1'>Rejetée</span>";
+                document.getElementById('traiteDerogBtn').hidden = true;
+              break;
+            }
+
+            $('#detail-demandeur').text(data.demandeur_nom +' '+ data.demandeur_prenom);
+            $('#detail-date-demande').text(data.date_de_demande);
+            $('#detail-statut').html(statutBadgeDerogation);
+            $('#detail-motif').text(data.type);
+            $('#detail-description').text(data.motif);
+          }
+        })
     }
     
-    // Fonction pour afficher les dérogations dans le tableau
-    function renderDerogations(derogations) {
-      let row = "";
-      
-      if (derogations.length === 0) {
+    function renderDerogationTable(data){
+      var row = "";
+      let total = 0;
+      let enAttente = 0;
+      let acceptee = 0;
+      let rejetee = 0;
+
+      if (data.length === 0) {
         row += "<tr><td colspan='6' class='text-center text-muted'>Aucune dérogation trouvée</td></tr>";
       } else {
-        $.each(derogations, function(index, item) {
-          // Déterminer la classe du badge selon le statut
+        $.each(data, function(index, item) {
+        
           let statutBadge = "";
           switch(item.statut) {
             case "en_attente":
@@ -558,12 +525,27 @@
             default:
               statutBadge = "<span class='badge bg-secondary-subtle text-secondary px-2 py-1'>Inconnu</span>";
           }
+
+          total++;
+
+          switch (item.statut) {
+            case "en_attente":
+              enAttente++;
+              break;
+            case "acceptee":
+              acceptee++;
+              break;
+            case "rejetee":
+              rejetee++;
+              break;
+          }
           
           row += "<tr class='align-middle'>";
-          row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-semibold'>" + item.demandeur + "</div></div></td>";
+          row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-semibold'>" + item.demandeur__nom +' '+item.demandeur__prenom+ "</div></div></td>";
           row += "<td><div class='text-body'>" + item.type + "</div></td>";
           row += "<td><div class='text-truncate' style='max-width: 200px;'>" + item.motif + "</div></td>";
-          row += "<td><div class='text-body'><i class='ri-calendar-line text-muted me-2'></i>" + item.date_demande + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-calendar-line text-muted me-2'></i>" + item.date_de_demande + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-calendar-line text-muted me-2'></i>" + item.updated_at + "</div></td>";
           row += "<td>" + statutBadge + "</td>";
           row += '<td class="text-end">';
           row += '<div class="dropdown d-inline-block">';
@@ -574,7 +556,6 @@
           row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 btn-details" data-id="' + item.id + '">';
           row += '<i class="ri-eye-line text-info me-2"></i>Détails</button></li>';
           
-          // N'afficher le bouton "Traiter" que pour les dérogations en attente
           if (item.statut === "en_attente") {
             row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 btn-traiter" data-id="' + item.id + '">';
             row += '<i class="ri-edit-line text-warning me-2"></i>Traiter</button></li>';
@@ -590,22 +571,23 @@
           row += "</tr>";
         });
       }
-      
       $("#listeItem").html(row);
-      
-      // Mettre à jour les informations de pagination
-      $("#start-item").text("1");
-      $("#end-item").text(derogations.length);
-      $("#total-items").text(derogations.length);
+      $('#total-derogations').text(total);
+      $('#en-attente').text(enAttente);
+      $('#acceptees').text(acceptee);
+      $('#rejetees').text(rejetee);
     }
     
-    // Charger les dérogations au chargement de la page
-    loadDerogations();
-    
-    // Gestionnaire d'événements pour les boutons de filtrage
     $(document).on('change', '#filter-derogation', function(){
-      // Dans une vraie application, cela rechargerait les dérogations avec le filtre appliqué
-      alert("Filtrage par statut: " + $(this).val());
+      let selected = $(this).val();
+      if (selected === "0") {
+        renderDerogationTable(derogationsData);
+      } else {
+        let filtered = derogationsData.filter(function(item) {
+          return item.statut === selected;
+        });
+        renderDerogationTable(filtered);
+      }
     });
     
     $(document).on('change', '#date_filter-derogation', function(){
@@ -623,45 +605,16 @@
     // Gestionnaire d'événements pour le bouton "Détails"
     $(document).on('click', '.btn-details', function(){
       const derogationId = $(this).data('id');
+      loadDerogationDetails(derogationId);
       
-      // Dans une vraie application, cela chargerait les détails de la dérogation via AJAX
-      // Ici, nous simulons avec des données statiques
-      $('#detail-demandeur').text("Jean Martin");
-      $('#detail-type').text("Dérogation de frais");
-      $('#detail-date-demande').text("15/05/2024");
-      $('#detail-statut').html("<span class='badge bg-warning-subtle text-warning px-2 py-1'>En attente</span>");
-      $('#detail-motif').text("Situation financière difficile");
-      $('#detail-description').text("Le demandeur justifie d'une situation financière précaire qui ne lui permet pas de payer les frais de formation complets. Il joint des documents attestant de sa situation.");
-      
-      // Afficher les documents joints (simulation)
-      let documentsHtml = "";
-      documentsHtml += "<tr>";
-      documentsHtml += "<td>Justificatif_de_revenus.pdf</td>";
-      documentsHtml += '<td class="text-end">';
-      documentsHtml += '<div class="d-flex justify-content-end gap-2">';
-      documentsHtml += '<button class="btn btn-soft-info btn-sm" title="Télécharger"><i class="ri-download-line"></i></button>';
-      documentsHtml += '<button class="btn btn-soft-danger btn-sm" title="Supprimer"><i class="ri-delete-bin-line"></i></button>';
-      documentsHtml += '</div>';
-      documentsHtml += "</td>";
-      documentsHtml += "</tr>";
-      
-      documentsHtml += "<tr>";
-      documentsHtml += "<td>Pièce_identité.pdf</td>";
-      documentsHtml += '<td class="text-end">';
-      documentsHtml += '<div class="d-flex justify-content-end gap-2">';
-      documentsHtml += '<button class="btn btn-soft-info btn-sm" title="Télécharger"><i class="ri-download-line"></i></button>';
-      documentsHtml += '<button class="btn btn-soft-danger btn-sm" title="Supprimer"><i class="ri-delete-bin-line"></i></button>';
-      documentsHtml += '</div>';
-      documentsHtml += "</td>";
-      documentsHtml += "</tr>";
-      
-      $('#detail-documents').html(documentsHtml);
+      // Mettre à jour l'ID de la dérogation pour le bouton traiter
+      $('.btn-traiter-modal').data('id', derogationId);
       
       // Afficher la modale
       $('#detailsDerogationModal').modal('show');
     });
     
-    // Gestionnaire d'événements pour le bouton "Traiter"
+    // Gestionnaire d'événements pour le bouton "Traiter" (dans le dropdown)
     $(document).on('click', '.btn-traiter', function(){
       currentDerogationId = $(this).data('id');
       
@@ -671,10 +624,31 @@
       
       // Afficher la modale
       $('#traiterDerogationModal').modal('show');
+
+      $('#btnConfirmerTraitement').data('id', currentDerogationId);
+    });
+    
+    // Gestionnaire d'événements pour le bouton "Traiter" (dans la modale de détails)
+    $(document).on('click', '.btn-traiter-modal', function(){
+      currentDerogationId = $(this).data('id');
+      
+      // Réinitialiser le formulaire
+      $('#decision_derogation').val("");
+      $('#commentaire_traitement').val("");
+      
+      // Fermer la modale de détails
+      $('#detailsDerogationModal').modal('hide');
+      
+      // Afficher la modale de traitement
+      $('#traiterDerogationModal').modal('show');
+
+      $('#btnConfirmerTraitement').data('id', currentDerogationId);
     });
     
     // Gestionnaire d'événements pour le bouton "Confirmer" du traitement
     $(document).on('click', '#btnConfirmerTraitement', function(){
+      var currentDerogationId = $(this).data('id');
+
       const decision = $('#decision_derogation').val();
       const commentaire = $('#commentaire_traitement').val();
       
@@ -682,15 +656,26 @@
         alert("Veuillez sélectionner une décision.");
         return;
       }
-      
-      // Dans une vraie application, cela enverrait les données au serveur via AJAX
-      alert("Dérogation #" + currentDerogationId + " " + (decision === "acceptee" ? "acceptée" : "rejetée") + ".Commentaire: " + commentaire);
-      
-      // Fermer la modale
-      $('#traiterDerogationModal').modal('hide');
-      
-      // Recharger les dérogations
-      loadDerogations();
+      $.ajax({
+        url : "{% url 't_crm:ApiTraiteDerogation' %}",
+        dataType: 'JSON',
+        type : 'POST',
+        data : {
+          'decision' : decision,
+          'commentaire' : commentaire,
+          'id_derogation' : currentDerogationId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response){
+          if(response.status === "success"){
+            alertify.success("La demande de dérogation a été traiter avec succès");       
+            $('#traiterDerogationModal').modal('hide');
+            loadDerogations();
+          }else{  
+            alertify.error('Une erreur c\'produite lors du traitement de la reqûete');
+          }
+        }
+      }); 
     });
     
     // Gestionnaire d'événements pour le bouton "Supprimer"
@@ -712,6 +697,9 @@
       // Recharger les dérogations
       loadDerogations();
     });
+  
+  
+  
   });
 </script>
 {% endblock content %}
