@@ -4,7 +4,7 @@ from t_crm.models import *
 
 class Etudiant(models.Model):
     
-    relation = models.ForeignKey(Visiteurs, on_delete=models.DO_NOTHING, null=True, blank=True)
+    relation = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)
 
     nom_arabe = models.CharField(max_length=255, null=True, blank=True)
     prenom_arabe = models.CharField(max_length=255, null=True, blank=True)
