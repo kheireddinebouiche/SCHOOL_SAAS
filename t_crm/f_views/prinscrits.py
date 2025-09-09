@@ -341,7 +341,7 @@ def ApiStoreRappelPreinscrit(request):
 
 def get_prospects_incomplets():
     # Tous les prospects préinscrits
-    prospects = Prospets.objects.filter(type_prospect="particulier")
+    prospects = Prospets.objects.filter(type_prospect="particulier", statut="prinscrit")
     results = []
 
     for prospect in prospects:
