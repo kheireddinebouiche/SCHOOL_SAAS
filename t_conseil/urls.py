@@ -23,6 +23,12 @@ urlpatterns = [
   path('ApiArchiveThematique', ApiArchiveThematique, name="ApiArchiveThematique"),
   path('ApiActivateThematique', ApiActivateThematique, name="ApiActivateThematique"),
   path('ApiUpdateThematique', ApiUpdateThematique, name="ApiUpdateThematique"),
+
+
+
+  path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
+  path('ApiLoadProspect',ApiLoadProspect, name="ApiLoadProspect"),
+  path('ApiTransformeToClient',ApiTransformeToClient, name="ApiTransformeToClient"),
   
    
 ]

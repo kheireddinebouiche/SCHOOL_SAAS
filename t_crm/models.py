@@ -55,6 +55,7 @@ class Prospets(models.Model):
     has_completed_doc = models.BooleanField(default=False)
     has_derogation = models.BooleanField(default = False)
 
+    is_ets_prospect = models.BooleanField(default=False)
     is_client = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

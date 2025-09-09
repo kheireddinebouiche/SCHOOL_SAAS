@@ -1,0 +1,1127 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}CRM - Liste des prospects{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .prospect-type-card[data-type="entreprise"]:hover {
+    border-color: #dc3545;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-users text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Liste des prospects</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Conseil</a>
+                  </li>
+                  <li class="breadcrumb-item active">Liste des prospects</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      <div class="row">
+        <!-- KPIs Section -->
+        <div class="col-12 mb-4">
+          <div class="row g-3">
+            <!-- Total Prospects -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-group-line text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Total Prospects</h5>
+                      <h3 class="mb-0 fw-bold" id="totalProspects">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Particuliers -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-user-line text-info fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Particuliers</h5>
+                      <h3 class="mb-0 fw-bold" id="particuliersCount">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Entreprises -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-building-line text-danger fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Entreprises</h5>
+                      <h3 class="mb-0 fw-bold" id="entreprisesCount">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- En Attente -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-time-line text-warning fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">En Attente</h5>
+                      <h3 class="mb-0 fw-bold" id="enAttenteCount">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                  <select id="filter-prospect" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par type de client</option>
+                    <option value="particulier">Particulier</option>
+                    <option value="entreprise">Entreprise</option>
+                  </select>
+
+                  <select id="date_filter-prospect" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par date de création</option>
+                    <option value="-created_at">Date (récent)</option>
+                    <option value="created_at">Date (ancien)</option>
+                  </select>
+                  
+                  <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#newProspectModal">
+                    <i class="ri-add-line me-1"></i> Nouveau prospect
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Nom & Prénom</th>
+                      <th class="border-0">Entreprise</th>
+                      <th class="border-0">Téléphone</th>
+                      <th class="border-0">Email</th>
+                      <th class="border-0">Type client</th>
+                      <th class="border-0">État</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeItem" class="border-top-0"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div hidden class="row">
+        <div class="kanban">
+          <div class="column">
+            <p>Visiteurs</p>
+            <div
+              class="dropzone"
+              ondragover="allowDrop(event)"
+              ondrop="drop(event)"
+            >
+              <div
+                class="cardtache"
+                draggable="true"
+                ondragstart="drag(event)"
+                id="card1"
+              >
+                Tâche 1
+              </div>
+              <div
+                class="cardtache"
+                draggable="true"
+                ondragstart="drag(event)"
+                id="card2"
+              >
+                Tâche 2
+              </div>
+            </div>
+          </div>
+
+          <div class="column">
+            <p>Instances</p>
+            <div
+              class="dropzone"
+              ondragover="allowDrop(event)"
+              ondrop="drop(event)"
+            >
+              <div
+                class="cardtache"
+                draggable="true"
+                ondragstart="drag(event)"
+                id="card3"
+              >
+                Tâche 3
+              </div>
+            </div>
+          </div>
+
+          <div class="column">
+            <p>Dossier incomplet</p>
+            <div
+              class="dropzone"
+              ondragover="allowDrop(event)"
+              ondrop="drop(event)"
+            >
+              <div
+                class="cardtache"
+                draggable="true"
+                ondragstart="drag(event)"
+                id="card3"
+              >
+                Tâche 3
+              </div>
+            </div>
+          </div>
+
+          <div class="column">
+            <p>Inscrits</p>
+            <div
+              class="dropzone"
+              ondragover="allowDrop(event)"
+              ondrop="drop(event)"
+            >
+              <div
+                class="cardtache"
+                draggable="true"
+                ondragstart="drag(event)"
+                id="card4"
+              >
+                Tâche 4
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!--Modal-->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Confirmation de suppression
+            </h5>
+            <p class="text-muted small mb-0">Cette action ne peut pas être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-delete-bin-line text-danger" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-danger mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0">
+            Vous êtes sur le point de supprimer ce prospect. Cette action est irréversible et toutes les données associées seront définitivement supprimées.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /.modal -->
+
+<!-- Modal pour suppression impossible -->
+<div class="modal fade deleteImpossibleModal" tabindex="-1" role="dialog" aria-labelledby="deleteImpossibleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-error-warning-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="deleteImpossibleModalLabel">
+              Suppression impossible
+            </h5>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-error-warning-line text-warning" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-warning mb-3">Action non autorisée</h4>
+          <p class="text-muted mb-0">
+            La suppression du prospect ne peut pas être effectuée car il a été confirmé.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Compris</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /.modal -->
+
+
+<!--MODAL-->
+<div id="updateInfoProspect" class="modal fade" tabindex="-1" aria-labelledby="updateInfoProspectLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-user-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="updateInfoProspectLabel">
+                            Modification des informations
+                        </h5>
+                        <p class="text-muted small mb-0">Mise à jour des informations du prospect</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Informations personnelles -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                                <i class="ri-user-line text-primary"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-primary">Informations personnelles</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_last_name">Nom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_last_name" name="nom">
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_first_name">Prénom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_first_name" name="prenom">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordonnées -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-warning bg-opacity-10 rounded me-2">
+                                <i class="ri-contacts-line text-warning"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-warning">Coordonnées</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_email">Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-muted"></i></span>
+                                    <input type="email" class="form-control border-0 bg-light py-2" id="id_email" name="email">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_telephone">Téléphone</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-phone-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_telephone" name="telephone">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_canal">Canal</label>
+                                <select class="form-select border-0 bg-light py-2" id="id_canal" name="canal">
+                                    <option value="">---------</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observation -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-danger bg-opacity-10 rounded me-2">
+                                <i class="ri-chat-1-line text-danger"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-danger">Observation</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control border-0 bg-light" id="id_observation" name="observation" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Voeux de formation -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
+                                <i class="ri-book-open-line text-success"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-success">Voeux de formation</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_voeux_formation">Formation</label>
+                                <select class="form-select border-0 bg-light py-2" id="id_voeux_formation" name="voeux_formation">
+                                    <option value="">Sélectionner une formation</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_voeux_specialite">Spécialité</label>
+                                <select class="form-select border-0 bg-light py-2" id="id_voeux_specialite" name="voeux_specialite">
+                                    <option value="">Sélectionner une spécialité</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary px-4 py-2" id="updateInfoProspectBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </div>
+</div><!-- /.modal -->
+
+
+<!--MODAL-->
+<div id="updateInfoProspectEntreprise" class="modal fade" tabindex="-1" aria-labelledby="updateInfoProspectEntrepriseLabel" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-building-4-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="updateInfoProspectEntrepriseLabel">
+                            Modification des informations
+                        </h5>
+                        <p class="text-muted small mb-0">Mise à jour des informations de l'entreprise</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Informations entreprise -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                                <i class="ri-building-line text-primary"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-primary">Informations entreprise</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-12">
+                                <label class="form-label fw-medium" for="entreprise_informations">Désignation de l'entreprise</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-building-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="entreprise_informations" name="nom" placeholder="Nom de l'entreprise">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact principal -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
+                                <i class="ri-user-line text-success"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-success">Contact principal</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_last_name">Nom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_last_name_ets" name="nom" placeholder="Nom">
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-medium" for="id_first_name">Prénom</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_first_name_ets" name="prenom" placeholder="Prénom">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordonnées -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-warning bg-opacity-10 rounded me-2">
+                                <i class="ri-contacts-line text-warning"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-warning">Coordonnées</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_email">Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-muted"></i></span>
+                                    <input type="email" class="form-control border-0 bg-light py-2" id="id_email_ets" name="email" placeholder="Email">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_telephone">Téléphone</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-phone-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_telephone_ets" name="telephone" placeholder="Téléphone">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="id_canal">Canal</label>
+                                <select class="form-select border-0 bg-light py-2" id="id_canal_ets" name="canal">
+                                    <option value="">Sélectionner un canal</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observation -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-danger bg-opacity-10 rounded me-2">
+                                <i class="ri-chat-1-line text-danger"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-danger">Observation</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control border-0 bg-light" id="id_observation_ets" name="observation" rows="3" placeholder="Ajouter une observation..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary px-4 py-2" id="updateInfoProspectEntrepriseBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for new prospect type selection -->
+<div class="modal fade" id="newProspectModal" tabindex="-1" aria-labelledby="newProspectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary" id="newProspectModalLabel">
+          <i class="ri-user-add-line me-2"></i>Créer un nouveau prospect
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <p class="text-muted mb-4">Sélectionnez le type de prospect que vous souhaitez créer</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 prospect-type-card" data-type="particulier">
+              <div class="card-body p-4">
+                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-3 d-inline-block mb-3">
+                  <i class="ri-user-line text-primary fs-2"></i>
+                </div>
+                <h5 class="card-title fw-bold mb-2">Particulier</h5>
+                <p class="card-text text-muted small">Créer un prospect individuel</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 prospect-type-card" data-type="entreprise">
+              <div class="card-body p-4">
+                <div class="icon-circle bg-danger bg-opacity-10 rounded-circle p-3 d-inline-block mb-3">
+                  <i class="ri-building-line text-danger fs-2"></i>
+                </div>
+                <h5 class="card-title fw-bold mb-2">Entreprise</h5>
+                <p class="card-text text-muted small">Créer un prospect entreprise</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // Fix dropdown positioning
+  $(document).ready(function () {
+    // Ensure table responsive container doesn't hide dropdowns
+    $('.table-responsive').css('overflow-x', 'visible');
+    
+    // Handle dropdown show events
+    $(document).on('show.bs.dropdown', function(e) {
+      var dropdownMenu = $(e.target).find('.dropdown-menu');
+      if (dropdownMenu.length) {
+        dropdownMenu.css({
+          'z-index': '1050',
+          'position': 'absolute'
+        });
+      }
+    });
+
+    function loadProspects(){
+        $.ajax({
+          url : '{% url "t_crm:ApiLoadProspects" %}',
+          dataType: "JSON",
+          type: 'GET',
+          success : function(data){
+            var row = "";
+            if (data.length === 0) {
+              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
+            }else{
+              $.each(data, function(index, item){
+                row += "<tr class='align-middle'>";
+                row += "<td><a href='/crm/details-prospect/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
+                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
+                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
+                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
+                row += "<td>" + (item.type_prospect === 'particulier' ? 
+                    "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
+                    "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
+                row += "<td>" + (item.etat === 'en_attente' ? 
+                    "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
+                    "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
+                row += '<td class="text-end">';
+                row += '<div class="dropdown d-inline-block">';
+                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                row += '<i class="ri-more-2-fill"></i>';
+                row += '</button>';
+                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+                if(item.etat == "en_attente"){
+                  row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+                  row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+                  row += '</button></li>';
+                }else{
+                   row += '<li><button id="deleteImpossible" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+                   row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+                   row += '</button></li>';
+                }
+                row += '</ul>';
+                row += '</div>';
+                row += '</td>';
+                row += "</tr>";
+            });
+            
+          }
+
+          $("#listeItem").html(row);
+          
+          // Update KPIs
+          updateKPIs(data);
+        }
+      });
+    }
+    
+    function updateKPIs(data) {
+      // Total prospects
+      $('#totalProspects').text(data.length);
+      
+      // Count by type
+      let particuliers = 0;
+      let entreprises = 0;
+      let enAttente = 0;
+      
+      $.each(data, function(index, item) {
+        if (item.type_prospect === 'particulier') {
+          particuliers++;
+        } else if (item.type_prospect === 'entreprise') {
+          entreprises++;
+        }
+        
+        if (item.etat === 'en_attente') {
+          enAttente++;
+        }
+      });
+      
+      $('#particuliersCount').text(particuliers);
+      $('#entreprisesCount').text(entreprises);
+      $('#enAttenteCount').text(enAttente);
+    }
+
+    loadProspects();
+
+    $(document).on('click','#deleteConfirmation', function(){
+      var id_prospect = $(this).data('id');
+      var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id_prospect+' class="btn btn-danger">Confirmer</a>';
+
+      $('.hstack').html(row);
+      $('.deleteModal').modal('show');
+    });
+
+    $(document).on('click','#deleteImpossible', function(){
+      $('.deleteImpossibleModal').modal('show');
+    });
+
+    $(document).on('click', '#confirmDeleteBtn', function(){
+      var id_prospect = $(this).data('id');
+
+      $.ajax({
+        url : "{% url 't_crm:ApiDeleteProspect' %}",
+        type : "POST",
+        dataType : "JSON",
+        data : {'id_prospect' : id_prospect,'csrfmiddlewaretoken': '{{ csrf_token }}'},
+        success : function(response){
+          if (response.status === "success"){
+            alertify.success(response.message);
+            loadProspects();
+            $('.deleteModal').modal('hide');
+          }else{
+            alertify.error(response.message);
+          }
+        }
+      });
+    });
+    
+    function loadFiltredProspect(filter_option, value){
+      $.ajax({
+        url : "{% url 't_crm:ApiFilterProspect' %}",
+        type : "GET",
+        dataType : "JSON",
+        data : {'filter_option' : filter_option, 'value' : value},
+        success : function(data){
+            var row = "";
+            if (data.length === 0) {
+              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect "+value+" trouvé</td></tr>";
+            }else{
+              $.each(data, function(index, item){
+                row += "<tr class='align-middle'>";
+                row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></td>";
+                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
+                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
+                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
+                row += "<td>" + (item.type_prospect === 'particulier' ? 
+                    "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
+                    "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
+                row += "<td>" + (item.etat === 'en_attente' ? 
+                    "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
+                    "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
+                row += '<td class="text-end">';
+                row += '<div class="dropdown d-inline-block">';
+                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                row += '<i class="ri-more-2-fill"></i>';
+                row += '</button>';
+                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+                row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
+                row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+                if(item.type_prospect === "particulier"){
+                  row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+                }else{
+                  row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+                }
+                row += '<li><hr class="dropdown-divider my-1"></li>';
+                if(item.etat == "en_attente"){
+                  row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+                  row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+                  row += '</button></li>';
+                }else{
+                   row += '<li><button id="deleteImpossible" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+                   row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+                   row += '</button></li>';
+                }
+                row += '</ul>';
+                row += '</div>';
+                row += '</td>';
+                row += "</tr>";
+              });
+            }
+            $("#listeItem").html(row);
+            
+            // Update KPIs when filtering
+            updateKPIs(data);
+          }
+      });
+    }
+
+    $(document).on('change','#filter-prospect', function(){
+      var filter_option = "filter-prospect";
+      let value = $(this).val();
+
+      loadFiltredProspect(filter_option, value);
+      
+    });
+
+    $(document).on('click','#date_filter-prospect', function(){
+      var filter_option = "date_filter-prospect";
+      let value = $(this).val();
+
+      loadFiltredProspect(filter_option, value);
+     
+    });
+
+   
+    function loadProspectDetails(id_prospect){
+
+      $.ajax({
+        url : "{% url 't_crm:ApiLoadProspectDetails' %}",
+        dataType : 'JSON',
+        type: 'GET',
+        data : {'id_prospect' : id_prospect},
+        success : function(data){
+          $('#id_last_name').val(data.prospect.nom);
+          $('#id_first_name').val(data.prospect.prenom);
+          $('#id_email').val(data.prospect.email);
+          $('#id_telephone').val(data.prospect.telephone);
+          $('#id_observation').val(data.prospect.observation);
+          
+          var id_selection_formation = data.fiche_voeux[0].specialite_id_formation;
+          var id_selection_specialite = data.fiche_voeux[0].specialite_id;
+
+          var formationOptions = '<option value="">---------</option>';
+          $.each(data.formations, function(index, item){
+            formationOptions += '<option '+(item.id === id_selection_formation ? 'selected' : '')+' value="'+item.id+'">'+item.id+'- '+item.nom+'</option>';
+          });
+          $('#id_voeux_formation').html(formationOptions);
+
+          var specialiteOptions = '<option value="">---------</option>';
+          $.each(data.specialites, function(index, item){
+            specialiteOptions += '<option '+(item.id === id_selection_specialite ? 'selected' : '')+ ' value="'+item.id+'">'+item.code+' - '+item.label+'</option>';
+          });
+          $('#id_voeux_specialite').html(specialiteOptions);
+         
+
+          var canalOptions = '<option value="">---------</option>';
+
+          canalOptions += '<option '+(data.prospect.canal === "email" ? 'selected' : '')+' value="email">Email</option>';
+          canalOptions += '<option '+(data.prospect.canal === "telephone" ? 'selected' : '')+' value="telephone">Téléphone</option>';
+          canalOptions += '<option '+(data.prospect.canal === "autre" ? 'selected' : '')+' value="autre">Autre</option>';
+          canalOptions += '<option '+(data.prospect.canal === "facebook" ? 'selected' : '')+' value="facebook">Facebook</option>';
+          canalOptions += '<option '+(data.prospect.canal === "linkedin" ? 'selected' : '')+' value="linkedin">LinkedIn</option>';
+          canalOptions += '<option '+(data.prospect.canal === "instagram" ? 'selected' : '')+' value="instagram">Instagram</option>';
+          canalOptions += '<option '+(data.prospect.canal === "tiktok" ? 'selected' : '')+' value="tiktok">TikTok</option>';
+           
+          $('#id_canal').html(canalOptions);
+
+
+          $('#updateInfoProspect').modal('show');
+        }
+      });
+    }
+
+    function loadProspectEntrepriseDetails(id_prospect_ets){
+      $.ajax({
+        url : "{% url 't_crm:ApiLoadProspectDetails' %}",
+        dataType : 'JSON',
+        type: 'GET',
+        data : {'id_prospect' : id_prospect_ets},
+        success : function(data){
+          $('#id_last_name_ets').val(data.prospect.nom);
+          $('#id_first_name_ets').val(data.prospect.prenom);
+          $('#id_email_ets').val(data.prospect.email);
+          $('#id_telephone_ets').val(data.prospect.telephone);
+          $('#id_observation_ets').val(data.prospect.observation);
+          $('#entreprise_informations').val(data.prospect.entreprise);
+                       
+          var canalOptions = '<option value="">---------</option>';
+
+          canalOptions += '<option '+(data.prospect.canal === "email" ? 'selected' : '')+' value="email">Email</option>';
+          canalOptions += '<option '+(data.prospect.canal === "telephone" ? 'selected' : '')+' value="telephone">Téléphone</option>';
+          canalOptions += '<option '+(data.prospect.canal === "autre" ? 'selected' : '')+' value="autre">Autre</option>';
+          canalOptions += '<option '+(data.prospect.canal === "facebook" ? 'selected' : '')+' value="facebook">Facebook</option>';
+          canalOptions += '<option '+(data.prospect.canal === "linkedin" ? 'selected' : '')+' value="linkedin">LinkedIn</option>';
+          canalOptions += '<option '+(data.prospect.canal === "instagram" ? 'selected' : '')+' value="instagram">Instagram</option>';
+          canalOptions += '<option '+(data.prospect.canal === "tiktok" ? 'selected' : '')+' value="tiktok">TikTok</option>';
+           
+          $('#id_canal_ets').html(canalOptions);
+
+
+          $('#updateInfoProspectEntreprise').modal('show');
+        }
+      });
+
+      
+    }
+
+    $(document).on('click','#btnUpdate', function(){
+      var id_prospect = $(this).data('id');
+      loadProspectDetails(id_prospect);
+      $('#btnUpdate').data('id', id_prospect);
+    });
+
+    $(document).on('click','#btnUpdateEntreprise', function(){
+      var id_prospect = $(this).data('id');
+      loadProspectEntrepriseDetails(id_prospect);
+      $('#btnUpdateEntreprise').data('id', id_prospect);
+      
+    });
+
+    $(document).on('click', '#updateInfoProspectEntrepriseBtn', function(){
+      var id_perospect = $('#btnUpdateEntreprise').data('id')
+
+      var last_name_ets = $('#id_last_name_ets').val();
+      var first_name_ets = $('#id_first_name_ets').val();
+      var email_ets = $('#id_email_ets').val();
+      var telephone_ets = $('#id_telephone_ets').val();
+      var observation_ets = $('#id_observation_ets').val();
+      var canal_ets = $('#id_canal_ets').val();
+      var entreprise_informations = $('#entreprise_informations').val();
+
+      $.ajax({
+        url : "{% url 't_crm:ApiUpdateProspectEtsDetails' %}",
+        dataType : "JSON",
+        type: 'POST',
+        data : {
+          'id_prospect' : id_perospect,
+          'last_name_ets' : last_name_ets,
+          'first_name_ets' : first_name_ets,
+          'email_ets' : email_ets,
+          'telephone_ets' : telephone_ets,
+          'observation_ets' : observation_ets,
+          'canal_ets' : canal_ets,
+          'entreprise_informations' : entreprise_informations,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            alertify.success(response.message);
+            loadProspects();
+            $('#updateInfoProspectEntreprise').modal('hide');
+          }else{
+            alertify.error(response.message);
+          }
+        }
+      })
+      
+    })
+
+    $(document).on('click','#updateInfoProspectBtn', function(){
+      var id_prospect = $('#btnUpdate').data('id');
+     
+      var nom = $('#id_last_name').val();
+      var prenom = $('#id_first_name').val();
+      var email = $('#id_email').val();
+      var telephone = $('#id_telephone').val();
+      var canal = $('#id_canal').val();
+      var observation = $('#id_observation').val();
+      var voeux_formation = $('#id_voeux_formation').val();
+      var voeux_specialite = $('#id_voeux_specialite').val();
+
+      $.ajax({
+        url : "{% url 't_crm:ApiUpdatePropectDetails' %}",
+        type : "POST",
+        dataType : "JSON",
+        data : {
+          'id_prospect' : id_prospect,
+          'nom' : nom,
+          'prenom' : prenom,
+          'email' : email,
+          'telephone' : telephone,
+          'canal' : canal,
+          'observation' : observation,
+          'voeux_formation' : voeux_formation,
+          'voeux_specialite' : voeux_specialite,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            alertify.success(response.message);
+            loadProspects();
+            $('#updateInfoProspect').modal('hide');
+          }else{
+            alertify.error(response.message);
+          }
+        }
+      });
+    
+    });
+
+    // Handle prospect type selection
+    $(document).on('click', '.prospect-type-card', function() {
+      var prospectType = $(this).data('type');
+     
+      $('#newProspectModal').modal('hide');
+      if(prospectType === "particulier"){
+        window.location = "{% url 't_crm:inscription_particulier' %}";
+      }else{
+        window.location = "{% url 't_crm:inscription_entreprise' %}";
+
+      }
+    
+    });
+
+    
+  });
+    
+    
+
+
+</script>
+
+
+{% endblock content %}

@@ -117,3 +117,20 @@ def make_prospect_client(request):
 
 def ApiUpdateThematique(request):
     pass
+
+
+
+@login_required(login_url="institut_app:login")
+def ListeProspectConseil(request):
+    context ={
+        'tenant' : request.tenant,
+    }
+    return render(request, "tenant_folder/conseil/prospect/liste_des_prospects.html",context)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadProspect(request):
+    pass
+
+@login_required(login_url="institut_app:login")
+def ApiTransformeToClient(request):
+    pass
