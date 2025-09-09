@@ -1563,6 +1563,16 @@
             <div class="modal-body p-4">
                 <div class="row g-3">
                     <div class="col-12">
+                        <label class="form-label fw-medium">Statut</label>
+                        <select id="validate_statut_reminder" class="form-select border-0 bg-light py-2">
+                            <option value="">Selectionnez une option</option>
+                            <option value="annule">Annuler</option>
+                            <option value="termine">Terminer</option>
+                            <option value="abouti">Abouti</option>
+                            <option value="nabouti">Non abouti</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
                         <label class="form-label fw-medium">Observations</label>
                         <textarea id="observation_rappel" class="form-control border-0 bg-light" rows="4" placeholder="Entrez vos observations..."></textarea>
                     </div>
@@ -2297,6 +2307,33 @@
                     var row = "";
                     if (data.length > 0){
                         $.each(data, function(index, item){
+                            var statutBreak = "";
+                            switch(item.statut){
+                                case "nabouti":
+                                    statutBreak = '<span class="badge bg-primary-subtle text-primary px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                                case "abouti":
+                                    statutBreak = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                                case "termine":
+                                    statutBreak = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                                case "nabouti":
+                                    statutBreak = '<span class="badge bg-dark-subtle text-dark px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                                case "en_attent":
+                                    statutBreak = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                                case "annule":
+                                    statutBreak = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                break;
+
+                            }
                             row += '<tr>';
                                 row += '<td>';
                                     row += '<div class="d-flex align-items-center">';
@@ -2317,9 +2354,8 @@
                                     row += '</div>';
                                 row += '</td>';
                                 row += '<td>';
-                                    row += '<span class="badge bg-warning-subtle text-warning px-2 py-1">';
-                                        row += '<i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                    row += '</td>';
+                                    row += ''+statutBreak+'';
+                                row += '</td>';
                                 row += '<td class="text-end">';
                                     row += '<div class="d-flex justify-content-end gap-2">';
                                         row += '<button class="btn btn-soft-primary btn-sm" data-bs-toggle="modal" id="editReminderBtn" data-id=' + item.id + '  title="Modifier">';
@@ -3276,6 +3312,14 @@
                     $('#editTimeReminer').val(data[0].heure_rendez_vous);
                     $('#editObjectReminder').val(data[0].object);
                     $('#editTypeReminder').val(data[0].type);
+
+                    $('#reminder-type').text(data[0].type_label)
+                    $('#reminder-date-time').text(data[0].heure_rendez_vous)
+                    $('#reminder-object').text(data[0].object)
+                    $('#reminder-status').text(data[0].statut_label)
+                    $('#reminder-description').text(data[0].description)
+
+
                     
                 }
             });
@@ -3324,19 +3368,69 @@
 
         $(document).on('click', '#detailsReminderBtn', function(){
             var id_reminder = $(this).data('id');
+            loadRemiderDetailsForUpdate(id_reminder);
             $('#detailsReminderModal').modal('show');
         });
 
         $(document).on('click', '#validateReminderBtn', function(){
             var id_reminder = $(this).data('id');
+            $('#confirmValidateReminderBtn').data('id', id_reminder);
             $('#validateReminderModal').modal('show');
+        });
+
+        $(document).on('click','#confirmValidateReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            var description = $('#observation_rappel').val();
+            var statut_reminder = $('#validate_statut_reminder').val();
+
+            $.ajax({
+                url : "{% url 't_crm:ApiValidateRemider' %}",
+                dataType : "JSON",
+                type: 'POST',
+                data : {
+                    'id_reminder' : id_reminder,
+                    'description' : description,
+                    'statut_reminder' : statut_reminder,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("La validation du rappel a été effecuter avec succès");
+                        loadRappelRendezVous();
+                        $('#validateReminderModal').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete !");
+                    }
+                }
+            })
         });
 
         $(document).on('click', '#deleteReminderBtn', function(){
             var id_reminder = $(this).data('id');
+            $('#ConfirmDeleteReminderBtn').data('id', id_reminder);
             $('#deleteReminderModal').modal('show');
         });
 
+        $(document).on('click','#ConfirmDeleteReminderBtn', function(){
+            var id_reminder = $(this).data('id');
+            $.ajax({
+                url :"{% url 't_crm:ApiArchiveReminder' %}",
+                dataType : "JSON",
+                type: "GET",
+                data : {
+                    'id_reminder' :  id_reminder,
+                },
+                success : function(response){
+                    if (response.status === "success"){
+                        alertify.success("Suppression effectué avec succès");
+                        loadRappelRendezVous();
+                        $('#deleteReminderModal').modal('hide');
+                    }else{  
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete !");
+                    }
+                }
+            });
+        });
 
         
 

@@ -4,6 +4,8 @@ from .views import *
 from .f_views.prospects import *
 from .f_views.prinscrits import *
 from .f_views.derogations import *
+from .f_views.reminder import *
+from .f_views.entreprise_prospect import *
 
 app_name="t_crm"
 
@@ -117,5 +119,12 @@ urlpatterns = [
 
 
     path('suivie-des-dossiers/', prospects_incomplets_view, name="prospects_incomplets_view"),
-   
+
+    path('ApiValidateRemider', ApiValidateRemider, name="ApiValidateRemider"),
+    path('ApiArchiveReminder', ApiArchiveReminder, name="ApiArchiveReminder"),  
+
+
+    path('ApiLoadEntrepriseProspectInfo', ApiLoadEntrepriseProspectInfo, name="ApiLoadEntrepriseProspectInfo"),
+    path('ApiUpdateEntrepriseData', ApiUpdateEntrepriseData, name="ApiUpdateEntrepriseData"),
+    path('ApiUpdateContactInfo', ApiUpdateContactInfo , name="ApiUpdateContactInfo"),
 ]

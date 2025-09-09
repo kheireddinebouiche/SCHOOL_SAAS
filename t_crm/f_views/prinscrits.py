@@ -94,7 +94,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscritRendezVous(request):
    id_prospect = request.GET.get('id_prospect')
-   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect, context="prinscrit").values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
+   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect, context="prinscrit", archived = False).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
    for l in rendez_vous:
        l_obj = RendezVous.objects.get(id = l['id'])
        l['status_label'] = l_obj.get_statut_display()

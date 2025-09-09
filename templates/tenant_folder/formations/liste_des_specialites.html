@@ -1,95 +1,178 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
-{% block title %} Formations - Liste des spécilaitées {% endblock title %}
+{% block title %}Formations - Liste des spécialités{% endblock title %}
 
 {% block content %}
-        <!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+</style>
 
-            <div class="page-content">
-                <div class="container-fluid">
-
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Liste des spécialitées</h4>
-
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Formations</a></li>
-                                        <li class="breadcrumb-item active">Liste des spécialitées</li>
-                                    </ol>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                    <!-- end page title -->
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">Liste des spécialitées</h5>
-                                </div>
-                                <div class="card-body">
-                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                        <thead>
-                                            <tr>
-                                                
-                                                <th>Code</th>
-                                                <th>Nom de la formation</th>
-                                                <th>Partenaire</th>
-                                                <th>Frais inscription</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-
-                                            {% if liste.count != 0 %}
-                                                {% for i in liste %}
-                                                    <tr> 
-                                                        <td><b>{{i.code}}</b></td>
-                                                        <td><b>{{i.label}}</b></td>
-                                                        <td class="text-center">{% if not i.formation.partenaire %} -- {% else %} {{i.formation.partenaire}}{% endif %}</td>
-                                                        <td>{{i.prix}} DZD</td>
-                                                        <td>
-                                                            <div class="dropdown d-inline-block">
-                                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="ri-more-fill align-middle"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a href="{% url 't_formations:detailSpecialite' pk=i.id %}" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
-                                                                    <li><a class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                                    {% if i.formation.type_formation != 'etranger' or request.tenant.tenant_type == 'master' %}
-                                                                        <li>
-                                                                            <a href="{% url 't_formations:deleteSpecialite' pk=i.id %}" class="dropdown-item remove-item-btn">
-                                                                                <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                                            </a>
-                                                                        </li>
-                                                                    {% endif %}
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                            {% else %}
-                                                <tr><td colspan="6" class="text-muted text-center">Aucune donnée trouvée</td></tr>
-                                            {% endif %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- container-fluid -->
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-graduation-cap text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Liste des spécialités</h4>
             </div>
-            <!-- End Page-content -->
+            <div class="d-flex align-items-center gap-2">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Formations</a>
+                  </li>
+                  <li class="breadcrumb-item active">Liste des spécialités</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
         </div>
+      </div>
+      <!-- end page title -->
+      
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                  
+                  <select id="filter-formation" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par formation</option>
+                    <!-- Options will be populated dynamically -->
+                  </select>
+
+                  <select id="date_filter-specialite" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par date de création</option>
+                    <option value="-created_at">Date (récent)</option>
+                    <option value="created_at">Date (ancien)</option>
+                  </select>
+                  
+                  <a href="{% url 't_formations:addSpecialite' %}" class="btn btn-primary rounded-pill">
+                    <i class="ri-add-line me-1"></i> Nouvelle spécialité
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start"># Code</th>
+                      <th class="border-0">Nom de la spécialité</th>
+                      <th class="border-0">Formation</th>
+                      <th class="border-0">Partenaire</th>
+                      <th class="border-0">Frais inscription</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeItem">
+                    {% if liste.count != 0 %}
+                      {% for i in liste %}
+                        <tr> 
+                          <td><b><a href="{% url 't_formations:detailSpecialite' pk=i.id %}">{{i.code}}</a></b></td>
+                          <td><b><a href="{% url 't_formations:detailSpecialite' pk=i.id %}">{{i.label}}</a></b></td>
+                          <td>{{i.formation.nom}}</td>
+                          <td class="text-center">{% if not i.formation.partenaire %} -- {% else %} {{i.formation.partenaire}}{% endif %}</td>
+                          <td>{{i.prix}} DZD</td>
+                        
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr><td colspan="6" class="text-muted text-center">Aucune donnée trouvée</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<script>
+  // Fix dropdown positioning
+  $(document).ready(function () {
+    // Ensure table responsive container doesn't hide dropdowns
+    $('.table-responsive').css('overflow-x', 'visible');
+    
+    // Handle dropdown show events
+    $(document).on('show.bs.dropdown', function(e) {
+      var dropdownMenu = $(e.target).find('.dropdown-menu');
+      if (dropdownMenu.length) {
+        dropdownMenu.css({
+          'z-index': '1050',
+          'position': 'absolute'
+        });
+      }
+    });
+  });
+</script>
+
 {% endblock content %}
            
 

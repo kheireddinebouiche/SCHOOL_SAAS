@@ -36,7 +36,7 @@ def crm_dashboard(request):
     conversion_rate = (converted_prospects / total_prospects * 100) if total_prospects > 0 else 0
     
     # Derniers rappels
-    recent_reminders = RendezVous.objects.select_related('prospect').order_by('-created_at')[:5]
+    recent_reminders = RendezVous.objects.filter(archived=False).select_related('prospect').order_by('-created_at')[:5]
     
     # Répartition des prospects par canal
     prospects_by_channel = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')

@@ -209,7 +209,7 @@ class RendezVous(models.Model):
     type = models.CharField(max_length=255, null=True, choices=[('appel', 'Appel'), ('email', 'Email'),('rendez_vous','Rendez-vous'), ('autre', 'Autre')])
     object = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
-    statut = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('confirme', 'Confirmé'), ('annule', 'Annulé'), ('termine', 'Terminé')])
+    statut = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('confirme', 'Confirmé'), ('annule', 'Annulé'), ('termine', 'Terminé'),('abouti','Abouti'),('nabouti','Non abouti')])
 
     date_rendez_vous = models.DateField(null=True, blank=True)
     heure_rendez_vous = models.TimeField(null=True, blank=True)
@@ -217,6 +217,8 @@ class RendezVous(models.Model):
     context= models.CharField(max_length=100, null=True, blank=True)
 
     observation = models.CharField(max_length=100, null=True, blank=True)
+
+    archived = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
