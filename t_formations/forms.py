@@ -163,6 +163,8 @@ class NewFraisInscriptionForm(forms.ModelForm):
         model = FraisInscription
         fields = ['specialite', 'label', 'montant']
 
+
+
 class PromoForm(forms.ModelForm):
     class Meta:
         model = Promos
@@ -171,4 +173,7 @@ class PromoForm(forms.ModelForm):
         widgets = {
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'session' : forms.Select(attrs={'class' : 'form-control'}),
+            'code' : forms.TextInput(attrs={"class" : 'form-control'}),
+            'begin_year' : forms.DateInput(attrs={"class" : 'form-control'}),
+            'end_year': forms.NumberInput(attrs={"class": "form-control", "placeholder": "Année"}),
         }

@@ -184,6 +184,9 @@ class ProgrammeFormation(models.Model):
 class Promos(models.Model):
     
     label = models.CharField(max_length=255, null=True, blank=True)
+    code = models.CharField(max_length = 255, null=True, blank=True)
+    begin_year = models.DateField(null=True, blank=True)
+    end_year = models.DateField(null=True, blank=True)
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
 
     etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')], default='inactive')

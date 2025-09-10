@@ -603,6 +603,8 @@ def ApiListeSpecialiteByFormation(request):
     liste = Specialites.objects.filter(formation = formation_obj.code).values('id', 'label','code')
     return JsonResponse(list(liste), safe=False)
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
 def AddPromo(request):
     form = PromoForm()
     if request.method =="POST":
