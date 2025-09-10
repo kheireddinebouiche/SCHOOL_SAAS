@@ -70,9 +70,8 @@ class Prospets(models.Model):
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
-
+    promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_fiche_voeux", limit_choices_to={'etat':'active'})
     commentaire = models.CharField(max_length=1000, null=True, blank=True)
-    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
 
     is_confirmed = models.BooleanField(default=False)
 

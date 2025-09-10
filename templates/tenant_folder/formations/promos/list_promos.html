@@ -100,9 +100,9 @@
                     <i class="fas fa-search text-muted search-icon"></i>
                   </div>
                   
-                  <button type="button" class="btn btn-primary rounded-pill" id="btnAddPromo">
+                  <a href="{% url 't_formations:AddPromo' %}" type="button" class="btn btn-primary rounded-pill" >
                     <i class="ri-add-line me-1"></i> Nouvelle promotion
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -111,8 +111,10 @@
                 <table id="example" class="table table-hover align-middle mb-0">
                   <thead class="bg-light">
                     <tr>
-                      <th class="border-0 rounded-start">Label</th>
+                      <th class="border-0 rounded-start">Code</th>
                       <th class="border-0">Session</th>
+                      <th class="border-0">Début</th>
+                      <th class="border-0">Fin</th>
                       <th class="border-0">État</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
@@ -233,6 +235,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
+
         <div class="form-group mb-3">
           <label for="updated_label" class="form-label fw-medium">Label</label>
           <div class="input-group">
@@ -241,11 +244,30 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-3">
           <label for="updated_session" class="form-label fw-medium">Session</label>
           <select name="session" id="updated_session" class="form-select border-0 bg-light py-2 session">
           </select>
         </div>
+
+        <div class="form-group mb-3">
+          <label for="update_code" class="form-label fw-medium">Code</label>
+          <input type="text" name="code" id="updated_code" class="form-control border-0 bg-light py-2 session" />
+         
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="updated_begin_year" class="form-label fw-medium">Année début</label>
+          <input type="text" name="begin_year" id="updated_begin_year" class="form-control border-0 bg-light py-2 session" />
+        </div>
+
+        <div class="form-group mb-3 ">
+          <label for="updated_end_year" class="form-label fw-medium">Année fin</label>
+          <input type="text" name="end_year" id="updated_end_year" class="form-control border-0 bg-light py-2 session" />
+        </div>
+
+
+
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3 update-promo">
       </div>
@@ -280,8 +302,10 @@
           if(data.length > 0){
             $.each(data, function(index, p){
               row += "<tr class='align-middle'>";
-              row += "<td><strong>"+p.label+"</strong></td>";
+              row += "<td><strong>"+p.code+"</strong></td>";
               row += "<td><b>Rentrée : </b> "+p.session_label+"</td>";
+              row += "<td>"+p.begin_year+"</td>";
+              row += "<td>"+p.end_year+"</td>";
               row += "<td class='text-left'>"+(p.etat == 'active' ? '<span class="badge bg-success fs-6">'+p.etat_label+'</span>' : '<span class="badge bg-warning fs-6">'+p.etat_label+'</span>' )+"</td>";
               row += "<td class='text-end'>";
               row += '<div class="dropdown d-inline-block">';
@@ -360,6 +384,11 @@
 
           $('.update-promo').html(buttons);
 
+              
+          $('#updated_code').val(data[0].code);
+          $('#updated_begin_year').val(data[0].begin_year);
+          $('#updated_end_year').val(data[0].end_year);
+
           $('.session').html(row);
           $('#updatePromo').modal('show');
         }
@@ -369,6 +398,9 @@
     $(document).on('click', '#confirmUpdateButton',  function(){
       var new_label = document.getElementById('updated_label').value;
       var new_session = document.getElementById('updated_session').value;
+      var new_code = document.getElementById('updated_code').value;
+      var new_begin_year = document.getElementById('updated_begin_year').value;
+      var new_end_year = document.getElementById('updated_end_year').value;
       var id = $(this).data('id');
 
       $.ajax({
@@ -378,6 +410,9 @@
           'id' : id,
           'label' : new_label,
           'session' : new_session,
+          'new_code' : new_code,
+          'new_begin_year' : new_begin_year,
+          'new_end_year' : new_end_year,
           csrfmiddlewaretoken : "{{csrf_token}}"
         },
         success : function(data){

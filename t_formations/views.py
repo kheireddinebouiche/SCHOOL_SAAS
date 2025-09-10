@@ -534,6 +534,7 @@ def deleteModule(request):
    
     return JsonResponse({'success' : True, 'message' : "Le module à été supprimé avec succès"})
 
+@login_required(login_url="institut_app:login")
 def archiveModule(request):
     liste = Modules.objects.filter(is_archived = True)
     context = {
@@ -542,11 +543,13 @@ def archiveModule(request):
     }
     return render(request, 'tenant_folder/formations/archive/archive_module.html', context)
 
+@login_required(login_url="institut_app:login")
 def ApiGetModuleDetails(request):
     id = request.GET.get('id')
     obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef')
     return JsonResponse(list(obj), safe=False)
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdateModule(request):
 
@@ -583,8 +586,9 @@ def listPromos(request):
     }
     return render(request,'tenant_folder/formations/promos/list_promos.html',context)
 
+@login_required(login_url="institut_app:login")
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','session','etat')
+    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year')
 
     for l in liste:
         l_obj = Promos.objects.get(id = l['id'])
@@ -622,6 +626,7 @@ def AddPromo(request):
     }
     return render(request, 'tenant_folder/formations/promos/new_promo.html', context)
 
+@login_required(login_url="institut_app:login")
 def ApiDeletePromo(request):
     id = request.POST.get('id')
     promo = Promos.objects.get(id = id)
@@ -631,15 +636,21 @@ def ApiDeletePromo(request):
         promo.delete()
         return JsonResponse({'success' : True, 'message' : 'Promo supprimée avec succès'})
 
+@login_required(login_url="institut_app:login")
 def ApiGetPromo(request):
     id = request.GET.get('id')
-    promo = Promos.objects.filter(id = id).values('id', 'label', 'session')
+    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year')
     return JsonResponse(list(promo), safe=False)
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiUpdatePromo(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
     session = request.POST.get('session')
+    new_code  = request.POST.get('new_code')
+    new_begin_year = request.POST.get('new_begin_year')
+    new_end_year = request.POST.get('new_end_year')
 
     if not label or not session:
         return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
@@ -647,6 +658,9 @@ def ApiUpdatePromo(request):
         promo = Promos.objects.get(id = id)
         promo.label = label
         promo.session = session
+        promo.code = new_code
+        promo.begin_year = new_begin_year
+        promo.end_year = new_end_year
         promo.save()
         return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
     
