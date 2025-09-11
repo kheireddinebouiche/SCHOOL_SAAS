@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 
 
+
 def listeVisiteurs(request):
     context = {
         'tenant' : request.tenant,
@@ -321,6 +322,7 @@ def filter_visiteur(request):
     return JsonResponse({'filtred': data})
 
 @login_required(login_url='institut_app:login')
+@transaction.atomic
 def InscriptionParticulier(request):
     form = NewProspecFormParticulier()
     if request.method == "POST":
@@ -332,12 +334,15 @@ def InscriptionParticulier(request):
             donnee.save()
 
             voeux_specialite = request.POST.get('voeux_specialite')
+            promo_selection = request.POST.get('promo_selection')
+
 
             if voeux_specialite is not None and voeux_specialite != "":
                 specialite = Specialites.objects.get(id=voeux_specialite)
                 FicheDeVoeux.objects.create(
                     prospect=donnee,
-                    specialite=specialite
+                    specialite=specialite,
+                    promo = Promos.objects.get(code = promo_selection)
                 )
 
             messages.success(request, "Prospect ajouté avec succès")
