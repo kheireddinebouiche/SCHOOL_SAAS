@@ -54,6 +54,7 @@ class Prospets(models.Model):
     profile_completed = models.BooleanField(default=False)
     has_completed_doc = models.BooleanField(default=False)
     has_derogation = models.BooleanField(default = False)
+    has_second_wish = models.BooleanField(default=False)
 
     is_ets_prospect = models.BooleanField(default=False)
     is_client = models.BooleanField(default=False)
