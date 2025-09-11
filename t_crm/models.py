@@ -84,6 +84,10 @@ class FicheDeVoeux(models.Model):
     
     def __str__(self):
         return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
+    
+class FicheDeVoeuxAddiotionnel(models.Model):
+    pass
+
 
 class NotesProcpects(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
@@ -241,3 +245,12 @@ class Derogations(models.Model):
 
     def __stre__(self):
         return f"{self.demandeur.nom} {self.demandeur.prenom}"
+    
+
+class CrmCounter(models.Model):
+    date_counter = models.DateField(null=True, blank=True)
+    visite_counter = models.IntegerField(default=0)
+    phone_counter = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.date_counter
