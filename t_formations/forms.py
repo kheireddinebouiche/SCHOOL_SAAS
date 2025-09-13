@@ -98,7 +98,8 @@ class NewPartenaireForm(forms.ModelForm):
             'telephone':  forms.TextInput(attrs={'class': 'form-control'}),
             'email' : forms.TextInput(attrs={'class': 'form-control'}),
             'site_web' : forms.TextInput(attrs={'class': 'form-control'}),
-            'observation' : forms.Textarea(attrs={'class': 'form-control'}),
+            'observation' : forms.Textarea(attrs={'class': 'form-control','rows' : "3"}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
         exclude = ['updated_by']
 

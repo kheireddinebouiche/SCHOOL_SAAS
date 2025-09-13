@@ -17,7 +17,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
@@ -102,6 +102,7 @@ def ApiLoadFicheVoeuxProspect(request):
             'specialite_label': fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
             'specialite_id_formation': fiche.specialite.formation.id,
+            'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
             'created_at' : format(fiche.created_at,"Y-m-d H:i"),
             'updated_at' : format(fiche.updated_at,"Y-m-d H:i"),
             
@@ -115,6 +116,16 @@ def ApiUpdateFicheVoeuxProspect(request):
 @login_required(login_url='institut_app:login')
 def ApiDeleteFicheVoeuxProspect(request):
     pass
+
+
+@login_required(login_url='institut_app:login')
+def ApiStoreSecondVoeuxProspect(request):
+    pass
+
+@login_required(login_url='institut_app:login')
+def ApiLoadSecondVoeuxProspect(request):
+    pass
+
 
 ###################################Fiche de voeux prospect #############################################
 
@@ -260,7 +271,7 @@ def ApiLoadFormationAndSpecialite(request):
         specialite_liste.append({
             'id' : i.id,
             'code' : i.code,
-            'label' : i.label
+            'label' : i.label,
         })
 
     return JsonResponse({'formation' : formation_liste, 'specialite' : specialite_liste})
@@ -268,6 +279,7 @@ def ApiLoadFormationAndSpecialite(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadFormation(request):
     formation = Formation.objects.all()
+    promos = Promos.objects.all()
     
     formation_liste = []
     for i in formation:
@@ -277,7 +289,14 @@ def ApiLoadFormation(request):
             'nom' : i.nom,
         })
 
-    return JsonResponse({'formation':formation_liste})
+    promo_liste = []
+    for i in promos:
+        promo_liste.append({
+            "id" : i.id,
+            "code" : i.code,
+        })
+
+    return JsonResponse({'formation':formation_liste,"promo" : promo_liste})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadSpecialiteProspect(request):
@@ -301,12 +320,14 @@ def ApiUpdateVoeux(request):
     id_prospect = request.POST.get('id_prospect')
     id_specialite = request.POST.get('specialite')
     id_fiche = request.POST.get('id_voeux')
+    promo = request.POST.get('promo')
     
     if not id_prospect or not id_specialite or not id_fiche:
         return JsonResponse({"status" : "error", 'message': "Veuillez remplir tous les champs"})
     
     fiche = FicheDeVoeux.objects.get(id = id_fiche, prospect = Prospets.objects.get(id=id_prospect))    
     fiche.specialite = Specialites.objects.get(id = id_specialite)
+    fiche.promo = Promos.objects.get(code = promo)
     fiche.save()
     return JsonResponse({'status' : "success", 'message' : "Fiche de voeux mis a jours avec succès"})
 

@@ -10,12 +10,13 @@ class Prospets(models.Model):
     nom = models.CharField(max_length=255, null=True)
     photo = models.ImageField(upload_to=tenant_directory_path_for_image, null=True, blank=True)
 
+    lead_source = models.CharField(max_length=100, null=True, blank=True, choices=[('viste','Visite'),('appel','Appel'),('prospectus','Prospectus')])
     
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
     telephone = models.CharField(max_length=15, null=True)
     type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
-    canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web')])
+    canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicitée')])
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
 
     entreprise = models.CharField(max_length=255, null=True, blank=True)
@@ -58,6 +59,11 @@ class Prospets(models.Model):
 
     is_ets_prospect = models.BooleanField(default=False)
     is_client = models.BooleanField(default=False)
+
+    context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Acceuil'),('con','Conseil')])
+
+    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','A déja appeler'),('est_passer','Visiste')])
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -87,9 +93,22 @@ class FicheDeVoeux(models.Model):
         return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
     
 class FicheDeVoeuxAddiotionnel(models.Model):
-    pass
+    order = models.CharField(max_length=10, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
+    promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_fiche_voeux_secondaire", limit_choices_to={'etat':'active'})
+    commentaire = models.CharField(max_length=1000, null=True, blank=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Fiche de Voeux secondaire"
+        verbose_name_plural = "Fiches de Voeux secondaire"
+    
+    def __str__(self):
+        return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
+    
 class NotesProcpects(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     note = models.TextField(null=True, blank=True)
@@ -246,8 +265,7 @@ class Derogations(models.Model):
 
     def __stre__(self):
         return f"{self.demandeur.nom} {self.demandeur.prenom}"
-    
-
+  
 class CrmCounter(models.Model):
     date_counter = models.DateField(null=True, blank=True)
     visite_counter = models.IntegerField(default=0)

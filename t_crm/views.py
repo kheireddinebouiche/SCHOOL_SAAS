@@ -445,7 +445,7 @@ def ApiFilterPrinscrit(request):
 
     return JsonResponse(list(prospects), safe=False)
 
-
+@login_required(login_url="institut_app:login")
 def ApiLoadFormation(request):
     liste = Formation.objects.all().values('id','nom','code')
     return JsonResponse(list(liste), safe=False) 
@@ -586,5 +586,10 @@ def ApiCheckIfVoeuxExiste(request):
     else:
         return JsonResponse({'status' : 'error'})
 
+@login_required(login_url="institut_app:login")
+def get_crm_counters(request):
+    pass
 
-    
+@login_required(login_url="institut_app:login")
+def increment_crm_counter(request):
+    pass

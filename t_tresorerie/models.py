@@ -88,3 +88,55 @@ class SeuilPaiements(models.Model):
 
     def __str__(self):
         return self.specialite
+    
+
+class Remises(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    taux = models.IntegerField(null=True, blank=True)
+    is_enabled = models.BooleanField(default=False)
+
+    is_archived = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    def __str__(self):
+        return self.label
+    
+
+class EcheancierPaiement(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
+    formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
+
+    is_active = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    is_approuved = models.BooleanField(default=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+
+class EcheancierPaiementLine(models.Model):
+    echeancier = models.ForeignKey(EcheancierPaiement, null=True, blank=True, on_delete=models.CASCADE)
+    
+    taux = models.CharField(max_length=100, null=True, blank=True)
+    value = models.CharField(max_length=100, null=True, blank=True)
+
+    date_echeancier = models.DateField(null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+
+    def __str__(self):
+        return self.echeancier.label
+
+class EcheancierPaiementSepcial(models.Model):
+    pass
+
+class EcheancierPaiementSpecialLine(models.Model):
+    pass

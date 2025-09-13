@@ -112,7 +112,7 @@ def updateFormation(request, pk):
 @login_required(login_url='institut_app:login')
 def AddPartenaire(request):
     if request.method == 'POST':
-        form = NewPartenaireForm(request.POST, current_tenant=request.tenant)
+        form = NewPartenaireForm(request.POST, request.FILES, current_tenant=request.tenant)
         if form.is_valid():
             form.save()
             messages.success(request, 'Partenaire ajouté avec succès')

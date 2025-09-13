@@ -44,10 +44,6 @@ SHARED_APPS = [
 ]
 
 TENANT_APPS = [
-    'django_otp',
-    'django_otp.plugins.otp_totp',
-    'django_otp.plugins.otp_static',
-    'two_factor',
     'institut_app',
     't_rh',
     't_formations',
@@ -61,8 +57,6 @@ TENANT_APPS = [
     't_groupe',
     't_exam',
     't_conseil',
-
-   
 
     'django_countries',
     'django.contrib.auth',
@@ -85,7 +79,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    "django_otp.middleware.OTPMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     

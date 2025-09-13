@@ -6,6 +6,7 @@ from .f_views.prinscrits import *
 from .f_views.derogations import *
 from .f_views.reminder import *
 from .f_views.entreprise_prospect import *
+from .f_views.secondwishe import *
 
 app_name="t_crm"
 
@@ -127,4 +128,12 @@ urlpatterns = [
     path('ApiLoadEntrepriseProspectInfo', ApiLoadEntrepriseProspectInfo, name="ApiLoadEntrepriseProspectInfo"),
     path('ApiUpdateEntrepriseData', ApiUpdateEntrepriseData, name="ApiUpdateEntrepriseData"),
     path('ApiUpdateContactInfo', ApiUpdateContactInfo , name="ApiUpdateContactInfo"),
+
+
+    path('get_crm_counters', get_crm_counters, name="get_crm_counters"),
+    path('increment_crm_counter', increment_crm_counter, name="increment_crm_counter"),
+
+    path('ApiListeSecondWishes', ApiListeSecondWishes, name="ApiListeSecondWishes"),
+    path('ApiStoreSecondWish', ApiStoreSecondWish, name="ApiStoreSecondWish"),
+    path('ApiDeleteSecondWishes', ApiDeleteSecondWishes, name="ApiDeleteSecondWishes"),
 ]

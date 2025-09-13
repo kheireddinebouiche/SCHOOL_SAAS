@@ -2,10 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 from institut_app.models import Entreprise
 from t_rh.models import *
+from t_crm.tenant_path import *
 
 
 class Partenaires(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True, blank=True)
     code = models.CharField(max_length=255, null=True, blank=True, unique=True)
     adresse = models.CharField(max_length=255, null=True, blank=True)

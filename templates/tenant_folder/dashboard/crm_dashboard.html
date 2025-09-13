@@ -143,6 +143,65 @@
                         </div><!-- end col -->
                     </div> <!-- end row -->
 
+                    <!-- Compteur de visites et appels -->
+                    <div class="row">
+                        <div class="col-xl-12">
+                            <div class="card">
+                                <div class="card-header align-items-center d-flex">
+                                    <h4 class="card-title mb-0 flex-grow-1">Suivi des Activités</h4>
+                                    <div class="flex-shrink-0">
+                                        <button type="button" class="btn btn-soft-info btn-sm" id="refresh-counters">
+                                            <i class="ri-refresh-line align-middle"></i> Actualiser
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-12">
+                                            <div class="bg-primary bg-opacity-10 p-2 rounded text-center">
+                                                <h5 class="mb-0 text-primary">
+                                                    <i class="ri-calendar-line align-middle me-1"></i>
+                                                    <span id="current-date-display">Date du jour</span>
+                                                </h5>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                                <div>
+                                                    <h5 class="mb-1">Visites</h5>
+                                                    <p class="text-muted mb-0">Nombre de visites reçues aujourd'hui</p>
+                                                </div>
+                                                <div class="text-center">
+                                                    <h3 class="mb-2" id="visit-counter">0</h3>
+                                                    <button type="button" class="btn btn-primary" id="increment-visits">
+                                                        <i class="ri-add-line align-middle"></i> +1
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                                                <div>
+                                                    <h5 class="mb-1">Appels Téléphoniques</h5>
+                                                    <p class="text-muted mb-0">Nombre d'appels reçus aujourd'hui</p>
+                                                </div>
+                                                <div class="text-center">
+                                                    <h3 class="mb-2" id="call-counter">0</h3>
+                                                    <button type="button" class="btn btn-success" id="increment-calls">
+                                                        <i class="ri-add-line align-middle"></i> +1
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end row -->
+
                     <!-- Répartition des prospects par statut -->
                     <div class="row">
                         <div class="col-xl-12">
@@ -556,4 +615,120 @@
         </div>
         <!-- end main content-->
 
+        <script>
+            // Fonction pour formater la date en français
+            function formatDateToFrench(date) {
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const frenchDate = date.toLocaleDateString('fr-FR', options);
+                // Mettre la première lettre en majuscule
+                return frenchDate.charAt(0).toUpperCase() + frenchDate.slice(1);
+            }
+
+            // Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
+            function getTodayString() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Fonction pour envoyer une requête AJAX d'incrémentation
+            function sendIncrementRequest(type) {
+                fetch('{% url "t_crm:increment_crm_counter" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        date: getTodayString()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Compteur ${type} incrémenté avec succès`);
+                        // Recharger les compteurs pour refléter la nouvelle valeur
+                        loadCounters();
+                    } else {
+                        console.error('Erreur lors de l\'incrémentation:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur réseau:', error);
+                });
+            }
+
+            // Fonction pour charger les compteurs depuis la base de données
+            function loadCounters() {
+                fetch('{% url "t_crm:get_crm_counters" %}', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('visit-counter').textContent = data.visits;
+                        document.getElementById('call-counter').textContent = data.calls;
+                    } else {
+                        console.error('Erreur lors du chargement des compteurs:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur réseau:', error);
+                });
+            }
+
+            // Fonction pour obtenir le cookie CSRF (nécessaire pour Django)
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Afficher la date du jour
+            document.addEventListener('DOMContentLoaded', function() {
+                const today = new Date();
+                const formattedDate = formatDateToFrench(today);
+                document.getElementById('current-date-display').textContent = formattedDate;
+                
+                // Charger les compteurs depuis la base de données
+                loadCounters();
+                
+                // Bouton d'incrémentation pour les visites
+                document.getElementById('increment-visits').addEventListener('click', function() {
+                    sendIncrementRequest('visit');
+                });
+                
+                // Bouton d'incrémentation pour les appels
+                document.getElementById('increment-calls').addEventListener('click', function() {
+                    sendIncrementRequest('call');
+                });
+                
+                // Bouton d'actualisation
+                document.getElementById('refresh-counters').addEventListener('click', function() {
+                    // Mettre à jour la date au cas où la page reste ouverte plusieurs jours
+                    const today = new Date();
+                    const formattedDate = formatDateToFrench(today);
+                    document.getElementById('current-date-display').textContent = formattedDate;
+                    
+                    // Recharger les compteurs depuis la base de données
+                    loadCounters();
+                });
+            });
+        </script>
 {% endblock content %}
