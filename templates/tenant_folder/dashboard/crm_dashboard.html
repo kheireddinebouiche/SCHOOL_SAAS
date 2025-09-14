@@ -633,55 +633,38 @@
                 return `${year}-${month}-${day}`;
             }
 
-            // Fonction pour envoyer une requête AJAX d'incrémentation
+            
             function sendIncrementRequest(type) {
-                fetch('{% url "t_crm:increment_crm_counter" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                $.ajax({
+                    url : "{% url 't_crm:increment_crm_counter' %}",
+                    type: 'POST',
+                    dataType : 'JSON',
+                    data : {
+                        'type' : type,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
                     },
-                    body: JSON.stringify({
-                        type: type,
-                        date: getTodayString()
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        console.log(`Compteur ${type} incrémenté avec succès`);
-                        // Recharger les compteurs pour refléter la nouvelle valeur
-                        loadCounters();
-                    } else {
-                        console.error('Erreur lors de l\'incrémentation:', data.error);
+                    success: function(response){
+                        if (response.status === "success"){
+                              loadCounters();
+                        }
+                     
                     }
                 })
-                .catch(error => {
-                    console.error('Erreur réseau:', error);
-                });
             }
 
             // Fonction pour charger les compteurs depuis la base de données
             function loadCounters() {
-                fetch('{% url "t_crm:get_crm_counters" %}', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                $.ajax({
+                    url : '{% url "t_crm:get_crm_counters" %}',
+                    dataType: "JSON",
+                    type : 'GET',
+                    success : function(data){
+                        $('#visit-counter').text(data[0].visite_counter);
+
+                        $('#call-counter').text(data[0].phone_counter);
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('visit-counter').textContent = data.visits;
-                        document.getElementById('call-counter').textContent = data.calls;
-                    } else {
-                        console.error('Erreur lors du chargement des compteurs:', data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur réseau:', error);
-                });
+
             }
 
             // Fonction pour obtenir le cookie CSRF (nécessaire pour Django)

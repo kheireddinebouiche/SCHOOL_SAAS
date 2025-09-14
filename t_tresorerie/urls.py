@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import *
-from .f_views.remise import *
 
 
 app_name="t_tresorerie"
@@ -32,9 +31,5 @@ urlpatterns = [
     path('remboursements/', PageRemboursement , name="PageRemboursement"),
     path('ApiSetRembourssement', ApiSetRembourssement, name="ApiSetRembourssement"),
 
-    path('liste-des-remises/', ListeRemise, name="ListeRemise"),
-    path('ApiListeRemise/', ApiListeRemise, name="ApiListeRemise"),
-    path('ApiCreateRemise', ApiCreateRemise, name="ApiCreateRemise"),
-    path('ApiDetailsRemise', ApiDetailsRemise, name="ApiDetailsRemise"),
-    path('ApiActivateRemise', ApiActivateRemise, name="ApiActivateRemise"),
+    
 ]

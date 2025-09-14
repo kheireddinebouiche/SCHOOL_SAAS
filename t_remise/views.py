@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from ..models import *
+from .models import *
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
@@ -16,7 +16,7 @@ def ListeRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeRemise(request):
-    liste = Remises.objects.all().values('id','label','taux','is_enabled')
+    liste = Remises.objects.all().values('id','label','taux','is_enabled','created_at')
     return JsonResponse(list(liste), safe=False)
 
 
@@ -53,5 +53,21 @@ def ApiUpdateRemise(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiCreateRemise(request):
-    pass
+    label = request.POST.get('label')
+    taux = request.POST.get('taux')
+    activated = request.POST.get('activated')
+
+    if activated == "on":
+        is_activate = True
+    else:
+        is_activate = False
+
+    Remises.objects.create(
+        label = label,
+        taux = taux,
+        is_enabled = is_activate, 
+    )
+
+    return JsonResponse({'status': "success"})

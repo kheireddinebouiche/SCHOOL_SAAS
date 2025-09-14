@@ -382,20 +382,20 @@
         // Fonction pour charger les remises
         function loadRemises(){
             $.ajax({
-                url: "{% url 't_tresorerie:ApiListeRemise' %}",
+                url: "{% url 't_remise:ApiListeRemise' %}",
                 dataType: "JSON",
                 type: "GET",
                 success: function(data){
                     var row = "";
                     if(data.length > 0){
                         $.each(data, function(index, item){
-                            var statusClass = item.is_active ? 'status-active' : 'status-inactive';
-                            var statusText = item.is_active ? 'Active' : 'Inactive';
+                            var statusClass = item.is_enabled ? 'status-active' : 'status-inactive';
+                            var statusText = item.is_enabled ? 'Active' : 'Inactive';
                             
                             row += "<tr>";
                             row += "<td>" + item.label + "</td>";
                             row += "<td>" + item.taux + "%</td>";
-                            row += "<td>" + item.created_at + "</td>";
+                            row += "<td>" + item.created_at.split("T")[0] + "</td>";
                             row += "<td><span class='badge " + statusClass + "'>" + statusText + "</span></td>";
                             row += "<td class='text-center'>";
                             row += "<div class='btn-group' role='group'>";
@@ -455,17 +455,19 @@
 
         function CreateRemise(label, taux, activated){
             $.ajax({
-                url : "{% url 't_tresorerie:ApiCreateRemise' %}",
+                url : "{% url 't_remise:ApiCreateRemise' %}",
                 dataType : "JSON",
                 type : "POST",
                 data : {
                     'label': label,
                     'taux' : taux,
                     'activated' : activated,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
                 },
                 success : function(response){
                     if(response.status === "success"){
                         alertify.success("Remise crée avec succès");
+                        loadRemises();
                     }else{
                         alertify.error("Une erreur c'est produite lors de l'execution de la requete !");
                     }

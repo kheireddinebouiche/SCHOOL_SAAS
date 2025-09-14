@@ -3,7 +3,6 @@ from django.http import JsonResponse
 from ..models import *
 from ..forms import *
 from django.contrib import messages
-from t_tresorerie.models import *
 from t_formations.models import *
 from django.db import transaction
 from django.db.models import Count, Q
@@ -44,10 +43,19 @@ def ApiStoreSecondWish(request):
     return JsonResponse({"status" : "success"})
 
 @login_required(login_url="institut_app:login")
-def ApiDeleteSecondWishes(request):
-    pass
+def ApiDeleteSecondWish(request):
+    id_second_voeux = request.POST.get('id_voeux_supp')
+    obj = FicheDeVoeuxAddiotionnel.objects.get(id = id_second_voeux)
+    obj.delete()
+
+    return JsonResponse({'status' : 'success'})
 
 @login_required(login_url="institut_app:login")
 def ApiConfirmeSecondWish(request):
     pass
 
+@login_required(login_url="institut_app:login")
+def ApiCountFormationSupplementaire(request):
+    id_prospect = request.GET.get('id_prospect')
+    count = FicheDeVoeuxAddiotionnel.objects.filter(prospect__id=id_prospect).count()
+    return JsonResponse({"count" : count})

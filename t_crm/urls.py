@@ -7,6 +7,8 @@ from .f_views.derogations import *
 from .f_views.reminder import *
 from .f_views.entreprise_prospect import *
 from .f_views.secondwishe import *
+from .f_views.remise import *
+from.f_views.counter import *
 
 app_name="t_crm"
 
@@ -135,5 +137,9 @@ urlpatterns = [
 
     path('ApiListeSecondWishes', ApiListeSecondWishes, name="ApiListeSecondWishes"),
     path('ApiStoreSecondWish', ApiStoreSecondWish, name="ApiStoreSecondWish"),
-    path('ApiDeleteSecondWishes', ApiDeleteSecondWishes, name="ApiDeleteSecondWishes"),
+    path('ApiDeleteSecondWish', ApiDeleteSecondWish, name="ApiDeleteSecondWish"),
+    path('ApiCountFormationSupplementaire', ApiCountFormationSupplementaire, name="ApiCountFormationSupplementaire"),
+   
+
+    path('gestion-des-reductions/', ListeRemiseApplique, name="ListeRemiseApplique"),
 ]

@@ -1,5 +1,5 @@
 from django.db import models
-from t_crm.models import *
+from t_crm.models import Prospets
 
 
 class Etudiant(models.Model):

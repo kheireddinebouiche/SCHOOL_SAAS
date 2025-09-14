@@ -2,7 +2,7 @@ from django.db import models
 from t_etudiants.models import *
 from institut_app.models import *
 from t_formations.models import *
-from t_crm.models import *
+from t_crm.models import Visiteurs, Prospets
 from django.contrib.auth.models import User
 
 
@@ -90,20 +90,7 @@ class SeuilPaiements(models.Model):
         return self.specialite
     
 
-class Remises(models.Model):
-    label = models.CharField(max_length=100, null=True, blank=True)
-    taux = models.IntegerField(null=True, blank=True)
-    is_enabled = models.BooleanField(default=False)
 
-    is_archived = models.BooleanField(default=False)
-
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-
-    def __str__(self):
-        return self.label
-    
 
 class EcheancierPaiement(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)

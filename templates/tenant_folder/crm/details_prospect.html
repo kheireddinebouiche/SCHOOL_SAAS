@@ -1088,6 +1088,49 @@
                 </div>
             </div>
 
+            <!-- Modal Suppression Fiche de Voeux Supplémentaire -->
+            <div class="modal fade" id="deleteVoeuxSuppModal" tabindex="-1" aria-labelledby="deleteVoeuxSuppModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 shadow-lg border-0">
+                        <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-delete-bin-line text-danger fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteVoeuxSuppModalLabel">
+                                        Supprimer la fiche de voeux
+                                    </h5>
+                                    <p class="text-muted small mb-0">Suppression de la formation supplémentaire</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="text-center">
+                                <div class="avatar-lg mx-auto mb-4">
+                                    <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+                                        <i class="ri-error-warning-line"></i>
+                                    </div>
+                                </div>
+                                <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer cette fiche de voeux ?</h5>
+                                <p class="text-muted">
+                                    La suppression de cette fiche de voeux est définitive et ne pourra pas être annulée.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 bg-light px-4 py-3">
+                            <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                                <i class="ri-close-line me-2"></i>Annuler
+                            </button>
+                            <button type="button" class="btn btn-danger px-4 py-2" id="confirmDeleteVoeuxSuppBtn">
+                                <i class="ri-delete-bin-line me-2"></i>Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal Validation Formations Supplémentaires -->
             <div class="modal fade" id="validateVoeuxSuppModal" tabindex="-1" aria-labelledby="validateVoeuxSuppModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -1311,7 +1354,7 @@
         let id  = "{{ pk }}";
         let type = null;
         let has_voeux = null;
-        var count_voeux = 0;
+       
         let has_second_wished = null;
         let promoListee = [];
 
@@ -1458,24 +1501,28 @@
                 success : function(data){
                     var row = "";
                     if (data.length > 0) {
-                        console.log(data.length);
-                        count_voeux = data.length;
+                       
                         $.each(data, function(index, item){
                             
                             row += "<tr>";
                             row += "<td>"+item.formation__nom+"</td>";
                             row += "<td>"+item.specialite__label+"</td>";
                             row += "<td>"+(item.commentaires || "")+"</td>";
-                            row += "<td><button class='btn btn-success btn-sm validate-sup-btn' data-id='"+item.id+"'><i class='ri-check-line'></i><span class='ms-1'>Valider</span></button></td>";
+                            row += "<td>";
+                            row += "<div class='d-flex gap-2'>";
+                            row += "<button class='btn btn-success btn-sm validate-sup-btn' data-id='"+item.id+"'><i class='ri-check-line'></i><span class='ms-1'>Valider</span></button>";
+                            row += "<button class='btn btn-danger btn-sm delete-sup-btn' data-id='"+item.id+"'><i class='ri-delete-bin-line'></i><span class='ms-1'>Supprimer</span></button>";
+                            row += "</div>";
+                            row += "</td>";
                             row += "</tr>";
                         });
                     } else {
-                        count_voeux = 0;
+                       
                         row += "<tr><td colspan='4' class='text-center text-muted'>Aucune formation supplémentaire enregistrée</td></tr>";
                     }
 
                     $('#listeVoeuxSupplementaires').html(row);
-                     loadVoeuxSupplementairesCount();
+        
                 }
             })
         }
@@ -1585,14 +1632,26 @@
         }
 
         function loadVoeuxSupplementairesCount(){
-           
-            $('#voeuxSuppCount').text(count_voeux);
+
+            $.ajax({
+                url : "{% url 't_crm:ApiCountFormationSupplementaire' %}",
+                dataType : "JSON",
+                type : "GET",
+                data : {
+                    'id_prospect' : id,
+                },
+                success : function(response){
+                    $('#voeuxSuppCount').text(response.count);
                        
-            if (count_voeux === 0) {
-                $('#voeuxSuppCount').hide();
-            } else {
-                $('#voeuxSuppCount').show();
-            }
+                    if (response.count === 0) {
+                        $('#voeuxSuppCount').hide();
+                    } else {
+                        $('#voeuxSuppCount').show();
+                    }
+                }
+            });
+           
+           
         }
 
         loadFicheVoeuxSupplementaire();
@@ -2203,6 +2262,49 @@
             var id_voeux_supp = $(this).data('id');
         
             $('#validateVoeuxSuppModal').modal('hide');
+        });
+
+        // Gestion du bouton de suppression des voeux supplémentaires
+        $(document).on('click', '.delete-sup-btn', function(){
+            var id_voeux_supp = $(this).data('id');
+            // Afficher la modale de confirmation de suppression
+            $('#deleteVoeuxSuppModal').modal('show');
+            // Stocker l'ID du voeu supplémentaire à supprimer
+            $('#confirmDeleteVoeuxSuppBtn').data('id', id_voeux_supp);
+        });
+
+        // Confirmation de la suppression d'un voeu supplémentaire
+        $(document).on('click', '#confirmDeleteVoeuxSuppBtn', function(){
+            var id_voeux_supp = $(this).data('id');
+            
+            $.ajax({
+                url : "{% url 't_crm:ApiDeleteSecondWish' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'id_voeux_supp' : id_voeux_supp,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if (response.status === "success") {
+                        // Masquer la modale de confirmation
+                        $('#deleteVoeuxSuppModal').modal('hide');
+                        // Recharger la liste des voeux supplémentaires
+                        loadFicheVoeuxSupplementaire();
+                        // Mettre à jour le compteur
+                        loadVoeuxSupplementairesCount();
+                        // Afficher un message de succès
+                        alertify.success("La fiche de voeux a été supprimée avec succès");
+                    } else {
+                        // Afficher un message d'erreur
+                        alertify.error("Une erreur est survenue lors de la suppression");
+                    }
+                },
+                error : function() {
+                    // Afficher un message d'erreur
+                    alertify.error("Une erreur est survenue lors de la suppression");
+                }
+            });
         });
 
         $(document).on('click', '#udapteProspectDetailsBtn', function(){

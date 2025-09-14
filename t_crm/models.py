@@ -4,6 +4,8 @@ from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
 from t_formations.models import DossierInscription
 from .tenant_path import *
+from t_remise.models import *
+
 
 class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
@@ -273,3 +275,30 @@ class CrmCounter(models.Model):
 
     def __str__(self):
         return self.date_counter
+    
+
+class RemiseAppliquer(models.Model):
+    remise  = models.ForeignKey(Remises, on_delete=models.CASCADE, null=True, blank=True)
+    is_approuved = models.BooleanField(default=False)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.remise.label
+    
+
+class RemiseAppliquerLine(models.Model):
+    remise_appliquer = models.ForeignKey(RemiseAppliquer, null=True, blank=True, on_delete=models.CASCADE)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.prospect.nom} - {self.prenom}'
+    
+
+
+
+
