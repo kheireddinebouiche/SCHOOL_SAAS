@@ -134,6 +134,7 @@ urlpatterns = [
 
     path('get_crm_counters', get_crm_counters, name="get_crm_counters"),
     path('increment_crm_counter', increment_crm_counter, name="increment_crm_counter"),
+    path('get_activity_history', get_activity_history, name="get_activity_history"),
 
     path('ApiListeSecondWishes', ApiListeSecondWishes, name="ApiListeSecondWishes"),
     path('ApiStoreSecondWish', ApiStoreSecondWish, name="ApiStoreSecondWish"),
@@ -145,4 +146,7 @@ urlpatterns = [
     path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),
 
     path('ApiLoadProspectParticulier', ApiLoadProspectParticulier, name="ApiLoadProspectParticulier"),
+    path('ApiStoreApplicedReduction', ApiStoreApplicedReduction, name="ApiStoreApplicedReduction"), 
+    path('ApiloadRemiseAppliquer', ApiloadRemiseAppliquer, name="ApiloadRemiseAppliquer"),
+    path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
 ]

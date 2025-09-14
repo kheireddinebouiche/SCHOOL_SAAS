@@ -37,13 +37,21 @@
     box-shadow: none;
   }
   
-  /* Remise status colors */
-  .status-active {
-    background-color: #198754;
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
   }
   
-  .status-inactive {
-    background-color: #dc3545;
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .prospect-type-card[data-type="entreprise"]:hover {
+    border-color: #dc3545;
   }
   
   /* Fix dropdown z-index issue */
@@ -59,6 +67,15 @@
   .table .dropdown-menu {
     z-index: 1050;
     position: absolute;
+  }
+  
+  /* Remise status colors */
+  .status-active {
+    background-color: #198754;
+  }
+  
+  .status-inactive {
+    background-color: #dc3545;
   }
 </style>
 
@@ -89,6 +106,65 @@
         </div>
       </div>
       <!-- end page title -->
+      
+      <!-- KPIs Section -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="row g-3">
+            <!-- Total Remises -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-percent-line text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Total Remises</h5>
+                      <h3 class="mb-0 fw-bold" id="totalRemises">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Actives -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-checkbox-circle-line text-success fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Actives</h5>
+                      <h3 class="mb-0 fw-bold" id="activesCount">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Inactives -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-close-circle-line text-danger fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Inactives</h5>
+                      <h3 class="mb-0 fw-bold" id="inactivesCount">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div class="row">
         <div class="col-lg-12">
           <div class="card shadow border-0 rounded-3">
@@ -104,6 +180,7 @@
                     <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
                     <i class="fas fa-search text-muted search-icon"></i>
                   </div>
+                 
                   
                   <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#createRemiseModal">
                     <i class="ri-add-line me-1"></i> Nouvelle remise
@@ -170,9 +247,7 @@
                 <div class="col-lg-12">
                   <label class="form-label fw-medium" for="remiseLabel">Nom de la remise</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-light border-0">
-                      <i class="ri-price-tag-3-line text-muted"></i>
-                    </span>
+                    <span class="input-group-text bg-light border-0"><i class="ri-price-tag-3-line text-muted"></i></span>
                     <input type="text" class="form-control border-0 bg-light py-2" id="remiseLabel" name="label" placeholder="Ex: Remise étudiant, Remise fidélité..." required>
                   </div>
                   <div class="form-text">Donnez un nom significatif à votre remise</div>
@@ -180,9 +255,7 @@
                 <div class="col-lg-12">
                   <label class="form-label fw-medium" for="remiseTaux">Taux de remise (%)</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-light border-0">
-                      <i class="ri-percent-line text-muted"></i>
-                    </span>
+                    <span class="input-group-text bg-light border-0"><i class="ri-percent-line text-muted"></i></span>
                     <input type="number" class="form-control border-0 bg-light py-2" id="remiseTaux" name="taux" min="0" max="100" step="0.01" placeholder="Ex: 10, 15.5, 20..." required>
                   </div>
                   <div class="form-text">Entrez un pourcentage entre 0 et 100</div>
@@ -257,18 +330,14 @@
                 <div class="col-lg-12">
                   <label class="form-label fw-medium" for="updateRemiseLabel">Nom de la remise</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-light border-0">
-                      <i class="ri-price-tag-3-line text-muted"></i>
-                    </span>
+                    <span class="input-group-text bg-light border-0"><i class="ri-price-tag-3-line text-muted"></i></span>
                     <input type="text" class="form-control border-0 bg-light py-2" id="updateRemiseLabel" name="label" required>
                   </div>
                 </div>
                 <div class="col-lg-12">
                   <label class="form-label fw-medium" for="updateRemiseTaux">Taux de remise (%)</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-light border-0">
-                      <i class="ri-percent-line text-muted"></i>
-                    </span>
+                    <span class="input-group-text bg-light border-0"><i class="ri-percent-line text-muted"></i></span>
                     <input type="number" class="form-control border-0 bg-light py-2" id="updateRemiseTaux" name="taux" min="0" max="100" step="0.01" required>
                   </div>
                 </div>
@@ -392,37 +461,67 @@
                             var statusClass = item.is_enabled ? 'status-active' : 'status-inactive';
                             var statusText = item.is_enabled ? 'Active' : 'Inactive';
                             
-                            row += "<tr>";
+                            row += "<tr class='align-middle'>";
                             row += "<td>" + item.label + "</td>";
                             row += "<td>" + item.taux + "%</td>";
                             row += "<td>" + item.created_at.split("T")[0] + "</td>";
                             row += "<td><span class='badge " + statusClass + "'>" + statusText + "</span></td>";
                             row += "<td class='text-center'>";
-                            row += "<div class='btn-group' role='group'>";
-                            row += "<button type='button' class='btn btn-outline-primary btn-sm edit-remise' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_active + "'>";
-                            row += "<i class='fas fa-edit'></i>";
+                            row += "<div class='dropdown d-inline-block'>";
+                            row += "<button class='btn btn-soft-info btn-sm dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
+                            row += "<i class='ri-more-2-fill'></i>";
                             row += "</button>";
-                            row += "<button type='button' class='btn btn-outline-danger btn-sm delete-remise' data-id='" + item.id + "'>";
-                            row += "<i class='fas fa-trash'></i>";
-                            row += "</button>";
-                            row += "<button type='button' class='btn btn-outline-info btn-sm activate-remise' data-id='" + item.id + "' data-active='" + item.is_active + "'>";
-                            row += item.is_active ? "<i class='fas fa-times'></i>" : "<i class='fas fa-check'></i>";
-                            row += "</button>";
+                            row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-sm'>";
+                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 edit-remise' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_active + "'>";
+                            row += "<i class='ri-edit-line text-primary me-2'></i>Modifier";
+                            row += "</button></li>";
+                            row += "<li><hr class='dropdown-divider my-1'></li>";
+                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-remise' data-id='" + item.id + "'>";
+                            row += "<i class='ri-delete-bin-line me-2'></i>Supprimer";
+                            row += "</button></li>";
+                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 activate-remise' data-id='" + item.id + "' data-active='" + item.is_active + "'>";
+                            row += item.is_active ? "<i class='ri-close-line text-warning me-2'></i>Désactiver" : "<i class='ri-check-line text-success me-2'></i>Activer";
+                            row += "</button></li>";
+                            row += "</ul>";
                             row += "</div>";
                             row += "</td>";
                             row += "</tr>";
                         });
                     }else{
-                        row = "<tr><td colspan='5' class='text-muted text-center'>Aucune données disponible !</td></tr>";
+                        row = "<tr><td colspan='5' class='text-center text-muted'>Aucune données disponible !</td></tr>";
                     }
                    
                     $('#listeItem').html(row);
+                    
+                    // Update KPIs
+                    updateKPIs(data);
                 },
                 error: function(xhr, status, error) {
                     console.error("Erreur lors du chargement des remises:", error);
                     $('#listeItem').html("<tr><td colspan='5' class='text-danger text-center'>Erreur lors du chargement des données</td></tr>");
                 }
             });
+        }
+        
+        // Fonction pour mettre à jour les KPIs
+        function updateKPIs(data) {
+            // Total remises
+            $('#totalRemises').text(data.length);
+            
+            // Count by status
+            let actives = 0;
+            let inactives = 0;
+            
+            $.each(data, function(index, item) {
+                if (item.is_enabled) {
+                    actives++;
+                } else {
+                    inactives++;
+                }
+            });
+            
+            $('#activesCount').text(actives);
+            $('#inactivesCount').text(inactives);
         }
 
         // Fonction pour activer/désactiver une remise
@@ -436,13 +535,13 @@
             $('#confirmActivateRemiseBtn').removeClass('btn-info').addClass(isActive ? 'btn-warning' : 'btn-success');
             $('#confirmActivateRemiseBtn').text(isActive ? "Désactiver" : "Activer");
             
-            $('#activateRemiseModal').modal('show');
+            $('.activateRemiseModal').modal('show');
         }
 
         // Fonction pour supprimer une remise
         function DeleteRemise(remiseId) {
             $('#deleteRemiseId').val(remiseId);
-            $('#deleteRemiseModal').modal('show');
+            $('.deleteRemiseModal').modal('show');
         }
 
         // Fonction pour modifier une remise
@@ -466,10 +565,10 @@
                 },
                 success : function(response){
                     if(response.status === "success"){
-                        alertify.success("Remise crée avec succès");
+                        alertify.success("Remise créée avec succès");
                         loadRemises();
                     }else{
-                        alertify.error("Une erreur c'est produite lors de l'execution de la requete !");
+                        alertify.error("Une erreur s'est produite lors de l'exécution de la requête !");
                     }
                 }
             })
@@ -496,12 +595,12 @@
             UpdateRemise(remiseId, label, taux);
         });
 
-        //estionnaire d'événements pour le bouton de confirmation d'activation/désactivation
+        // Gestionnaire d'événements pour le bouton de confirmation d'activation/désactivation
         $('#confirmActivateRemiseBtn').click(function() {
             var remiseId = $('#activateRemiseId').val();
             
             // Pour le moment, on ferme simplement la modale
-            $('#activateRemiseModal').modal('hide');
+            $('.activateRemiseModal').modal('hide');
             loadRemises(); // Recharger la liste
         });
 
@@ -511,7 +610,7 @@
            
             
             // Pour le moment, on ferme simplement la modale
-            $('#deleteRemiseModal').modal('hide');
+            $('.deleteRemiseModal').modal('hide');
             loadRemises(); // Recharger la liste
         });
 
@@ -519,7 +618,7 @@
         $('#saveRemiseBtn').click(function() {
             var remiseLabel = $('#remiseLabel').val();
             var remiseTaux = $('#remiseTaux').val();
-            var remiseStatus = $('#remiseStatus').val();
+            var remiseStatus = $('#remiseStatus').is(':checked');
             
             CreateRemise(remiseLabel, remiseTaux, remiseStatus);
             

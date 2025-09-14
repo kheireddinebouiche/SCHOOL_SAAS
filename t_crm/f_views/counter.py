@@ -19,39 +19,73 @@ def ApiUpdateVisisteCounter(request):
 def ApiUpdatePhoneCallCounter(request):
     pass
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from ..models import CrmCounter
+
 @login_required(login_url="institut_app:login")
 def get_crm_counters(request):
-    date = datetime.date.today()
-    object = CrmCounter.objects.filter(date_counter = date).values('id','visite_counter','phone_counter')
-
-    return JsonResponse(list(object), safe=False)
-
+    # Get today's date
+    from datetime import date
+    today = date.today()
+    
+    # Get or create counter for today
+    counter, created = CrmCounter.objects.get_or_create(
+        date_counter=today,
+        defaults={'visite_counter': 0, 'phone_counter': 0}
+    )
+    
+    data = [{
+        'date_counter': counter.date_counter.strftime('%Y-%m-%d') if counter.date_counter else '',
+        'visite_counter': counter.visite_counter,
+        'phone_counter': counter.phone_counter
+    }]
+    
+    return JsonResponse(data, safe=False)
 
 
 @login_required(login_url="institut_app:login")
-@transaction.atomic
 def increment_crm_counter(request):
-    type = request.POST.get('type')
-    today = datetime.date.today()
-
-    if type == "visit":
-        obj, created = CrmCounter.objects.get_or_create(
+    if request.method == 'POST' and request.POST.get('type'):
+        counter_type = request.POST.get('type')
+        
+        # Get today's date
+        from datetime import date
+        today = date.today()
+        
+        # Get or create counter for today
+        counter, created = CrmCounter.objects.get_or_create(
             date_counter=today,
-            defaults={"visite_counter": 1}
+            defaults={'visite_counter': 0, 'phone_counter': 0}
         )
-        if not created:
-            CrmCounter.objects.filter(pk=obj.pk).update(visite_counter=F("visite_counter") + 1)
+        
+        # Increment the appropriate counter
+        if counter_type == 'visit':
+            counter.visite_counter += 1
+        elif counter_type == 'call':
+            counter.phone_counter += 1
+            
+        counter.save()
+        
+        return JsonResponse({'status': 'success'})
+    
+    return JsonResponse({'status': 'error'})
 
 
-
-    else:
-
-        obj, created = CrmCounter.objects.get_or_create(
-            date_counter = today,
-            defaults={"phone_counter" : 1}
-        )
-        if not created:
-            CrmCounter.objects.filter(pk=obj.pk).update(phone_counter=F("phone_counter") + 1)
-
-    return JsonResponse({"status": "success"})
+@login_required(login_url="institut_app:login")
+def get_activity_history(request):
+    # Get all counters ordered by date
+    counters = CrmCounter.objects.all().order_by('-date_counter')
+    
+    data = []
+    for counter in counters:
+        data.append({
+            'date': counter.date_counter.strftime('%Y-%m-%d') if counter.date_counter else '',
+            'visits': counter.visite_counter,
+            'calls': counter.phone_counter,
+            'user': 'Admin'  # In a real implementation, this would be the actual user
+        })
+    
+    return JsonResponse(data, safe=False)
 

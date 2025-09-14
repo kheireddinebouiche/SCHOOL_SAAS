@@ -85,6 +85,29 @@ def crm_dashboard(request):
             {'status': 'convertit', 'label': 'Converti', 'count': 30}
         ]
         total_prospects = 305
+        
+    # Répartition des prospects par source (lead_source)
+    prospects_by_lead_source = Prospets.objects.values('lead_source').annotate(count=Count('lead_source')).order_by('-count')
+    
+    # Ajout des labels pour l'affichage des sources
+    lead_source_labels = {
+        'viste': 'Visite',
+        'appel': 'Appel',
+        'prospectus': 'Prospectus'
+    }
+    
+    lead_source_data = []
+    for source in prospects_by_lead_source:
+        source_code = source['lead_source']
+        count = source['count']
+        # Only include sources that have a count > 0
+        if count > 0 and source_code is not None:
+            label = lead_source_labels.get(source_code, source_code)
+            lead_source_data.append({
+                'source': source_code,
+                'label': label,
+                'count': count
+            })
     
     context = {
         'tenant': request.tenant,
@@ -95,6 +118,7 @@ def crm_dashboard(request):
         'recent_reminders': recent_reminders,
         'channel_conversion_data': channel_conversion_data,
         'prospects_by_status': prospects_by_status_with_labels,
+        'lead_source_data': lead_source_data,
     }
     
     return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)

@@ -280,7 +280,8 @@ class CrmCounter(models.Model):
 class RemiseAppliquer(models.Model):
     remise  = models.ForeignKey(Remises, on_delete=models.CASCADE, null=True, blank=True)
     is_approuved = models.BooleanField(default=False)
-
+    fichie_justificatif = models.FileField(upload_to=tenant_directory_path, null=True, blank=True)
+    
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
 

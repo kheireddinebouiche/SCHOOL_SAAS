@@ -272,6 +272,27 @@
     background-color: #dc3545 !important;
   }
   
+  /* Subtle badges (from prospects list) */
+  .badge.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    color: #0d6efd !important;
+  }
+  
+  .badge.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: #198754 !important;
+  }
+  
+  .badge.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    color: #ffc107 !important;
+  }
+  
+  .badge.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+  }
+  
   /* Selected prospects list */
   .selected-prospects-list {
     background-color: #f8f9fa;
@@ -310,6 +331,20 @@
   .btn-soft-danger:hover {
     background: rgba(220, 53, 69, 0.2);
     color: #dc3545;
+  }
+  
+  /* Soft info button (from prospects list) */
+  .btn-soft-info {
+    background: rgba(13, 110, 253, 0.1);
+    border: none;
+    color: #0d6efd;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-soft-info:hover {
+    background: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
   }
   
   /* Responsive */
@@ -416,12 +451,9 @@
                 <table id="example" class="table table-hover align-middle mb-0">
                   <thead class="bg-light">
                     <tr>
-                      <th class="border-0 rounded-start">Nom & Prénom</th>
-                      <th class="border-0">Entreprise</th>
-                      <th class="border-0">Téléphone</th>
-                      <th class="border-0">Email</th>
-                      <th class="border-0">Type client</th>
+                      <th class="border-0 rounded-start">Réduction</th>
                       <th class="border-0">État</th>
+                      <th class="border-0">Date de création</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
                   </thead>
@@ -517,7 +549,7 @@
                   <thead>
                     <tr>
                       <th class="border-0 rounded-start">Nom & Prénom</th>
-                      <th class="border-0">Entreprise</th>
+                      <th class="border-0">Date de naissance</th>
                       <th class="border-0 rounded-end text-end">Action</th>
                     </tr>
                   </thead>
@@ -534,7 +566,7 @@
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
           <i class="ri-close-line me-2"></i>Annuler
         </button>
-        <button type="button" class="btn btn-primary px-4 py-2">
+        <button type="button" class="btn btn-primary px-4 py-2" id="applyReductionBtn">
           <i class="ri-checkbox-circle-line me-2"></i>Appliquer la réduction
         </button>
       </div>
@@ -601,6 +633,96 @@
   </div>
 </div>
 
+<!-- Modal pour afficher les détails d'une réduction appliquée -->
+<div class="modal fade" id="discountDetailsModal" tabindex="-1" aria-labelledby="discountDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-coupon-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="discountDetailsModalLabel">
+              Détails de la réduction
+            </h5>
+            <p class="text-muted small mb-0">Informations sur la réduction appliquée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+          <div class="card-header border-0 bg-white pt-3">
+            <div class="d-flex align-items-center">
+              <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                <i class="ri-coupon-line text-primary"></i>
+              </span>
+              <h6 class="card-title mb-0 text-primary">Informations générales</h6>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Nom de la réduction</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailRemiseName">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Statut</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailRemiseStatus">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Taux de réduction</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailRemiseTaux">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Date d'application</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailRemiseDate">-</div>
+              </div>
+              <div class="col-lg-12">
+                <label class="form-label fw-medium">Justificatif</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailRemiseJustificatif">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+          <div class="card-header border-0 bg-white pt-3">
+            <div class="d-flex align-items-center">
+              <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                <i class="ri-group-line text-primary"></i>
+              </span>
+              <h6 class="card-title mb-0 text-primary">Prospects concernés</h6>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="border-0 rounded-start">Nom & Prénom</th>
+                    <th class="border-0">Date de naissance</th>
+                    <th class="border-0 rounded-end">Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="detailProspectsList">
+                  <!-- Les prospects seront ajoutés ici dynamiquement -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   
   $(document).ready(function () {
@@ -608,29 +730,98 @@
     var selectedProspects = [];
     $('#justificatifPourRemise').hide();
     
-    function loadProspect(){
+    // Load applied discounts on page load
+    
+    
+    function loadAppliedDiscounts(){
       $.ajax({
-        url : "{% url 't_crm:ApiLoadProspectParticulier' %}",
+        url : "{% url 't_crm:ApiloadRemiseAppliquer' %}",
         dataType : "JSON",
         type: "GET",
         success: function(data){
           var row = "";
-          $.each(data, function(index, item){
-            row += '<tr>';
-                row += "<td>"+item.prenom+' '+item.nom+"</td>";
-                row += "<td>"+item.date_naissance+"</td>";
-                row += "<td>"+item.statut_label+"</td>";
-                row += '<td class="text-end">';
-                  row += '<button class="btn btn-sm btn-outline-primary select-prospect" data-name="Mohamed Ali" data-entreprise="Tech Solutions"data-id="1"data-bs-dismiss="modal">';
-                    row +=  '<i class="ri-check-line me-1"></i>Sélectionner';
-                  row += '</button>';
-                row += '</td>';
+          if(data.length > 0) {
+            $.each(data, function(index, item){
+              var statusBadge = item.is_approuved ? 
+                '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Approuvée</span>' : 
+                '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>';
+              
+              // Format the date
+              var createdDate = new Date(item.created_at);
+              var formattedDate = createdDate.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              });
+                
+              row += '<tr class="align-middle">';
+              row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.remise__label + "</div></div></td>";
+              row += "<td>" + statusBadge + "</td>";
+              row += "<td>" + formattedDate + "</td>";
+              row += '<td class="text-end">';
+              row += '<div class="dropdown d-inline-block">';
+              row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+              row += '<i class="ri-more-2-fill"></i>';
+              row += '</button>';
+              row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+              row += '<li><button class="btn-detail-discount dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
+              row += '<i class="ri-eye-line text-info me-2"></i>Voir détails</button></li>';
+              row += '</ul>';
+              row += '</div>';
+              row += '</td>';
               row += '</tr>';
-          });
+            });
+          } else {
+            row += '<tr><td colspan="4" class="text-center py-4">';
+            row += '<div class="d-flex flex-column align-items-center">';
+            row += '<i class="ri-gift-line ri-2x text-muted mb-2"></i>';
+            row += '<p class="text-muted mb-0">Aucune réduction appliquée pour le moment</p>';
+            row += '<p class="text-muted small mb-0">Appliquez une réduction pour la voir apparaître ici</p>';
+            row += '</div>';
+            row += '</td></tr>';
+          }
 
-          $('#listeItemProspect').html(row);
+          $('#listeItem').html(row);
+        },
+        error: function(xhr, status, error) {
+          console.log("Error loading applied discounts: " + error);
+          $('#listeItem').html('<tr><td colspan="4" class="text-center">Erreur lors du chargement des données</td></tr>');
         }
       })
+    }
+      
+    loadAppliedDiscounts();
+
+    function loadProspect(){      
+      $.ajax({       
+        url : "{% url 't_crm:ApiLoadProspectParticulier' %}",        
+        dataType : "JSON",        
+        type: "GET",        
+        success: function(data){          
+          // Store original data for search reset          
+          window.prospectData = data;                    
+          var row = "";          
+          if (data.length > 0) {            
+            $.each(data, function(index, item){              
+              row += '<tr>';                  
+              row += "<td>"+item.prenom+' '+item.nom+"</td>";                  
+              row += "<td>"+item.date_naissance+"</td>";                  
+              row += "<td>"+item.statut_label+"</td>";                  
+              row += '<td class="text-end">';                    
+              row += '<button class="btn btn-sm btn-outline-primary select-prospect" data-date_naisance='+item.date_naissance+' data-name='+item.nom+' data-prenom='+item.prenom+' data-id='+item.id+'>';                      
+              row +=  '<i class="ri-check-line me-1"></i>Sélectionner';                    
+              row += '</button>';                  
+              row += '</td>';                
+              row += '</tr>';            
+            });          
+          } else {            
+            row += '<tr><td colspan="4" class="text-center py-4"><div class="d-flex flex-column align-items-center"><i class="ri-group-line ri-2x text-muted mb-2"></i><p class="text-muted mb-0">Aucun prospect disponible</p><p class="text-muted small mb-0">Il n\'y a actuellement aucun prospect dans le système</p></div></td></tr>';          
+          }          
+          $('#listeItemProspect').html(row);          
+          // Clear search field when loading new data          
+          $('#searchProspect').val('');        
+        }      
+      })    
     }
 
     function loadRemise(){
@@ -641,7 +832,7 @@
         success : function(data){
           var row = "<option value='0'>Veuillez selectionner la remise</option>";
           $.each(data, function(index, item){
-            row += "<option value="+item.id+" data-justificatif='"+item.has_to_justify+"' >"+item.label+"</option>";
+            row += "<option value="+item.id+" data-justificatif="+item.has_to_justify+">"+item.label+"</option>";
           });
           $('#typeRemise').html(row);
         }
@@ -675,14 +866,19 @@
       $('#prospectListModal').modal('show');
     });
     
+    
     $('#prospectListModal').on('hidden.bs.modal', function () {
       // Réouvrir la modale principale
-
       $('#newProspectModal').modal('show');
+      // Clear search when modal is closed
+      $('#searchProspect').val('');
+      $('#listeItemProspect tr').show();
     });
     
-    $('.select-prospect').on('click', function() {
+    $(document).on('click', '.select-prospect', function() {
       var prospectName = $(this).data('name');
+      var prospectPrenom = $(this).data('prenom');
+      var prospectNaissance = $(this).data('date_naisance');
       var prospectId = $(this).data('id') || Date.now(); // Utilisation d'un ID temporaire si non fourni
       
       // Vérifier si le prospect est déjà sélectionné
@@ -693,7 +889,9 @@
         selectedProspects.push({
           id: prospectId,
           name: prospectName,
-          entreprise: $(this).data('entreprise') || ''
+          prenom : prospectPrenom,
+          date_naissance : prospectNaissance,
+
         });
         
         // Mettre à jour l'affichage
@@ -725,14 +923,14 @@
                   </span>
                 </div>
                 <div class="flex-grow-1">
-                  <h6 class="mb-0">${prospect.name}</h6>
+                  <h6 class="mb-0">${prospect.name} ${prospect.prenom}</h6>
                 </div>
               </div>
             </td>
             <td>
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
-                  <h6 class="mb-0">${prospect.entreprise || '-'}</h6>
+                  <h6 class="mb-0">${prospect.date_naissance || '-'}</h6>
                 </div>
               </div>
             </td>
@@ -747,19 +945,136 @@
       });
     }
     
-    $(document).on('click', '.remove-prospect', function() {
-      var prospectId = $(this).data('id');
+    $(document).on('click', '.remove-prospect', function() {      
+      var prospectId = $(this).data('id');            
+      // Retirer le prospect du tableau      
+      selectedProspects = selectedProspects.filter(prospect => prospect.id !== prospectId);            
+      // Mettre à jour l'affichage     
+      updateSelectedProspectsList();    
+    });    
+
+    // Handle click on detail button
+    $(document).on('click', '.btn-detail-discount', function() {
+      var discountId = $(this).data('id');
       
-      // Retirer le prospect du tableau
-      selectedProspects = selectedProspects.filter(prospect => prospect.id !== prospectId);
-      
-      // Mettre à jour l'affichage
-      updateSelectedProspectsList();
+      $.ajax({
+        url: "{% url 't_crm:ApiLoadRemiseAppliquerDetails' %}",
+        type: 'GET',
+        data: { 'id': discountId },
+        dataType: 'JSON',
+        success: function(response) {
+          if(response.status === 'success') {
+            var data = response.data;
+            
+            // Fill general information
+            $('#detailRemiseName').text(data.remise_name);
+            $('#detailRemiseStatus').html(data.is_approuved ? 
+              '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Approuvée</span>' : 
+              '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>');
+            $('#detailRemiseTaux').text(data.taux + ' %');
+            $('#detailRemiseDate').text(data.created_at);
+            
+            // Handle justification file
+            if(data.fichie_justificatif) {
+              $('#detailRemiseJustificatif').html('<a href="'+data.fichie_justificatif+'" target="_blank" class="btn btn-sm btn-outline-primary">Voir le justificatif</a>');
+            } else {
+              $('#detailRemiseJustificatif').text('Aucun justificatif fourni');
+            }
+            
+            // Fill prospects list
+            var prospectsRow = "";
+            if(data.prospects.length > 0) {
+              $.each(data.prospects, function(index, prospect) {
+                prospectsRow += '<tr>';
+                prospectsRow += '<td>'+prospect.prenom+' '+prospect.nom+'</td>';
+                prospectsRow += '<td>'+prospect.date_naissance+'</td>';
+                prospectsRow += '<td>'+prospect.statut+'</td>';
+                prospectsRow += '</tr>';
+              });
+            } else {
+              prospectsRow += '<tr><td colspan="3" class="text-center">Aucun prospect associé</td></tr>';
+            }
+            
+            $('#detailProspectsList').html(prospectsRow);
+            
+            // Show modal
+            $('#discountDetailsModal').modal('show');
+          } else {
+            alert('Erreur lors du chargement des détails: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          alert('Erreur lors du chargement des détails: ' + error);
+        }
+      });
     });
 
-    
+    // Handle form submission to apply reduction    
+    $('#applyReductionBtn').on('click', function() {      
+          var typeId = $('#typeRemise').val();     
+          var justificatif = $('#fichierJustificatif')[0].files[0];  
 
-  });
+          // Validation      
+          if (typeId === '0' || typeId === 0) {        
+            alert('Veuillez sélectionner un type de réduction.');        
+            return;      
+          }           
+          if (selectedProspects.length === 0) {        
+            alert('Veuillez sélectionner au moins un prospect.');        
+            return;      
+          }            
+          
+          // Check if justification is required      
+          var selectedOption = $('#typeRemise option:selected');  
+
+          var besoinJustificatif = selectedOption.data("justificatif");
+
+          if (besoinJustificatif && !justificatif) {        
+            alert('Veuillez fournir un fichier justificatif.');        
+            return;      
+          }            
+          // Prepare form data      
+          var formData = new FormData();      
+          formData.append('type_remise', typeId);      
+          if (justificatif) {        
+            formData.append('fichier_justificatif', justificatif);      
+          }            
+          // Add selected prospects to form data      
+          selectedProspects.forEach(function(prospect, index) {        
+            formData.append('prospects[' + index + '][id]', prospect.id);        
+            formData.append('prospects[' + index + '][name]', prospect.name);        
+            formData.append('prospects[' + index + '][prenom]', prospect.prenom);      
+            formData.append('prospects[' + index + '][date_naissance]', prospect.date_naissance);      
+          });            
+          // Send data to API      
+          $.ajax({        
+            url: "{% url 't_crm:ApiStoreApplicedReduction' %}",        
+            type: 'POST',        
+            data: formData,        
+            processData: false,        
+            contentType: false,        
+            headers: {          
+              'X-CSRFToken': '{{ csrf_token }}'       
+            },        
+            success: function(response) {          
+                // Handle success          
+                alert('Réduction appliquée avec succès.');          
+                $('#configureRemiseModal').modal('hide');          
+                // Reset form          
+                $('#typeRemise').val('0');          
+                $('#fichierJustificatif').val('');          
+                selectedProspects = [];          
+                updateSelectedProspectsList();
+                // Reload applied discounts
+                loadAppliedDiscounts();
+            },       
+            error: function(xhr, status, error) {          
+              // Handle error         
+              alert('Erreur lors de l\'application de la réduction: ' + error);        
+            }      
+          });    
+        });  
+      });
 
 </script>
 
