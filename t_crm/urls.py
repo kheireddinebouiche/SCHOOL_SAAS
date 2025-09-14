@@ -142,4 +142,7 @@ urlpatterns = [
    
 
     path('gestion-des-reductions/', ListeRemiseApplique, name="ListeRemiseApplique"),
+    path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),
+
+    path('ApiLoadProspectParticulier', ApiLoadProspectParticulier, name="ApiLoadProspectParticulier"),
 ]

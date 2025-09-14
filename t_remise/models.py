@@ -6,6 +6,7 @@ class Remises(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     taux = models.IntegerField(null=True, blank=True)
     is_enabled = models.BooleanField(default=False)
+    has_to_justify = models.BooleanField(default=False)
 
     is_archived = models.BooleanField(default=False)
 
