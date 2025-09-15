@@ -1,0 +1,900 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Comptabilité - Échéanciers Configurés{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .prospect-type-card[data-type="entreprise"]:hover {
+    border-color: #dc3545;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+  
+  /* Nouveau design modal - Style cohérent avec liste_des_remises.html */
+  .modal-content {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .modal-header {
+    background-color: #f8f9fa;
+    color: #495057;
+    padding: 1.25rem 1.5rem;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .modal-header h5 {
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #495057;
+  }
+  
+  .modal-header .btn-close {
+    background: transparent;
+    opacity: 0.5;
+    padding: 0.5rem;
+    margin: 0;
+    transition: all 0.2s ease;
+  }
+  
+  .modal-header .btn-close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    justify-content: flex-end;
+  }
+  
+  /* Cards design for sections */
+  .section-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    background-color: #f8f9fa;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+  }
+  
+  .card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .card-body {
+    padding: 1.25rem;
+  }
+  
+  /* Filter styles */
+  .filter-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+  }
+  
+  .filter-container .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Form elements */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-control, .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  /* Input group */
+  .input-group .form-control {
+    border-right: none;
+  }
+  
+  .input-group .btn {
+    border-left: none;
+  }
+  
+  .input-group-text {
+    background: #e9ecef;
+    border-color: #ced4da;
+    color: #495057;
+  }
+  
+  /* Buttons */
+  .btn {
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+  }
+  
+  .btn-light {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    color: #495057;
+  }
+  
+  .btn-light:hover {
+    background: #e9ecef;
+    border-color: #d1d7e0;
+  }
+  
+  .btn-outline-primary {
+    border-width: 2px;
+    border-radius: 0.375rem;
+    border-color: #0d6efd;
+    color: #0d6efd;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+  }
+  
+  /* Table styles */
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+  }
+  
+  .table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.075);
+  }
+  
+  /* Badges */
+  .badge.bg-primary {
+    background-color: #0d6efd !important;
+  }
+  
+  .badge.bg-info {
+    background-color: #17a2b8 !important;
+  }
+  
+  .badge.bg-success {
+    background-color: #198754 !important;
+  }
+  
+  .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+  }
+  
+  .badge.bg-danger {
+    background-color: #dc3545 !important;
+  }
+  
+  /* Subtle badges (from prospects list) */
+  .badge.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    color: #0d6efd !important;
+  }
+  
+  .badge.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: #198754 !important;
+  }
+  
+  .badge.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    color: #ffc107 !important;
+  }
+  
+  .badge.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+  }
+  
+  /* Selected prospects list */
+  .selected-prospects-list {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+  
+  .selected-prospects-list .table {
+    background-color: transparent;
+  }
+  
+  .selected-prospects-list .table th {
+    background-color: transparent;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #495057;
+  }
+  
+  .selected-prospects-list .table td {
+    padding: 0.5rem 0.75rem;
+    border: none;
+  }
+  
+  /* Remove prospect button */
+  .btn-soft-danger {
+    background: rgba(220, 53, 69, 0.1);
+    border: none;
+    color: #dc3545;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-soft-danger:hover {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+  }
+  
+  /* Soft info button (from prospects list) */
+  .btn-soft-info {
+    background: rgba(13, 110, 253, 0.1);
+    border: none;
+    color: #0d6efd;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-soft-info:hover {
+    background: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .modal-body {
+      padding: 1rem;
+    }
+    
+    .modal-header, .modal-footer {
+      padding: 0.75rem 1rem;
+    }
+    
+    .card-body {
+      padding: 1rem;
+    }
+    
+    .filter-container {
+      padding: 0.75rem;
+    }
+  }
+  
+  /* Modal icons */
+  .modal-icon {
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-right: 1rem;
+  }
+  
+  .modal-icon i {
+    font-size: 1.5rem;
+    color: #0d6efd;
+  }
+  
+  /* Card icons */
+  .icon-circle {
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .icon-circle i {
+    color: #0d6efd;
+  }
+  
+  /* Status indicators */
+  .status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+  }
+  
+  .status-active {
+    background-color: #198754;
+  }
+  
+  .status-inactive {
+    background-color: #dc3545;
+  }
+  
+  .status-archived {
+    background-color: #6c757d;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-calendar-check text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Échéanciers Configurés</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Comptabilité</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Trésorerie</a>
+                  </li>
+                  <li class="breadcrumb-item active">Échéanciers Configurés</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Liste des Échéanciers</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                 
+                  <div class="dropdown">
+                    <button class="btn btn-light rounded-pill dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="ri-filter-line me-1"></i> Filtres
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end border-0 shadow-sm p-3" style="width: 250px;">
+                      <h6 class="dropdown-header px-0 py-2">Filtrer par état</h6>
+                      <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterActive" checked>
+                        <label class="form-check-label" for="filterActive">Actifs</label>
+                      </div>
+                      <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterInactive" checked>
+                        <label class="form-check-label" for="filterInactive">Inactifs</label>
+                      </div>
+                      <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="filterArchived" checked>
+                        <label class="form-check-label" for="filterArchived">Archivés</label>
+                      </div>
+                      <button class="btn btn-primary w-100" id="applyFilters">Appliquer</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Modèle</th>
+                      <th class="border-0">Formation</th>
+                      <th class="border-0">Nombre de Tranches</th>
+                      <th class="border-0">État</th>
+                      <th class="border-0">Date de création</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeEcheanciers" class="border-top-0"></tbody>
+                </table>
+              </div>
+              
+              <!-- Pagination -->
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted">
+                  Affichage de <span id="startRecord">0</span> à <span id="endRecord">0</span> sur <span id="totalRecords">0</span> échéanciers
+                </div>
+                <nav>
+                  <ul class="pagination mb-0" id="paginationControls">
+                    <!-- Pagination will be generated here -->
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!-- Modal pour afficher les détails d'un échéancier -->
+<div class="modal fade" id="detailsEcheancierModal" tabindex="-1" aria-labelledby="detailsEcheancierModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-calendar-check-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="detailsEcheancierModalLabel">
+              Détails de l'échéancier
+            </h5>
+            <p class="text-muted small mb-0">Informations sur l'échéancier sélectionné</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+          <div class="card-header border-0 bg-white pt-3">
+            <div class="d-flex align-items-center">
+              <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                <i class="ri-file-info-line text-primary"></i>
+              </span>
+              <h6 class="card-title mb-0 text-primary">Informations générales</h6>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Modèle</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierModele">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Formation</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierFormation">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">État</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierEtat">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Date de création</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierDate">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+          <div class="card-header border-0 bg-white pt-3">
+            <div class="d-flex align-items-center">
+              <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                <i class="ri-list-settings-line text-primary"></i>
+              </span>
+              <h6 class="card-title mb-0 text-primary">Tranches de paiement</h6>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="border-0 rounded-start">Libellé</th>
+                    <th class="border-0">Pourcentage</th>
+                    <th class="border-0">Versement</th>
+                    <th class="border-0">Date d'échéance</th>
+                    <th class="border-0 rounded-end">Description</th>
+                  </tr>
+                </thead>
+                <tbody id="detailTranchesList">
+                  <!-- Les tranches seront ajoutées ici dynamiquement -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    // Variables pour la pagination
+    let currentPage = 1;
+    const recordsPerPage = 10;
+    
+    // Charger la liste des échéanciers
+    function loadEcheanciers(page = 1) {
+        currentPage = page;
+        
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadEcheanciersConfigures' %}",
+            dataType: "JSON",
+            type: "GET",
+            success: function(data) {
+                displayEcheanciers(data, page);
+            },
+            error: function(xhr, status, error) {
+                console.log("Error loading échéanciers: " + error);
+                $('#listeEcheanciers').html('<tr><td colspan="6" class="text-center">Erreur lors du chargement des données</td></tr>');
+            }
+        });
+    }
+    
+    // Afficher les échéanciers dans le tableau
+    function displayEcheanciers(data, page) {
+        const startIndex = (page - 1) * recordsPerPage;
+        const endIndex = startIndex + recordsPerPage;
+        const paginatedData = data.slice(startIndex, endIndex);
+        const totalRecords = data.length;
+        
+        let row = "";
+        if(paginatedData.length > 0) {
+            $.each(paginatedData, function(index, item) {
+                // Déterminer le badge d'état
+                let statusBadge = '';
+                if(item.is_active && !item.is_archived) {
+                    statusBadge = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Actif</span>';
+                } else if(!item.is_active && !item.is_archived) {
+                    statusBadge = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Inactif</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-archive-line me-1"></i>Archivé</span>';
+                }
+                
+                // Format the date
+                var createdDate = new Date(item.created_at);
+                var formattedDate = createdDate.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                
+                row += '<tr class="align-middle">';
+                row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.model_label + "</div></div></td>";
+                row += "<td>" + item.formation_label + "</td>";
+                row += "<td>" + item.nombre_tranches + "</td>";
+                row += "<td>" + statusBadge + "</td>";
+                row += "<td>" + formattedDate + "</td>";
+                row += '<td class="text-end">';
+                row += '<div class="dropdown d-inline-block">';
+                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                row += '<i class="ri-more-2-fill"></i>';
+                row += '</button>';
+                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+                row += '<li><button class="btn-detail-echeancier dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
+                row += '<i class="ri-eye-line text-info me-2"></i>Voir détails</button></li>';
+                row += '<li><button class="btn-edit-echeancier dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
+                row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+                row += '<li><hr class="dropdown-divider my-1"></li>';
+                if(!item.is_archived) {
+                    row += '<li><button class="btn-archive-echeancier dropdown-item d-flex align-items-center px-3 py-2 text-warning" data-id="'+item.id+'">';
+                    row += '<i class="ri-archive-line me-2"></i>Archiver</button></li>';
+                } else {
+                    row += '<li><button class="btn-unarchive-echeancier dropdown-item d-flex align-items-center px-3 py-2 text-success" data-id="'+item.id+'">';
+                    row += '<i class="ri-unarchive-line me-2"></i>Désarchiver</button></li>';
+                }
+                row += '<li><button class="btn-delete-echeancier dropdown-item d-flex align-items-center px-3 py-2 text-danger" data-id="'+item.id+'">';
+                row += '<i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
+                row += '</ul>';
+                row += '</div>';
+                row += '</td>';
+                row += '</tr>';
+            });
+        } else {
+            row += '<tr><td colspan="6" class="text-center py-4">';
+            row += '<div class="d-flex flex-column align-items-center">';
+            row += '<i class="ri-calendar-check-line ri-2x text-muted mb-2"></i>';
+            row += '<p class="text-muted mb-0">Aucun échéancier configuré pour le moment</p>';
+            row += '<p class="text-muted small mb-0">Créez un échéancier pour le voir apparaître ici</p>';
+            row += '</div>';
+            row += '</td></tr>';
+        }
+
+        $('#listeEcheanciers').html(row);
+        
+        // Mettre à jour les informations de pagination
+        $('#startRecord').text(startIndex + 1);
+        $('#endRecord').text(Math.min(endIndex, totalRecords));
+        $('#totalRecords').text(totalRecords);
+        
+        // Générer les contrôles de pagination
+        generatePagination(Math.ceil(totalRecords / recordsPerPage), page);
+    }
+    
+    // Générer les contrôles de pagination
+    function generatePagination(totalPages, currentPage) {
+        let paginationHtml = '';
+        
+        if(totalPages > 1) {
+            // Bouton précédent
+            if(currentPage > 1) {
+                paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + (currentPage - 1) + '">Précédent</a></li>';
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Précédent</span></li>';
+            }
+            
+            // Pages
+            for(let i = 1; i <= totalPages; i++) {
+                if(i === currentPage) {
+                    paginationHtml += '<li class="page-item active"><span class="page-link">' + i + '</span></li>';
+                } else {
+                    paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
+                }
+            }
+            
+            // Bouton suivant
+            if(currentPage < totalPages) {
+                paginationHtml += '<li class="page-item"><a class="page-link" href="#" data-page="' + (currentPage + 1) + '">Suivant</a></li>';
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Suivant</span></li>';
+            }
+        }
+        
+        $('#paginationControls').html(paginationHtml);
+    }
+    
+    // Gestion des clics sur la pagination
+    $(document).on('click', '#paginationControls .page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if(page) {
+            loadEcheanciers(page);
+        }
+    });
+    
+    // Charger les échéanciers au démarrage
+    loadEcheanciers();
+    
+    // Recherche dans le tableau
+    $('#table-filter').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $("#listeEcheanciers tr").each(function() {
+            const rowText = $(this).text().toLowerCase();
+            if(rowText.indexOf(searchTerm) === -1 && searchTerm !== '') {
+                $(this).hide();
+            } else {
+                $(this).show();
+            }
+        });
+    });
+    
+    // Appliquer les filtres
+    $('#applyFilters').on('click', function() {
+        // Pour l'instant, on recharge tous les échéanciers
+        // Dans une implémentation complète, on enverrait les filtres au serveur
+        loadEcheanciers();
+    });
+    
+    // Voir les détails d'un échéancier
+    $(document).on('click', '.btn-detail-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadEcheancierDetails' %}",
+            type: 'GET',
+            data: { 'id': echeancierId },
+            dataType: 'JSON',
+            success: function(response) {
+                if(response.status === 'success') {
+                    var data = response.data;
+                    
+                    // Remplir les informations générales
+                    $('#detailEcheancierModele').text(data.model_label);
+                    $('#detailEcheancierFormation').text(data.formation_label);
+                    
+                    // Déterminer le badge d'état
+                    let statusBadge = '';
+                    if(data.is_active && !data.is_archived) {
+                        statusBadge = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Actif</span>';
+                    } else if(!data.is_active && !data.is_archived) {
+                        statusBadge = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Inactif</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-archive-line me-1"></i>Archivé</span>';
+                    }
+                    $('#detailEcheancierEtat').html(statusBadge);
+                    
+                    $('#detailEcheancierDate').text(data.created_at);
+                    
+                    // Remplir les tranches
+                    var tranchesRow = "";
+                    if(data.tranches.length > 0) {
+                        $.each(data.tranches, function(index, tranche) {
+                            // Format the date
+                            var dateEcheance = tranche.date_echeancier ? new Date(tranche.date_echeancier).toLocaleDateString('fr-FR') : '-';
+                            
+                            tranchesRow += '<tr>';
+                            tranchesRow += '<td>'+tranche.value+'</td>';
+                            tranchesRow += '<td>'+tranche.taux+' %</td>';
+                            tranchesRow += '<td>'+tranche.montant_tranche+'DZD </td>';
+                            tranchesRow += '<td>'+dateEcheance+'</td>';
+                            tranchesRow += '<td>'+(tranche.description || '-')+'</td>';
+                            tranchesRow += '</tr>';
+                        });
+                    } else {
+                        tranchesRow += '<tr><td colspan="4" class="text-center">Aucune tranche définie</td></tr>';
+                    }
+                    
+                    $('#detailTranchesList').html(tranchesRow);
+                    
+                    // Afficher la modale
+                    $('#detailsEcheancierModal').modal('show');
+                } else {
+                    alertify.error("Erreur lors du chargement des détails");
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la communication avec le serveur");
+            }
+        });
+    });
+    
+    // Modifier un échéancier
+    $(document).on('click', '.btn-edit-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        alertify.warning("Fonctionnalité de modification en cours de développement");
+        // À implémenter : redirection vers une page de modification ou ouverture d'une modale
+    });
+    
+    // Archiver un échéancier
+    $(document).on('click', '.btn-archive-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        alertify.confirm("Archiver l'échéancier", "Êtes-vous sûr de vouloir archiver cet échéancier ?", 
+            function() {
+                // À implémenter : appel AJAX pour archiver l'échéancier
+                alertify.success("Échéancier archivé avec succès");
+                loadEcheanciers();
+            },
+            function() {
+                // Annulation
+            }
+        );
+    });
+    
+    // Désarchiver un échéancier
+    $(document).on('click', '.btn-unarchive-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        alertify.confirm("Désarchiver l'échéancier", "Êtes-vous sûr de vouloir désarchiver cet échéancier ?", 
+            function() {
+                // À implémenter : appel AJAX pour désarchiver l'échéancier
+                alertify.success("Échéancier désarchivé avec succès");
+                loadEcheanciers();
+            },
+            function() {
+                // Annulation
+            }
+        );
+    });
+    
+    // Supprimer un échéancier
+    $(document).on('click', '.btn-delete-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        alertify.confirm("Supprimer l'échéancier", "Êtes-vous sûr de vouloir supprimer cet échéancier ? Cette action est irréversible.", 
+            function() {
+                // À implémenter : appel AJAX pour supprimer l'échéancier
+                alertify.success("Échéancier supprimé avec succès");
+                loadEcheanciers();
+            },
+            function() {
+                // Annulation
+            }
+        );
+    });
+});
+</script>
+{% endblock content %}

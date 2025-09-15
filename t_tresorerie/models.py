@@ -88,13 +88,26 @@ class SeuilPaiements(models.Model):
 
     def __str__(self):
         return self.specialite
-    
 
+
+class ModelEcheancier(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
+    nombre_tranche = models.IntegerField(null=True, blank=True)
+
+    description = models.CharField(max_length=1000, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.label
 
 
 class EcheancierPaiement(models.Model):
-    label = models.CharField(max_length=100, null=True, blank=True)
-    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
+    model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
 
     is_active = models.BooleanField(default=False)
@@ -109,10 +122,9 @@ class EcheancierPaiement(models.Model):
 
 class EcheancierPaiementLine(models.Model):
     echeancier = models.ForeignKey(EcheancierPaiement, null=True, blank=True, on_delete=models.CASCADE)
-    
     taux = models.CharField(max_length=100, null=True, blank=True)
     value = models.CharField(max_length=100, null=True, blank=True)
-
+    montant_tranche = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=100)
     date_echeancier = models.DateField(null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)

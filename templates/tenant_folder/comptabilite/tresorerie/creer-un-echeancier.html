@@ -1,0 +1,952 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Comptabilité - Créer un Échéancier{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .prospect-type-card[data-type="entreprise"]:hover {
+    border-color: #dc3545;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+  
+  /* Nouveau design modal - Style cohérent avec liste_des_remises.html */
+  .modal-content {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .modal-header {
+    background-color: #f8f9fa;
+    color: #495057;
+    padding: 1.25rem 1.5rem;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .modal-header h5 {
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #495057;
+  }
+  
+  .modal-header .btn-close {
+    background: transparent;
+    opacity: 0.5;
+    padding: 0.5rem;
+    margin: 0;
+    transition: all 0.2s ease;
+  }
+  
+  .modal-header .btn-close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    justify-content: flex-end;
+  }
+  
+  /* Cards design for sections */
+  .section-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    background-color: #f8f9fa;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+  }
+  
+  .card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .card-body {
+    padding: 1.25rem;
+  }
+  
+  /* Filter styles */
+  .filter-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+  }
+  
+  .filter-container .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Form elements */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-control, .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  /* Style pour les champs en lecture seule */
+  .form-control[readonly] {
+    background-color: #f8f9fa;
+    opacity: 1;
+  }
+  
+  /* Style pour les inputs dans les tranches */
+  .tranche-item .form-control {
+    border: 1px solid #ced4da;
+    background-color: #fff;
+  }
+  
+  /* Input group */
+  .input-group .form-control {
+    border-right: none;
+  }
+  
+  .input-group .btn {
+    border-left: none;
+  }
+  
+  .input-group-text {
+    background: #e9ecef;
+    border-color: #ced4da;
+    color: #495057;
+  }
+  
+  /* Buttons */
+  .btn {
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+  }
+  
+  .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+  }
+  
+  .btn-light {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    color: #495057;
+  }
+  
+  .btn-light:hover {
+    background: #e9ecef;
+    border-color: #d1d7e0;
+  }
+  
+  .btn-outline-primary {
+    border-width: 2px;
+    border-radius: 0.375rem;
+    border-color: #0d6efd;
+    color: #0d6efd;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+  }
+  
+  /* Table styles */
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+  }
+  
+  .table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.075);
+  }
+  
+  /* Badges */
+  .badge.bg-primary {
+    background-color: #0d6efd !important;
+  }
+  
+  .badge.bg-info {
+    background-color: #17a2b8 !important;
+  }
+  
+  .badge.bg-success {
+    background-color: #198754 !important;
+  }
+  
+  .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+  }
+  
+  .badge.bg-danger {
+    background-color: #dc3545 !important;
+  }
+  
+  /* Subtle badges (from prospects list) */
+  .badge.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    color: #0d6efd !important;
+  }
+  
+  .badge.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: #198754 !important;
+  }
+  
+  .badge.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    color: #ffc107 !important;
+  }
+  
+  .badge.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+  }
+  
+  /* Selected prospects list */
+  .selected-prospects-list {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+  
+  .selected-prospects-list .table {
+    background-color: transparent;
+  }
+  
+  .selected-prospects-list .table th {
+    background-color: transparent;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #495057;
+  }
+  
+  .selected-prospects-list .table td {
+    padding: 0.5rem 0.75rem;
+    border: none;
+  }
+  
+  /* Remove prospect button */
+  .btn-soft-danger {
+    background: rgba(220, 53, 69, 0.1);
+    border: none;
+    color: #dc3545;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-soft-danger:hover {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+  }
+  
+  /* Soft info button (from prospects list) */
+  .btn-soft-info {
+    background: rgba(13, 110, 253, 0.1);
+    border: none;
+    color: #0d6efd;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-soft-info:hover {
+    background: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .modal-body {
+      padding: 1rem;
+    }
+    
+    .modal-header, .modal-footer {
+      padding: 0.75rem 1rem;
+    }
+    
+    .card-body {
+      padding: 1rem;
+    }
+    
+    .filter-container {
+      padding: 0.75rem;
+    }
+  }
+  
+  /* Modal icons */
+  .modal-icon {
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-right: 1rem;
+  }
+  
+  .modal-icon i {
+    font-size: 1.5rem;
+    color: #0d6efd;
+  }
+  
+  /* Card icons */
+  .icon-circle {
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .icon-circle i {
+    color: #0d6efd;
+  }
+  
+  /* Tranche item styling */
+  .tranche-item {
+    transition: all 0.3s ease;
+  }
+  
+  .tranche-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Progress bar */
+  .progress {
+    height: 10px;
+    border-radius: 5px;
+  }
+  
+  .progress-bar {
+    border-radius: 5px;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-calendar-alt text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Créer un Échéancier</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Comptabilité</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Trésorerie</a>
+                  </li>
+                  <li class="breadcrumb-item active">Créer un Échéancier</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Configuration de l'Échéancier</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="row">
+                <div class="col-lg-8">
+                  <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                      <div class="d-flex align-items-center">
+                        <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                          <i class="ri-settings-3-line text-primary"></i>
+                        </span>
+                        <h6 class="card-title mb-0 text-primary">Sélection du Modèle</h6>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-lg-12">
+                          <label class="form-label fw-medium" for="modeleEcheancier">Modèle d'échéancier</label>
+                          <select class="form-select py-2" id="modeleEcheancier" name="modele_echeancier">
+                            <option value="">Sélectionnez un modèle d'échéancier</option>
+                            <!-- Options à charger dynamiquement -->
+                          </select>
+                          <div class="form-text">Sélectionnez un modèle d'échéancier existant</div>
+                        </div>
+                        
+                        <div class="col-lg-12">
+                          <label class="form-label fw-medium" for="formationEcheancier">Formation</label>
+                          <select class="form-select py-2" id="formationEcheancier" name="formation_echeancier">
+                            <option value="">Sélectionnez une formation</option>
+                            <!-- Options à charger dynamiquement -->
+                          </select>
+                          <div class="form-text">Sélectionnez la formation associée à cet échéancier</div>
+                        </div>
+                        
+                        <div class="col-lg-12">
+                          <button type="button" class="btn btn-primary px-4 py-2" id="btnChargerTranches">
+                            <i class="ri-refresh-line me-2"></i>Charger les tranches
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="card border-0 shadow-sm mb-4 overflow-hidden" id="tranchesContainer" style="display: none;">
+                    <div class="card-header border-0 bg-white pt-3">
+                      <div class="d-flex align-items-center">
+                        <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                          <i class="ri-list-settings-line text-primary"></i>
+                        </span>
+                        <h6 class="card-title mb-0 text-primary">Configuration des Tranches</h6>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div id="listeTranchesContainer">
+                        <!-- Les tranches seront ajoutées ici dynamiquement -->
+                      </div>
+                      
+                      <div class="d-flex justify-content-end mt-4">
+                        <button type="button" class="btn btn-success px-4 py-2" id="btnEnregistrerEcheancier">
+                          <i class="ri-save-line me-2"></i>Enregistrer l'échéancier
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-lg-4">
+                  <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                      <div class="d-flex align-items-center">
+                        <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                          <i class="ri-information-line text-primary"></i>
+                        </span>
+                        <h6 class="card-title mb-0 text-primary">Informations</h6>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-xs">
+                            <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-5">
+                              <i class="ri-calendar-line"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6 class="mb-1">Modèles d'échéanciers</h6>
+                          <p class="text-muted mb-0 fs-6">Sélectionnez un modèle existant pour configurer votre échéancier</p>
+                        </div>
+                      </div>
+                      
+                      <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-xs">
+                            <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-5">
+                              <i class="ri-book-line"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6 class="mb-1">Formations</h6>
+                          <p class="text-muted mb-0 fs-6">Associez votre échéancier à une formation spécifique</p>
+                        </div>
+                      </div>
+                      
+                      <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                          <div class="avatar-xs">
+                            <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-5">
+                              <i class="ri-list-check-2"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                          <h6 class="mb-1">Tranches de paiement</h6>
+                          <p class="text-muted mb-0 fs-6">Configurez les tranches de paiement selon le modèle sélectionné</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="card border-0 shadow-sm mb-4 overflow-hidden" id="resumeContainer" style="display: none;">
+                    <div class="card-header border-0 bg-white pt-3">
+                      <div class="d-flex align-items-center">
+                        <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                          <i class="ri-bar-chart-line text-primary"></i>
+                        </span>
+                        <h6 class="card-title mb-0 text-primary">Résumé</h6>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="mb-3">
+                        <h6 class="mb-2">Modèle sélectionné</h6>
+                        <div class="border rounded-3 p-2 bg-light" id="resumeModele">-</div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <h6 class="mb-2">Formation</h6>
+                        <div class="border rounded-3 p-2 bg-light" id="resumeFormation">-</div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <h6 class="mb-2">Prix de la formation</h6>
+                        <div class="border rounded-3 p-2 bg-light" id="resumePrix">-</div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <h6 class="mb-2">Nombre de tranches</h6>
+                        <div class="border rounded-3 p-2 bg-light" id="resumeTranches">-</div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <h6 class="mb-2">Montant total</h6>
+                        <div class="border rounded-3 p-2 bg-light" id="resumeTotal">-</div>
+                      </div>
+                      
+                      <div>
+                        <h6 class="mb-2">Progression</h6>
+                        <div class="progress">
+                          <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progressBar"></div>
+                        </div>
+                        <p class="text-muted text-end mt-1 mb-0" id="progressText">0%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<script>
+$(document).ready(function () {
+    // Charger les modèles d'échéanciers
+    function loadModelesEcheanciers() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadModelEcheancier' %}",
+            dataType: 'JSON',
+            type: "GET",
+            success: function(data) {
+                var option = "<option value=''>Sélectionnez un modèle d'échéancier</option>";
+                $.each(data, function(index, item) {
+                    option += "<option value='"+item.id+"'>"+item.label+"</option>";
+                });
+                $('#modeleEcheancier').html(option);
+            },
+            error: function() {
+                alertify.error("Erreur lors du chargement des modèles d'échéanciers");
+            }
+        });
+    }
+    
+    // Charger les formations
+    function loadFormations() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadFormations' %}",
+            dataType: 'JSON',
+            type: "GET",
+            success: function(data) {
+                var option = "<option value=''>Sélectionnez une formation</option>";
+                $.each(data, function(index, item) {
+                    option += "<option value='"+item.id+"' data-prix='"+item.prix_formation+"'>"+item.nom+"</option>";
+                });
+                $('#formationEcheancier').html(option);
+            },
+            error: function() {
+                alertify.error("Erreur lors du chargement des formations");
+            }
+        });
+    }
+    
+    // Initialiser les données
+    loadModelesEcheanciers();
+    loadFormations();
+    
+    // Mettre à jour les montants lorsque le pourcentage change
+    $(document).on('input', '.tranche-pourcentage', function() {
+        var pourcentage = parseFloat($(this).val()) || 0;
+        var selectedFormation = $('#formationEcheancier option:selected');
+        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        var montant = (prixFormation * pourcentage / 100).toFixed(2);
+        
+        // Mettre à jour le champ montant correspondant
+        $(this).closest('.row').find('.montant-echeance').val(montant);
+    });
+    
+    // Mettre à jour les montants lorsque la formation change
+    $('#formationEcheancier').on('change', function() {
+        // Si les tranches sont déjà générées, mettre à jour tous les montants
+        if($('#tranchesContainer').is(':visible')) {
+            var selectedFormation = $('#formationEcheancier option:selected');
+            var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+            
+            $('.tranche-pourcentage').each(function() {
+                var pourcentage = parseFloat($(this).val()) || 0;
+                var montant = (prixFormation * pourcentage / 100).toFixed(2);
+                $(this).closest('.row').find('.montant-echeance').val(montant);
+            });
+        }
+    });
+    
+    // Charger les tranches lorsque le bouton est cliqué
+    $('#btnChargerTranches').on('click', function() {
+        var modeleId = $('#modeleEcheancier').val();
+        var formationId = $('#formationEcheancier').val();
+        
+        if(!modeleId) {
+            alertify.error("Veuillez sélectionner un modèle d'échéancier");
+            return;
+        }
+        
+        if(!formationId) {
+            alertify.error("Veuillez sélectionner une formation");
+            return;
+        }
+        
+        // Charger les détails du modèle
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadModeleEcheancierDetails' %}",
+            type: 'GET',
+            data: { 'id': modeleId },
+            dataType: 'JSON',
+            success: function(response) {
+                if(response.status === 'success') {
+                    var data = response.data;
+                    
+                    // Récupérer le prix de la formation sélectionnée
+                    var selectedFormation = $('#formationEcheancier option:selected');
+                    var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+                    
+                    // Mettre à jour le résumé
+                    $('#resumeModele').text(data.label);
+                    $('#resumeTranches').text(data.nombre_tranche + " tranches");
+                    $('#resumePrix').text(prixFormation.toFixed(2) + " €");
+                    $('#resumeTotal').text(prixFormation.toFixed(2) + " €");
+                    
+                    // Mettre à jour la formation dans le résumé
+                    $('#formationEcheancier option:selected').each(function() {
+                        $('#resumeFormation').text($(this).text());
+                    });
+                    
+                    // Afficher les conteneurs
+                    $('#tranchesContainer').show();
+                    $('#resumeContainer').show();
+                    
+                    // Générer les tranches
+                    generateTranches(data.tranches, data.nombre_tranche);
+                    
+                    // Mettre à jour la progression
+                    updateProgress(25);
+                } else {
+                    alertify.error("Erreur lors du chargement des détails du modèle");
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la communication avec le serveur");
+            }
+        });
+    });
+    
+    // Générer les tranches dynamiquement
+    function generateTranches(tranches, nombreTranches) {
+        // Récupérer le prix de la formation sélectionnée
+        var selectedFormation = $('#formationEcheancier option:selected');
+        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        
+        var container = $('#listeTranchesContainer');
+        container.empty();
+        
+        if(tranches && tranches.length > 0) {
+            // Utiliser les tranches du modèle
+            $.each(tranches, function(index, tranche) {
+                // Calculer le montant de l'échéance
+                var montantEcheance = (prixFormation * parseFloat(tranche.value) / 100).toFixed(2);
+                
+                var trancheHtml = `
+                  <div class="tranche-item mb-3 p-3 bg-light rounded-3">
+                    <div class="row g-3 align-items-end">
+                      <div class="col-md-5">
+                        <label class="form-label fw-medium">Libellé de la tranche ${index + 1}</label>
+                        <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${tranche.label}" placeholder="Ex: Acompte, Versement ${index + 1}...">
+                        <input type="hidden" name="tranche_id[]" value="${tranche.id}">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label fw-medium">Pourcentage (%)</label>
+                        <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" min="0" max="100" step="0.01" placeholder="Ex: ${tranche.value}">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label fw-medium">Montant (€)</label>
+                        <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheance}" readonly aria-readonly="true">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label fw-medium">Date d'échéance</label>
+                        <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
+                      </div>
+                      <div class="col-md-12 mt-2">
+                        <label class="form-label fw-medium">Description</label>
+                        <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${index + 1} (optionnel)">${tranche.description || ''}</textarea>
+                      </div>
+                    </div>
+                  </div>
+                `;
+                container.append(trancheHtml);
+            });
+        } else {
+            // Générer des tranches par défaut
+            var pourcentageParTranche = (100 / nombreTranches).toFixed(2);
+            
+            for(var i = 1; i <= nombreTranches; i++) {
+                var delaiParDefaut = i * 30; // 30 jours entre chaque tranche
+                var libelleParDefaut = i === 1 ? "Acompte" : "Versement " + i;
+                // Calculer le montant de l'échéance
+                var montantEcheance = (prixFormation * parseFloat(pourcentageParTranche) / 100).toFixed(2);
+                
+                var trancheHtml = `
+                  <div class="tranche-item mb-3 p-3 bg-light rounded-3">
+                    <div class="row g-3 align-items-end">
+                      <div class="col-md-5">
+                        <label class="form-label fw-medium">Libellé de la tranche ${i}</label>
+                        <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${libelleParDefaut}" placeholder="Ex: Acompte, Versement ${i}...">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label fw-medium">Pourcentage (%)</label>
+                        <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${pourcentageParTranche}" min="0" max="100" step="0.01" placeholder="Ex: ${pourcentageParTranche}">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label fw-medium">Montant (€)</label>
+                        <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheance}" readonly aria-readonly="true">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label fw-medium">Date d'échéance</label>
+                        <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
+                      </div>
+                      <div class="col-md-12 mt-2">
+                        <label class="form-label fw-medium">Description</label>
+                        <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${i} (optionnel)"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                `;
+                container.append(trancheHtml);
+            }
+        }
+    }
+    
+    // Mettre à jour la progression
+    function updateProgress(percentage) {
+        $('#progressBar').css('width', percentage + '%');
+        $('#progressText').text(percentage + '%');
+    }
+    
+    // Enregistrer l'échéancier
+    $('#btnEnregistrerEcheancier').on('click', function() {
+        var modeleId = $('#modeleEcheancier').val();
+        var formationId = $('#formationEcheancier').val();
+        
+        if(!modeleId) {
+            alertify.error("Veuillez sélectionner un modèle d'échéancier");
+            return;
+        }
+        
+        if(!formationId) {
+            alertify.error("Veuillez sélectionner une formation");
+            return;
+        }
+        
+        // Récupérer les données des tranches
+        var tranchesData = [];
+        $('#listeTranchesContainer .tranche-item').each(function(index) {
+            var tranche = {
+                libelle: $(this).find('input[name="tranche_libelle[]"]').val(),
+                montant_echeance: $(this).find('input[name="montant_echeance[]"]').val(),
+                pourcentage: $(this).find('input[name="tranche_pourcentage[]"]').val(),
+                date: $(this).find('input[name="tranche_date[]"]').val(),
+                description: $(this).find('textarea[name="tranche_description[]"]').val()
+            };
+            tranchesData.push(tranche);
+        });
+        
+        // Vérifier que toutes les tranches ont des données
+        var isValid = true;
+        $.each(tranchesData, function(index, tranche) {
+            if(!tranche.libelle || !tranche.pourcentage || !tranche.date) {
+                isValid = false;
+                return false; // break loop
+            }
+        });
+        
+        if(!isValid) {
+            alertify.error("Veuillez remplir tous les champs obligatoires pour chaque tranche");
+            return;
+        }
+        
+        // Afficher un message de chargement
+        var originalText = $('#btnEnregistrerEcheancier').html();
+        $('#btnEnregistrerEcheancier').html('<i class="ri-loader-4-line me-2"></i>Enregistrement en cours...').prop('disabled', true);
+        
+        // Envoyer les données via AJAX
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiSaveEcheancier' %}",
+            type: 'POST',
+            data: {
+                'modele_id': modeleId,
+                'formation_id': formationId,
+                'tranches': JSON.stringify(tranchesData),
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            dataType: 'JSON',
+            success: function(response) {
+                if(response.status === 'success') {
+                    alertify.success("Échéancier créé avec succès");
+                    updateProgress(100);
+                    
+                    // Réinitialiser le formulaire après un délai
+                    setTimeout(function() {
+                        $('#modeleEcheancier').val('');
+                        $('#formationEcheancier').val('');
+                        $('#tranchesContainer').hide();
+                        $('#resumeContainer').hide();
+                        $('#listeTranchesContainer').empty();
+                        updateProgress(0);
+                        $('#btnEnregistrerEcheancier').html(originalText).prop('disabled', false);
+                    }, 2000);
+                } else {
+                    alertify.error("Erreur lors de la création de l'échéancier: " + response.message);
+                    $('#btnEnregistrerEcheancier').html(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la communication avec le serveur");
+                $('#btnEnregistrerEcheancier').html(originalText).prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+{% endblock content %}

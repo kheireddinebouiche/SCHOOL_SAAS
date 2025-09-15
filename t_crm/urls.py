@@ -120,17 +120,14 @@ urlpatterns = [
     path('ApiTraiteDerogation', ApiTraiteDerogation, name="ApiTraiteDerogation"),
     ################################################### Gestion des dérogations ##########################################################
 
-
     path('suivie-des-dossiers/', prospects_incomplets_view, name="prospects_incomplets_view"),
 
     path('ApiValidateRemider', ApiValidateRemider, name="ApiValidateRemider"),
     path('ApiArchiveReminder', ApiArchiveReminder, name="ApiArchiveReminder"),  
 
-
     path('ApiLoadEntrepriseProspectInfo', ApiLoadEntrepriseProspectInfo, name="ApiLoadEntrepriseProspectInfo"),
     path('ApiUpdateEntrepriseData', ApiUpdateEntrepriseData, name="ApiUpdateEntrepriseData"),
     path('ApiUpdateContactInfo', ApiUpdateContactInfo , name="ApiUpdateContactInfo"),
-
 
     path('get_crm_counters', get_crm_counters, name="get_crm_counters"),
     path('increment_crm_counter', increment_crm_counter, name="increment_crm_counter"),
@@ -140,7 +137,7 @@ urlpatterns = [
     path('ApiStoreSecondWish', ApiStoreSecondWish, name="ApiStoreSecondWish"),
     path('ApiDeleteSecondWish', ApiDeleteSecondWish, name="ApiDeleteSecondWish"),
     path('ApiCountFormationSupplementaire', ApiCountFormationSupplementaire, name="ApiCountFormationSupplementaire"),
-   
+    path('ApiConfirmeSecondWish', ApiConfirmeSecondWish, name="ApiConfirmeSecondWish"),
 
     path('gestion-des-reductions/', ListeRemiseApplique, name="ListeRemiseApplique"),
     path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),

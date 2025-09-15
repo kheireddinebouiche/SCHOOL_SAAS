@@ -44,6 +44,8 @@ class Formation(models.Model):
     frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
     updated = models.BooleanField(default=False)
 
+    prix_formation = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=10)
+
     class Meta:
         verbose_name="Formation"
         verbose_name_plural="Formations"
@@ -190,6 +192,9 @@ class Promos(models.Model):
     begin_year = models.CharField(null=True, blank=True)
     end_year = models.CharField(null=True, blank=True)
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
+
+    date_debut = models.DateField(null=True)
+    date_fin = models.DateField(null=True)
 
     etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')], default='inactive')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

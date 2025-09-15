@@ -109,6 +109,16 @@ def crm_dashboard(request):
                 'count': count
             })
     
+    # Répartition des prospects par promotion (à partir des fiches de voeux)
+    prospects_by_promo = FicheDeVoeux.objects.values('promo__label').annotate(
+        count=Count('prospect', distinct=True)
+    ).order_by('-count')
+    
+    # Répartition des prospects par spécialité (à partir des fiches de voeux)
+    prospects_by_speciality = FicheDeVoeux.objects.values('specialite__label').annotate(
+        count=Count('prospect', distinct=True)
+    ).order_by('-count')
+    
     context = {
         'tenant': request.tenant,
         'total_prospects': total_prospects,
@@ -119,6 +129,8 @@ def crm_dashboard(request):
         'channel_conversion_data': channel_conversion_data,
         'prospects_by_status': prospects_by_status_with_labels,
         'lead_source_data': lead_source_data,
+        'prospects_by_promo': prospects_by_promo,
+        'prospects_by_speciality': prospects_by_speciality,
     }
     
     return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)

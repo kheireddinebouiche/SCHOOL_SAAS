@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import *
-
+from .f_views.echeancier import *
 
 app_name="t_tresorerie"
 
@@ -30,6 +30,30 @@ urlpatterns = [
 
     path('remboursements/', PageRemboursement , name="PageRemboursement"),
     path('ApiSetRembourssement', ApiSetRembourssement, name="ApiSetRembourssement"),
+
+
+    path('modeles-echeancier/', ListeModelEcheancier, name="ListeModelEcheancier"),
+    path('ApiLoadModelEcheancier', ApiLoadModelEcheancier, name="ApiLoadModelEcheancier"),
+    path('ApiLoadFormations', ApiLoadFormations, name="ApiLoadFormations"),
+
+    path('ApiLoadEcheancierDetails', ApiLoadEcheancierDetails, name="ApiLoadEcheancierDetails"),
+    path('ApiSaveEcheancier', ApiSaveEcheancier, name="ApiSaveEcheancier"),
+    path('ApiSaveModeleEcheancier', ApiSaveModeleEcheancier, name="ApiSaveModeleEcheancier"),
+    path('ApiLoadModeleEcheancierDetails', ApiLoadModeleEcheancierDetails, name="ApiLoadModeleEcheancierDetails"),
+    path('ApiUpdateModeleEcheancier', ApiUpdateModeleEcheancier, name="ApiUpdateModeleEcheancier"),
+
+    path('configuration-des-echeancier/', CreeEcheancier, name="CreeEcheancier"),
+    path('echeanciers-configures/', ListeEcheanciersConfigures, name="ListeEcheanciersConfigures"),
+    path('ApiLoadEcheanciersConfigures', ApiLoadEcheanciersConfigures, name="ApiLoadEcheanciersConfigures"),
+    path('echeancier-appliquer/',echeancierAppliquer, name="echeancierAppliquer"),
+
+    path('ApiLoadPromo', ApiLoadPromo, name="ApiLoadPromo"),
+    
+
+    
+
+
+
 
     
 ]

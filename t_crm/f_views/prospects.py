@@ -129,7 +129,6 @@ def ApiLoadSecondVoeuxProspect(request):
 
 ###################################Fiche de voeux prospect #############################################
 
-
 ###################################Gestion des rappels #############################################
 
 @login_required(login_url='institut_app:login')

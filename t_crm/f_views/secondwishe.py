@@ -51,8 +51,21 @@ def ApiDeleteSecondWish(request):
     return JsonResponse({'status' : 'success'})
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiConfirmeSecondWish(request):
-    pass
+    id_prospect = request.POST.get('id_prospect')
+    id_voeux_sup = request.POST.get('id_voeux_sup')
+
+    prospect = Prospets.objects.get(id = id_prospect)
+    voeux_principal = FicheDeVoeux.objects.filter(prospect = prospect, is_confirmed=False).last()
+
+    voeux_supplementaire = FicheDeVoeuxAddiotionnel.objects.get(id = id_voeux_sup)
+    specialite_remplacement = voeux_supplementaire.specialite
+
+    voeux_principal.specialite = specialite_remplacement
+    voeux_principal.save()
+
+    return JsonResponse({'status' : 'success'})
 
 @login_required(login_url="institut_app:login")
 def ApiCountFormationSupplementaire(request):
