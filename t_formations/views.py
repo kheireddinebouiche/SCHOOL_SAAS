@@ -588,7 +588,7 @@ def listPromos(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year')
+    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','date_debut', 'date_fin')
 
     for l in liste:
         l_obj = Promos.objects.get(id = l['id'])

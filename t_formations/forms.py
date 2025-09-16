@@ -100,6 +100,7 @@ class NewPartenaireForm(forms.ModelForm):
             'site_web' : forms.TextInput(attrs={'class': 'form-control'}),
             'observation' : forms.Textarea(attrs={'class': 'form-control','rows' : "3"}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+           
         }
         exclude = ['updated_by']
 
@@ -174,8 +175,10 @@ class PromoForm(forms.ModelForm):
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'session' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={"class" : 'form-control'}),
-            'begin_year' : forms.DateInput(attrs={"class" : 'form-control'}),
+            'begin_year' : forms.NumberInput(attrs={"class" : 'form-control', "placeholder": "Année"}),
             'end_year': forms.NumberInput(attrs={"class": "form-control", "placeholder": "Année"}),
+            'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),
+            'date_fin' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_fin"}),
         }
 
         labels = {
@@ -184,4 +187,6 @@ class PromoForm(forms.ModelForm):
             'code' : "Code Unique :",
             'begin_year' : "Année de début",
             'end_year' : "Année de fin",
+            'date_debut' : "Date de lançement",
+            'date_fin' : "Date de fin de formation",
         }
