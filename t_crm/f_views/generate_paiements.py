@@ -13,6 +13,11 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
 
+def load_preinscrit_promo(id_preinscrit):
+    pass
+
+def load_preinscrit_voeux(id_preinscrit):
+    pass
 
 @login_required(login_url="institut_app:login")
 def ApiGeneratePaiementRequest(id_preinscrit):
