@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 
 class ClientPaiementsRequest(models.Model):
     
-    client = models.ForeignKey(Visiteurs, on_delete=models.DO_NOTHING, null=True, blank=True)
+    client = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)
 
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
@@ -30,7 +30,7 @@ class ClientPaiementsRequest(models.Model):
         verbose_name_plural = "Demandes de paiement"
 
     def __str__(self):
-        return f"{self.student}"
+        return f"{self.client.nom}"
     
 class clientPaiementsRequestLine(models.Model):
     paiement_request = models.ForeignKey(ClientPaiementsRequest, on_delete=models.DO_NOTHING, null=True)
@@ -145,6 +145,7 @@ class ModelEcheancierPaiementSepcial(models.Model):
 class AppliquerEcheancierSpecial(models.Model):
     model = models.ForeignKey(ModelEcheancierPaiementSepcial, on_delete=models.CASCADE, null=True, blank=True)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    
     is_validate = models.BooleanField(default=False)
     is_approuved = models.BooleanField(default=False)
 
