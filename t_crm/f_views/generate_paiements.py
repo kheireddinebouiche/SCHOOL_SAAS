@@ -24,8 +24,11 @@ def load_preinscrit_voeux(id_preinscrit):
 def ApiGeneratePaiementRequest(id_preinscrit):
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
-    ClientPaiementsRequest.objects.create(
-        client = preinscrit,
-    )
+    try:
+        ClientPaiementsRequest.objects.create(
+            client = preinscrit,
+        )
 
-    return JsonResponse({'status' : "success"})
+        return JsonResponse({'status' : "success"})
+    except:
+        return JsonResponse({"status" : "error"})
