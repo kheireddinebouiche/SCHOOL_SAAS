@@ -146,4 +146,6 @@ urlpatterns = [
     path('ApiStoreApplicedReduction', ApiStoreApplicedReduction, name="ApiStoreApplicedReduction"), 
     path('ApiloadRemiseAppliquer', ApiloadRemiseAppliquer, name="ApiloadRemiseAppliquer"),
     path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
+
+    path('ApiValidatePreinscrit', ApiValidatePreinscrit, name="ApiValidatePreinscrit"),
 ]

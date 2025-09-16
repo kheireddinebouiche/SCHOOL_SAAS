@@ -2091,6 +2091,7 @@
         
         let id  = "{{ pk }}";
         var hasHandicap=null;
+        let dergorationStatus = false;
 
         // Fonction pour charger les notes
         function loadNotes(){
@@ -2600,64 +2601,71 @@
             let profileCompleted = null;
             let documentsCompleted = null;
             
-            // Vérifier la complétude du profil
-            $.ajax({
-                url: "{% url 't_crm:ApiCheckHasCompletedProfile' %}",
-                dataType: "JSON",
-                type: "GET",
-                data: {'id_preinscrit': id},
-                success: function(response) {
-                    profileCompleted = response.profile_completed.profile_completed  === "true";
-                    updateValidationStatus(profileCompleted, documentsCompleted);
-                },
-                error: function() {
-                    profileCompleted = false;
-                    updateValidationStatus(profileCompleted, documentsCompleted);
-                }
-            });
-            
-            // Vérifier la complétude des documents
-            $.ajax({
-                url: "{% url 't_crm:check_all_required_docs' %}",
-                dataType: "JSON",
-                type: 'GET',
-                data: {'id_prospect': id},
-                success: function(data) {
-                    documentsCompleted = !(data.missing_docs && data.missing_docs.length > 0);
-                    updateValidationStatus(profileCompleted, documentsCompleted);
-                },
-                error: function() {
-                    documentsCompleted = false;
-                    updateValidationStatus(profileCompleted, documentsCompleted);
-                }
-            });
-            
-            // Fonction pour mettre à jour l'état de validation
-            function updateValidationStatus(profileCompleted, documentsCompleted) {
-                // Mettre à jour l'interface de la modale de blocage
-                if (profileCompleted === true) {
-                    $('#profileStatusIcon').removeClass('ri-close-circle-line text-danger').addClass('ri-checkbox-circle-line text-success');
-                } else if (profileCompleted === false) {
-                    $('#profileStatusIcon').removeClass('ri-checkbox-circle-line text-success').addClass('ri-close-circle-line text-danger');
-                }
+            if(dergorationStatus == false){
+                // Vérifier la complétude du profil
+                $.ajax({
+                    url: "{% url 't_crm:ApiCheckHasCompletedProfile' %}",
+                    dataType: "JSON",
+                    type: "GET",
+                    data: {'id_preinscrit': id},
+                    success: function(response) {
+                        profileCompleted = response.profile_completed.profile_completed  === "true";
+                        updateValidationStatus(profileCompleted, documentsCompleted);
+                    },
+                    error: function() {
+                        profileCompleted = false;
+                        updateValidationStatus(profileCompleted, documentsCompleted);
+                    }
+                });
                 
-                if (documentsCompleted === true) {
-                    $('#documentsStatusIcon').removeClass('ri-close-circle-line text-danger').addClass('ri-checkbox-circle-line text-success');
-                } else if (documentsCompleted === false) {
-                    $('#documentsStatusIcon').removeClass('ri-checkbox-circle-line text-success').addClass('ri-close-circle-line text-danger');
-                }
+                // Vérifier la complétude des documents
+                $.ajax({
+                    url: "{% url 't_crm:check_all_required_docs' %}",
+                    dataType: "JSON",
+                    type: 'GET',
+                    data: {'id_prospect': id},
+                    success: function(data) {
+                        documentsCompleted = !(data.missing_docs && data.missing_docs.length > 0);
+                        updateValidationStatus(profileCompleted, documentsCompleted);
+                    },
+                    error: function() {
+                        documentsCompleted = false;
+                        updateValidationStatus(profileCompleted, documentsCompleted);
+                    }
+                });
                 
-                // Si les deux vérifications sont terminées
-                if (profileCompleted !== null && documentsCompleted !== null) {
-                    if (profileCompleted && documentsCompleted) {
-                        // Tous les critères sont remplis, afficher la modale de validation
-                        $('#validatePreinscritModal').modal('show');
-                    } else {
-                        // Au moins un critère n'est pas rempli, afficher la modale de blocage
-                        $('#validationBlockedModal').modal('show');
+                // Fonction pour mettre à jour l'état de validation
+                function updateValidationStatus(profileCompleted, documentsCompleted) {
+                    // Mettre à jour l'interface de la modale de blocage
+                    if (profileCompleted === true) {
+                        $('#profileStatusIcon').removeClass('ri-close-circle-line text-danger').addClass('ri-checkbox-circle-line text-success');
+                    } else if (profileCompleted === false) {
+                        $('#profileStatusIcon').removeClass('ri-checkbox-circle-line text-success').addClass('ri-close-circle-line text-danger');
+                    }
+                    
+                    if (documentsCompleted === true) {
+                        $('#documentsStatusIcon').removeClass('ri-close-circle-line text-danger').addClass('ri-checkbox-circle-line text-success');
+                    } else if (documentsCompleted === false) {
+                        $('#documentsStatusIcon').removeClass('ri-checkbox-circle-line text-success').addClass('ri-close-circle-line text-danger');
+                    }
+                    
+                    // Si les deux vérifications sont terminées
+                    if (profileCompleted !== null && documentsCompleted !== null) {
+                        if (profileCompleted && documentsCompleted) {
+                            // Tous les critères sont remplis, afficher la modale de validation
+                            $('#validatePreinscritModal').modal('show');
+                        } else {
+                            // Au moins un critère n'est pas rempli, afficher la modale de blocage
+                            $('#validationBlockedModal').modal('show');
+                        }
                     }
                 }
+            }else {
+                 $('#validatePreinscritModal').modal('show');
             }
+            
+
+
         });
 
         // Gestionnaire pour le bouton "Corriger les problèmes"
@@ -2710,6 +2718,9 @@
         });
 
         $(document).on('click', '#confirmeValidationBtn', function(){
+            $.ajax({
+                url : "{% url 't_crm:ApiValidatePreinscrit' %}",
+            })
             // Simulation de validation
             $('#validatePreinscritModal').modal('hide');
             alertify.success("Pré-inscription validée avec succès");
@@ -3230,7 +3241,8 @@
                         document.getElementById('derogation_refusee').hidden = true;
                         document.getElementById('derogation_attente').hidden = true;
                         document.getElementById('requestValidationBtn').disabled = false;
-                        
+                        dergorationStatus = true;
+
                         
                     } else if (response.status === 'rejetee') {
                         document.getElementById('derogation_acceptee').hidden = true;
