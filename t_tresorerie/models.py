@@ -134,8 +134,25 @@ class EcheancierPaiementLine(models.Model):
     def __str__(self):
         return self.echeancier.label
 
-class EcheancierPaiementSepcial(models.Model):
-    pass
+class ModelEcheancierPaiementSepcial(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    nombre_tranche = models.IntegerField(null=True, blank=True)
+
+    is_archived = models.BooleanField(default=False)
+    def __str__(self):
+        return self.label
+
+class AppliquerEcheancierSpecial(models.Model):
+    model = models.ForeignKey(ModelEcheancierPaiementSepcial, on_delete=models.CASCADE, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    is_validate = models.BooleanField(default=False)
+    is_approuved = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f'{self.prospect.nom} - {self.prospect.prenom}'
 
 class EcheancierPaiementSpecialLine(models.Model):
     pass
