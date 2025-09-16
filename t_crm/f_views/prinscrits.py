@@ -473,7 +473,19 @@ def prospects_incomplets_view(request):
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiValidatePreinscrit(request):
     id_preinscrit=  request.GET.get('id_preinscrit')
-    ApiGeneratePaiementRequest(id_preinscrit)
-    pass
+
+    try:
+        ApiGeneratePaiementRequest(id_preinscrit)
+        
+        preinscrit = Prospets.objects.get(id = id_preinscrit)
+        preinscrit.statut = "instance"
+
+        preinscrit.save()
+
+        return JsonResponse({"status": "succes"})
+    except:
+        return JsonResponse({"status":"error"})
+

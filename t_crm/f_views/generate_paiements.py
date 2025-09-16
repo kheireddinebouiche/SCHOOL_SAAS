@@ -20,5 +20,12 @@ def load_preinscrit_voeux(id_preinscrit):
     pass
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiGeneratePaiementRequest(id_preinscrit):
-    pass
+    preinscrit = Prospets.objects.get(id = id_preinscrit)
+
+    ClientPaiementsRequest.objects.create(
+        client = preinscrit,
+    )
+
+    return JsonResponse({'status' : "success"})
