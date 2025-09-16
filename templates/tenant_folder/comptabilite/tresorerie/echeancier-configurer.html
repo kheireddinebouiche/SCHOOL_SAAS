@@ -414,6 +414,37 @@
   .status-archived {
     background-color: #6c757d;
   }
+  
+  /* Modal icons */
+  .modal-icon {
+    background: rgba(13, 110, 253, 0.1);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-right: 1rem;
+  }
+  
+  .modal-icon i {
+    font-size: 1.5rem;
+    color: #0d6efd;
+  }
+  
+  /* Warning modal icon */
+  .bg-warning.bg-opacity-10 .modal-icon {
+    background: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-warning.bg-opacity-10 .modal-icon i {
+    color: #ffc107;
+  }
+  
+  /* Danger modal icon */
+  .bg-danger.bg-opacity-10 .modal-icon {
+    background: rgba(220, 53, 69, 0.1);
+  }
+  
+  .bg-danger.bg-opacity-10 .modal-icon i {
+    color: #dc3545;
+  }
 </style>
 
 <div class="main-content">
@@ -608,6 +639,102 @@
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
           <i class="ri-close-line me-2"></i>Fermer
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation d'archivage -->
+<div class="modal fade archiveModal" tabindex="-1" role="dialog" aria-labelledby="archiveModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-archive-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="archiveModalLabel">
+              Confirmation d'archivage
+            </h5>
+            <p class="text-muted small mb-0">Cette action peut être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <lord-icon
+              src="https://cdn.lordicon.com/nduddlov.json"
+              trigger="loop"
+              colors="primary:#ffc107,secondary:#e9ecef"
+              style="width:120px;height:120px">
+            </lord-icon>
+          </div>
+          <h4 class="text-warning mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0">
+            Vous êtes sur le point d'archiver cet échéancier. Cette action le déplacera dans la section des échéanciers archivés.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-warning px-4 py-2" id="confirmArchiveBtn">
+            <i class="ri-archive-line me-2"></i>Archiver
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Confirmation de suppression
+            </h5>
+            <p class="text-muted small mb-0">Cette action ne peut pas être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <lord-icon
+              src="https://cdn.lordicon.com/hwjcdycb.json"
+              trigger="loop"
+              colors="primary:#dc3545,secondary:#e9ecef"
+              style="width:120px;height:120px">
+            </lord-icon>
+          </div>
+          <h4 class="text-danger mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0">
+            Vous êtes sur le point de supprimer cet échéancier. Cette action est irréversible et toutes les données associées seront définitivement supprimées.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-danger px-4 py-2" id="confirmDeleteBtn">
+            <i class="ri-delete-bin-line me-2"></i>Supprimer
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -854,16 +981,19 @@ $(document).ready(function () {
     // Archiver un échéancier
     $(document).on('click', '.btn-archive-echeancier', function() {
         var echeancierId = $(this).data('id');
-        alertify.confirm("Archiver l'échéancier", "Êtes-vous sûr de vouloir archiver cet échéancier ?", 
-            function() {
-                // À implémenter : appel AJAX pour archiver l'échéancier
-                alertify.success("Échéancier archivé avec succès");
-                loadEcheanciers();
-            },
-            function() {
-                // Annulation
-            }
-        );
+        // Stocker l'ID de l'échéancier à archiver
+        $('#archiveModalLabel').data('echeancierId', echeancierId);
+        // Afficher la modale de confirmation
+        $('.archiveModal').modal('show');
+    });
+    
+    // Confirmer l'archivage
+    $('#confirmArchiveBtn').on('click', function() {
+        var echeancierId = $('#archiveModalLabel').data('echeancierId');
+        // À implémenter : appel AJAX pour archiver l'échéancier
+        alertify.success("Échéancier archivé avec succès");
+        $('.archiveModal').modal('hide');
+        loadEcheanciers();
     });
     
     // Désarchiver un échéancier
@@ -884,16 +1014,19 @@ $(document).ready(function () {
     // Supprimer un échéancier
     $(document).on('click', '.btn-delete-echeancier', function() {
         var echeancierId = $(this).data('id');
-        alertify.confirm("Supprimer l'échéancier", "Êtes-vous sûr de vouloir supprimer cet échéancier ? Cette action est irréversible.", 
-            function() {
-                // À implémenter : appel AJAX pour supprimer l'échéancier
-                alertify.success("Échéancier supprimé avec succès");
-                loadEcheanciers();
-            },
-            function() {
-                // Annulation
-            }
-        );
+        // Stocker l'ID de l'échéancier à supprimer
+        $('#deleteModalLabel').data('echeancierId', echeancierId);
+        // Afficher la modale de confirmation
+        $('.deleteModal').modal('show');
+    });
+    
+    // Confirmer la suppression
+    $('#confirmDeleteBtn').on('click', function() {
+        var echeancierId = $('#deleteModalLabel').data('echeancierId');
+        // À implémenter : appel AJAX pour supprimer l'échéancier
+        alertify.success("Échéancier supprimé avec succès");
+        $('.deleteModal').modal('hide');
+        loadEcheanciers();
     });
 });
 </script>

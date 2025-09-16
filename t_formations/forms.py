@@ -4,7 +4,7 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','frais_assurance']
+        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','frais_assurance','prix_formation']
 
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
@@ -17,6 +17,7 @@ class NewFormationForm(forms.ModelForm):
             'partenaire' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control'}),
             'type_formation' : forms.Select(attrs={'class' : 'form-control'}),
+            'prix_formation' : forms.TextInput(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -29,12 +30,13 @@ class NewFormationForm(forms.ModelForm):
             'frais_assurance' : "Frais d'assurance",
             'code' : 'Code de la formation',
             'type_formation' : "Type de formation",
+            'prix_formation' : "Prix de la formation",
         }
         
 class NewFormationFormMaster(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance']
+        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance','prix_formation']
         widgets = {
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
@@ -45,6 +47,7 @@ class NewFormationFormMaster(forms.ModelForm):
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"})
         }
 
         labels = {
@@ -56,6 +59,7 @@ class NewFormationFormMaster(forms.ModelForm):
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
             'frais_assurance' : "Frais d'assurance",
+            'prix_formation' : "Prix de la formation",
         }
     def __init__(self, *args, **kwargs):
         current_tenant = kwargs.pop('current_tenant', None)
@@ -122,7 +126,7 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version','condition_access','dossier_inscription']
+        fields = ['code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version','condition_access']
 
         widgets = {
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'specialiteId'}),
@@ -134,7 +138,6 @@ class NewSpecialiteForm(forms.ModelForm):
             'nb_semestre' : forms.Select(attrs={'class':'form-control'}),
             'version' : forms.TextInput(attrs={'class' : 'form-control'}),
             'condition_access' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'dossier_inscription' : forms.Textarea(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -175,8 +178,8 @@ class PromoForm(forms.ModelForm):
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'session' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={"class" : 'form-control'}),
-            'begin_year' : forms.NumberInput(attrs={"class" : 'form-control', "placeholder": "Année"}),
-            'end_year': forms.NumberInput(attrs={"class": "form-control", "placeholder": "Année"}),
+            'begin_year' : forms.NumberInput(attrs={"class" : 'form-control', "placeholder": "Année",'id' : "begin_year_id"}),
+            'end_year': forms.NumberInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
             'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),
             'date_fin' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_fin"}),
         }

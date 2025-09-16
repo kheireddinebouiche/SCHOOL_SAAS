@@ -33,9 +33,13 @@ def LoadDerogations(request):
 def ApiCheckDerogationStatus(request):
     id_preinscrit = request.GET.get('id_preinscrit')
     try:
-        obj = Derogations.objects.filter(demandeur__id = id_preinscrit).last()
-        
-        return JsonResponse({"status": obj.statut}, safe=False)
+        obj = Derogations.objects.filter(demandeur__id = id_preinscrit, motif="Documents Incomplets").last()
+        data = {
+            'date_de_demande' : obj.date_de_demande,
+            'motif' : "Documents Incomplets",
+            'statut' : obj.get_statut_display(),
+        }
+        return JsonResponse({"status": obj.statut,'data':data}, safe=False)
     except:
         return JsonResponse({"status": "error"})
    
@@ -44,14 +48,13 @@ def ApiCheckDerogationStatus(request):
 def ApiStoreDerogation(request):
     id_preinscrit = request.POST.get('id_preinscrit')
     reason = request.POST.get('reason')
-    motif = request.POST.get('motif')
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
    
     Derogations.objects.create(
         demandeur = preinscrit,
         type = reason,
-        motif = motif,
+        motif = "Documents Incomplets",
         
     )
 

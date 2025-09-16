@@ -84,9 +84,12 @@ class Entreprise(models.Model):
 class BankAccount(models.Model):
    
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
-    label = models.CharField(max_length=255, null=True, blank=True)
-    num = models.CharField(max_length=255, null=True, blank=True)
-    amount = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
+    bank_name= models.CharField(max_length=255, null=True, blank=True)
+    bank_iban  = models.CharField(max_length=1000, null=True, blank=True)
+    bank_currency  = models.CharField(max_length=1000, null=True, blank=True, choices=[('eur','Euro'),('dzd','Dinars'),('usd','USD')])
+    bank_observations = models.CharField(max_length=1000, null=True, blank=True)
+
+    is_archived = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now_add=True)

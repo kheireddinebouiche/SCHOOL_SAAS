@@ -333,12 +333,7 @@
                                     </thead>
                                     <tbody id="bankAccountsList">
                                         <!-- Comptes bancaires seront chargés ici -->
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted py-3">
-                                                <i class="ri-bank-line fs-3 d-block mb-2"></i>
-                                                Aucun compte bancaire enregistré
-                                            </td>
-                                        </tr>
+                                        
                                     </tbody>
                                 </table>
                             </div>
@@ -478,9 +473,9 @@
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Devise</label>
                                     <select class="form-select border-0 bg-light py-2" id="edit_bank_currency">
-                                        <option value="EUR">Euro (€)</option>
-                                        <option value="USD">Dollar ($)</option>
-                                        <option value="DZD">Dinar algérien (DA)</option>
+                                        <option value="eur">Euro (€)</option>
+                                        <option value="usd">Dollar ($)</option>
+                                        <option value="dzd">Dinar algérien (DA)</option>
                                         <!-- Ajouter d'autres devises selon les besoins -->
                                     </select>
                                 </div>
@@ -947,13 +942,13 @@
         // Chargement des comptes bancaires
         function loadBankAccounts(){
             $.ajax({
-                url : "#",
+                url : "{% url 'institut_app:ApiListeBanckAccountEntreprise' %}",
                 dataType: "JSON",
                 type : 'GET',
                 data:{'id_entreprise' : id},
                 success: function(data){
                     var html = "";
-                    if (data.length > 0){
+                    if(data.length > 0){
                         $.each(data, function(index, item){
                             html += '<tr>';
                             html += '<td>'+item.bank_name+'</td>';
@@ -972,14 +967,36 @@
                             html += '</tr>';
                         });
                     }else{
-                        html += '<tr><td colspan="4" class="text-center text-muted">Aucun compte bancaire enregistré</td></tr>';
+                            html += '<tr>';
+                                html += '<td colspan="4" class="text-center text-muted py-3">';
+                                    html += '<i class="ri-bank-line fs-3 d-block mb-2"></i>';
+                                    html += 'Aucun compte bancaire enregistré';
+                                html += '</td>';
+                            html += '</tr>';
                     }
                     $('#bankAccountsList').html(html);
                 }
             });
         }
 
-       
+        function loadBankAccountDetails(account_id){
+            $.ajax({
+                url : "{% url 'institut_app:ApiLoadBankAccountDetails' %}",
+                dataType : "JSON",
+                type : "GET",
+                data: {
+                    'account_id' : account_id,
+                },
+                success : function(response){
+                    $('#edit_bank_name').val(response.data.bank_name)
+                    $('#edit_bank_iban').val(response.data.bank_iban)
+                    $('#edit_bank_currency').val(response.data.bank_currency)
+                    $('#edit_bank_observations').val(response.data.bank_observations)
+                },
+            })
+        }
+
+
         // Initialisation des données
         loadEntrepriseData();
         loadBankAccounts();
@@ -1087,7 +1104,7 @@
             
             // Envoi des données via AJAX
             $.ajax({
-                url : "#", // URL à définir pour l'API d'ajout de compte bancaire
+                url : "{% url 'institut_app:ApiSaveBankAccount' %}", // URL à définir pour l'API d'ajout de compte bancaire
                 dataType: "JSON",
                 type : 'POST',
                 data:{
@@ -1118,7 +1135,7 @@
         $(document).on('click', '.edit-bank-account', function(){
             var accountId = $(this).data('id');
             // Charger les données du compte bancaire et les afficher dans le modal d'édition
-            // Pour l'instant, on affiche simplement le modal
+            loadBankAccountDetails(accountId);
             $('#edit_bank_account_id').val(accountId);
             $('#editBankAccountModal').modal('show');
             // TODO: Charger les données réelles du compte bancaire via AJAX
@@ -1130,7 +1147,7 @@
                 function(){
                     // Envoi de la requête de suppression via AJAX
                     $.ajax({
-                        url : "#", // URL à définir pour l'API de suppression de compte bancaire
+                        url : "{% url 'institut_app:ApiArchiveBankAccount' %}", // URL à définir pour l'API de suppression de compte bancaire
                         dataType: "JSON",
                         type : 'POST',
                         data:{

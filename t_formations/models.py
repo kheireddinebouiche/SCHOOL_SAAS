@@ -44,7 +44,7 @@ class Formation(models.Model):
     frais_assurance = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
     updated = models.BooleanField(default=False)
 
-    prix_formation = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=10)
+    prix_formation = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
 
     class Meta:
         verbose_name="Formation"
@@ -80,7 +80,6 @@ class Specialites(models.Model):
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="specialite_updated_by")
     version = models.CharField(max_length=100, null=True, blank=True)
     condition_access = models.TextField(max_length=1000, null=True, blank=True)
-    dossier_inscription = models.TextField(max_length=1000, null=True, blank=True)
 
     etat = models.CharField(max_length=10, null=True, blank=True, choices=[('last','A jour'),('updated','Mis à jour')], default='last')
 

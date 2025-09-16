@@ -55,7 +55,10 @@ urlpatterns = [
     path('ApiLoadEntrepriseData', ApiLoadEntrepriseData , name="ApiLoadEntrepriseData"),
     path('ApiUpdateEntrepriseData', ApiUpdateEntrepriseData , name="ApiUpdateEntrepriseData"),
     
-    
+    path('ApiSaveBankAccount', ApiSaveBankAccount, name="ApiSaveBankAccount"),
+    path('ApiListeBanckAccountEntreprise', ApiListeBanckAccountEntreprise, name="ApiListeBanckAccountEntreprise"),
+    path('ApiLoadBankAccountDetails', ApiLoadBankAccountDetails, name="ApiLoadBankAccountDetails"),
+    path('ApiArchiveBankAccount',ApiArchiveBankAccount, name="ApiArchiveBankAccount"),
 
     
 ]

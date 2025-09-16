@@ -69,7 +69,7 @@ class EntrepriseForm(forms.ModelForm):
         }
 
         widgets = {
-            'designation' : forms.TextInput(attrs={'class':'form-control'}),
+            'designation' : forms.TextInput(attrs={'class':'form-control','id':"id_designationEts"}),
             'rc' : forms.TextInput(attrs={'class':'form-control'}),
             'nif' : forms.TextInput(attrs={'class':'form-control'}),
             'entete' : forms.Textarea(attrs={'class':'form-control'}),

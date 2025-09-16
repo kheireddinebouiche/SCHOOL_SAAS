@@ -42,6 +42,7 @@ def ListeDesInstituts(request):
     }
     return render(request, 'tenant_folder/formations/liste_des_instituts.html', context)
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def addFormation(request):
     form = NewFormationFormMaster(current_tenant = request.tenant)
@@ -83,14 +84,15 @@ def ApiCheckIfFormationCompleted(request):
     # Si tout est bon
     return JsonResponse({'completed': True})
 
-@transaction.atomic
+
 @login_required(login_url='institut_app:login')
+@transaction.atomic
 def updateFormation(request, pk):
     if request.tenant.tenant_type == "master":
         formation = Formation.objects.get(pk = pk)
         form = NewFormationFormMaster(instance = formation)
         if request.method == "POST":
-            form = NewFormationForm(request.POST, instance=formation)
+            form = NewFormationFormMaster(request.POST, instance=formation)
             if form.is_valid():
                 updated_formation = form.save()
                 updated_formation.updated = True
@@ -639,7 +641,7 @@ def ApiDeletePromo(request):
 @login_required(login_url="institut_app:login")
 def ApiGetPromo(request):
     id = request.GET.get('id')
-    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year')
+    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year','date_debut','date_fin')
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -652,6 +654,9 @@ def ApiUpdatePromo(request):
     new_begin_year = request.POST.get('new_begin_year')
     new_end_year = request.POST.get('new_end_year')
 
+    new_date_debut = request.POST.get('new_date_debut')
+    new_date_fin = request.POST.get('new_date_fin')
+
     if not label or not session:
         return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
     else:
@@ -661,6 +666,8 @@ def ApiUpdatePromo(request):
         promo.code = new_code
         promo.begin_year = new_begin_year
         promo.end_year = new_end_year
+        promo.date_debut = new_date_debut
+        promo.date_fin = new_date_fin
         promo.save()
         return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
     
