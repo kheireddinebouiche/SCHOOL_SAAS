@@ -148,4 +148,6 @@ urlpatterns = [
     path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
 
     path('ApiValidatePreinscrit', ApiValidatePreinscrit, name="ApiValidatePreinscrit"),
+
+    path('ApiGeneratePaiementRequest', ApiGeneratePaiementRequest, name="ApiGeneratePaiementRequest"),
 ]
