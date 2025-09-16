@@ -12,7 +12,7 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
-from generate_paiements import ApiGeneratePaiementRequest
+from .generate_paiements import ApiGeneratePaiementRequest
 
 @login_required(login_url='intitut_app:login')
 def ListeDesPrinscrits(request):
