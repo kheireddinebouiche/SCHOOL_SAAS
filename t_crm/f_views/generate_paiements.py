@@ -12,3 +12,8 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
+
+
+@login_required(login_url="institut_app:login")
+def ApiGeneratePaiementRequest(id_preinscrit):
+    pass

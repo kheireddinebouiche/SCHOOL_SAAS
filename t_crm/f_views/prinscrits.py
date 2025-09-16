@@ -12,7 +12,7 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
-
+from generate_paiements import ApiGeneratePaiementRequest
 
 @login_required(login_url='intitut_app:login')
 def ListeDesPrinscrits(request):
@@ -88,7 +88,6 @@ def ApiLoadPreinscrisPerosnalInfos(request):
     }
 
     return JsonResponse(data, safe=False)
-
 
 
 @login_required(login_url='institut_app:login')
@@ -338,7 +337,6 @@ def ApiStoreRappelPreinscrit(request):
     rappel.save()
     return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
 
-
 def get_prospects_incomplets():
     # Tous les prospects préinscrits
     prospects = Prospets.objects.filter(type_prospect="particulier", statut="prinscrit")
@@ -474,3 +472,8 @@ def prospects_incomplets_view(request):
     }
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)
 
+@login_required(login_url="institut_app:login")
+def ApiValidatePreinscrit(request):
+    id_preinscrit=  request.GET.get('id_preinscrit')
+    ApiGeneratePaiementRequest(id_preinscrit)
+    pass

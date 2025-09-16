@@ -89,7 +89,6 @@ class SeuilPaiements(models.Model):
     def __str__(self):
         return self.specialite
 
-
 class ModelEcheancier(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
@@ -104,7 +103,6 @@ class ModelEcheancier(models.Model):
 
     def __str__(self):
         return self.label
-
 
 class EcheancierPaiement(models.Model):
     model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
