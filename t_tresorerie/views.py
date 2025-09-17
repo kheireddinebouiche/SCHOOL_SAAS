@@ -62,6 +62,7 @@ def ApiGetDetailsDemandePaiement(request):
     echeancier_data=[]
     for i in liste_echeancier:
         echeancier_data.append({
+            'id': i.id,
             'taux' : i.taux,
             'value' : i.value,
             'montant_tranche' : i.montant_tranche,
@@ -75,7 +76,7 @@ def ApiGetDetailsDemandePaiement(request):
         "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    voeux = {
+    voeux_data = {
         'specialite_id' : voeux.specialite.id,
         'specialite_label' : voeux.specialite.label,
         'promo' : voeux.promo.code,
@@ -85,7 +86,7 @@ def ApiGetDetailsDemandePaiement(request):
 
     data = {
         'user_data' : user_data,
-        'voeux' : voeux,
+        'voeux' : voeux_data,
         'echeancier' : list(echeancier_data),
     }
 
