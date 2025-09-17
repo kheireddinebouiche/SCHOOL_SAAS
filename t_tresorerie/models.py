@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 class ClientPaiementsRequest(models.Model):
     
     client = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)
+    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True)
 
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
@@ -17,11 +18,12 @@ class ClientPaiementsRequest(models.Model):
     paid = models.BooleanField(default=False)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('tranche','Tranche'), ('mensuelle','Mensuelle'), ('totalite','Paiement unique')])
 
-    motif = models.CharField(max_length=100, null=True, blank=True, choices=[('frais', 'Frais d\'admission'),('autre','Autres'),('dette','Module en dette')])
+    motif = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f', 'Frais de formation'),('frais', 'Frais d\'admission'),('autre','Autres'),('dette','Module en dette')])
 
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     etat = models.CharField(max_length=100, null=True, blank=True, default='en_attente' ,choices=[('en_attente','En Attente'),('annulation','Demande d\'annulation'),('annulation_approuver','Demande d\'annulation approuvée'),('terminer','Cloturer')])
     approuved_annulation = models.BooleanField(default=False)
 
@@ -107,7 +109,8 @@ class ModelEcheancier(models.Model):
 class EcheancierPaiement(models.Model):
     model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
-
+    
+    is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
     is_approuved = models.BooleanField(default=True)

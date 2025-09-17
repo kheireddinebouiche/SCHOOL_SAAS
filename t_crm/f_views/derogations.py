@@ -20,7 +20,6 @@ def liste_derogations(request):
     return render(request, 'tenant_folder/crm/liste_derogations.html', context)
 
 
-
 @login_required(login_url='institut_app:login')
 def LoadDerogations(request):
     liste = Derogations.objects.all().values('id','motif','date_de_demande','statut', 'type','demandeur','demandeur__nom','demandeur__prenom','updated_at')
@@ -36,6 +35,8 @@ def ApiCheckDerogationStatus(request):
         obj = Derogations.objects.filter(demandeur__id = id_preinscrit, motif="Documents Incomplets").last()
         data = {
             'date_de_demande' : obj.date_de_demande,
+            'date_de_traitement' : obj.date_de_traitement,
+            'observation' : obj.observation,
             'motif' : "Documents Incomplets",
             'statut' : obj.get_statut_display(),
         }
@@ -43,7 +44,6 @@ def ApiCheckDerogationStatus(request):
     except:
         return JsonResponse({"status": "error"})
    
-    
 @login_required(login_url="institut_app:login")
 def ApiStoreDerogation(request):
     id_preinscrit = request.POST.get('id_preinscrit')

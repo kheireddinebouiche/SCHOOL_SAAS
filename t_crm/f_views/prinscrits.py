@@ -478,14 +478,28 @@ def ApiValidatePreinscrit(request):
     id_preinscrit=  request.GET.get('id_preinscrit')
 
     try:
-        ApiGeneratePaiementRequest(id_preinscrit)
-        
         preinscrit = Prospets.objects.get(id = id_preinscrit)
+        fiche_voeux = FicheDeVoeux.objects.filter(prospect = preinscrit, is_confirmed = True).first()
+
+        specialite = fiche_voeux.specialite
+        promo = fiche_voeux.promo
+
+      
+        ClientPaiementsRequest.objects.create(
+            client = preinscrit,
+            promo = promo,
+            specialite = specialite,
+            motif = "frais_f"
+        )
+        
+        
         preinscrit.statut = "instance"
 
         preinscrit.save()
 
-        return JsonResponse({"status": "succes"})
+        
+
+        return JsonResponse({"status": "success"})
     except:
-        return JsonResponse({"status":"error"})
+        return JsonResponse({"status":"error",'message' : "Une erreur systeme c'est produite, veuillez contacter l'administrateur"})
 

@@ -22,13 +22,24 @@ def load_preinscrit_voeux(id_preinscrit):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiGeneratePaiementRequest(id_preinscrit):
-    preinscrit = Prospets.objects.get(id = id_preinscrit)
-
     try:
-        ClientPaiementsRequest.objects.create(
-            client = preinscrit,
-        )
+        preinscrit = Prospets.objects.get(id = id_preinscrit)
 
-        return JsonResponse({'status' : "success"})
+        fiche_voeux = FicheDeVoeux.objects.filter(prospect = preinscrit, is_confirmed = True).first()
+
+        specialite = fiche_voeux.specialite
+        promo = fiche_voeux.promo
+
+        try:
+            ClientPaiementsRequest.objects.create(
+                client = preinscrit,
+                promo = promo,
+                specialite = specialite,
+                motif = "frais_f"
+            )
+
+            return JsonResponse({'status' : "success"})
+        except:
+            return JsonResponse({"status" : "error"})
     except:
-        return JsonResponse({"status" : "error"})
+        return JsonResponse({'status' : "error"})

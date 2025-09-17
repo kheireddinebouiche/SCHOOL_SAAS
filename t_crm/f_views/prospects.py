@@ -354,14 +354,17 @@ def ApiUpdateProspectData(request):
     return JsonResponse({'status' : 'success', 'message' : "Les informations du prospect ont été mise à jour"})
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiCreateVoeux(request):
     specialite = request.POST.get('specialite')
     id_prospect = request.POST.get('id_prospect')
+    promo = request.POST.get('promo')
     comment = request.POST.get('comment')
 
     FicheDeVoeux.objects.create(
         prospect = Prospets.objects.get(id = id_prospect),
         specialite = Specialites.objects.get(id = specialite),
+        promo = Promos.objects.get(code = promo),
         commentaire = comment
     )
 

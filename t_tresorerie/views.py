@@ -4,6 +4,7 @@ from .models import *
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
+from t_crm.models import FicheDeVoeux
 
 def AttentesPaiements(request):
     
@@ -14,13 +15,32 @@ def AttentesPaiements(request):
 
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
 
+@login_required(login_url="insitut_app:login")
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.all().values('motif','id','specialite__label','specialite__prix', 'formation__nom','formation__frais_assurance','formation__frais_inscription', 'client__nom', 'client__prenom','amount','created_at','etat')
-    for liste in listes:
-        liste_obj = ClientPaiementsRequest.objects.get(id=liste['id'])
-        liste['motif_label'] = liste_obj.get_motif_display()
-    return JsonResponse(list(listes), safe=False)
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").all()
+    
+    data = []
+    for obj in listes:
+        data.append({
+            "id": obj.id,
+            "motif": obj.motif,
+            "motif_label": obj.get_motif_display(),
+            "promo": obj.promo.id if obj.promo else None,
+            "promo_session": obj.promo.session if obj.promo else None,
+            "promo_begin" : obj.promo.begin_year,
+            "promo_end" : obj.promo.end_year,
+            "specialite": obj.specialite.id if obj.specialite else None,
+            "amount" : obj.specialite.formation.prix_formation,
+            "nom": obj.client.nom if obj.client else None,
+            "prenom": obj.client.prenom if obj.client else None,
+            "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "etat": obj.etat,
+            "etat_label": obj.get_etat_display() if hasattr(obj, "get_etat_display") else None,
+        })
+    
+    return JsonResponse(data, safe=False)
 
+@login_required(login_url="institut_app:login")
 def PageDetailsDemandePaiement(request, pk):
     context = {
         'tenant' : request.tenant,
@@ -28,15 +48,46 @@ def PageDetailsDemandePaiement(request, pk):
     }
     return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
 
+@login_required(login_url="institut_app:login")
 def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
     obj = ClientPaiementsRequest.objects.get(id = id)
-    data = {
-        'demandeur_nom' : obj.client.nom,
-        'demandeur_prenom': obj.client.prenom,
-        'motif' : obj.get_motif_display(),
-        'created_at' : obj.created_at,
+
+    voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
+
+    echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
+    liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
+
+    echeancier_data=[]
+    for i in liste_echeancier:
+        echeancier_data.append({
+            'taux' : i.taux,
+            'value' : i.value,
+            'montant_tranche' : i.montant_tranche,
+            'date_echeancier' : i.date_echeancier,
+        })
+    
+    user_data = {
+        "demandeur_nom": obj.client.nom,
+        "demandeur_prenom": obj.client.prenom,
+        "motif": obj.get_motif_display(),
+        "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     }
+
+    voeux = {
+        'specialite_id' : voeux.specialite.id,
+        'specialite_label' : voeux.specialite.label,
+        'promo' : voeux.promo.code,
+        'prix_formation' : voeux.specialite.formation.prix_formation,
+        'frais_inscription' : voeux.specialite.formation.frais_inscription,
+    }
+
+    data = {
+        'user_data' : user_data,
+        'voeux' : voeux,
+        'echeancier' : list(echeancier_data),
+    }
+
     return JsonResponse(data, safe=False)
 
 def ApiDeleteDemandePaiement(request):

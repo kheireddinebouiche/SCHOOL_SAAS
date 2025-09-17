@@ -4,7 +4,7 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','frais_assurance','prix_formation']
+        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','prix_formation']
 
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
@@ -12,7 +12,6 @@ class NewFormationForm(forms.ModelForm):
             'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'partenaire' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control'}),
@@ -27,7 +26,6 @@ class NewFormationForm(forms.ModelForm):
             'partenaire' : "Partenaire",
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
-            'frais_assurance' : "Frais d'assurance",
             'code' : 'Code de la formation',
             'type_formation' : "Type de formation",
             'prix_formation' : "Prix de la formation",
@@ -36,7 +34,7 @@ class NewFormationForm(forms.ModelForm):
 class NewFormationFormMaster(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','frais_assurance','prix_formation']
+        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','prix_formation']
         widgets = {
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
@@ -46,7 +44,6 @@ class NewFormationFormMaster(forms.ModelForm):
             'partenaire' : forms.Select(attrs={'class':'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'frais_assurance' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"})
         }
 
@@ -58,7 +55,6 @@ class NewFormationFormMaster(forms.ModelForm):
             'partenaire' : "Partenaire",
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
-            'frais_assurance' : "Frais d'assurance",
             'prix_formation' : "Prix de la formation",
         }
     def __init__(self, *args, **kwargs):

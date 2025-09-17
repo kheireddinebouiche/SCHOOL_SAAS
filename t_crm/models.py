@@ -259,7 +259,7 @@ class Derogations(models.Model):
     motif = models.CharField(max_length=100, null=True, blank=True)
     date_de_demande = models.DateField(auto_now_add=True)
     statut = models.CharField(max_length=100, null=True, blank=True, choices=[('en_attente','En attente'),('acceptee','Acceptée'),('rejetee','Rejetée')], default="en_attente")
-    date_de_traitement = models.DateField(null=True, blank=True)
+    date_de_traitement = models.DateField(null=True, blank=True, auto_now_add=True)
     observation = models.CharField(max_length=1000, null=True, blank=True)
     etat = models.BooleanField(default=False)
 

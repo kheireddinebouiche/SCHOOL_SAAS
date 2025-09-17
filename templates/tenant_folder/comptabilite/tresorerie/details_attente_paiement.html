@@ -299,7 +299,8 @@
 
 <script>
     $(document).ready(function(){
-        var id_demande = {{pk}};
+        var id_demande = "{{pk}}";
+
         function loadDatas(){
             $.ajax({
                 url : "{% url 't_tresorerie:ApiGetDetailsDemandePaiement' %}",
@@ -307,7 +308,7 @@
                 type : 'GET',
                 data : {'id_demande' : id_demande},
                 success : function(data){
-                    $('#demandeur').val(data.demandeur_nom+" "+data.demandeur_prenom);
+                    $('#demandeur').val(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#motif').val(data.motif);
                     $('#created_at').val(data.created_at.split('T')[0]);
                 },
@@ -316,218 +317,6 @@
 
         loadDatas();
 
-        function loadPaiementRequestLine(){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiGetRequestPaiementsLine' %}",
-                dataType: 'JSON',
-                type: 'GET',
-                data : {
-                    'id' : id_demande,
-                },
-                success : function(data){
-                    var row = "";
-                    var option = "";
-                    if (data.length > 0){
-                       $.each(data, function(index, p){
-                            row += "<tr>";
-                            row += "<td>"+p.label+"</td>";
-                            row += "<td>"+p.montant_paye+"</td>";
-                            row += "<td>"+p.montant_restant+"</td>";
-                            row += "</tr>";
-                       });
-
-                       $.each(data, function(index, key){
-                            option += "<option value="+key.id+">"+key.label+' - '+key.montant_restant+" DA</option>";
-                       });
-                       
-                        $('#NbrPaiementDue').html(data.length);
-                       
-                    }
-
-                    else{
-
-                        var row = "<tr><td colspan='3' class='text-muted text-center'>Aucune données disponible ! </td></tr>";
-                    }
-                    $('#due_paiements').html(option);
-                    $('#ListePaiementRequestLine').html(row);
-                }
-            });
-        }
-
-        loadPaiementRequestLine();
-
-        function listeReceivedPaiements(){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiListPaiementDone' %}",
-                type: 'GET',
-                data : {'id' : id_demande},
-                success : function(data){
-                    var rows = "";
-                    if(data.length>0){
-                        $.each(data, function(index, p){
-                            rows +="<tr>";
-                            rows += "<td>"+p.label+"</td>";
-                            rows += "<td>"+p.montant_paye+"</td>";
-                            rows += "<td>"+p.date_paiement+"</td>";
-                            rows += "<td>"+(p.etat == "val" ? '<span class="badge bg-success">'+p.etat_label+'</span>' 
-                                           :p.etat == "dmr" ? '<span class="badge bg-warning">'+p.etat_label+'</span>' 
-                                           :p.etat == "rem" ? '<span class="badge bg-primary">'+p.etat_label+'</span>' : '')+"</td>";
-                            rows += '<td>';
-                                rows += '<div class="dropdown d-inline-block">';
-                                rows += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                rows += '<i class="ri-more-fill align-middle"></i>';
-                                rows += '</button>';
-                                rows += '<ul class="dropdown-menu dropdown-menu-end">';
-                                rows += '<li><button id="DonePaiementdetailsBtn" data-id='+p.id+' class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</button></li>';
-                                rows += '<li><button id="DonePaiementupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
-                                
-                                rows += '<li><button '+(p.etat == "val" ? '' : 'hidden')+' id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Remboussement </button></li>';
-                                rows += '<li><button '+(p.etat == "dmr" ? '' : 'hidden')+' id="AskRefundupdateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Annuler la demande </button></li>';
-                                
-                                rows += '<li>';
-                                rows += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
-                                rows += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
-                                rows += '</button>';
-                                rows += '</li>';
-                                rows += '</ul>';
-                                rows += '</div>';
-                                rows += '</td>';
-                            rows +="</tr>";
-                        });
-                    }else{
-                        rows = "<tr><td colspan='4' class='text-muted text-center'>Aucun paiement effectuer</td></tr>"
-                    }
-                    
-                    $('#NbrPaiementDone').html(data.length);
-                    $('#ListePaiementRequestLineDone').html(rows);
-                },
-            }); 
-        }
-
-        listeReceivedPaiements();
-
-        $(document).on('click', '#btnNewPaiement', function(){
-            
-            $('#paiementsModal').modal('show');
-        });
-
-        $(document).on('click', '#StorePaimentBnt', function(){
-            
-            var due_paiements = $('#due_paiements').val();
-            var date_paiement = $('#date_paiement').val();
-            var received_amount = $('#received_amount').val();
-            var observation = $('#observation').val();
-            var mode_paiement = $('#paiement_mode').val();
-            var paiement_ref = $('#paiement_ref').val();
-
-            if ((mode_paiement == "che" && paiement_ref == "") || (mode_paiement == "vir" && paiement_ref == "")) {
-                alertify.error("Une référence de paiement est requise pour le type de paiement");
-            }else{
-                $.ajax({
-                    url : "{% url 't_tresorerie:ApiStorePaiement' %}",
-                    dataType: 'JSON',
-                    type : 'POST',
-                    data : {
-                        'due_paiements' : due_paiements,
-                        'date_paiement' : date_paiement,
-                        'received_amount' : received_amount,
-                        'observation' : observation,
-                        'mode_paiement' : mode_paiement,
-                        'paiement_ref' : paiement_ref,
-                        'csrfmiddlewaretoken': '{{ csrf_token }}',
-                    },
-                    success : function(response){
-                        if (response.status =="success"){
-                            alertify.success(response.message);
-                            listeReceivedPaiements();
-                            loadPaiementRequestLine();
-                        }else{
-                            alertify.error(response.message);
-                        }
-                    }
-                });
-            }
-     
-        });
-
-        $(document).on('click','#deleteConfirmation', function(){
-            var id = $(this).data('id');
-
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtn" data-id='+id+' class="btn btn-danger">Confirmer</a>';
-
-            $('.hstack').html(row);
-            $('.deleteModal').modal('show');
-
-            
-        }); 
-
-        $(document).on('click','#confirmDeleteBtn', function(){
-            var id = $(this).data('id');
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiDeletePaiement' %}",
-                dataType: 'JSON',
-                type : 'GET',
-                data : {
-                    'id' : id,
-                },
-                success : function(response){
-                    if (response.status == "success"){
-                        alertify.success(response.message);
-                        listeReceivedPaiements();
-                        loadPaiementRequestLine();
-                        $('.deleteModal').modal('hide');
-                    }else{  
-                        alertify.error(response.message);
-                    }
-                }
-            });
-        });
-
-        $(document).on('click', '#DonePaiementdetailsBtn', function(){
-            var id = $(this).data('id');
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiDetailsReceivedPaiement' %}",
-                dataType: "JSON",
-                type : 'GET',
-                data : {'id' : id},
-                success : function(data){
-
-                    $('#paiementsModalDetails').modal('show');
-                },
-            });
-        });
-
-        $(document).on('click', '#AskRefundupdateBtn', function(){
-            var id = $(this).data('id');
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="AskRefund" data-id='+id+' class="btn btn-warning">Confirmer la demande de rembourssement</a>';
-
-            $('.refundModal .hstack').html(row);
-            $('.refundModal').modal('show');
-        });
-
-        $(document).on('click', '#AskRefund', function(){
-            var id = $(this).data('id');
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiSetRembourssement' %}",
-                dataType: 'JSON',
-                type : 'GET',
-                data : {'id' : id},
-                success : function(response){
-                    if (response.status == "success"){
-                        alertify.success(response.message);    
-                        listeReceivedPaiements();
-                         $('.refundModal').modal('hide');
-                    }else{
-                        alertify.error(response.message);
-                    }
-                }
-            });
-        });
-
-        $('#btnNewRefund').prop('hidden', true);
-        $('#btnNewRefund').prop('disabled', true);
     
     }); 
 </script>

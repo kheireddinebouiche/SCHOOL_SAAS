@@ -2720,10 +2720,22 @@
         $(document).on('click', '#confirmeValidationBtn', function(){
             $.ajax({
                 url : "{% url 't_crm:ApiValidatePreinscrit' %}",
-            })
-            // Simulation de validation
-            $('#validatePreinscritModal').modal('hide');
-            alertify.success("Pré-inscription validée avec succès");
+                dataType : "JSON",
+                type :"GET",
+                data : {
+                    'id_preinscrit' : id,
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        $('#validatePreinscritModal').modal('hide');
+                        alertify.success("Pré-inscription validée avec succès");
+                        loadPersonalInfos();
+                    }else{
+                        $('#validatePreinscritModal').modal('hide');
+                        alertify.error(response.message);
+                    }
+                },
+            });              
         });
 
         $(document).on('click', '#editVoeuxBtn', function(){
@@ -3219,10 +3231,12 @@
             $('#addDocumentModal').modal('show');
         });
         
-        function showDerogationDetails(date_de_demande,statut,motif){
+        function showDerogationDetails(date_de_demande,statut,motif,date_de_traitement,observation){
             $('#derogation-date-demande').html(date_de_demande);
             $('#derogation-motif-demande').html(motif);
             $('#derogation-status').html(statut);
+            $('#derogation-date-traitement').html(date_de_traitement);
+            $('#derogation-commentaire-traitement').html(observation);
         }
 
         // Fonction pour vérifier l'état de la dérogation
@@ -3234,7 +3248,13 @@
                 data: {'id_preinscrit': id},
                 success: function(response) {
 
-                    showDerogationDetails(response.data.date_de_demande,response.data.statut,response.data.motif);
+                    showDerogationDetails(
+                        response.data.date_de_demande,
+                        response.data.statut,
+                        response.data.motif,
+                        response.data.date_de_traitement,
+                        response.data.observation
+                    );
 
                     if (response.status === 'acceptee') {
                         document.getElementById('derogation_acceptee').hidden = false;
