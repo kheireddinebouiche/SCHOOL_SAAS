@@ -48,13 +48,14 @@ def PageDetailsDemandePaiement(request, pk):
     }
     return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
 
+
+
+
 @login_required(login_url="institut_app:login")
 def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
     obj = ClientPaiementsRequest.objects.get(id = id)
-
     voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
-
     echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
     liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
 
@@ -89,6 +90,11 @@ def ApiGetDetailsDemandePaiement(request):
     }
 
     return JsonResponse(data, safe=False)
+
+
+
+
+
 
 def ApiDeleteDemandePaiement(request):
     id_demande = request.GET.get('id_demande')

@@ -177,7 +177,7 @@ def ListeEcheanciersConfigures(request):
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
-            'id', 'model__label', 'formation__nom', 'is_active', 'is_archived', 'created_at',
+            'id', 'model__label', 'formation__nom', 'is_active', 'is_archived', 'created_at','is_default',
         )
         
         # Ajouter le nombre de tranches pour chaque échéancier
@@ -193,7 +193,8 @@ def ApiLoadEcheanciersConfigures(request):
                 'is_active': echeancier['is_active'],
                 'is_archived': echeancier['is_archived'],
                 'created_at': echeancier['created_at'].strftime('%Y-%m-%d') if echeancier['created_at'] else '',
-                'nombre_tranches': nombre_tranches
+                'nombre_tranches': nombre_tranches,
+                'is_default' : echeancier['is_default']
             })
         
         return JsonResponse(data, safe=False)
