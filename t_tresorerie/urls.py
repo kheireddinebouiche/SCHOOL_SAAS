@@ -2,6 +2,7 @@ from django.urls import path
 from .views import *
 from .f_views.echeancier import *
 from .f_views.preinscrit_paiements import *
+from .f_views.echeancier_special import *
 
 app_name="t_tresorerie"
 
@@ -54,7 +55,7 @@ urlpatterns = [
     
 
     
-
+    path("echeanciers-specials/",ListeEcheancierSpecial, name="ListeEcheancierSpecial")
 
 
 
