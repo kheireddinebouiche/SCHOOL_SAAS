@@ -44,6 +44,37 @@
     .card-equal-height .card-body {
         flex: 1 1 auto;
     }
+    
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
 </style>
 <script src="https://cdn.lordicon.com/lordicon.js"></script>
         <!-- ============================================================== -->
@@ -167,6 +198,20 @@
                                                         </button>
                                                     </div>
                                                 </div>
+                                                <!-- Notification d'échéancier spécial avec bouton Détails -->
+                                                <div  class="alert alert-info d-flex align-items-center mt-3" role="alert" id="echeancierSpecialNotification">
+                                                    <i class="ri-star-line me-2 fs-4"></i>
+                                                    <div class="flex-grow-1">
+                                                        <strong>Un échéancier spécial est disponible pour ce demandeur.</strong>
+                                                        <p class="mb-0 text-muted small">Cliquez sur détails pour voir les informations de l'échéancier.</p>
+                                                    </div>
+                                                    <div class="flex-shrink-0 ms-2">
+                                                        <button type="button" class="btn btn-primary btn-sm" id="showEcheancierSpecialDetails">
+                                                            <i class="ri-eye-line me-1"></i>Détails
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
                                             </div>
                                         </div>
                                         
@@ -970,6 +1015,7 @@
         var prixFormation = 0.00;
         var prixFormationReduction = 0.00;
         let hasReduction =  false;
+        var clientId = null; // Variable to store client ID
 
         function HideReducNotif(){
            
@@ -993,6 +1039,9 @@
                     $('#demandeur').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#created_at').text(data.user_data.created_at.split('T')[0]);
                     $('#motif').text(data.user_data.motif);
+                    
+                    // Store client ID
+                    clientId = data.user_data.client_id;
                     
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
@@ -1224,9 +1273,72 @@
         
         // Confirmer l'enregistrement de l'échéancier
         $(document).on('click', '#confirmSaveEcheancierBtn', function(){
-            alert("Fonctionnalité d'enregistrement de l'échéancier spécial - à implémenter");
-            $('#confirmSaveEcheancierModal').modal('hide');
-            $('#specialEcheancierModal').modal('hide');
+            // Collect data from the special echeancier table
+            var echeancierLines = [];
+            var isValid = true;
+            
+            $('#specialEcheancierTable tr').each(function() {
+                var $row = $(this);
+                var taux = $row.find('.percentage-input').val();
+                var montant = $row.find('.montant-cell').text().replace(' DA', '');
+                var date = $row.find('input[type="date"]').val();
+                
+                // Validate required fields
+                if (!taux || !montant || !date) {
+                    isValid = false;
+                    return false; // Break the loop
+                }
+                
+                echeancierLines.push({
+                    taux: taux,
+                    value: '', // We don't have this value in the UI, so leave it empty
+                    montant_tranche: montant,
+                    date_echeancier: date
+                });
+            });
+            
+            if (!isValid) {
+                alert("Veuillez remplir tous les champs pour chaque tranche.");
+                return;
+            }
+            
+            // Get other required data
+            var prospectId = clientId; // Use the stored client ID
+            var nombreTranches = $('#nombreTranches').val();
+            
+            // Prepare data for API call
+            var data = {
+                prospect_id: prospectId,
+                nombre_tranches: nombreTranches,
+                echeancier_lines: echeancierLines
+            };
+            
+            // Get CSRF token
+            var csrftoken = $('input[name=csrfmiddlewaretoken]').val();
+            
+            // Call API to save echeancier
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiStoreEcheancierSpecial' %}",
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert("Échéancier spécial enregistré avec succès !");
+                        $('#confirmSaveEcheancierModal').modal('hide');
+                        $('#specialEcheancierModal').modal('hide');
+                    } else {
+                        alert("Erreur: " + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur lors de l'enregistrement:", error);
+                    alert("Erreur lors de l'enregistrement de l'échéancier spécial.");
+                }
+            });
         });
         
         // Confirmation définitive de l'échéancier
@@ -1284,9 +1396,105 @@
         
 
     }); 
-    
+        
+
     // Modal Détails de la Réduction
 </script>
+
+<!-- Modal Détails Échéancier Spécial -->
+<div class="modal fade" id="echeancierSpecialDetailsModal" tabindex="-1" aria-labelledby="echeancierSpecialDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-star-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="echeancierSpecialDetailsModalLabel">Détails de l'échéancier spécial</h5>
+                        <p class="text-muted small mb-0">Informations sur l'échéancier personnalisé</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-4">
+                    <div class="col-lg-12">
+                        <div class="card border border-primary">
+                            <div class="card-header bg-primary bg-opacity-10">
+                                <h6 class="mb-0 text-primary">Informations générales</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-borderless mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td class="text-muted">Client</td>
+                                                <td id="echeancierClientName">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Formation</td>
+                                                <td id="echeancierFormation">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Nombre de tranches</td>
+                                                <td id="echeancierNombreTranches">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Date de création</td>
+                                                <td id="echeancierDateCreation">-</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border border-success">
+                            <div class="card-header bg-success bg-opacity-10">
+                                <h6 class="mb-0 text-success">Détail des tranches</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle table-nowrap mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Tranche</th>
+                                                <th>Pourcentage</th>
+                                                <th>Montant</th>
+                                                <th>Date d'échéance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="echeancierSpecialLinesTable">
+                                            <!-- Les lignes seront chargées dynamiquement -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-4" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <span>Cet échéancier spécial a été créé pour répondre aux besoins spécifiques du client. Vous pouvez l'appliquer à cette demande de paiement.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="applyEcheancierSpecialBtn">
+                    <i class="ri-check-line me-2"></i>Appliquer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 

@@ -190,4 +190,15 @@ class EcheancierSpecial(models.Model):
         return f'{self.prospect.nom} - {self.prospect.prenom}'
 
 class EcheancierPaiementSpecialLine(models.Model):
-    pass
+    echeancier = models.ForeignKey(EcheancierSpecial, null=True, blank=True, on_delete=models.CASCADE)
+    taux = models.CharField(max_length=100, null=True, blank=True)
+    value = models.CharField(max_length=100, null=True, blank=True)
+    montant_tranche = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=100)
+    date_echeancier = models.DateField(null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+
+    def __str__(self):
+        return self.echeancier.prospect.nom

@@ -55,7 +55,11 @@ urlpatterns = [
     
 
     
-    path("echeanciers-specials/",ListeEcheancierSpecial, name="ListeEcheancierSpecial")
+    path("echeanciers-specials/",ListeEcheancierSpecial, name="ListeEcheancierSpecial"),
+    path('ApiListEcheancierSpecial', ApiListEcheancierSpecial, name="ApiListEcheancierSpecial"),
+    path('ApiApproveEcheancierSpecial', ApiApproveEcheancierSpecial, name="ApiApproveEcheancierSpecial"),
+    path('ApiRejectEcheancierSpecial', ApiRejectEcheancierSpecial, name="ApiRejectEcheancierSpecial"),
+    path('ApiStoreEcheancierSpecial', ApiStoreEcheancierSpecial, name="ApiStoreEcheancierSpecial"),
 
 
 

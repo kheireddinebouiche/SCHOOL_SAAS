@@ -94,6 +94,7 @@ def ApiGetDetailsDemandePaiement(request):
         "demandeur_prenom": obj.client.prenom,
         "motif": obj.get_motif_display(),
         "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "client_id": obj.client.id,  # Add client ID to the response
     }
 
     voeux_data = {
