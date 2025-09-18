@@ -402,7 +402,7 @@
   </div>
 </div>
 
-<!-- Modal Activation/Désactivation Remise -->
+<!-- Modal Activation Remise -->
 <div class="modal fade activateRemiseModal" tabindex="-1" role="dialog" aria-labelledby="activateRemiseModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 shadow-lg border-0">
@@ -446,6 +446,50 @@
   </div>
 </div>
 
+<!-- Modal Désactivation Remise -->
+<div class="modal fade deactivateRemiseModal" tabindex="-1" role="dialog" aria-labelledby="deactivateRemiseModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-settings-line text-info fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-info mb-1" id="deactivateRemiseModalLabel">
+              Modifier l'état de la remise
+            </h5>
+            <p class="text-muted small mb-0">Changement du statut de la remise</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-settings-line text-info" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-info mb-3" id="activateRemiseTitle">Modifier l'état</h4>
+          <p class="text-muted mb-0" id="activateRemiseMessage">
+            Êtes-vous sûr de vouloir modifier l'état de cette remise ?
+          </p>
+        </div>
+        <input type="hidden" id="activateRemiseId">
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-info" id="confirmDeactivateRemiseBtn">
+            <i class="ri-check-line me-2"></i>Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
     $(document).ready(function(){
         // Fonction pour charger les remises
@@ -458,14 +502,15 @@
                     var row = "";
                     if(data.length > 0){
                         $.each(data, function(index, item){
-                            var statusClass = item.is_enabled ? 'status-active' : 'status-inactive';
-                            var statusText = item.is_enabled ? 'Active' : 'Inactive';
-                            
+
+                            var statusBagde = item.is_enabled ? "Activée" : "Désactivée";
+                            var statusSpan = item.is_enabled ? "bg-success" : "bg-danger" ;
+
                             row += "<tr class='align-middle'>";
                             row += "<td>" + item.label + "</td>";
                             row += "<td>" + item.taux + "%</td>";
                             row += "<td>" + item.created_at.split("T")[0] + "</td>";
-                            row += "<td><span class='badge " + statusClass + "'>" + statusText + "</span></td>";
+                            row += "<td><span class='badge "+statusSpan+" '>"+statusBagde+"</span></td>";
                             row += "<td class='text-center'>";
                             row += "<div class='dropdown d-inline-block'>";
                             row += "<button class='btn btn-soft-info btn-sm dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
@@ -479,9 +524,13 @@
                             row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-remise' data-id='" + item.id + "'>";
                             row += "<i class='ri-delete-bin-line me-2'></i>Supprimer";
                             row += "</button></li>";
-                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 activate-remise' data-id='" + item.id + "' data-active='" + item.is_active + "'>";
-                            row += item.is_active ? "<i class='ri-close-line text-warning me-2'></i>Désactiver" : "<i class='ri-check-line text-success me-2'></i>Activer";
-                            row += "</button></li>";
+                            row += "<li>";
+                            if(item.is_enabled){
+                              row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 deactivate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-close-line text-warning me-2'></i>Désactiver</button>";  
+                            }else{
+                              row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 activate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-check-line text-success me-2'></i>Activer</button>";
+                            }
+                            row += "</li>";
                             row += "</ul>";
                             row += "</div>";
                             row += "</td>";
@@ -525,17 +574,45 @@
         }
 
         // Fonction pour activer/désactiver une remise
-        function ActivateRemise(remiseId, isActive) {
-            var action = isActive ? 'désactiver' : 'activer';
-            var newState = isActive ? 'désactivée' : 'activée';
-            
-            $('#activateRemiseId').val(remiseId);
-            $('#activateRemiseMessage').text("Êtes-vous sûr de vouloir " + action + " cette remise ?");
-            $('#activateRemiseModalLabel').text(isActive ? "Désactiver la remise" : "Activer la remise");
-            $('#confirmActivateRemiseBtn').removeClass('btn-info').addClass(isActive ? 'btn-warning' : 'btn-success');
-            $('#confirmActivateRemiseBtn').text(isActive ? "Désactiver" : "Activer");
-            
-            $('.activateRemiseModal').modal('show');
+        function ActivateRemise(remiseId) {
+            $.ajax({
+              url : "{% url 't_remise:ApiActivateRemise' %}",
+              dataType: 'JSON',
+              type:'POST',
+              data : {
+                'id_remise' : remiseId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+              },
+              success: function(response){
+                if(response.status === "success"){
+                  alertify.success("La remise est activée.")
+                  loadRemises();
+                }else{
+                  alertify.error("Une erreur c'est produite lors du traitement de la requete")
+                }
+              }
+            })
+        }
+
+        // Fonction pour activer/désactiver une remise
+        function DeactivateRemise(remiseId) {
+            $.ajax({
+              url : "{% url 't_remise:ApiDeactivateRemise' %}",
+              dataType: 'JSON',
+              type:'POST',
+              data : {
+                'id_remise' : remiseId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+              },
+              success: function(response){
+                if(response.status === "success"){
+                  alertify.success("La remise est descativée.");
+                  loadRemises();
+                }else{
+                  alertify.error("Une erreur c'est produite lors du traitement de la requete")
+                }
+              }
+            })
         }
 
         // Fonction pour supprimer une remise
@@ -577,8 +654,14 @@
         // Gestionnaire d'événements pour le bouton d'activation/désactivation
         $(document).on('click', '.activate-remise', function() {
             var remiseId = $(this).data('id');
-            var isActive = $(this).data('active');
-            ActivateRemise(remiseId, isActive);
+            $('#confirmActivateRemiseBtn').data('id', remiseId);
+            $('.activateRemiseModal').modal('show');
+        });
+
+        $(document).on('click', '.deactivate-remise', function(){
+          var remiseId = $(this).data('id');
+           $('#confirmDeactivateRemiseBtn').data('id', remiseId);
+           $('.deactivateRemiseModal').modal('show');
         });
 
         // Gestionnaire d'événements pour le bouton de suppression
@@ -596,12 +679,18 @@
         });
 
         // Gestionnaire d'événements pour le bouton de confirmation d'activation/désactivation
-        $('#confirmActivateRemiseBtn').click(function() {
-            var remiseId = $('#activateRemiseId').val();
-            
-            // Pour le moment, on ferme simplement la modale
+        $(document).on('click', '#confirmActivateRemiseBtn', function() {
+            var remiseId = $(this).data('id');
+            ActivateRemise(remiseId);
             $('.activateRemiseModal').modal('hide');
-            loadRemises(); // Recharger la liste
+             
+        });
+
+        $(document).on('click','#confirmDeactivateRemiseBtn', function(){
+            var remiseId = $(this).data('id');
+            DeactivateRemise(remiseId);
+            $('.deactivateRemiseModal').modal('hide');
+            loadRemises(); 
         });
 
         // Gestionnaire d'événements pour le bouton de confirmation de suppression

@@ -16,7 +16,7 @@ def ListeRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeRemise(request):
-    liste = Remises.objects.all().values('id','label','taux','is_enabled','created_at')
+    liste = Remises.objects.all().values('id','label','taux','is_enabled','created_at').order_by('-created_at')
     return JsonResponse(list(liste), safe=False)
 
 
@@ -36,13 +36,27 @@ def ApiDetailsRemise(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiActivateRemise(request):
-    id_remise = request.GET.get('id_remise')
+    id_remise = request.POST.get('id_remise')
     obj = Remises.objects.get(id = id_remise)
 
     obj.is_enabled = True
+    obj.save()
 
     return JsonResponse({"status" : "success"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeactivateRemise(request):
+    id_remise = request.POST.get('id_remise')
+    obj = Remises.objects.get(id = id_remise)
+
+    obj.is_enabled = False
+    obj.save()
+
+    return JsonResponse({"status" : "success"})
+
 
 @login_required(login_url="institut_app:login")
 def ApiArchiveRemise(request):

@@ -4,7 +4,8 @@ from .models import *
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-from t_crm.models import FicheDeVoeux
+from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
+from t_remise.models import *
 
 def AttentesPaiements(request):
     
@@ -50,7 +51,7 @@ def PageDetailsDemandePaiement(request, pk):
 
 
 
-
+########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
 def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
@@ -58,6 +59,25 @@ def ApiGetDetailsDemandePaiement(request):
     voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
     echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
     liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
+    
+    remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj.client).last()
+
+    if remiseObj and remiseObj.remise_appliquer:
+        
+        remise_appliquer = remiseObj.remise_appliquer.remise.taux
+        is_approuved_remise = remiseObj.remise_appliquer.is_approuved
+        reduction_type = remiseObj.remise_appliquer.remise.label
+        id_reduction = remiseObj.remise_appliquer.id
+
+        remiseDatas = {
+            'valeur' : remise_appliquer,
+            'remise_approuver' : is_approuved_remise,
+            'type_remise' : reduction_type,
+            'id_applied_reduction' : id_reduction,
+        }
+
+    else:
+        remiseDatas = None
 
     echeancier_data=[]
     for i in liste_echeancier:
@@ -88,12 +108,11 @@ def ApiGetDetailsDemandePaiement(request):
         'user_data' : user_data,
         'voeux' : voeux_data,
         'echeancier' : list(echeancier_data),
+        'remise' : remiseDatas
     }
 
     return JsonResponse(data, safe=False)
-
-
-
+########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 
 
 

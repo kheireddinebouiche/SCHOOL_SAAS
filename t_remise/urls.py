@@ -10,5 +10,6 @@ urlpatterns = [
     path('ApiCreateRemise', ApiCreateRemise, name="ApiCreateRemise"),
     path('ApiDetailsRemise', ApiDetailsRemise, name="ApiDetailsRemise"),
     path('ApiActivateRemise', ApiActivateRemise, name="ApiActivateRemise"),
+    path('ApiDeactivateRemise', ApiDeactivateRemise, name="ApiDeactivateRemise"),
 
 ]

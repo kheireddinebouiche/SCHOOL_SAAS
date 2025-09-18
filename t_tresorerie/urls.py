@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from .f_views.echeancier import *
+from .f_views.preinscrit_paiements import *
 
 app_name="t_tresorerie"
 
@@ -48,6 +49,8 @@ urlpatterns = [
     path('echeancier-appliquer/',echeancierAppliquer, name="echeancierAppliquer"),
 
     path('ApiLoadPromo', ApiLoadPromo, name="ApiLoadPromo"),
+
+    path('ApiGetPaiementRequestDetails', ApiGetPaiementRequestDetails, name="ApiGetPaiementRequestDetails"),
     
 
     

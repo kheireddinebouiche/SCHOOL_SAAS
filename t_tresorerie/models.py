@@ -2,8 +2,11 @@ from django.db import models
 from t_etudiants.models import *
 from institut_app.models import *
 from t_formations.models import *
-from t_crm.models import Visiteurs, Prospets
+from t_crm.models import Prospets
 from django.contrib.auth.models import User
+import datetime
+from django.db import models
+from django.db.models import Max
 
 
 class ClientPaiementsRequest(models.Model):
@@ -33,7 +36,8 @@ class ClientPaiementsRequest(models.Model):
 
     def __str__(self):
         return f"{self.client.nom}"
-    
+
+
 class clientPaiementsRequestLine(models.Model):
     paiement_request = models.ForeignKey(ClientPaiementsRequest, on_delete=models.DO_NOTHING, null=True)
     montant_paye = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -48,19 +52,56 @@ class clientPaiementsRequestLine(models.Model):
     def __str__(self):
         return self.paiement_request
 
+
 class Paiements(models.Model):
-    montant_paye = models.FloatField(null=True, blank=True)
+    montant_paye = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
-    mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('che','Chèque'),('esp','Espece'),('vir','Virement Bancaire')])
-    reference_paiement = models.CharField(max_length=100, null=True, blank=True)
 
-    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('val','Valider'),('dmr','Demande de remboursement'),('rem','Rembourssement approuvé')], default='val')
+    mode_paiement = models.CharField(
+        max_length=100, null=True, blank=True,
+        choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')]
+    )
+
+    paiement_label = models.CharField(max_length=100, null=True, blank=True)
+    
+    is_frais_inscription = models.BooleanField(default=False)
+    reference_paiement = models.CharField(
+        max_length=100, null=True, blank=True, unique=True,
+        help_text="Numéro séquentiel de paiement"
+    )
+
+    is_done = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.montant_paye
+        return str(self.montant_paye)
+
+    def save(self, *args, **kwargs):
+        if not self.reference_paiement:  # Générer seulement si vide
+            today = datetime.date.today()
+            year = today.year
+            month = today.strftime("%m")
+
+            prefix = f"{year}/{month}/"
+
+            # Chercher le dernier numéro du mois courant
+            last_ref = Paiements.objects.filter(
+                reference_paiement__startswith=prefix
+            ).aggregate(max_num=Max("reference_paiement"))["max_num"]
+
+            if last_ref:
+                last_number = int(last_ref.split("/")[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            # Formater en 3 chiffres (001, 002, …)
+            self.reference_paiement = f"{prefix}{str(new_number).zfill(3)}"
+
+        super().save(*args, **kwargs)
+
     
 class Rembourssements(models.Model):
     paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)
