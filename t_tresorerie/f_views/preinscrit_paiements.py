@@ -34,8 +34,16 @@ def ApiGetPaiementRequestDetails(request):
             'total_final': str(total_final),
             'reduction': request.GET.get('reduction', '0') + '%' if request.GET.get('has_reduction') else '0%'
         }
-        
+        ### Boucle pour enregistrer les paiements
+        for i in echeancier_list:
+            ApiStorePaiements(i['montant'])     
+             
         return JsonResponse(data)
     else:
         
         return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
+
+### Fonction qui stock les echeanciers de paiements
+@login_required(login_url="institut_app:login")
+def ApiStorePaiements(montant):
+    print(montant)

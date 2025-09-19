@@ -134,41 +134,18 @@ def ApiValidateEcheancierSpecial(request):
     })
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiApproveEcheancierSpecial(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            echeancier_id = data.get('echeancier_id')
-            
-            if not echeancier_id:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'ID de l\'échéancier manquant'
-                })
-            
-            echeancier = EcheancierSpecial.objects.get(id=echeancier_id)
-            echeancier.is_approuved = True
-            echeancier.save()
-            
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Échéancier approuvé avec succès'
-            })
-        except EcheancierSpecial.DoesNotExist:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Échéancier non trouvé'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Erreur lors de l\'approbation: {str(e)}'
-            })
-    
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Méthode non autorisée'
-    })
+    if request.method == "GET":
+        echeancierId = request.GET.get('echeancierId')
+        obj = EcheancierSpecial.objects.get(id = echeancierId)
+        obj.is_approuved = True
+        obj.save()
+
+        return JsonResponse({"status" : "success"})
+    else:
+
+        return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
 def ApiRejectEcheancierSpecial(request):

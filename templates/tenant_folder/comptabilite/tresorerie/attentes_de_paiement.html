@@ -3,6 +3,52 @@
 {% block title %} Comptabilité/Trésorerie - Attentes de paiements {% endblock title %}
 
 {% block content %}
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .icon-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
+</style>
+
 <!-- ============================================================== -->
 <!-- Start right Content here -->
 <!-- ============================================================== -->
@@ -12,28 +58,114 @@
         <div class="container-fluid">
 
             <!-- start page title -->
-            <div class="row">
+            <div class="row mb-3">
                 <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Attentes de paiement</h4>
-
-                        <div class="page-title-right">
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="javascript: void(0);">Comptabilité/Trésorerie</a></li>
-                                <li class="breadcrumb-item active">Attentes de paiement</li>
-                            </ol>
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-money-dollar-circle-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Attentes de paiement</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Comptabilité/Trésorerie</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Attentes de paiement</li>
+                                </ol>
+                            </nav>
+                            <button class="btn btn-primary" id="refreshPaiements">
+                                <i class="ri-refresh-line me-1"></i>Actualiser
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- end page title -->
+
+            <!-- Statistics Section -->
+            <div class="row mb-4" id="statisticsSection">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-list-check-2 text-primary fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">Total</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-time-line text-warning fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="pendingPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">En attente</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-success bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-success bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-checkbox-circle-line text-success fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="approvedPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">Approuvés</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-info bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-info bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-money-cny-circle-line text-info fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalMontant">0 DA</h5>
+                                    <p class="mb-0 text-muted small">Montant total</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Liste des paiements en attentes</h5>
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-list-check-2 text-primary fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-primary mb-1">Liste des paiements en attentes</h5>
+                                        <p class="text-muted small mb-0">Gestion des demandes de paiement</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
                                 <thead>
                                     <tr>
@@ -93,7 +225,7 @@
                                 html += '<td><strong>'+p.motif_label+'</strong></td>';
                                 html += '<td><strong>'+p.amount+' DA</strong></td>';
                                 html += '<td><strong>'+(p.etat == 'en_attente' ? "<span class='badge bg-warning'>En attente de traitement</span>" 
-                                                      : p.etat == 'annulation' ? "<span class='badge bg-danger'>Demande d\'annulation</span>" : '') +'</strong></td>';
+                                                      : p.etat == 'annulation' ? "<span class='badge bg-danger'>Demande d'annulation</span>" : '') +'</strong></td>';
                                 html += '<td>'+ p.created_at.split('T')[0]+'</td>';
                                
                                 html += '<td>';
@@ -123,7 +255,52 @@
             });
         }
 
+        function loadStatistics() {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiListeDemandePaiement' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                success: function(data) {
+                    // Calculer les statistiques
+                    var total = data.length;
+                    var pending = 0;
+                    var approved = 0;
+                    var totalMontant = 0;
+                    
+                    $.each(data, function(index, p) {
+                        if (p.etat == 'en_attente') {
+                            pending++;
+                        } else if (p.etat != 'annulation') {
+                            approved++;
+                        }
+                        
+                        totalMontant += parseFloat(p.amount) || 0;
+                    });
+                    
+                    // Mettre à jour les statistiques
+                    $('#totalPaiements').text(total);
+                    $('#pendingPaiements').text(pending);
+                    $('#approvedPaiements').text(approved);
+                    $('#totalMontant').text(totalMontant.toLocaleString('fr-FR') + ' DA');
+                },
+                error: function() {
+                    console.error("Erreur lors du chargement des statistiques");
+                }
+            });
+        }
+
+        // Charger les données initiales
         loadItems();
+        loadStatistics();
+
+        // Rafraîchir les données
+        $(document).on('click', '#refreshPaiements', function(){
+            // Afficher un indicateur de chargement
+            $('#listItem').html('<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></td></tr>');
+            
+            loadItems();
+            loadStatistics();
+        });
 
         $(document).on('click', '#deleteConfirmation', function(){
             var id_demande = $(this).data('id');

@@ -57,6 +57,28 @@ def ApiGetDetailsDemandePaiement(request):
     id= request.GET.get('id_demande')
     obj = ClientPaiementsRequest.objects.get(id = id)
     voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
+
+    special_echeancier_data = []
+    has_special_echeancier = False
+    echeancier_state_approuvel = False
+
+    obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
+    if obj_echeacncier_speial:
+        line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
+        echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
+        has_special_echeancier = True
+
+        special_echeancier_data = []
+        for i in line_echeancier_special:
+            special_echeancier_data.append({
+                'id_echeancier_special' : i.id,
+                'taux' : i.taux,
+                'value' : i.value,
+                'date_echeancier' : i.date_echeancier,
+                'montant_tranche' : i.montant_tranche,
+            })
+
+
     echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
     liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
     
@@ -79,6 +101,8 @@ def ApiGetDetailsDemandePaiement(request):
     else:
         remiseDatas = None
 
+    
+
     echeancier_data=[]
     for i in liste_echeancier:
         echeancier_data.append({
@@ -88,6 +112,10 @@ def ApiGetDetailsDemandePaiement(request):
             'montant_tranche' : i.montant_tranche,
             'date_echeancier' : i.date_echeancier,
         })
+
+    ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
+    if obj_echeacncier_speial:
+        echeancier_data = special_echeancier_data
     
     user_data = {
         "demandeur_nom": obj.client.nom,
@@ -109,7 +137,10 @@ def ApiGetDetailsDemandePaiement(request):
         'user_data' : user_data,
         'voeux' : voeux_data,
         'echeancier' : list(echeancier_data),
-        'remise' : remiseDatas
+        'remise' : remiseDatas,
+        'has_special_echeancier' : has_special_echeancier,
+        'special_echeancier_line' : list(special_echeancier_data),
+        'echeancier_special_state_approuvel' : echeancier_state_approuvel,
     }
 
     return JsonResponse(data, safe=False)
