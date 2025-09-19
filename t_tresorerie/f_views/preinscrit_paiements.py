@@ -39,6 +39,7 @@ def ApiGetPaiementRequestDetails(request):
             ApiStorePaiements(i['montant'])     
              
         return JsonResponse(data)
+    
     else:
         
         return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
