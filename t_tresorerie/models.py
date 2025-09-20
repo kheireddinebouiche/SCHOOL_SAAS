@@ -52,6 +52,18 @@ class clientPaiementsRequestLine(models.Model):
     def __str__(self):
         return self.paiement_request
 
+class DuePaiements(models.Model):
+    client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    label = models.CharField(max_length=100, null=True, blank=True)
+    ref_echeancier = models.CharField(max_length=1000, null=True, blank=True)
+    montant_due = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    date_echeance = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.label
 
 class Paiements(models.Model):
     montant_paye = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
@@ -101,7 +113,6 @@ class Paiements(models.Model):
             self.reference_paiement = f"{prefix}{str(new_number).zfill(3)}"
 
         super().save(*args, **kwargs)
-
     
 class Rembourssements(models.Model):
     paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)

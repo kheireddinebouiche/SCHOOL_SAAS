@@ -61,6 +61,22 @@ def ApiGetDetailsDemandePaiement(request):
     special_echeancier_data = []
     has_special_echeancier = False
     echeancier_state_approuvel = False
+    due_paiement_data = []
+    has_due_paiement = False
+
+    due_paiement = DuePaiements.objects.filter(client = obj.client)
+
+    if due_paiement.count() > 0:
+        has_due_paiement = True
+        for i in due_paiement:
+            due_paiement_data.append({
+                'montant_due'  : i.montant_due,
+                'label' : i.label,
+                'date_echeance' : i.date_echeance,
+            })
+    else:
+        has_due_paiement = False
+        due_paiement_data = []
 
     obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
     if obj_echeacncier_speial:
@@ -101,8 +117,6 @@ def ApiGetDetailsDemandePaiement(request):
     else:
         remiseDatas = None
 
-    
-
     echeancier_data=[]
     for i in liste_echeancier:
         echeancier_data.append({
@@ -114,12 +128,13 @@ def ApiGetDetailsDemandePaiement(request):
         })
 
     ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
-    if obj_echeacncier_speial:
+    if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
         echeancier_data = special_echeancier_data
     
     user_data = {
         "demandeur_nom": obj.client.nom,
         "demandeur_prenom": obj.client.prenom,
+        "client_id" : obj.client.id,
         "motif": obj.get_motif_display(),
         "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         "client_id": obj.client.id,  # Add client ID to the response
@@ -141,6 +156,8 @@ def ApiGetDetailsDemandePaiement(request):
         'has_special_echeancier' : has_special_echeancier,
         'special_echeancier_line' : list(special_echeancier_data),
         'echeancier_special_state_approuvel' : echeancier_state_approuvel,
+        "has_due_paiement" : has_due_paiement,
+        "due_paiement_data" : due_paiement_data,
     }
 
     return JsonResponse(data, safe=False)
