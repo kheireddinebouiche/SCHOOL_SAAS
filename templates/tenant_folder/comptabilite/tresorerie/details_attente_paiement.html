@@ -642,14 +642,16 @@
                                                          <table class="table table-hover align-middle table-nowrap mb-0">
                                                             <thead class="table-light">
                                                                 <tr>
+                                                                    <th scope="col">N° Bon</th>
                                                                     <th scope="col">Label</th>
                                                                     <th scope="col">Montant</th>
                                                                     <th scope="col">Date</th>
                                                                     <th scope="col">Etat</th>
+                                                                    <th scope="col">Actions</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody id="ListePaiementRequestLineDone">
-                                                                
+                                                                <!-- Liste des paiements effectuer -->
                                                             </tbody>
                                                         </table>
                                                     </div>
@@ -1809,6 +1811,45 @@
                 }   
         }
     
+        // Add a global variable to store payment data
+        var paymentData = {};
+        
+        // Function to calculate and update payment summary
+        function updatePaymentSummary() {
+            // Calculate total due
+            var totalDue = 0;
+            $('#echeancierTable tr').each(function() {
+                var montantText = $(this).find('td:eq(2) span.fw-bold').text();
+                if (montantText) {
+                    var montant = parseFloat(montantText.replace(' DA', '').replace(/\s/g, '')) || 0;
+                    totalDue += montant;
+                }
+            });
+
+            // Calculate total paid
+            var totalPaid = 0;
+            $('#ListePaiementRequestLineDone tr').each(function() {
+                var montantText = $(this).find('td:eq(2)').text();
+                if (montantText) {
+                    var montant = parseFloat(montantText.replace(' DA', '').replace(/\s/g, '')) || 0;
+                    totalPaid += montant;
+                }
+            });
+
+            // Calculate balance
+            var balance = totalDue - totalPaid;
+
+            // Update the summary display
+            $('#totalDueAmount').text(totalDue.toFixed(2) + ' DA');
+            $('#totalPaidAmount').text(totalPaid.toFixed(2) + ' DA');
+            $('#balanceAmount').text(balance.toFixed(2) + ' DA');
+        }
+        
+        // Update payment summary whenever tables are modified
+        $(document).on('DOMSubtreeModified', '#echeancierTable, #ListePaiementRequestLineDone', function() {
+            setTimeout(updatePaymentSummary, 100); // Small delay to ensure DOM is updated
+        });
+        
         function loadDatas(){
             $.ajax({
                 url : "{% url 't_tresorerie:ApiGetDetailsDemandePaiement' %}",
@@ -1945,6 +1986,43 @@
                         }
                         echeancierHtml += '</tr>';
                     });
+
+
+                    if(data.has_paiement){
+                        var row = "";
+                        var count = data.paiements_done_data.length;
+                        
+                        // Store payment data for later use
+                        paymentData = {};
+                        $.each(data.paiements_done_data, function(index, item){
+                            // Store payment data with payment number as key
+                            paymentData[item.num] = {
+                                num: item.num,
+                                montant_paye: item.montant_paye,
+                                date_paiement: item.date_paiement,
+                                mode_paiement: item.mode_paiement || 'Non spécifié',
+                                reference: item.reference || 'Non spécifié'
+                            };
+                            
+                            row += "<tr>";
+                            row += "<td>"+item.num+"</td>";
+                            row += "<td></td>";
+                            row += "<td>"+item.montant_paye+"</td>";
+                            row += "<td>"+item.date_paiement+"</td>";
+                            row += "<td></td>"; // État column
+                            row += "<td>";
+                            row += "<button class='btn btn-sm btn-primary me-1 print-quittance-btn' data-id='"+item.num+"'>";
+                            row += "<i class='ri-file-text-line'></i> Quittance";
+                            row += "</button>";
+                            row += "<button class='btn btn-sm btn-success print-facture-btn' data-id='"+item.num+"'>";
+                            row += "<i class='ri-printer-line'></i> Facture";
+                            row += "</button>";
+                            row += "</td>";
+                            row += "</tr>";
+                        });
+                        $('#NbrPaiementDone').text(count);
+                        $('#ListePaiementRequestLineDone').html(row);
+                    }
                     
                     $('#echeancierTable').html(echeancierHtml);
                  
@@ -2637,6 +2715,7 @@
                 success : function(response){
                     if(response.status === "success"){
                         alertify.success("Le paiement à été enregistrer avec succès");
+                        loadDatas();
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
                         
@@ -2644,8 +2723,8 @@
                 }
             })
             
-            // Fermer la modale
-            $('#nouveauPaiementModal').modal('hide');
+                // Fermer la modale
+                $('#nouveauPaiementModal').modal('hide');
             
            
             // Réinitialiser le formulaire
@@ -2662,6 +2741,191 @@
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
+        });
+        
+        // Imprimer la quittance
+        $(document).on('click', '.print-quittance-btn', function(){
+            var id = $(this).data('id');
+            
+            // Get payment data
+            var payment = paymentData[id];
+            if (!payment) {
+                alert("Données de paiement non trouvées pour l'ID: " + id);
+                return;
+            }
+            
+            // Get student information
+            var studentName = $('#demandeur').text();
+            var formation = $('#specialite').text();
+            var promo = $('#promo').text();
+            var currentDate = new Date().toLocaleDateString('fr-FR');
+            
+            // Generate PDF
+            generateQuittancePDF(payment, studentName, formation, promo, currentDate);
+        });
+        
+        // Fonction pour générer le PDF de la quittance
+        function generateQuittancePDF(payment, studentName, formation, promo, currentDate) {
+            // Vérifier si jsPDF est disponible
+            var jsPDFInstance = null;
+            
+            // Méthode 1: jsPDF direct
+            if (typeof jsPDF !== 'undefined') {
+                jsPDFInstance = jsPDF;
+            }
+            // Méthode 2: window.jspdf.jsPDF
+            else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = window.jspdf.jsPDF;
+            }
+            // Méthode 3: jspdf.jsPDF
+            else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = jspdf.jsPDF;
+            }
+            
+            if (jsPDFInstance) {
+                // jsPDF est déjà disponible
+                createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance);
+            } else {
+                // Charger jsPDF dynamiquement
+                var script1 = document.createElement('script');
+                script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                script1.onload = function() {
+                    // Charger autoTable
+                    var script2 = document.createElement('script');
+                    script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js';
+                    script2.onload = function() {
+                        // Réessayer de générer le PDF
+                        var loadedJsPDF = null;
+                        if (typeof jsPDF !== 'undefined') {
+                            loadedJsPDF = jsPDF;
+                        } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                            loadedJsPDF = window.jspdf.jsPDF;
+                        }
+                        if (loadedJsPDF) {
+                            createQuittancePDF(payment, studentName, formation, promo, currentDate, loadedJsPDF);
+                        } else {
+                            alert("Erreur lors du chargement de la bibliothèque PDF.");
+                        }
+                    };
+                    script2.onerror = function() {
+                        alert("Erreur lors du chargement de la bibliothèque PDF (AutoTable).");
+                    };
+                    document.head.appendChild(script2);
+                };
+                script1.onerror = function() {
+                    alert("Erreur lors du chargement de la bibliothèque PDF.");
+                };
+                document.head.appendChild(script1);
+            }
+        }
+        
+        // Fonction pour créer le PDF de la quittance
+        function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance) {
+            try {
+                // Créer le PDF
+                var doc = new jsPDFInstance();
+                
+                // Définir la police et la taille
+                doc.setFont("helvetica");
+                
+                // Ajouter le titre
+                doc.setFontSize(18);
+                doc.setTextColor(40, 40, 40);
+                doc.text("QUITTANCE DE PAIEMENT", 105, 20, null, null, 'center');
+                
+                // Ajouter une ligne de séparation
+                doc.setDrawColor(59, 125, 221); // Couleur bleue
+                doc.setLineWidth(0.5);
+                doc.line(20, 25, 190, 25);
+                
+                // Informations de l'établissement (simulées)
+                doc.setFontSize(10);
+                doc.setTextColor(80, 80, 80);
+                doc.text("Établissement de formation", 20, 35);
+                doc.text("Adresse de l'établissement", 20, 40);
+                doc.text("Tél: +213 XX XX XX XX", 20, 45);
+                
+                // Date et numéro de quittance
+                doc.setTextColor(40, 40, 40);
+                doc.text("Date: " + currentDate, 150, 35);
+                doc.text("N° Quittance: " + payment.num, 150, 40);
+                
+                // Informations de l'étudiant
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Reçu de:", 20, 60);
+                doc.setFontSize(11);
+                doc.text(studentName, 45, 60);
+                
+                doc.setFontSize(12);
+                doc.text("Formation:", 20, 68);
+                doc.setFontSize(11);
+                doc.text(formation, 45, 68);
+                
+                doc.setFontSize(12);
+                doc.text("Promo:", 20, 76);
+                doc.setFontSize(11);
+                doc.text(promo, 45, 76);
+                
+                // Détails du paiement
+                doc.setFontSize(14);
+                doc.setTextColor(59, 125, 221);
+                doc.text("DÉTAILS DU PAIEMENT", 20, 95);
+                
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Montant payé:", 20, 105);
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.text(payment.montant_paye + " DA", 60, 105);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(12);
+                doc.text("Date de paiement:", 20, 115);
+                doc.text(payment.date_paiement, 60, 115);
+                
+                doc.text("Mode de paiement:", 20, 125);
+                doc.text(payment.mode_paiement, 60, 125);
+                
+                doc.text("Référence:", 20, 135);
+                doc.text(payment.reference, 60, 135);
+                
+                // Message de remerciement
+                doc.setFontSize(12);
+                doc.setTextColor(40, 167, 69); // Vert
+                doc.text("Merci pour votre paiement.", 20, 155);
+                
+                // Signature
+                doc.setFontSize(11);
+                doc.setTextColor(80, 80, 80);
+                doc.text("Signature de l'agent:", 20, 180);
+                doc.line(20, 185, 80, 185); // Ligne pour la signature
+                
+                doc.text("Signature du responsable:", 120, 180);
+                doc.line(120, 185, 180, 185); // Ligne pour la signature
+                
+                // Pied de page
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text("Document généré le " + currentDate, 105, 200, null, null, 'center');
+                doc.text("Page 1 sur 1", 105, 205, null, null, 'center');
+                
+                // Télécharger le PDF
+                doc.save("quittance_" + payment.num + "_" + studentName.replace(/\s+/g, '_') + ".pdf");
+                
+                alertify.success("Quittance générée avec succès !");
+                
+            } catch (error) {
+                console.error("Erreur lors de la génération du PDF:", error);
+                alert("Erreur lors de la génération de la quittance. Détails: " + error.message);
+            }
+        }
+        
+        // Imprimer la facture
+        $(document).on('click', '.print-facture-btn', function(){
+            var id = $(this).data('id');
+            alert("Fonctionnalité d'impression de facture - à implémenter pour le paiement ID: " + id);
+            // À implémenter : Logique d'impression de la facture
         });
         
     });

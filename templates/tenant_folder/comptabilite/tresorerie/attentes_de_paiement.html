@@ -47,6 +47,40 @@
         color: #17a2b8 !important;
         font-weight: 500 !important;
     }
+    
+    /* Add search box styling */
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none; /* Make sure icon doesn't block input */
+    }
+    
+    /* Ensure search input is accessible */
+    #table-filter {
+        padding-right: 40px; /* Space for search icon */
+        z-index: 1; /* Ensure input is above icon */
+    }
+    
+    /* Table styling */
+    .table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Rounded elements */
+    .rounded-pill {
+        border-radius: 50rem !important;
+    }
 </style>
 
 <!-- ============================================================== -->
@@ -76,7 +110,7 @@
                                     <li class="breadcrumb-item active">Attentes de paiement</li>
                                 </ol>
                             </nav>
-                            <button class="btn btn-primary" id="refreshPaiements">
+                            <button class="btn btn-primary rounded-pill" id="refreshPaiements">
                                 <i class="ri-refresh-line me-1"></i>Actualiser
                             </button>
                         </div>
@@ -152,35 +186,55 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                        <div class="card-header border-0 bg-white p-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-list-check-2 text-primary fs-4"></i>
+                                    <i class="fas fa-filter text-info me-2"></i>
+                                    <h5 class="card-title mb-0 text-info">Filtres</h5>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="search-box position-relative">
+                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px; padding-right: 40px; z-index: 1;">
+                                        <i class="fas fa-search text-muted search-icon" style="pointer-events: none;"></i>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <label for="dateFrom" class="me-2 mb-0">Du:</label>
+                                        <input type="date" id="dateFrom" class="form-control form-control-sm rounded-pill" style="width: 150px;">
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <label for="dateTo" class="me-2 mb-0">Au:</label>
+                                        <input type="date" id="dateTo" class="form-control form-control-sm rounded-pill" style="width: 150px;">
                                     </div>
                                     <div>
-                                        <h5 class="card-title fw-semibold text-primary mb-1">Liste des paiements en attentes</h5>
-                                        <p class="text-muted small mb-0">Gestion des demandes de paiement</p>
+                                        <button id="filterByDate" class="btn btn-primary btn-sm rounded-pill">
+                                            <i class="ri-filter-line me-1"></i>Filtrer
+                                        </button>
+                                        <button id="clearDateFilter" class="btn btn-light btn-sm rounded-pill">
+                                            <i class="ri-close-line me-1"></i>Effacer
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th>Client</th>
-                                        <th>Motif</th>
-                                        <th>Montant</th>
-                                        <th>Etat</th>
-                                        <th>Crée le</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="listItem">
-
-                                </tbody>
-                            </table>
+                            
+                            <div class="card-body p-3">
+                            <div class="table-responsive">
+                                <table id="example" class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="border-0 rounded-start">Client</th>
+                                            <th class="border-0">Motif</th>
+                                            <th class="border-0">Montant</th>
+                                            <th class="border-0">Etat</th>
+                                            <th class="border-0">Crée le</th>
+                                            <th class="border-0 rounded-end text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -209,48 +263,82 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
 <script>
     $(document).ready(function(){
+        // Initialize DataTable
+        var table = $('#example').DataTable({
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json",
+                "emptyTable": "Aucune donnée disponible dans le tableau"
+            },
+            "pageLength": 10,
+            "ordering": true,
+            "searching": false, // Disable DataTables built-in search
+            "info": true,
+            "lengthChange": true,
+            "autoWidth": false,
+            "responsive": true,
+            "columnDefs": [
+                { "orderable": true, "targets": [0, 1, 2, 3, 4] },
+                { "orderable": false, "targets": [5] }
+            ],
+            "data": [], // Initialize with empty data
+            "dom": '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+
+        // Store all payment data for filtering
+        var allPaymentData = [];
+        var currentSearchTerm = '';
+
         function loadItems(){
             $.ajax({
                 url : "{% url 't_tresorerie:ApiListeDemandePaiement' %}",
                 dataType : 'JSON',
                 type : 'GET',
                 success : function(data){
-                    var html = "";
+                    // Store all data for filtering
+                    allPaymentData = data;
+                    
+                    // Clear existing data
+                    table.clear();
+                    
                     if (data.length > 0){
                         $.each(data, function(index, p){
-                            html += '<tr>';
-                                html += '<td><strong><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'">'+p.nom+" "+p.prenom+'</a></strong></td>';
-                                html += '<td><strong>'+p.motif_label+'</strong></td>';
-                                html += '<td><strong>'+p.amount+' DA</strong></td>';
-                                html += '<td><strong>'+(p.etat == 'en_attente' ? "<span class='badge bg-warning'>En attente de traitement</span>" 
-                                                      : p.etat == 'annulation' ? "<span class='badge bg-danger'>Demande d'annulation</span>" : '') +'</strong></td>';
-                                html += '<td>'+ p.created_at.split('T')[0]+'</td>';
-                               
-                                html += '<td>';
-                                html += '<div class="dropdown d-inline-block">';
-                                html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                html += '<i class="ri-more-fill align-middle"></i>';
-                                html += '</button>';
-                                html += '<ul class="dropdown-menu dropdown-menu-end">';
-                                html += '<li><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
-                                html += '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
-                                html += '<li>';
-                                html += '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">';
-                                html += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
-                                html += '</button>';
-                                html += '</li>';
-                                html += '</ul>';
-                                html += '</div>';
-                                html += '</td>';
-                                html += '</tr>';
+                            var row = [];
+                            row.push('<strong><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'">'+p.nom+" "+p.prenom+'</a></strong>');
+                            row.push('<strong>'+p.motif_label+'</strong>');
+                            row.push('<strong>'+p.amount+' DA</strong>');
+                            row.push('<strong>'+(p.etat == 'en_attente' ? "<span class='badge bg-warning'>En attente de traitement</span>" 
+                                                      : p.etat == 'annulation' ? "<span class='badge bg-danger'>Demande d'annulation</span>" : '') +'</strong>');
+                            row.push(p.created_at.split('T')[0]);
+                            
+                            var actions = '<div class="dropdown d-inline-block">'+
+                                '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+
+                                '<i class="ri-more-fill align-middle"></i>'+
+                                '</button>'+
+                                '<ul class="dropdown-menu dropdown-menu-end">'+
+                                '<li><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
+                                '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>'+
+                                '<li>'+
+                                '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">'+
+                                '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer'+
+                                '</button>'+
+                                '</li>'+
+                                '</ul>'+
+                                '</div>';
+                            row.push(actions);
+                            
+                            // Add row to table
+                            table.row.add(row);
                         });
-                    }else{
-                                html = "<tr><td colspan=7 class='text-muted text-center'>Aucune données disponible</td><tr>";
                     }
 
-                    $('#listItem').html(html);
+                    // Draw the table
+                    table.draw();
                 }
             });
         }
@@ -289,17 +377,164 @@
             });
         }
 
+        // Search functionality
+        $('#table-filter').on('keyup', function() {
+            console.log('Search term:', this.value); // Debug log
+            currentSearchTerm = this.value.toLowerCase();
+            applyFilters();
+        }).on('focus', function() {
+            console.log('Search input focused'); // Debug log
+        }).on('click', function() {
+            console.log('Search input clicked'); // Debug log
+        });
+        
+        // Enhanced filtering that combines search and date filters
+        function applyFilters() {
+            var dateFrom = $('#dateFrom').val();
+            var dateTo = $('#dateTo').val();
+            
+            // Clear existing data
+            table.clear();
+            
+            var filteredData = allPaymentData;
+            
+            // Apply search filter
+            if (currentSearchTerm) {
+                filteredData = filteredData.filter(function(payment) {
+                    // Search in client name, motif, amount, and status
+                    return (
+                        (payment.nom && payment.nom.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.prenom && payment.prenom.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.motif_label && payment.motif_label.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.amount && payment.amount.toString().includes(currentSearchTerm)) ||
+                        (payment.etat && payment.etat.toLowerCase().includes(currentSearchTerm))
+                    );
+                });
+            }
+            
+            // Apply date filtering if dates are provided
+            if (dateFrom || dateTo) {
+                filteredData = filteredData.filter(function(payment) {
+                    var paymentDate = new Date(payment.created_at);
+                    
+                    if (dateFrom && dateTo) {
+                        var fromDate = new Date(dateFrom);
+                        var toDate = new Date(dateTo);
+                        toDate.setHours(23, 59, 59, 999); // Include the entire end date
+                        return paymentDate >= fromDate && paymentDate <= toDate;
+                    } else if (dateFrom) {
+                        var fromDate = new Date(dateFrom);
+                        return paymentDate >= fromDate;
+                    } else if (dateTo) {
+                        var toDate = new Date(dateTo);
+                        toDate.setHours(23, 59, 59, 999); // Include the entire end date
+                        return paymentDate <= toDate;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Add filtered data to table
+            if (filteredData.length > 0){
+                $.each(filteredData, function(index, p){
+                    var row = [];
+                    row.push('<strong><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'">'+p.nom+" "+p.prenom+'</a></strong>');
+                    row.push('<strong>'+p.motif_label+'</strong>');
+                    row.push('<strong>'+p.amount+' DA</strong>');
+                    row.push('<strong>'+(p.etat == 'en_attente' ? "<span class='badge bg-warning'>En attente de traitement</span>" 
+                                              : p.etat == 'annulation' ? "<span class='badge bg-danger'>Demande d'annulation</span>" : '') +'</strong>');
+                    row.push(p.created_at.split('T')[0]);
+                    
+                    var actions = '<div class="dropdown d-inline-block">'+
+                        '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+
+                        '<i class="ri-more-fill align-middle"></i>'+
+                        '</button>'+
+                        '<ul class="dropdown-menu dropdown-menu-end">'+
+                        '<li><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
+                        '<li><button '+(p.etat == 'rejete' ? 'hidden' : '')+' id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>'+
+                        '<li>'+
+                        '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">'+
+                        '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer'+
+                        '</button>'+
+                        '</li>'+
+                        '</ul>'+
+                        '</div>';
+                    row.push(actions);
+                    
+                    // Add row to table
+                    table.row.add(row);
+                });
+            }
+            
+            // Draw the table
+            table.draw();
+            
+            // Update statistics based on filtered data
+            updateFilteredStatistics(filteredData);
+        }
+        
+        // Date filtering functionality
+        function filterByDateRange() {
+            applyFilters();
+        }
+        
+        // Update statistics based on filtered data
+        function updateFilteredStatistics(filteredData) {
+            var total = filteredData.length;
+            var pending = 0;
+            var approved = 0;
+            var totalMontant = 0;
+            
+            $.each(filteredData, function(index, p) {
+                if (p.etat == 'en_attente') {
+                    pending++;
+                } else if (p.etat != 'annulation') {
+                    approved++;
+                }
+                
+                totalMontant += parseFloat(p.amount) || 0;
+            });
+            
+            // Mettre à jour les statistiques
+            $('#totalPaiements').text(total);
+            $('#pendingPaiements').text(pending);
+            $('#approvedPaiements').text(approved);
+            $('#totalMontant').text(totalMontant.toLocaleString('fr-FR') + ' DA');
+        }
+
         // Charger les données initiales
         loadItems();
         loadStatistics();
 
         // Rafraîchir les données
         $(document).on('click', '#refreshPaiements', function(){
-            // Afficher un indicateur de chargement
-            $('#listItem').html('<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></td></tr>');
-            
             loadItems();
             loadStatistics();
+            // Clear date filters and search
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            $('#table-filter').val('');
+            currentSearchTerm = '';
+        });
+
+        // Date filter button
+        $(document).on('click', '#filterByDate', function(){
+            filterByDateRange();
+        });
+        
+        // Clear date filter button
+        $(document).on('click', '#clearDateFilter', function(){
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            applyFilters();
+        });
+        
+        // Also filter when pressing Enter in date fields
+        $(document).on('keypress', '#dateFrom, #dateTo', function(e){
+            if (e.which === 13) { // Enter key
+                filterByDateRange();
+            }
         });
 
         $(document).on('click', '#deleteConfirmation', function(){

@@ -96,6 +96,11 @@ def ApiStoreClientPaiement(request):
         mode_paiement = modePaiement,
         reference_paiement = reference
     )
+
+    update_due_paiement= DuePaiements.objects.get(id = id_due_paiement)
+    update_due_paiement.is_done = True
+    update_due_paiement.save()
+
     return JsonResponse({"status" : "success"})
  
 

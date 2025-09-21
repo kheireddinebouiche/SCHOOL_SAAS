@@ -64,8 +64,9 @@ def ApiGetDetailsDemandePaiement(request):
     due_paiement_data = []
     paiements_done_data = []
     has_due_paiement = False
+    has_paiement = False
 
-    due_paiement = DuePaiements.objects.filter(client = obj.client)
+    due_paiement = DuePaiements.objects.filter(client = obj.client, is_done=False)
 
     if due_paiement.count() > 0:
         has_due_paiement = True
@@ -82,12 +83,17 @@ def ApiGetDetailsDemandePaiement(request):
 
     done_paiements = Paiements.objects.filter(prospect = obj.client)
     if done_paiements.count()>0:
+        has_paiement = True
         for i in done_paiements:
             paiements_done_data.append({
-                'montant_paye'
-                'date_paiement'
-                'reference_paiement'
+                'montant_paye' : i.montant_paye,
+                'date_paiement' : i.date_paiement,
+                'num' : i.num,
+                'reference_paiement' : i.reference_paiement,
             })
+
+    else:
+        paiements_done_data = []
 
     obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
     if obj_echeacncier_speial:
@@ -169,6 +175,8 @@ def ApiGetDetailsDemandePaiement(request):
         'echeancier_special_state_approuvel' : echeancier_state_approuvel,
         "has_due_paiement" : has_due_paiement,
         "due_paiement_data" : due_paiement_data,
+        "has_paiement" : has_paiement,
+        "paiements_done_data" : paiements_done_data,
     }
 
     return JsonResponse(data, safe=False)
