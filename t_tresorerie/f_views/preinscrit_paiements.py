@@ -39,8 +39,8 @@ def ApiGetPaiementRequestDetails(request):
         }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
-            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant'])  
-            print(i['libelle'], i['montant'])   
+            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'])  
+               
              
         return JsonResponse({"status":"success"})
     
@@ -72,3 +72,31 @@ def ApiApplyRemiseToPaiement(request):
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiStoreClientPaiement(request):
+    echeance = request.POST.get('echeance')
+    datePaiement = request.POST.get('datePaiement')
+    montant = request.POST.get('montant')
+    modePaiement = request.POST.get('modePaiement')
+    reference = request.POST.get('reference')
+    observation = request.POST.get('observation')
+    clientId = request.POST.get('clientId')
+    id_due_paiement = request.POST.get('id_due_paiement')
+
+    
+    Paiements.objects.create(
+        due_paiements = DuePaiements.objects.get(id = id_due_paiement),
+        prospect = Prospets.objects.get(id = clientId),
+        montant_paye = montant,
+        date_paiement = datePaiement,
+        observation = observation,
+        mode_paiement = modePaiement,
+        reference_paiement = reference
+    )
+    return JsonResponse({"status" : "success"})
+ 
+
+    

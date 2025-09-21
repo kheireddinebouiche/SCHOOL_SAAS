@@ -59,6 +59,8 @@ class DuePaiements(models.Model):
     montant_due = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     date_echeance = models.DateField(null=True, blank=True)
 
+    is_done = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
@@ -66,22 +68,19 @@ class DuePaiements(models.Model):
         return self.label
 
 class Paiements(models.Model):
+    num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de paiement")
+    due_paiements = models.ForeignKey(DuePaiements, on_delete=models.CASCADE, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     montant_paye = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
 
-    mode_paiement = models.CharField(
-        max_length=100, null=True, blank=True,
-        choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')]
-    )
+    mode_paiement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
 
     paiement_label = models.CharField(max_length=100, null=True, blank=True)
     
     is_frais_inscription = models.BooleanField(default=False)
-    reference_paiement = models.CharField(
-        max_length=100, null=True, blank=True, unique=True,
-        help_text="Numéro séquentiel de paiement"
-    )
+    reference_paiement = models.CharField(max_length=100, null=True, blank=True)
 
     is_done = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -91,7 +90,7 @@ class Paiements(models.Model):
         return str(self.montant_paye)
 
     def save(self, *args, **kwargs):
-        if not self.reference_paiement:  # Générer seulement si vide
+        if not self.num:  # Générer seulement si vide
             today = datetime.date.today()
             year = today.year
             month = today.strftime("%m")
@@ -100,8 +99,8 @@ class Paiements(models.Model):
 
             # Chercher le dernier numéro du mois courant
             last_ref = Paiements.objects.filter(
-                reference_paiement__startswith=prefix
-            ).aggregate(max_num=Max("reference_paiement"))["max_num"]
+                num__startswith=prefix
+            ).aggregate(max_num=Max("num"))["max_num"]
 
             if last_ref:
                 last_number = int(last_ref.split("/")[-1])
@@ -110,7 +109,7 @@ class Paiements(models.Model):
                 new_number = 1
 
             # Formater en 3 chiffres (001, 002, …)
-            self.reference_paiement = f"{prefix}{str(new_number).zfill(3)}"
+            self.num = f"{prefix}{str(new_number).zfill(3)}"
 
         super().save(*args, **kwargs)
     
