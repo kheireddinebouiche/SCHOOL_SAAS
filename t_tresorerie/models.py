@@ -185,7 +185,6 @@ class EcheancierPaiementLine(models.Model):
     def __str__(self):
         return self.echeancier.label
 
-
 class EcheancierSpecial(models.Model):
     nombre_tranche = models.IntegerField(null=True, blank=True)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)

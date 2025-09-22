@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
 from t_remise.models import *
+from django.db.models import Sum
+
 
 def AttentesPaiements(request):
     
@@ -70,6 +72,7 @@ def ApiGetDetailsDemandePaiement(request):
 
     if due_paiement.count() > 0:
         has_due_paiement = True
+        total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
         for i in due_paiement:
             due_paiement_data.append({
                 'id_due_paiement' : i.id,
@@ -84,11 +87,14 @@ def ApiGetDetailsDemandePaiement(request):
     done_paiements = Paiements.objects.filter(prospect = obj.client)
     if done_paiements.count()>0:
         has_paiement = True
+        total_paiement = done_paiements.aggregate(total=Sum('montant_paye'))['total'] or 0
         for i in done_paiements:
             paiements_done_data.append({
                 'montant_paye' : i.montant_paye,
                 'date_paiement' : i.date_paiement,
+                'label_paiements' : i.due_paiements.label,
                 'num' : i.num,
+                'mode_paiement' : i.get_mode_paiement_display(),
                 'reference_paiement' : i.reference_paiement,
             })
 
@@ -165,6 +171,8 @@ def ApiGetDetailsDemandePaiement(request):
         'frais_inscription' : voeux.specialite.formation.frais_inscription,
     }
 
+    total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
+
     data = {
         'user_data' : user_data,
         'voeux' : voeux_data,
@@ -177,6 +185,9 @@ def ApiGetDetailsDemandePaiement(request):
         "due_paiement_data" : due_paiement_data,
         "has_paiement" : has_paiement,
         "paiements_done_data" : paiements_done_data,
+        "total_paiement" : total_paiement if has_paiement else 0,
+        "total_initial" : total_initial if has_due_paiement else 0,
+        "total_solde" : total_solde ,
     }
 
     return JsonResponse(data, safe=False)

@@ -56,7 +56,7 @@ class Entreprise(models.Model):
    
     designation = models.CharField(max_length=255, null=True, blank=True)
     logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
-
+    entete_logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
     rc = models.CharField(max_length=255, null=True, blank=True)
     nif = models.CharField(max_length=255, null=True, blank=True)
     art = models.CharField(max_length=255, blank=True, null=True)
