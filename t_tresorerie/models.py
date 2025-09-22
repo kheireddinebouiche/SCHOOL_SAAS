@@ -57,6 +57,7 @@ class DuePaiements(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     ref_echeancier = models.CharField(max_length=1000, null=True, blank=True)
     montant_due = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    montant_restant = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     date_echeance = models.DateField(null=True, blank=True)
 
     is_done = models.BooleanField(default=False)

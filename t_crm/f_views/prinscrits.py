@@ -13,6 +13,8 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
 from .generate_paiements import ApiGeneratePaiementRequest
+from django.db.models import Q
+
 
 @login_required(login_url='intitut_app:login')
 def ListeDesPrinscrits(request):
@@ -24,7 +26,8 @@ def ListeDesPrinscrits(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
-    liste = Prospets.objects.filter(statut = "prinscrit").values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    #liste = Prospets.objects.filter(statut = "prinscrit").values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance")).values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
     for i in liste:
         i_obj = Prospets.objects.get(id=i['id'])
         i['etat_label'] = i_obj.get_etat_display()

@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
 from t_crm.models import RemiseAppliquer
+from django.db.models import Q
 
 
 
@@ -55,6 +56,7 @@ def ApiStorePaiements(client,label,date_echeance,montant):
             client = client,
             label = label,
             montant_due = montant,
+            montant_restant = montant,
             date_echeance = date_echeance
         )
     except:
@@ -97,11 +99,46 @@ def ApiStoreClientPaiement(request):
         reference_paiement = reference
     )
 
+    if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):
+        montant_restant = 0
+    else:
+        montant_restant = Decimal(DuePaiements.objects.get(id = id_due_paiement).montant_restant) - Decimal(montant)
+
     update_due_paiement= DuePaiements.objects.get(id = id_due_paiement)
     update_due_paiement.is_done = True
+    update_due_paiement.montant_restant = montant_restant
     update_due_paiement.save()
 
     return JsonResponse({"status" : "success"})
  
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeletePaiement(request):
+    if request.method == "POST":
+        num_bon = request.POST.get('num_bon')   
+        paiement_obj = Paiements.objects.get(num = num_bon) 
+        
+        montant_paye = paiement_obj.montant_paye
 
+        paiement_obj.due_paiements.montant_restant = Decimal(paiement_obj.due_paiements.montant_restant) + Decimal(montant_paye)
+        paiement_obj.due_paiements.is_done = False
+        paiement_obj.due_paiements.save()
+
+        paiement_obj.delete()
+
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error"})
     
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiApplyEcheancierSpecial(request):
+    if request.method == "POST":
+        id_echeancier_special = request.POST.get('id_echeancier_special')
+        obj_echeancier_special = EcheancierSpecial.objects.get(id = id_echeancier_special)
+        obj_echeancier_special.is_validate = True
+        obj_echeancier_special.save()
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error"})

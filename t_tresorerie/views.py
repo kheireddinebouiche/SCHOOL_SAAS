@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
 from t_remise.models import *
 from django.db.models import Sum
+from django.db.models import Q
 
 
 def AttentesPaiements(request):
@@ -68,7 +69,7 @@ def ApiGetDetailsDemandePaiement(request):
     has_due_paiement = False
     has_paiement = False
 
-    due_paiement = DuePaiements.objects.filter(client = obj.client, is_done=False)
+    due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
     if due_paiement.count() > 0:
         has_due_paiement = True
@@ -77,6 +78,7 @@ def ApiGetDetailsDemandePaiement(request):
             due_paiement_data.append({
                 'id_due_paiement' : i.id,
                 'montant_due'  : i.montant_due,
+                'montant_restant' : i.montant_restant,
                 'label' : i.label,
                 'date_echeance' : i.date_echeance,
             })
@@ -179,6 +181,7 @@ def ApiGetDetailsDemandePaiement(request):
         'echeancier' : list(echeancier_data),
         'remise' : remiseDatas,
         'has_special_echeancier' : has_special_echeancier,
+        'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
         'special_echeancier_line' : list(special_echeancier_data),
         'echeancier_special_state_approuvel' : echeancier_state_approuvel,
         "has_due_paiement" : has_due_paiement,

@@ -2192,6 +2192,7 @@
         var clientId = null; // Variable to store client ID
         let has_special_echeancier = false;
         let specialEcheancierState = false;
+        let IdSpecialEcheancier = null; 
         
        
         function HideReducNotif(){
@@ -2200,12 +2201,12 @@
             let appliedRedu = document.getElementById('reductionSuccessNotification');
             
             if (reductionApprouved){
-                appliedRedu.style.display = "flex";
+                appliedRedu.style.setProperty("display", "flex", "important");
 
             }else if (hasReduction && !reductionApprouved) {
-                 notif.style.display = "flex";  
+                 notif.style.setProperty("display", "flex", "important");  
             }else {
-                notif.style.display = "none";
+                notif.style.setProperty("display", "none", "important");
             }
 
            
@@ -2222,7 +2223,7 @@
                     btn.disabled = true;
                     
                 } else {
-                    special_notif.style.setProperty("display", "flex", "important");
+                    special_notif.style.setProperty("display", "none", "important");
                     exam_special_notif.style.setProperty("display", "none", "important");
                     btn.disabled = true;
                     btn.title = ""; // enlever le message
@@ -2320,7 +2321,7 @@
                     if(data.has_special_echeancier){
                         has_special_echeancier = true;
                         specialEcheancierState = data.echeancier_special_state_approuvel;
-                       
+                        IdSpecialEcheancier = data.id_echeancier_special;
 
                         HideSpecialEcheancierNotif();
                         var rowSpecial = "";
@@ -2350,7 +2351,7 @@
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
                             duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + parseFloat(item.montant_due).toFixed(2) + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + parseFloat(item.montant_due).toFixed(2) + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + parseFloat(item.montant_restant).toFixed(2) + ' DA</span></td>';
                             duePaiementHtml += '</td>';
                             duePaiementHtml += '</tr>';
                         });
@@ -2365,7 +2366,7 @@
                     }
                     
                     // Ajouter les autres échéances
-                    $.each(data.echeancier, function(index, echeance){
+                    $.each(data.echeancier, function(index, echeance){ 
                         var label = "Tranche " + (index + 1);
                         
                         echeancierHtml += '<tr>';
@@ -2441,6 +2442,9 @@
                         });
                         $('#NbrPaiementDone').text(count);
                         $('#ListePaiementRequestLineDone').html(row);
+                    }else{
+                        $('#ListePaiementRequestLineDone').html('<tr><td colspan="6" class="text-center">Aucun paiement effectué</td></tr>');
+                        $('#NbrPaiementDone').text('0');
                     }
                     $('#echeancierTable').html(echeancierHtml);
                     SummeryPaiement(data.total_paiement,data.total_initial,data.total_solde);
@@ -3087,11 +3091,11 @@
                 
                 // Vérifier que la ligne n'est pas vide
                 if (label && montant) {
-                    var optionText = label + " - " + montant;
+                    var optionText = label + " - " + restant;
                     if (date) {
                         optionText += " - Échéance: " + date;
                     }
-                    echeancesOptions += '<option data-id_due_paiement = "'+ id_due_paiement +'" value="' + label + '" data-montant="' + montant.replace(" DA", "") + '">' + optionText + '</option>';
+                    echeancesOptions += '<option data-id_due_paiement = "'+ id_due_paiement +'" value="' + label + '" data-montant="' + restant.replace(" DA", "") + '">' + optionText + '</option>';
                 }
             });
             
@@ -3475,7 +3479,7 @@
         // Confirmation de suppression
         $(document).on('click', '#confirmDeleteBtn', function(){
             var num_bon = $(this).data('id');
-            $.ajax{(
+            $.ajax({
                 url : "{% url 't_tresorerie:ApiDeletePaiement' %}",
                 dataType : "JSON",
                 type : "POST",
@@ -3493,7 +3497,7 @@
                     }
                 }
                 
-            )};
+        });
             $('.deleteModal').modal('hide');
         });
         
@@ -3510,6 +3514,30 @@
             // À implémenter : Logique de demande de remboursement
             alert("Fonctionnalité de demande de remboursement - à implémenter");
             $('.refundModal').modal('hide');
+        });
+
+        $(document).on('click', '#confirmApplyEcheancierSpecialBtn', function(){
+
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiApplyEcheancierSpecial' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'id_echeancier_special' : IdSpecialEcheancier,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("L'échéancier spécial a été appliqué avec succès");
+                        loadDatas();
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+
+                    }
+                }
+            });
+            $('#specialEcheancierModal').modal('hide');
+
         });
         
     });
