@@ -199,6 +199,7 @@ def ApiLoadRequiredDocs(request):
     return JsonResponse(list(files), safe=False)
 
 @login_required(login_url='institut_app:login')
+@transaction.atomic
 def add_document(request):
     if request.method == "POST":
         try:
@@ -343,7 +344,7 @@ def ApiStoreRappelPreinscrit(request):
 
 def get_prospects_incomplets():
     # Tous les prospects préinscrits
-    prospects = Prospets.objects.filter(type_prospect="particulier", statut="prinscrit")
+    prospects = Prospets.objects.filter(type_prospect="particulier").filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit"))
     results = []
 
     for prospect in prospects:
