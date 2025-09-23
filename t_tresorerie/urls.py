@@ -68,6 +68,6 @@ urlpatterns = [
     path("ApiApplyEcheancierSpecial", ApiApplyEcheancierSpecial, name="ApiApplyEcheancierSpecial"),
 
 
-
+    path('ApiConfirmInscription', ApiConfirmInscription, name="ApiConfirmInscription"),
     
 ]

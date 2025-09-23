@@ -142,3 +142,8 @@ def ApiApplyEcheancierSpecial(request):
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiConfirmInscription(request):
+    pass
