@@ -339,6 +339,76 @@
                 </div>
             </div>
 
+            <!-- Situation financière -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-money-euro-circle-line text-success fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-success mb-1">Situation financière</h5>
+                                        <p class="text-muted small mb-0">État des paiements du pré-inscrit</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-success bg-opacity-10 text-success rounded-circle">
+                                                    <i class="ri-money-euro-circle-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Montant total</h6>
+                                            <h4 class="mb-0 fw-bold text-success" id="montant-total">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle">
+                                                    <i class="ri-bank-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Montant payé</h6>
+                                            <h4 class="mb-0 fw-bold text-info" id="montant-payé">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle">
+                                                    <i class="ri-alert-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Solde</h6>
+                                            <h4 class="mb-0 fw-bold text-warning" id="solde">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Rappels & Notes -->
             <div class="row">
                 <!-- Rappels & Rendez-vous -->
@@ -2092,6 +2162,7 @@
         let id  = "{{ pk }}";
         var hasHandicap=null;
         let dergorationStatus = false;
+        let inscription_validated = false;
 
         // Fonction pour charger les notes
         function loadNotes(){
@@ -2282,6 +2353,10 @@
                     $('#wilaya').val(data.wilaya);
                     $('#code_zip').val(data.code_zip);
                     $('#lieu_naissance').val(data.lieu_naissance);
+
+                    if(data.statut_key !== "prinscrit"){
+                        document.getElementById("validatePreinscritBtn").disabled = true;
+                    };
                 }
             });
         }
@@ -2518,6 +2593,7 @@
         loadPersonalInfos();
         loadRappelRendezVous();
         loadDocuments();
+        loadFinancialData(); // Charger les données financières
         //CheckCompletedDocs();
         
         // Initialiser l'état des boutons de navigation
@@ -3016,14 +3092,15 @@
                 },
 
                 success : function(response){
-                    if (response.status == "success"){
-                            alertify.success(response.message);
-                            $('#confirmAdditionalInfoModal').modal('hide');
-                            loadPersonalInfos();    
-                    }else{
-                        alertify.error("Une erreur c'est produite lors du traitement de la requête");
-                    }
+                if (response.status == "success"){
+                        alertify.success(response.message);
+                        $('#confirmAdditionalInfoModal').modal('hide');
+                        loadPersonalInfos();
+                        loadFinancialData(); // Recharger les données financières après mise à jour
+                }else{
+                    alertify.error("Une erreur c'est produite lors du traitement de la requête");
                 }
+            }
             })
         }
         
@@ -3326,6 +3403,37 @@
                 }
             });      
         });
+
+        // Fonction pour charger les données financières du pré-inscrit
+        function loadFinancialData(){
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadFinancialData' %}",
+                dataType: "JSON",
+                type: "GET",
+                data : {'id_preinscrit' : id},
+                success: function(data){
+                    // Mise à jour des éléments avec les données financières
+                    $('#montant-total').text(data.montant_total + ' DZD');
+                    $('#montant-payé').text(data.montant_paye + ' DZD');
+                    $('#solde').text(data.solde + ' DZD');
+                    
+                    // Mise à jour des couleurs en fonction du solde
+                    if (data.solde > 0) {
+                        $('#solde').removeClass('text-success text-info').addClass('text-warning');
+                    } else if (data.solde < 0) {
+                        $('#solde').removeClass('text-success text-warning').addClass('text-info');
+                    } else {
+                        $('#solde').removeClass('text-info text-warning').addClass('text-success');
+                    }
+                },
+                error: function(){
+                    // En cas d'erreur, afficher des valeurs par défaut
+                    $('#montant-total').text('0,00 DZD');
+                    $('#montant-payé').text('0,00 DZD');
+                    $('#solde').text('0,00 DZD');
+                }
+            });
+        }
 
         function loadRemiderDetailsForUpdate(id_rendez_vous){
             $.ajax({

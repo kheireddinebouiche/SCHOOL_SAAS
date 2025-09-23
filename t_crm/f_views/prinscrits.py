@@ -54,6 +54,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
 
     data = {
         'id': prospect.id,
+        'statut_key' : prospect.statut,
         'statut': prospect.get_statut_display(), 
         'nom': prospect.nom,
         'prenom': prospect.prenom,
@@ -506,3 +507,6 @@ def ApiValidatePreinscrit(request):
     except:
         return JsonResponse({"status":"error",'message' : "Une erreur systeme c'est produite, veuillez contacter l'administrateur"})
 
+@login_required(login_url="institut_app:login")
+def ApiLoadFinancialData(request):
+    pass
