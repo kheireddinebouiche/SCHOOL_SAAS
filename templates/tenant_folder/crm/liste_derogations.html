@@ -327,6 +327,9 @@
         </div>
       </div>
       <div class="modal-footer border-0 bg-light-subtle px-4 py-3">
+        <button type="button" class="btn btn-info px-4 py-2" id="voirDossiersManquantsBtn" data-id="">
+          <i class="ri-folder-info-line me-2"></i>Voir dossiers manquants
+        </button>
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
           <i class="ri-close-line me-2"></i>Fermer
         </button>
@@ -443,6 +446,66 @@
   </div>
 </div>
 
+<!-- Modal Dossiers Manquants -->
+<div class="modal fade" id="dossiersManquantsModal" tabindex="-1" aria-labelledby="dossiersManquantsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-folder-info-line text-info fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-info mb-1" id="dossiersManquantsModalLabel">
+              Dossiers manquants
+            </h5>
+            <p class="text-muted small mb-0">Liste des documents non fournis par le pré-inscrit</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-warning d-flex align-items-center rounded-3 mb-4 border-start border-4 border-warning">
+          <div class="flex-shrink-0 me-3">
+            <i class="ri-information-line fs-4 text-warning"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">Documents requis</h6>
+            <p class="mb-0">
+              Voici la liste des documents obligatoires qui n'ont pas encore été fournis par le pré-inscrit.
+            </p>
+          </div>
+        </div>
+        
+        <div class="table-responsive rounded-3 border">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+              <tr>
+                <th class="border-0 rounded-start">Document requis</th>
+                <th class="border-0 rounded-end text-center">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="listeDossiersManquants" class="border-0">
+              <!-- Les dossiers manquants seront chargés ici dynamiquement -->
+              <tr>
+                <td colspan="2" class="text-center text-muted py-5">
+                  <div class="spinner-border spinner-border-sm me-2 text-info" role="status"></div>
+                  <span class="fw-medium">Chargement des dossiers manquants...</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light-subtle px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2 rounded-3" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function () {
     // Variables globales
@@ -495,6 +558,9 @@
             $('#detail-statut').html(statutBadgeDerogation);
             $('#detail-motif').text(data.motif);
             $('#detail-description').text(data.type);
+            
+            // Stocker l'ID du pré-inscrit dans le bouton
+            $('#voirDossiersManquantsBtn').data('id', data.demandeur_id);
           }
         })
     }
@@ -553,7 +619,7 @@
           row += '<i class="ri-more-2-fill"></i>';
           row += '</button>';
           row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 btn-details" data-id="' + item.id + '">';
+          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 btn-details" data-demandeur="'+item.demandeur+'" data-id="' + item.id + '">';
           row += '<i class="ri-eye-line text-info me-2"></i>Détails</button></li>';
           
           if (item.statut === "en_attente") {
@@ -604,14 +670,69 @@
     
     // Gestionnaire d'événements pour le bouton "Détails"
     $(document).on('click', '.btn-details', function(){
-      const derogationId = $(this).data('id');
+      const derogationId = $(this).data('demandeur');
       loadDerogationDetails(derogationId);
       
       // Mettre à jour l'ID de la dérogation pour le bouton traiter
       $('.btn-traiter-modal').data('id', derogationId);
+      $('#voirDossiersManquantsBtn').data('id', derogationId);
       
       // Afficher la modale
       $('#detailsDerogationModal').modal('show');
+    });
+    
+    // Fonction pour charger les dossiers manquants
+    function loadDossiersManquants(id_preinscrit) {
+      $.ajax({
+        url: "{% url 't_crm:check_all_required_docs' %}",
+        dataType: "JSON",
+        type: 'GET',
+        data: {'id_prospect': id_preinscrit},
+        success: function(data) {
+          var html = "";
+          
+          if (data.missing_docs && data.missing_docs.length > 0) {
+            $.each(data.missing_docs, function(index, doc) {
+              html += "<tr>";
+              html += "<td>" + doc.label + "</td>";
+              html += "<td class='text-center'>";
+              html += "<span class='badge bg-danger-subtle text-danger px-2 py-1'>";
+              html += "<i class='ri-close-circle-line me-1'></i>Manquant";
+              html += "</span>";
+              html += "</td>";
+              html += "</tr>";
+            });
+          } else {
+            html += "<tr>";
+            html += "<td colspan='2' class='text-center text-success'>";
+            html += "<i class='ri-checkbox-circle-line fs-4 me-2'></i>";
+            html += "Tous les documents requis ont été fournis";
+            html += "</td>";
+            html += "</tr>";
+          }
+          
+          $('#listeDossiersManquants').html(html);
+        },
+        error: function() {
+          $('#listeDossiersManquants').html(
+            "<tr><td colspan='2' class='text-center text-danger'>Erreur lors du chargement des documents</td></tr>"
+          );
+        }
+      });
+    }
+    
+    // Gestionnaire d'événements pour le bouton "Voir dossiers manquants"
+    $(document).on('click', '#voirDossiersManquantsBtn', function(){
+      const preinscritId = $(this).data('id');
+      console.log("Pré-inscrit ID:", preinscritId);
+      // Fermer la modale de détails
+      $('#detailsDerogationModal').modal('hide');
+      
+      // Charger les dossiers manquants
+      loadDossiersManquants(preinscritId);
+      
+      // Afficher la modale des dossiers manquants
+      $('#dossiersManquantsModal').modal('show');
     });
     
     // Gestionnaire d'événements pour le bouton "Traiter" (dans le dropdown)

@@ -260,7 +260,7 @@ def DeleteDocumentPreinscrit(request):
 def check_all_required_docs(request):
     prospect_id = request.GET.get("id_prospect")
     try:
-        fiche_voeux = FicheDeVoeux.objects.get(prospect_id=prospect_id)
+        fiche_voeux = FicheDeVoeux.objects.get(prospect__id=prospect_id)
         formation = fiche_voeux.specialite.formation
     except FicheDeVoeux.DoesNotExist:
         return JsonResponse({
