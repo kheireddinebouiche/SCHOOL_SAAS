@@ -37,7 +37,6 @@ class ClientPaiementsRequest(models.Model):
     def __str__(self):
         return f"{self.client.nom}"
 
-
 class clientPaiementsRequestLine(models.Model):
     paiement_request = models.ForeignKey(ClientPaiementsRequest, on_delete=models.DO_NOTHING, null=True)
     montant_paye = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -71,7 +70,7 @@ class DuePaiements(models.Model):
 class Paiements(models.Model):
     num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de paiement")
     due_paiements = models.ForeignKey(DuePaiements, on_delete=models.CASCADE, null=True, blank=True)
-    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="paiements")
     montant_paye = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
@@ -84,6 +83,8 @@ class Paiements(models.Model):
     reference_paiement = models.CharField(max_length=100, null=True, blank=True)
     context = models.CharField(max_length=100, null=True, blank=True,choices=[('frais_f','Frais de formation'),('autre','Autres'),('dette','Module en dette')])
 
+    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True, related_name="promo_paiements")
+    
     is_done = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

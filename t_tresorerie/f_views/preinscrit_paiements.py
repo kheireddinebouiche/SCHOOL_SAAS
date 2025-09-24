@@ -172,3 +172,8 @@ def ApiRequestRefundPaiement(request):
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institut_app:login")
+def SuivieEcheancier(request):
+    return render(request, 'tenant_folder/comptabilite/echeancier/suivie_echeancier.html')

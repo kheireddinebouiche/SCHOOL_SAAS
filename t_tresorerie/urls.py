@@ -3,6 +3,7 @@ from .views import *
 from .f_views.echeancier import *
 from .f_views.preinscrit_paiements import *
 from .f_views.echeancier_special import *
+from .f_views.suivie_echeancier import *
 
 app_name="t_tresorerie"
 
@@ -75,5 +76,10 @@ urlpatterns = [
 
     path('ApiAccepteRembourssement', ApiAccepteRembourssement, name="ApiAccepteRembourssement"),
     path('ApiRejectRembourssement', ApiRejectRembourssement, name="ApiRejectRembourssement"),
+
+    path('suivie-des-echeanciers/', SuivieEcheancier, name="SuivieEcheancier"),
+    path('ApiLoadConvertedProspects', ApiLoadConvertedProspects, name="ApiLoadConvertedProspects"),
+
+    path('details-suivie-echeancier/<int:pk>/', DetailsEcheancierClient, name="DetailsEcheancierClient"),
 
 ]

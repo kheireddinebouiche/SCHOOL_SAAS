@@ -78,8 +78,8 @@ class Prospets(models.Model):
         return f"{self.nom} {self.prenom}"
 
 class FicheDeVoeux(models.Model):
-    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
-    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True)
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux")
+    specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialite_fiche_voeux")
     promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_fiche_voeux", limit_choices_to={'etat':'active'})
     commentaire = models.CharField(max_length=1000, null=True, blank=True)
 
@@ -277,7 +277,6 @@ class CrmCounter(models.Model):
     def __str__(self):
         return self.date_counter
     
-
 class RemiseAppliquer(models.Model):
     remise  = models.ForeignKey(Remises, on_delete=models.CASCADE, null=True, blank=True)
     is_approuved = models.BooleanField(default=False)
@@ -289,7 +288,6 @@ class RemiseAppliquer(models.Model):
     def __str__(self):
         return self.remise.label
     
-
 class RemiseAppliquerLine(models.Model):
     remise_appliquer = models.ForeignKey(RemiseAppliquer, null=True, blank=True, on_delete=models.CASCADE)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
