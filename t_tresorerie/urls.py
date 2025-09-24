@@ -72,5 +72,8 @@ urlpatterns = [
     path('ApiRequestRefundPaiement', ApiRequestRefundPaiement, name="ApiRequestRefundPaiement"),
     path('ApiLoadRefundData', ApiLoadRefundData, name="ApiLoadRefundData"),
     path('ApiLoadRefundDetails', ApiLoadRefundDetails, name="ApiLoadRefundDetails"),
-    
+
+    path('ApiAccepteRembourssement', ApiAccepteRembourssement, name="ApiAccepteRembourssement"),
+    path('ApiRejectRembourssement', ApiRejectRembourssement, name="ApiRejectRembourssement"),
+
 ]

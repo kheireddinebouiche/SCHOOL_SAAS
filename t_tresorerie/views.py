@@ -68,6 +68,7 @@ def ApiLoadRefundDetails(request):
         paiement_lines = Paiements.objects.filter(prospect = obj.client, context='frais_f').aggregate(total=Sum('montant_paye'))['total'] or 0
 
         data= {
+            'client_id': obj.client.id,
             'client_nom' : obj.client.nom,
             'client_prenom' : obj.client.prenom,
             'motif_rembourssement' : obj.motif_rembourssement,
@@ -79,7 +80,27 @@ def ApiLoadRefundDetails(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Méthode non autorisée"}, status=405)
         
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAccepteRembourssement(request):
+    montantRembourser = request.GET.get('montantRembourser')
+    dateRemboursement = request.GET.get('dateRemboursement')
+    modePaiement = request.GET.get('modePaiement')
+    client = request.GET.get('client')
 
+    data= {
+        'montantRembourser' : montantRembourser,
+        'dateRemboursement' : dateRemboursement,
+        'modePaiement' : modePaiement,
+        'client' : client,
+    }
+
+    return JsonResponse({'status' : 'success', 'data' : data})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiRejectRembourssement(request):
+    pass
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")

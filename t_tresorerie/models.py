@@ -132,10 +132,12 @@ class Rembourssements(models.Model):
         return self.paiements
 
 class PaiementRemboursement(models.Model):
+    client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     remboursement = models.ForeignKey(Rembourssements, on_delete=models.CASCADE, related_name="paiements_rembourses")
     paiement = models.ForeignKey(Paiements, on_delete=models.CASCADE, related_name="remboursements")
     montant = models.DecimalField(max_digits=20, decimal_places=2)
-
+    mode_paiement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
+    date_remboursement = models.DateField(null=True, blank=True)
     def __str__(self):
         return f"Remboursement {self.remboursement.id} - Paiement {self.paiement.id} : {self.montant}"
 

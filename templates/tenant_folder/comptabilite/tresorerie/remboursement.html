@@ -410,26 +410,19 @@
             <div class="modal-body p-4">
                 <form id="traitementForm">
                     <div class="mb-3">
-                        <label for="montantPaye" class="form-label fw-medium">Montant déjà payé (DA)</label>
-                        <input disabled type="number" class="form-control border-0 bg-light py-2" id="montantPaye" name="montantPaye" placeholder="Saisir le montant déjà payé">
-                    </div>
-                    <div class="mb-3">
-                        <label for="montantRembourser" class="form-label fw-medium">Montant à rembourser (DA)</label>
-                        <input type="number" class="form-control border-0 bg-light py-2" id="montantRembourser" name="montantRembourser" placeholder="Saisir le montant à rembourser">
-                    </div>
-                    <div class="mb-3">
-                        <label for="dateRemboursement" class="form-label fw-medium">Date de remboursement</label>
-                        <input type="date" class="form-control border-0 bg-light py-2" id="dateRemboursement" name="dateRemboursement">
-                    </div>
-                    <div class="mb-3">
-                        <label for="modePaiement" class="form-label fw-medium">Mode de paiement</label>
-                        <select class="form-select border-0 bg-light py-2" id="modePaiement" name="modePaiement">
-                            <option value="">Sélectionner un mode de paiement</option>
-                            <option value="espece">Espèce</option>
-                            <option value="cheque">Chèque</option>
-                            <option value="virement">Virement bancaire</option>
-                            <option value="carte_bancaire">Carte bancaire</option>
+                        <label for="decisionTraitement" class="form-label fw-medium">Décision</label>
+                        <select class="form-select border-0 bg-light py-2" id="decisionTraitement" name="decisionTraitement">
+                            <option value="">Sélectionner une décision</option>
+                            <option value="accepter">Accepter</option>
+                            <option value="rejeter">Rejeter</option>
                         </select>
+                    </div>
+                    <div id="additionalFields">
+                        <!-- Additional fields will be loaded here based on selection -->
+                    </div>
+                    <div class="mb-3" id="motifRejetGroup" style="display: none;">
+                        <label for="motifRejet" class="form-label fw-medium">Motif de rejet</label>
+                        <textarea class="form-control border-0 bg-light" id="motifRejet" name="motifRejet" placeholder="Saisir le motif de rejet" rows="3"></textarea>
                     </div>
                 </form>
             </div>
@@ -469,6 +462,7 @@
         // Store all refund data for filtering
         var allRefundData = [];
         var currentSearchTerm = '';
+    
 
         function loadItems(){
             $.ajax({
@@ -482,10 +476,6 @@
                     var html = "";
                     if (data.length > 0){
                         $.each(data, function(index, p){
-                            // Create client name initials for avatar
-                            var nom = p.client__nom || '';
-                            var prenom = p.client__prenom || '';
-                            // Format the status
                             var statusClass = '';
                             var statusText = '';
                             switch(p.etat) {
@@ -525,7 +515,7 @@
                            html +="            <i class='ri-more-2-fill'></i>";
                            html +="        </button>";
                            html +="        <ul class='dropdown-menu dropdown-menu-end border-0 shadow-sm'>";
-                           html +="            <li><button id='detailsBtn' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
+                           html +="            <li><button id='detailsBtn' data-client='" + p.client__id + "' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
                            html +="            <li><button id='deleteConfirmation' data-id='" + p.id + "' class='dropdown-item remove-item-btn d-flex align-items-center text-danger'><i class='ri-delete-bin-line me-2'></i>Supprimer</button></li>";
                            html +="        </ul>";
                            html +="    </div>";
@@ -670,7 +660,7 @@
                    html +="            <i class='ri-more-2-fill'></i>";
                    html +="        </button>";
                    html +="        <ul class='dropdown-menu dropdown-menu-end border-0 shadow-sm'>";
-                   html +="            <li><button id='detailsBtn' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
+                   html +="            <li><button id='detailsBtn'  data-client='" + p.client__id + "' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
                    html +="            <li><button id='deleteConfirmation' data-id='" + p.id + "' class='dropdown-item remove-item-btn d-flex align-items-center text-danger'><i class='ri-delete-bin-line me-2'></i>Supprimer</button></li>";
                    html +="        </ul>";
                    html +="    </div>";
@@ -757,8 +747,11 @@
         // Handle details button click
         $(document).on('click', '#detailsBtn', function(){
             var id_demande = $(this).data('id');
+            $('#traiterBtn').data('id', id_demande);
+            var client = $(this).data('client');
+            console.log('Client ID:', client); // Debug log
+            $('#traiterBtn').data('client', $(this).data('client'));
             
-            // Load details for the selected refund request
             loadRefundDetails(id_demande);
         });
         
@@ -772,7 +765,7 @@
                 },
                 type : 'GET',
                 success : function(data){
-                    $('#montantPaye').val(data.paiement_total);
+                   
 
                     $('#detail_client').val(data.client_nom + ' ' + data.client_prenom);
 
@@ -782,55 +775,150 @@
                     $('#detail_statut').val(data.etat);
                     $('#detail_montant').val(data.paiement_total);
                     $('.detailsModal').modal('show');
+
+                    $('#traiterBtn').data('montant_paye', data.paiement_total);
                 }
             });
         }
         
-        // Handle traitement button click
-        $(document).on('click', '#traiterBtn', function(){
-            // Get the ID of the refund from the details modal
-            var refundId = $('.detailsModal').data('refund-id');
-            
-            // Store the refund ID in the traitement modal
-            $('.traitementModal').data('refund-id', refundId);
-            
-            // Show the traitement modal
-            $('.traitementModal').modal('show');
-        });
         
         // Handle traitement button click
         $(document).on('click', '#traiterBtn', function(){
-            // Get the ID of the refund from the details modal
-            // We need to store the refund ID when opening the details modal
-            var refundId = $(this).closest('.modal').find('#detailsBtn').data('id');
-            
-            // Show the traitement modal
+            var id_demande = $(this).data('id');
+            var client = $(this).data('client');
+            $('#validerTraitementBtn').data('client', client);
+            $('#validerTraitementBtn').data('id', id_demande);
+            var montant_paye = $(this).data('montant_paye');
+           
+            $('#decisionTraitement').data('montant_paye', montant_paye);
+
             $('.traitementModal').modal('show');
-            $('.detailsModal').modal('hide');
         });
+        
+        
+        // Handle decision change
+        $(document).on('change', '#decisionTraitement', function(){
+            var decision = $(this).val();
+            var additionalFields = $('#additionalFields');
+            var montant_paye = $(this).data('montant_paye');
+            
+
+            // Clear any existing additional fields
+            additionalFields.empty();
+            
+            if (decision === 'accepter') {
+                additionalFields.html(`
+                    <div class="mb-3">
+                        <label for="montantPaye" class="form-label fw-medium">Montant déjà payé (DA)</label>
+                        <input type="number" class="form-control border-0 bg-light py-2" id="montantPaye" name="montantPaye" placeholder="Saisir le montant déjà payé">
+                    </div>
+                    <div class="mb-3">
+                        <label for="montantRembourser" class="form-label fw-medium">Montant à rembourser (DA)</label>
+                        <input type="number" class="form-control border-0 bg-light py-2" id="montantRembourser" name="montantRembourser" placeholder="Saisir le montant à rembourser">
+                    </div>
+                    <div class="mb-3">
+                        <label for="dateRemboursement" class="form-label fw-medium">Date de remboursement</label>
+                        <input type="date" class="form-control border-0 bg-light py-2" id="dateRemboursement" name="dateRemboursement">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modePaiement" class="form-label fw-medium">Mode de paiement</label>
+                        <select class="form-select border-0 bg-light py-2" id="modePaiement" name="modePaiement">
+                            <option value="">Sélectionner un mode de paiement</option>
+                            <option value="espece">Espèce</option>
+                            <option value="cheque">Chèque</option>
+                            <option value="virement">Virement bancaire</option>
+                            <option value="carte_bancaire">Carte bancaire</option>
+                        </select>
+                    </div>
+                `);
+
+                $('#montantPaye').val(montant_paye);
+                
+                // Hide motif de rejet field
+                $('#motifRejetGroup').hide();
+            } else if (decision === 'rejeter') {
+                // Show motif de rejet field only
+                $('#motifRejetGroup').show();
+            } else {
+                
+                // When no decision is selected, hide everything except the decision
+                $('#motifRejetGroup').hide();
+            }
+        });
+
+
+        function RemboursementAccepter(montantRembourser ,dateRemboursement,modePaiement,client){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiAccepteRembourssement' %}",
+                dataType :"JSON",
+                data : {
+                    'montantRembourser': montantRembourser,
+                    'dateRemboursement': dateRemboursement,
+                    'modePaiement': modePaiement,
+                    'client': client,
+                },
+                type : 'GET',
+                success : function(response){
+                    if(response.status === 'success'){
+                        // Close the modal
+                        $('.traitementModal').modal('hide');
+                        // Refresh the data
+                        alertify.success("Remboursement accepté avec succès");
+                        loadItems();
+                    }else{
+                        alertify.error("Erreur lors du traitement du remboursement");
+                        return;
+                    }
+                    
+                }
+            })
+        }
+
+        function RemboursementRejeter(motifRejet){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiRejectRembourssement' %}",
+            })
+        }
         
         // Handle validation of traitement
         $(document).on('click', '#validerTraitementBtn', function(){
             var refundId = $('.traitementModal').data('refund-id');
-            var montantPaye = $('#montantPaye').val();
-            var montantRembourser = $('#montantRembourser').val();
-            var dateRemboursement = $('#dateRemboursement').val();
-            var modePaiement = $('#modePaiement').val();
-            
-            // Basic validation
-            if (!montantPaye || !montantRembourser) {
-                alertify.error("Veuillez remplir les champs obligatoires");
+            var decision = $('#decisionTraitement').val();
+            var client = $(this).data('client');
+
+            // Validate decision
+            if (!decision) {
+                alertify.error("Veuillez sélectionner une décision");
                 return;
             }
             
-            // In a real application, you would send this data to your server
-            // For now, just show a success message
-            alertify.success("Remboursement traité avec succès");
+            if (decision === 'accepter') {
+                var montantPaye = $('#montantPaye').val();
+                var montantRembourser = $('#montantRembourser').val();
+                var dateRemboursement = $('#dateRemboursement').val();
+                var modePaiement = $('#modePaiement').val();
+                
+                               
+                RemboursementAccepter(montantRembourser ,dateRemboursement,modePaiement,client);
+
+            } else if (decision === 'rejeter') {
+                var motifRejet = $('#motifRejet').val();
+                
+                // Validation for rejected refunds
+                if (!motifRejet) {
+                    alertify.error("Veuillez saisir le motif de rejet");
+                    return;
+                }
+                
+                // In a real application, you would send this data to your server for rejection
+                alertify.success("Remboursement rejeté avec succès");
+            }
             
             // Close the traitement modal and refresh the data
             $('.traitementModal').modal('hide');
             loadItems();
         });
     });
+ 
 </script>
 {% endblock content %}
