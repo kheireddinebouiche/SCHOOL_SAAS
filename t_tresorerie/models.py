@@ -122,7 +122,7 @@ class Rembourssements(models.Model):
     allowed_amount = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours de traitement'),('acp','Approuvé'),('ref','Refusé')], default="enc")
 
-    is_approuved = models.BooleanField(default=False)
+    is_done = models.BooleanField(default=False)
     observation = models.CharField(max_length=1000, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)

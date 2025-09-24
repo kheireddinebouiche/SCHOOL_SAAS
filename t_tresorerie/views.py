@@ -54,7 +54,7 @@ def PageDetailsDemandePaiement(request, pk):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadRefundData(request):
-    liste = Rembourssements.objects.all().values('client__nom', 'client__prenom', 'client__id', 'motif_rembourssement', 'etat','created_at', 'id').order_by('-created_at')
+    liste = Rembourssements.objects.all().values('is_done','client__nom', 'client__prenom', 'client__id', 'motif_rembourssement', 'etat','created_at', 'id').order_by('-created_at')
     for i in liste:
         i_obj = Rembourssements.objects.get(id = i['id'])
         i['etat_label'] = i_obj.get_etat_display()
@@ -87,12 +87,13 @@ def ApiAccepteRembourssement(request):
     dateRemboursement = request.GET.get('dateRemboursement')
     modePaiement = request.GET.get('modePaiement')
     client = request.GET.get('client')
-
+    id_remboursement = request.GET.get('id_remboursement') 
     data= {
         'montantRembourser' : montantRembourser,
         'dateRemboursement' : dateRemboursement,
         'modePaiement' : modePaiement,
         'client' : client,
+        'id_remboursement' : id_remboursement,
     }
 
     return JsonResponse({'status' : 'success', 'data' : data})
@@ -100,7 +101,15 @@ def ApiAccepteRembourssement(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiRejectRembourssement(request):
-    pass
+    id_remboursement = request.GET.get('id_remboursement') 
+    motif = request.GET.get('motifRejet') 
+
+    obj = Rembourssements.objects.get(id = id_remboursement)
+    obj.etat = 'ref'
+    obj.observation = motif
+    obj.save()
+
+    return JsonResponse({'status' : 'success'}) 
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
