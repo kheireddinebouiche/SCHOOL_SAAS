@@ -283,9 +283,6 @@
                                         </div>
                                         <select id="promoFilter" class="form-select rounded-pill" style="width: 200px;">
                                             <option value="">Toutes les promotions</option>
-                                            <option value="promo1">Promotion 2023</option>
-                                            <option value="promo2">Promotion 2024</option>
-                                            <option value="promo3">Promotion 2025</option>
                                         </select>
                                     </div>
                                 </div>
@@ -417,43 +414,47 @@
             applyPromoFilter();
         });
         
-        // Load promo data (with mock data for now)
+        // Load promo data from API
         function loadPromoData() {
-            var promoData = [
-                {
-                    id: 1,
-                    name: 'Promotion 2023',
-                    studentCount: 45,
-                    totalToPay: 1350000,
-                    totalPaid: 1150000,
-                    remaining: 200000,
-                    paymentRate: 85.2
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadConvertedProspects' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                success: function(response) {
+                    // Convert API data to match the expected format
+                    allPromoData = response.promos.map(function(promo) {
+                        var totalToPay = promo.montant_total || 0;
+                        var totalPaid = promo.montant_paye || 0;
+                        var remaining = totalToPay - totalPaid;
+                        var paymentRate = totalToPay > 0 ? (totalPaid / totalToPay) * 100 : 0;
+                        
+                        return {
+                            id: promo.id,
+                            name: promo.session + ' (' + promo.begin_year + '-' + promo.end_year + ')',
+                            code: promo.code, // Store the code for filtering
+                            studentCount: promo.total_inscrit || 0,
+                            totalToPay: totalToPay,
+                            totalPaid: totalPaid,
+                            remaining: remaining,
+                            paymentRate: paymentRate
+                        };
+                    });
+                    
+                    // Update statistics
+                    updatePromoStatistics(allPromoData);
+                    
+                    // Render data
+                    renderPromoTable(allPromoData);
+                    
+                    // Populate the promo filter dropdown
+                    populatePromoFilter();
                 },
-                {
-                    id: 2,
-                    name: 'Promotion 2024',
-                    studentCount: 52,
-                    totalToPay: 1560000,
-                    totalPaid: 1452000,
-                    remaining: 108000,
-                    paymentRate: 93.1
-                },
-                {
-                    id: 3,
-                    name: 'Promotion 2025',
-                    studentCount: 48,
-                    totalToPay: 1440000,
-                    totalPaid: 890000,
-                    remaining: 550000,
-                    paymentRate: 61.8
+                error: function() {
+                    console.error("Erreur lors du chargement des données des promotions");
+                    var html = '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement des données des promotions.</td></tr>';
+                    $('#promoTableBody').html(html);
                 }
-            ];
-            
-            // Update statistics
-            updatePromoStatistics(promoData);
-            
-            // Render data
-            renderPromoTable(promoData);
+            });
         }
         
         // Store all prospect data for filtering (converted prospects only)
@@ -547,19 +548,18 @@
             $.each(data, function(index, item) {
                 totalStudents += item.studentCount;
                 
-                // Calculate based on payment rates for demo
-                if (item.paymentRate > 90) {
-                    totalPaid += Math.floor(item.studentCount * 0.85);
-                    totalPending += Math.floor(item.studentCount * 0.10);
-                    totalOverdue += Math.floor(item.studentCount * 0.05);
-                } else if (item.paymentRate > 70) {
-                    totalPaid += Math.floor(item.studentCount * 0.70);
-                    totalPending += Math.floor(item.studentCount * 0.20);
-                    totalOverdue += Math.floor(item.studentCount * 0.10);
+                // Calculate based on actual payment rates from the API
+                if (item.paymentRate >= 100) {
+                    totalPaid += item.studentCount;
+                } else if (item.paymentRate > 0) {
+                    // Estimate based on payment percentage
+                    var paidCount = Math.floor(item.studentCount * (item.paymentRate / 100));
+                    var pendingCount = item.studentCount - paidCount;
+                    totalPaid += paidCount;
+                    totalPending += pendingCount;
                 } else {
-                    totalPaid += Math.floor(item.studentCount * 0.40);
-                    totalPending += Math.floor(item.studentCount * 0.30);
-                    totalOverdue += Math.floor(item.studentCount * 0.30);
+                    // If no payment made, all are overdue/awaiting payment
+                    totalOverdue += item.studentCount;
                 }
             });
             
@@ -569,14 +569,57 @@
             $('#overdueCount').text(totalOverdue);
         }
         
+        // Store all promo data for filtering
+        var allPromoData = [];
+
+        // Populate promo filter dropdown
+        function populatePromoFilter() {
+            var promoFilter = $('#promoFilter');
+            promoFilter.empty(); // Clear existing options
+            
+            // Add default option
+            promoFilter.append($('<option>', {
+                value: '',
+                text: 'Toutes les promotions'
+            }));
+            
+            // Add options from the loaded data
+            $.each(allPromoData, function(index, promo) {
+                promoFilter.append($('<option>', {
+                    value: promo.code.toLowerCase(),
+                    text: promo.name
+                }));
+            });
+        }
+
         // Apply promo filter
         function applyPromoFilter() {
             var searchTerm = $('#promo-table-filter').val().toLowerCase();
             var promoFilter = $('#promoFilter').val();
             
-            // In a real implementation, you would filter the data
-            // For now, we'll just reload the data
-            loadPromoData();
+            // Filter the stored data
+            var filteredData = allPromoData;
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredData = filteredData.filter(function(promo) {
+                    return (
+                        promo.name.toLowerCase().includes(searchTerm) ||
+                        promo.code.toLowerCase().includes(searchTerm) ||
+                        promo.studentCount.toString().includes(searchTerm)
+                    );
+                });
+            }
+            
+            // Apply promo-specific filter if needed
+            if (promoFilter) {
+                filteredData = filteredData.filter(function(promo) {
+                    return promo.code.toLowerCase().includes(promoFilter.toLowerCase());
+                });
+            }
+            
+            // Render the filtered data
+            renderPromoTable(filteredData);
         }
         
         // Search functionality for prospect view

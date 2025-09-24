@@ -25,6 +25,7 @@ def ApiLoadConvertedProspects(request):
 
     for promo in promos:
         promo['montant_paye'] = Paiements.objects.filter(promo_id=promo['id'],context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        
 
     data = {
         'clients': list(clients),
