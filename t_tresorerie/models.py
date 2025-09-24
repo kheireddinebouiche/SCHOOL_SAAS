@@ -82,6 +82,7 @@ class Paiements(models.Model):
     
     is_frais_inscription = models.BooleanField(default=False)
     reference_paiement = models.CharField(max_length=100, null=True, blank=True)
+    context = models.CharField(max_length=100, null=True, blank=True,choices=[('frais_f','Frais de formation'),('autre','Autres'),('dette','Module en dette')])
 
     is_done = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -115,8 +116,10 @@ class Paiements(models.Model):
         super().save(*args, **kwargs)
     
 class Rembourssements(models.Model):
-    paiements = models.ForeignKey(Paiements, on_delete=models.CASCADE, null=True, blank=True)
+    
+    client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
+    allowed_amount = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours de traitement'),('acp','Approuvé'),('ref','Refusé')], default="enc")
 
     is_approuved = models.BooleanField(default=False)
@@ -127,6 +130,14 @@ class Rembourssements(models.Model):
 
     def __str__(self):
         return self.paiements
+
+class PaiementRemboursement(models.Model):
+    remboursement = models.ForeignKey(Rembourssements, on_delete=models.CASCADE, related_name="paiements_rembourses")
+    paiement = models.ForeignKey(Paiements, on_delete=models.CASCADE, related_name="remboursements")
+    montant = models.DecimalField(max_digits=20, decimal_places=2)
+
+    def __str__(self):
+        return f"Remboursement {self.remboursement.id} - Paiement {self.paiement.id} : {self.montant}"
 
 class SeuilPaiements(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)

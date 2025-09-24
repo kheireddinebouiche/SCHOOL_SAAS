@@ -146,4 +146,29 @@ def ApiApplyEcheancierSpecial(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiConfirmInscription(request):
-    pass
+    if request.method == "POST":
+        id_client = request.POST.get('id_preinscrit')
+        client = Prospets.objects.get(id = id_client)
+        client.statut = 'convertit'
+        client.save()
+
+        return JsonResponse({"status" : "success"})
+    else:   
+        return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiRequestRefundPaiement(request):
+    if request.method == "POST":
+        id_client = request.POST.get('client_id')
+        reason = request.POST.get('reason')
+        Rembourssements.objects.create(
+            client = Prospets.objects.get(id = id_client),
+            motif_rembourssement = reason,
+            etat = 'enc',
+            is_approuved = False
+        )
+       
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error"})

@@ -547,6 +547,20 @@
                             <p class="mb-0 text-muted small">La réduction a été appliquée à la formation.</p>
                         </div>
                     </div>
+                    
+                    <!-- Notification d'attente de remboursement -->
+                    <div class="alert alert-warning d-flex align-items-center notification-banner" role="alert" id="remboursementEnAttenteNotification">
+                        <i class="ri-refund-line me-3 fs-4"></i>
+                        <div class="flex-grow-1">
+                            <strong>Remboursement en attente de traitement.</strong>
+                            <p class="mb-0 text-muted small">Une demande de remboursement a été soumise et est en cours de traitement.</p>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#remboursementDetailsModal">
+                                <i class="ri-eye-line me-1"></i>Détails
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -781,6 +795,9 @@
                                         <div class="d-flex gap-2 mt-2 mt-md-0">
                                             <button id="btnNewPaiementModal" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#nouveauPaiementModal">
                                                 <i class="ri-add-line me-1"></i>Nouveau paiement
+                                            </button>
+                                            <button id="btnRefundRequestModal" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#refundModal">
+                                                <i class="ri-refund-line me-1"></i>Remboursement
                                             </button>
                                         </div>
                                     </div>
@@ -1406,27 +1423,107 @@
             </div><!-- /.modal-dialog -->
         </div><!-- /.modal -->
 
-        <div class="modal fade refundModal" tabindex="-1" role="dialog" aria-labelledby="refundModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content rounded-4 shadow-lg border-0">
-                    <div class="modal-body text-center p-5">
-                        <div class="avatar-lg mx-auto mb-4">
-                            <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
-                                <i class="ri-refund-line"></i>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <h4 class="mb-3">Vous êtes sur le point de faire une demande de remboursement</h4>
-                            <p class="text-muted mb-4">La demande de remboursement doit être validée par un compte de niveau supérieur. </p>
-                            <div class="hstack gap-2 justify-content-center">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                                <button type="button" class="btn btn-warning" id="confirmRefundBtn">Demander le remboursement</button>
-                            </div>
+<!-- Demande de remboursement de paiement -->
+<div class="modal fade refundModal" tabindex="-1" role="dialog" aria-labelledby="refundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-body p-5">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refund-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1">Demande de remboursement</h5>
+                        <p class="text-muted small mb-0">Soumettre une demande de remboursement</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous êtes sur le point de faire une demande de remboursement</h4>
+                    <p class="text-muted mb-4">La demande de remboursement doit être validée par un compte de niveau supérieur. Veuillez indiquer le motif du remboursement.</p>
+                    
+                    <div class="mb-4">
+                        <label for="refundReason" class="form-label fw-medium">Motif du remboursement <span class="text-danger">*</span></label>
+                        <textarea class="form-control border-0 bg-light py-2" id="refundReason" rows="3" placeholder="Veuillez indiquer la raison du remboursement..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning d-flex align-items-center mt-4" role="alert">
+                        <i class="ri-alert-line me-2"></i>
+                        <div>
+                            <span>Le remboursement ne sera traité qu'après validation par un responsable.</span>
                         </div>
                     </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+                    
+                    <div class="hstack gap-2 justify-content-center mt-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-warning" id="confirmRefundBtn">Demander le remboursement</button>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Modal Détails Remboursement -->
+<div class="modal fade" id="remboursementDetailsModal" tabindex="-1" aria-labelledby="remboursementDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refund-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="remboursementDetailsModalLabel">Détails du remboursement</h5>
+                        <p class="text-muted small mb-0">Informations sur la demande de remboursement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="card border border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h6 class="mb-0 text-warning">Demande de remboursement</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted">Date de la demande</td>
+                                        <td id="remboursementDate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Montant demandé</td>
+                                        <td id="remboursementMontant">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Statut de la demande</td>
+                                        <td>
+                                            <span class="badge bg-warning badge-payment-status">En attente de traitement</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Motif du remboursement</td>
+                                        <td id="remboursementMotif">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <span>Cette demande de remboursement est en cours de traitement. Vous serez informé(e) dès que la demande aura été traitée.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Détails du Client -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-labelledby="clientDetailsModalLabel" aria-hidden="true">
@@ -2332,6 +2429,68 @@
     </div>
 </div>
 
+<!-- Modal Détails Remboursement -->
+<div class="modal fade" id="remboursementDetailsModal" tabindex="-1" aria-labelledby="remboursementDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refund-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="remboursementDetailsModalLabel">Détails du remboursement</h5>
+                        <p class="text-muted small mb-0">Informations sur la demande de remboursement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="card border border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h6 class="mb-0 text-warning">Demande de remboursement</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted">Date de la demande</td>
+                                        <td id="remboursementDate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Montant demandé</td>
+                                        <td id="remboursementMontant">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Statut de la demande</td>
+                                        <td>
+                                            <span class="badge bg-warning badge-payment-status">En attente de traitement</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Motif du remboursement</td>
+                                        <td id="remboursementMotif">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <span>Cette demande de remboursement est en cours de traitement. Vous serez informé(e) dès que la demande aura été traitée.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     
@@ -2414,7 +2573,7 @@
                     // Store client ID
                     clientId = data.user_data.client_id;
                     $('#clientIdInput').val(clientId);
-
+                    console.log("Client ID:", clientId); // Debugging line to check client ID
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#clientEmail').text(data.user_data.email || 'Non spécifié');
@@ -2591,7 +2750,6 @@
                             row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
                             row += "<button class='dropdown-item print-facture-btn' type='button' data-id='"+item.num+"'><i class='ri-printer-line me-2'></i>Facture</button>";
                             row += "<div class='dropdown-divider'></div>";
-                            row += "<button class='dropdown-item refund-btn' type='button' data-id='"+item.num+"'><i class='ri-refund-line me-2'></i>Remboursement</button>";
                             row += "<button class='dropdown-item delete-btn' type='button' data-id='"+item.num+"'><i class='ri-delete-bin-line me-2'></i>Supprimer</button>";
                             row += "</div>";
                             row += "</div>";
@@ -2608,6 +2766,11 @@
                     }
                     $('#echeancierTable').html(echeancierHtml);
                     SummeryPaiement(data.total_paiement,data.total_initial,data.total_solde);
+
+                    if(data.user_data.statut_demandeur === "convertit"){
+                        document.getElementById('btnConfirmInscription').disabled = true;
+
+                    }
                 },
             });
         }
@@ -3016,6 +3179,20 @@
             $.ajax({
                 url : "{% url 't_tresorerie:ApiConfirmInscription' %}",
                 type : 'POST',
+                dataType: 'JSON',
+                data : {
+                    'id_preinscrit' : clientId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        $('#confirmInscriptionModal').modal('hide');
+                        $('#inscriptionFinaliseeModal').modal('show');
+                        
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+                    }
+                }
                 
             })
             alert("Inscription confirmée avec succès !");
@@ -3619,14 +3796,6 @@
             // À implémenter : Logique d'impression de la facture
         });
         
-        // Demande de remboursement
-        $(document).on('click', '.refund-btn', function(e){
-            e.preventDefault();
-            var id = $(this).data('id');
-            // Afficher la modale de demande de remboursement
-            $('.refundModal').modal('show');
-            // À implémenter : Logique de demande de remboursement
-        });
         
         // Supprimer un paiement
         $(document).on('click', '.delete-btn', function(e){
@@ -3663,19 +3832,50 @@
             $('.deleteModal').modal('hide');
         });
         
-        // Demande de remboursement
-        $(document).on('click', '.refund-btn', function(){
-            var id = $(this).data('id');
-            // Afficher la modale de demande de remboursement
+        // Demande de remboursement (nouveau bouton)
+        $(document).on('click', '#btnRefundRequestModal', function(){
+            
+            $('#confirmRefundBtn').data('clientId', clientId);
             $('.refundModal').modal('show');
-            // À implémenter : Logique de demande de remboursement
         });
         
         // Confirmation de remboursement
         $(document).on('click', '#confirmRefundBtn', function(){
-            // À implémenter : Logique de demande de remboursement
-            alert("Fonctionnalité de demande de remboursement - à implémenter");
-            $('.refundModal').modal('hide');
+            var clientId = $(this).data('clientId');
+            var reason = $('#refundReason').val();
+           
+            if (!reason.trim()) {
+                alertify.error("Veuillez indiquer le motif du remboursement.");
+                return;
+            }
+            
+            if (!clientId) {
+                alertify.error("Aucun client sélectionné pour la demande de remboursement.");
+                return;
+            }
+            
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiRequestRefundPaiement' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'client_id' : clientId,
+                    'reason' : reason,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("La demande de remboursement à été envoyée avec succès");
+                        loadDatas();
+                        $('.refundModal').modal('hide');
+                        $('#refundReason').val(''); // Clear the reason field
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+
+                    }
+                }
+            });
+            
         });
 
         $(document).on('click', '#confirmApplyEcheancierSpecialBtn', function(){
@@ -3705,6 +3905,7 @@
     });
 
      
+
 </script>
 
 {% endblock content %}

@@ -52,6 +52,33 @@ def PageDetailsDemandePaiement(request, pk):
     }
     return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
 
+@login_required(login_url="institut_app:login")
+def ApiLoadRefundData(request):
+    liste = Rembourssements.objects.all().values('client__nom', 'client__prenom', 'client__id', 'motif_rembourssement', 'etat','created_at', 'id').order_by('-created_at')
+    for i in liste:
+        i_obj = Rembourssements.objects.get(id = i['id'])
+        i['etat_label'] = i_obj.get_etat_display()
+    return JsonResponse(list(liste), safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadRefundDetails(request):
+    if request.method == "GET":
+        id = request.GET.get('id')
+        obj = Rembourssements.objects.get(id = id)
+        paiement_lines = Paiements.objects.filter(prospect = obj.client, context='frais_f').aggregate(total=Sum('montant_paye'))['total'] or 0
+
+        data= {
+            'client_nom' : obj.client.nom,
+            'client_prenom' : obj.client.prenom,
+            'motif_rembourssement' : obj.motif_rembourssement,
+            'date_demande' : obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'etat' : obj.get_etat_display(),
+            'paiement_total' : paiement_lines,
+        }
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({'status' : 'error', 'message' : "Méthode non autorisée"}, status=405)
+        
 
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
@@ -159,6 +186,7 @@ def ApiGetDetailsDemandePaiement(request):
     user_data = {
         "demandeur_nom": obj.client.nom,
         "demandeur_prenom": obj.client.prenom,
+        "statut_demandeur": obj.client.statut,
         "client_id" : obj.client.id,
         "motif": obj.get_motif_display(),
         "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
