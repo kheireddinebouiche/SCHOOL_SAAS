@@ -96,7 +96,8 @@ def ApiStoreClientPaiement(request):
         date_paiement = datePaiement,
         observation = observation,
         mode_paiement = modePaiement,
-        reference_paiement = reference
+        reference_paiement = reference,
+        context = "frais_f"
     )
 
     if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):
@@ -166,7 +167,7 @@ def ApiRequestRefundPaiement(request):
             client = Prospets.objects.get(id = id_client),
             motif_rembourssement = reason,
             etat = 'enc',
-            is_approuved = False
+            is_done = False
         )
        
         return JsonResponse({"status" : "success"})

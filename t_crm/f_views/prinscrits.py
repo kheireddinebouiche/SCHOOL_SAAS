@@ -13,7 +13,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
 from .generate_paiements import ApiGeneratePaiementRequest
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 
 @login_required(login_url='intitut_app:login')
@@ -49,6 +49,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
 
     try:
         prospect = Prospets.objects.get(id=id_prospect)
+
     except Prospets.DoesNotExist:
         return JsonResponse({'error': 'Prospect non trouvé'}, status=404)
 
@@ -87,8 +88,6 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'wilaya' : prospect.wilaya,
         'code_zip' : prospect.code_zip,
         'lieu_naissance' : prospect.lieu_naissance,
-
-        
     }
 
     return JsonResponse(data, safe=False)
@@ -510,4 +509,15 @@ def ApiValidatePreinscrit(request):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadFinancialData(request):
-    pass
+    if request.method == "GET":
+        id_prospect = request.GET.get('id_preinscrit')
+
+        paiements = Paiements.objects.filter(prospect__id = id_prospect, context="frais_f").aggregate(total_paye=Sum('montant_paye'))['total_paye'] or 0
+        paiementDue = DuePaiements.objects.filter(client__id = id_prospect).aggregate(total_due=Sum('montant_due'))['total_due'] or 0
+
+        data = {
+            'montant_paye' : paiements,
+            'montant_total' : paiementDue,
+        }
+
+        return JsonResponse(data, safe=False)

@@ -18,7 +18,7 @@ def ApiLoadConvertedProspects(request):
     )
 
     promos = (Promos.objects.filter(etat="active").annotate(
-            total_inscrit=Count('promo_fiche_voeux',filter=Q(promo_fiche_voeux__is_confirmed=True)),
+            total_inscrit=Count('promo_fiche_voeux',filter=Q(promo_fiche_voeux__is_confirmed=True) & Q(promo_fiche_voeux__prospect__statut="convertit")) ,
             montant_total=Sum('promo_fiche_voeux__specialite__formation__prix_formation',filter=Q(promo_fiche_voeux__is_confirmed=True))
         ).values('id','code','date_debut','date_fin','begin_year','end_year','session','total_inscrit','montant_total')
     )

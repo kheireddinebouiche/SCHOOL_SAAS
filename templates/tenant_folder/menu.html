@@ -762,13 +762,13 @@
                 <!-- Examens -->
 
                 <!-- Finance -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures' %}active{% endif %}">
+                <li class="nav-item {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}active{% endif %}">
                     <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarFinance" data-bs-toggle="collapse" role="button" 
-                    aria-expanded="{% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures' %}true{% else %}false{% endif %}" 
+                    aria-expanded="{% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}true{% else %}false{% endif %}" 
                     aria-controls="sidebarFinance">
                         <i class='bx bx-money fs-5'></i> <span data-key="t-authentication" class="ms-1">Finance</span>
                     </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement PageConfigPaiementSeuil attentes_de_paiements liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures' %}show{% endif %}" id="sidebarFinance">
+                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement PageConfigPaiementSeuil attentes_de_paiements liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}show{% endif %}" id="sidebarFinance">
                         <div class="submenu-container">
                             <div class="row g-1">
                                 <div class="col-12">
@@ -784,7 +784,7 @@
                                         </div>
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements liste_des_remises' %}show{% endif %}" id="sidebarTresorerie">
+                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements liste_des_remises SuivieEcheancier' %}show{% endif %}" id="sidebarTresorerie">
                                         <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
                                             <a href="{% url 't_tresorerie:attentes_de_paiements' %}" class="nav-link {% if request.resolver_match.url_name in 'PageDetailsDemandePaiement attentes_de_paiements' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-time me-1"></i>
@@ -798,7 +798,7 @@
                                             </a>
                                         </div>
                                         <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
-                                            <a href="{% url 't_tresorerie:SuivieEcheancier' %}" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
+                                            <a href="{% url 't_tresorerie:SuivieEcheancier' %}" class="nav-link {% if request.resolver_match.url_name == 'SuivieEcheancier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-calendar-check me-1"></i>
                                                 <span>Suivie des échéanciers</span>
                                             </a>
@@ -1112,3 +1112,56 @@
 
     <div class="sidebar-background"></div>
 </div>
+
+<script>
+// JavaScript to maintain active state in menu and handle submenu expansion
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all nav-links in the menu that are not collapse toggles
+    const navLinks = document.querySelectorAll('.navbar-nav .nav-link:not([data-bs-toggle])');
+    
+    // Add click event to each nav link to ensure active state
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            // Only handle actual navigation links, not collapse toggles
+            if (!this.href || this.href.startsWith('#')) {
+                return;
+            }
+            
+            // Wait for the page to load with the new URL, then update active states based on server-side Django logic
+            // The Django template will set the correct active classes on page load
+        });
+    });
+    
+    // Handle collapse events to maintain active states
+    document.querySelectorAll('.navbar-nav [data-bs-toggle="collapse"]').forEach(function(collapseEl) {
+        collapseEl.addEventListener('click', function() {
+            // Remove active from siblings
+            const siblings = Array.from(this.closest('ul').children);
+            siblings.forEach(function(sibling) {
+                if (sibling !== this.closest('li')) {
+                    sibling.classList.remove('active');
+                }
+            }, this);
+        });
+    });
+    
+    // Additional JavaScript to ensure parent menus stay expanded when child items are active
+    document.querySelectorAll('.navbar-nav .nav-link.active').forEach(function(activeLink) {
+        // Find parent submenu and ensure it's shown
+        const submenuItem = activeLink.closest('.submenu-content');
+        if (submenuItem) {
+            submenuItem.classList.add('show');
+            // Also ensure parent collapse sections are shown
+            const parentCollapse = submenuItem.closest('.collapse');
+            if (parentCollapse) {
+                parentCollapse.classList.add('show');
+                // Add active to parent nav-item
+                const parentNavItem = parentCollapse.parentElement.closest('.nav-item');
+                if (parentNavItem) {
+                    parentNavItem.classList.add('active');
+                }
+            }
+        }
+    });
+});
+</script>
