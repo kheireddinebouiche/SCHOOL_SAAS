@@ -67,6 +67,8 @@ class Prospets(models.Model):
 
     contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','A déja appeler'),('est_passer','Visiste')])
 
+    has_refund = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

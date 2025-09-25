@@ -11,12 +11,14 @@ from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
 from t_crm.models import *
+from t_tresorerie.models import DuePaiements
+from t_formations.models import Promos
 from .models import UserSession
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django_otp.decorators import otp_required
 from datetime import datetime, timedelta
-from django.db.models import Count
+from django.db.models import Count, Sum
 
 
 @login_required(login_url='institut_app:login')
@@ -145,6 +147,26 @@ def FinanceDashboard(request):
     return render(request, 'tenant_folder/dashboard/finance_dash.html')
 
 @login_required(login_url="institut_app:login")
+def ApiFinanceKPIs(request):
+    total_due_payments = DuePaiements.objects.filter(is_done=False).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
+
+    echeance_passer = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
+    liste_echeance_echue = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).select_related('client').order_by('date_echeance').values('id','client__nom','client__prenom','montant_due','date_echeance','label')
+    
+    echeance_du_jours = (DuePaiements.objects.filter(is_done=False, date_echeance = datetime.now())
+                        .select_related('client')
+                        .order_by('date_echeance')
+                        .values('id','client__nom','client__prenom','montant_due','date_echeance','label'))
+
+    data = {
+        'total_due_payments': total_due_payments,
+        'echeance_passer': echeance_passer,
+        'liste_echeance_echue': list(liste_echeance_echue),
+        'echeance_du_jours' : list(echeance_du_jours),
+    }
+    return JsonResponse(data)
+
+@login_required(login_url="institut_app:login")
 def Index(request):
     tenant = getattr(request, 'tenant', None)
     # Get the schema name or set it to "Unknown" if no tenant is found
@@ -218,7 +240,6 @@ def register(request):
         return redirect('institut_app:login')
  
     return render(request, 'registration/register.html')
-
 
 def ShowBlockedConnexion(request):
     if not request.session.get("allow_blocked_page"):

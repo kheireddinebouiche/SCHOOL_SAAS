@@ -121,18 +121,23 @@ class Rembourssements(models.Model):
     
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
+    
     allowed_amount = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours de traitement'),('acp','Approuvé'),('ref','Refusé')], default="enc")
 
     is_done = models.BooleanField(default=False)
     observation = models.CharField(max_length=1000, null=True, blank=True)
+
+    mode_rembourssement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.paiements
+    
 
+## ne pas utiliser cette classe
 class PaiementRemboursement(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     remboursement = models.ForeignKey(Rembourssements, on_delete=models.CASCADE, related_name="paiements_rembourses")

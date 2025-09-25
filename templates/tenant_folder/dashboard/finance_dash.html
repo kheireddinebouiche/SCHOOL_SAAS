@@ -184,7 +184,7 @@
                             <div class="d-flex align-items-end justify-content-between mt-4">
                                 <div>
                                     <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="overdueAmount">0 DA</span></h4>
-                                    <a href="#" class="text-decoration-underline">Voir détails</a>
+                                    <a href="#" class="text-decoration-underline" id="viewOverdueDetailsBtn">Voir détails</a>
                                 </div>
                                 <div class="avatar-sm flex-shrink-0">
                                     <span class="avatar-title bg-danger-subtle rounded fs-3">
@@ -352,6 +352,38 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Daily Collection Status Section -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Situation de Recouvrement du Jour</h4>
+                            <div class="flex-shrink-0">
+                                <h5 class="text-muted mb-0" id="currentDate"></h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-centered table-nowrap mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Type</th>
+                                            <th>Montant</th>
+                                            <th>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dailyPaymentsTableBody">
+                                        <!-- Daily payments will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="noDailyPayments" class="text-center py-4" style="display: none;">
+                                <i class="ri-check-double-line ri-2x text-success mb-3"></i>
+                                <h5>Aucun paiement prévu</h5>
+                                <p class="text-muted">Aucun paiement enregistré pour aujourd'hui</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Column - Financial Distribution and Metrics -->
@@ -516,6 +548,41 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Unpaid Dues by Promo Section -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Échéances Non Recouvrées par Promo</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-centered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Promo</th>
+                                            <th>Montant</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in unpaid_dues_by_promo %}
+                                        <tr>
+                                            <td>{{ item.promo_label }}</td>
+                                            <td class="fw-medium">{{ item.total_amount|floatformat:2|floatformat:"g" }} DA</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune donnée disponible</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-3 pt-2 border-top">
+                                <h6 class="mb-1">Total Non Recouvré</h6>
+                                <h4 class="text-danger mb-0">{{ total_unpaid|floatformat:2|floatformat:"g" }} DA</h4>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -525,129 +592,114 @@
     <!-- End Page-content -->
 </div>
 
+<!-- Modal for overdue payments -->
+<div class="modal fade" id="overduePaymentsModal" tabindex="-1" aria-labelledby="overduePaymentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="overduePaymentsModalLabel">Paiements en Retard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-centered table-nowrap mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Étudiant</th>
+                                <th>Type de paiement</th>
+                                <th>Montant</th>
+                                <th>Date d'échéance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overduePaymentsTableBody">
+                            <!-- Overdue payments will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noOverduePayments" class="text-center py-4" style="display: none;">
+                    <i class="ri-check-double-line ri-2x text-success mb-3"></i>
+                    <h5>Aucun paiement en retard</h5>
+                    <p class="text-muted">Tous les paiements sont à jour</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
-        // Demo data for the dashboard
-        var demoPayments = [
-            { id: 1, client: "Jean Dupont", invoice: "INV-2023-001", amount: 1500, dueDate: "2023-10-15", status: "paid", daysRemaining: -10 },
-            { id: 2, client: "Marie Martin", invoice: "INV-2023-002", amount: 2300, dueDate: "2023-10-20", status: "overdue", daysRemaining: -5 },
-            { id: 3, client: "Pierre Bernard", invoice: "INV-2023-003", amount: 800, dueDate: "2023-10-25", status: "due-soon", daysRemaining: 0 },
-            { id: 4, client: "Sophie Laurent", invoice: "INV-2023-004", amount: 3200, dueDate: "2023-11-01", status: "upcoming", daysRemaining: 7 },
-            { id: 5, client: "Thomas Petit", invoice: "INV-2023-005", amount: 1200, dueDate: "2023-11-05", status: "upcoming", daysRemaining: 11 },
-            { id: 6, client: "Émilie Moreau", invoice: "INV-2023-006", amount: 950, dueDate: "2023-10-18", status: "overdue", daysRemaining: -7 },
-            { id: 7, client: "Lucas Girard", invoice: "INV-2023-007", amount: 2750, dueDate: "2023-10-30", status: "due-soon", daysRemaining: 5 },
-            { id: 8, client: "Camille Rousseau", invoice: "INV-2023-008", amount: 1800, dueDate: "2023-11-10", status: "upcoming", daysRemaining: 16 }
-        ];
-
-        function calculateStatistics() {
-            var totalPayments = 0;
-            var overdueAmount = 0;
-            var pendingAmount = 0;
-            var upcomingDeadlinesCount = 0;
-            
-            demoPayments.forEach(function(payment) {
-                if (payment.status === 'paid') {
-                    totalPayments += payment.amount;
-                } else if (payment.status === 'overdue') {
-                    overdueAmount += payment.amount;
-                } else if (payment.status === 'due-soon' || payment.status === 'upcoming') {
-                    pendingAmount += payment.amount;
-                    upcomingDeadlinesCount++;
-                }
-            });
-            
-            var collectionRate = ((totalPayments / (totalPayments + overdueAmount + pendingAmount)) * 100).toFixed(1);
-            
-            // Update the dashboard statistics
-            $('#totalPayments').text(totalPayments.toLocaleString('fr-FR') + ' DA');
-            $('#overdueAmount').text(overdueAmount.toLocaleString('fr-FR') + ' DA');
-            $('#upcomingDeadlinesCount').text(upcomingDeadlinesCount);
-            $('#collectionRate').text(collectionRate + '%');
-            $('#pendingAmount').text(pendingAmount.toLocaleString('fr-FR') + ' DA');
-            
-            // Update progress bars
-            $('#collectionProgressBar').css('width', collectionRate + '%');
-            var pendingRate = ((pendingAmount / (totalPayments + overdueAmount + pendingAmount)) * 100).toFixed(1);
-            $('#pendingProgressBar').css('width', pendingRate + '%');
-        }
-
-        function populateDeadlinesTable() {
-            var tbody = $('#deadlinesTableBody');
-            tbody.empty();
-
-            demoPayments.forEach(function(payment) {
-                if (payment.status !== 'paid') { // Only show non-paid payments
-                    var statusClass = '';
-                    var statusText = '';
+        var liste_overdue = [];
+        let today = new Date().toLocaleDateString();
+       
+        function loadKpiData(){
+            $.ajax({
+                url : "{% url 'institut_app:ApiFinanceKPIs' %}",
+                dataType: "JSON",
+                type : 'GET',
+                success : function(data){
+                    $('#overdueAmount').text(data.echeance_passer+' DA');
+                    liste_overdue = data.liste_echeance_echue;
                     
-                    switch(payment.status) {
-                        case 'overdue':
-                            statusClass = 'badge bg-danger';
-                            statusText = 'En retard';
-                            break;
-                        case 'due-soon':
-                            statusClass = 'badge bg-warning';
-                            statusText = 'Bientôt due';
-                            break;
-                        case 'upcoming':
-                            statusClass = 'badge bg-success';
-                            statusText = 'À venir';
-                            break;
-                        default:
-                            statusClass = 'badge bg-success';
-                            statusText = 'À venir';
+                    // Update daily collection status with the same data
+                    var dailyPayments = data.echeance_du_jours || [];
+                    var tableBody = $('#dailyPaymentsTableBody');
+                    tableBody.empty(); // Clear existing data
+                    
+                    if (dailyPayments.length > 0) {
+                        // Show the table and hide the "no payments" message
+                        $('#noDailyPayments').hide();
+                        tableBody.show();
+                        
+                        // Populate the table with daily payments
+                        $.each(dailyPayments, function(index, payment) {
+                            var row = $('<tr>');
+                            row.append($('<td>').text(payment.client__nom + ' ' + payment.client__prenom));
+                            row.append($('<td>').text(payment.label));
+                            row.append($('<td>').text(payment.montant_due + ' DA'));
+                            row.append($('<td>').html('<span class="badge bg-warning">En Attente</span>'));
+                            tableBody.append(row);
+                        });
+                    } else {
+                        // Show the "no payments" message and hide the table
+                        $('#noDailyPayments').show();
+                        tableBody.hide();
                     }
-                    
-                    var statusBadge = '<span class="' + statusClass + '">' + statusText + '</span>';
-                    var daysRemainingText = payment.daysRemaining < 0 ? 
-                        Math.abs(payment.daysRemaining) + ' jours en retard' : 
-                        payment.daysRemaining + ' jours restants';
-                    
-                    var row = '<tr>' +
-                        '<td><strong>' + payment.client + '</strong></td>' +
-                        '<td><strong>' + payment.invoice + '</strong></td>' +
-                        '<td><strong>' + payment.amount.toLocaleString('fr-FR') + ' DA</strong></td>' +
-                        '<td>' + formatDate(payment.dueDate) + '</td>' +
-                        '<td>' + statusBadge + '</td>' +
-                    '</tr>';
-                    
-                    tbody.append(row);
                 }
             });
         }
-        
-        function formatDate(dateString) {
-            var date = new Date(dateString);
-            return date.toLocaleDateString('fr-FR');
-        }
-        
-        // Search functionality
-        $('#table-filter').on('keyup', function() {
-            var searchTerm = this.value.toLowerCase();
-            var tbody = $('#deadlinesTableBody');
-            var rows = tbody.find('tr');
-            
-            rows.each(function() {
-                var row = $(this);
-                var text = row.text().toLowerCase();
-                
-                if (text.includes(searchTerm)) {
-                    row.show();
-                } else {
-                    row.hide();
-                }
-            });
+
+
+        loadKpiData();
+
+
+        $(document).on('click', '#viewOverdueDetailsBtn', function(){
+            var modalBody = $('#overduePaymentsTableBody');
+            modalBody.empty(); // Clear previous data
+
+            if (liste_overdue.length > 0) {
+                // Populate the table with overdue payments
+                $.each(liste_overdue, function(index, payment) {
+                    var row = $('<tr>');
+                    row.append($('<td>').text(payment.client__nom + ' ' + payment.client__prenom));
+                    row.append($('<td>').text(payment.label));
+                    row.append($('<td>').text(payment.montant_due + ' DA'));
+                    row.append($('<td>').text(payment.date_echeance));
+                    modalBody.append(row);
+                });
+            } else {
+               
+                modalBody.append($('<tr>').append($('<td colspan="6" class="text-center text-muted">Aucune donnée disponible</td>')));
+            }
+
+            $('#overduePaymentsModal').modal('show');
         });
 
-        // Initialize the dashboard
-        calculateStatistics();
-        populateDeadlinesTable();
         
-        // Refresh dashboard
-        $(document).on('click', '#refreshDashboard', function(){
-            calculateStatistics();
-            populateDeadlinesTable();
-        });
+
+        // Load KPI data when page loads (this also updates daily collection status)
     });
 </script>
 

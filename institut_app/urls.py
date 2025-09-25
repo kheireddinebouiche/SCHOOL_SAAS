@@ -62,6 +62,7 @@ urlpatterns = [
 
 
     path('tableau-de-bord/finance/', FinanceDashboard, name="FinanceDashboard"),
+    path('ApiFinanceKPIs', ApiFinanceKPIs, name="ApiFinanceKPIs"),
 
     
 ]

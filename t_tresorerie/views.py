@@ -21,7 +21,7 @@ def AttentesPaiements(request):
 
 @login_required(login_url="insitut_app:login")
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").all()
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").filter(client__statut = "instance")
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
@@ -90,15 +90,18 @@ def ApiAccepteRembourssement(request):
     modePaiement = request.GET.get('modePaiement')
     client = request.GET.get('client')
     id_remboursement = request.GET.get('id_remboursement') 
-    data= {
-        'montantRembourser' : montantRembourser,
-        'dateRemboursement' : dateRemboursement,
-        'modePaiement' : modePaiement,
-        'client' : client,
-        'id_remboursement' : id_remboursement,
-    }
+    
+    print(id_remboursement)
 
-    return JsonResponse({'status' : 'success', 'data' : data})
+    obj_rembourssement = Rembourssements.objects.get(id = id_remboursement)
+    obj_rembourssement.mode_rembourssement = modePaiement
+    obj_rembourssement.allowed_amount = montantRembourser
+    obj_rembourssement.etat = "acp"
+    obj_rembourssement.is_done = True
+
+    obj_rembourssement.save()
+
+    return JsonResponse({'status' : 'success'})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -128,6 +131,7 @@ def ApiGetDetailsDemandePaiement(request):
     has_due_paiement = False
     has_paiement = False
     has_pending_refund = False
+    has_processed_refund = False
 
     due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -216,9 +220,27 @@ def ApiGetDetailsDemandePaiement(request):
     if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
         echeancier_data = special_echeancier_data
     
-    refund = Rembourssements.objects.filter(client = obj.client, is_done=False).last()
+    refund = Rembourssements.objects.filter(client = obj.client).last()
+    refund_data = []
     if refund:
-        has_pending_refund = True
+        paiements = Paiements.objects.filter(prospect = obj.client, context = "frais_f" ).aggregate(total=Sum('montant_paye'))['total'] or 0
+        if not refund.is_done:
+            has_pending_refund = True
+        else:
+            has_processed_refund = True
+
+        refund_data = {
+            'id' : refund.id,
+            'motif_rembourssement' : refund.motif_rembourssement,
+            'allowed_amount' : refund.allowed_amount,
+            'etat' : refund.get_etat_display(),
+            'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'observation' : refund.observation, 
+            'montant_paye' : paiements,
+        }
+    else:
+        has_pending_refund = False
+        refund_data = []
     
 
     user_data = {
@@ -258,6 +280,8 @@ def ApiGetDetailsDemandePaiement(request):
         "total_initial" : total_initial if has_due_paiement else 0,
         "total_solde" : total_solde ,
         "has_pending_refund" : has_pending_refund,
+        'has_processed_refund'  : has_processed_refund,
+        "refund_data" : refund_data,
     }
 
     return JsonResponse(data, safe=False)
