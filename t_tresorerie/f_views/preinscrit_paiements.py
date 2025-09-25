@@ -52,15 +52,20 @@ def ApiGetPaiementRequestDetails(request):
 ### Fonction qui stock les echeanciers de paiements
 def ApiStorePaiements(client,label,date_echeance,montant):
     try:
+        last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
+        ordre = (last.ordre + 1) if last else 1
+
         DuePaiements.objects.create(
-            client = client,
-            label = label,
-            montant_due = montant,
-            montant_restant = montant,
-            date_echeance = date_echeance
+            client=client,
+            label=label,
+            ordre=ordre,
+            montant_due=montant,
+            montant_restant=montant,
+            date_echeance=date_echeance
         )
-    except:
-        return JsonResponse({"status" : "error"})
+        return JsonResponse({"status": "success"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
     
 @login_required(login_url="institut_app:login")
 def ApiApplyRemiseToPaiement(request):
@@ -87,30 +92,45 @@ def ApiStoreClientPaiement(request):
     observation = request.POST.get('observation')
     clientId = request.POST.get('clientId')
     id_due_paiement = request.POST.get('id_due_paiement')
+    promo = request.POST.get('promo')
 
+    try:
+        due_paiement = DuePaiements.objects.get(id=id_due_paiement)
+
+        if due_paiement.ordre and due_paiement.ordre > 1:
+            previous_due = DuePaiements.objects.filter(client_id=clientId,ordre=due_paiement.ordre - 1).first()
+            if previous_due and not previous_due.is_done:
+                return JsonResponse({"status": "error","message": "Le paiement précédent n'est pas encore effectué."})
     
-    Paiements.objects.create(
-        due_paiements = DuePaiements.objects.get(id = id_due_paiement),
-        prospect = Prospets.objects.get(id = clientId),
-        montant_paye = montant,
-        date_paiement = datePaiement,
-        observation = observation,
-        mode_paiement = modePaiement,
-        reference_paiement = reference,
-        context = "frais_f"
-    )
+        Paiements.objects.create(
+            due_paiements = DuePaiements.objects.get(id = id_due_paiement),
+            prospect = Prospets.objects.get(id = clientId),
+            montant_paye = montant,
+            date_paiement = datePaiement,
+            observation = observation,
+            mode_paiement = modePaiement,
+            reference_paiement = reference,
+            context = "frais_f",
+            promo = Promos.objects.get(code = promo) if promo else None,
+        )
 
-    if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):
-        montant_restant = 0
-    else:
-        montant_restant = Decimal(DuePaiements.objects.get(id = id_due_paiement).montant_restant) - Decimal(montant)
+        if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):
+            montant_restant = 0
+        else:
+            montant_restant = Decimal(DuePaiements.objects.get(id = id_due_paiement).montant_restant) - Decimal(montant)
 
-    update_due_paiement= DuePaiements.objects.get(id = id_due_paiement)
-    update_due_paiement.is_done = True
-    update_due_paiement.montant_restant = montant_restant
-    update_due_paiement.save()
+        update_due_paiement= DuePaiements.objects.get(id = id_due_paiement)
+        update_due_paiement.is_done = True
+        update_due_paiement.montant_restant = montant_restant
+        update_due_paiement.save()
 
-    return JsonResponse({"status" : "success"})
+        return JsonResponse({"status" : "success"})
+    
+
+    except DuePaiements.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Échéance introuvable."})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
  
 @login_required(login_url="institut_app:login")
 @transaction.atomic

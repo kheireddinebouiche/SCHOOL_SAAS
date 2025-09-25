@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer, Prospets
+from t_crm.models import RemiseAppliquer, Prospets, FicheDeVoeux
 from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 
@@ -24,7 +24,7 @@ def ApiLoadConvertedProspects(request):
     )
 
     for promo in promos:
-        promo['montant_paye'] = Paiements.objects.filter(promo_id=promo['id'],context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        promo['montant_paye'] = Paiements.objects.filter(promo_id=promo['id'],context="frais_f", prospect__statut="convertit").aggregate(total=Sum('montant_paye'))['total'] or 0
         
 
     data = {
@@ -40,4 +40,19 @@ def DetailsEcheancierClient(request, pk):
         'client_id': pk
     }
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
+
+def ApiGetLunchedSpec(request):
+    if request.method == "GET":
+        id_promo = request.GET.get("id_promo")
+
+       
+        liste = (
+            FicheDeVoeux.objects.filter(promo_id=id_promo, is_confirmed=True).values("specialite__id", "specialite__label")
+            .annotate(
+                total_student=Count( "prospect",filter=Q(prospect__statut="convertit"),distinct=True)
+            ).order_by("specialite__label")
+        )
+
+
+        return JsonResponse(list(liste), safe=False)
 

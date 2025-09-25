@@ -54,6 +54,7 @@ class clientPaiementsRequestLine(models.Model):
 class DuePaiements(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
+    ordre = models.IntegerField(null=True, blank=True)
     ref_echeancier = models.CharField(max_length=1000, null=True, blank=True)
     montant_due = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     montant_restant = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)

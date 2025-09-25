@@ -4,6 +4,7 @@ from .f_views.echeancier import *
 from .f_views.preinscrit_paiements import *
 from .f_views.echeancier_special import *
 from .f_views.suivie_echeancier import *
+from .f_views.paiements import *
 
 app_name="t_tresorerie"
 
@@ -81,5 +82,10 @@ urlpatterns = [
     path('ApiLoadConvertedProspects', ApiLoadConvertedProspects, name="ApiLoadConvertedProspects"),
 
     path('details-suivie-echeancier/<int:pk>/', DetailsEcheancierClient, name="DetailsEcheancierClient"),
+
+    path('liste-des-paiements/', ListeDesPaiements, name="ListeDesPaiements"),
+    path('ApiListePaiements', ApiListePaiements, name="ApiListePaiements"),
+
+    path('ApiGetLunchedSpec', ApiGetLunchedSpec, name="ApiGetLunchedSpec"),
 
 ]

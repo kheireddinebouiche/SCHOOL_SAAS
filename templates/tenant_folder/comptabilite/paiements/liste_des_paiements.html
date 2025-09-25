@@ -1,0 +1,572 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Comptabilité/Paiements - Liste des paiements {% endblock title %}
+
+{% block content %}
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .icon-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Add search box styling */
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none; /* Make sure icon doesn't block input */
+    }
+    
+    /* Ensure search input is accessible */
+    #table-filter {
+        padding-right: 40px; /* Space for search icon */
+        z-index: 1; /* Ensure input is above icon */
+    }
+    
+    /* Table styling */
+    .table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Rounded elements */
+    .rounded-pill {
+        border-radius: 50rem !important;
+    }
+</style>
+
+<!-- ============================================================== -->
+<!-- Start right Content here -->
+<!-- ============================================================== -->
+<div class="main-content">
+
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-money-dollar-circle-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Liste des paiements</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Comptabilité</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Paiements</li>
+                                </ol>
+                            </nav>
+                            <button class="btn btn-primary rounded-pill" id="refreshPaiements">
+                                <i class="ri-refresh-line me-1"></i>Actualiser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Statistics Section -->
+            <div class="row mb-4" id="statisticsSection">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-list-check-2 text-primary fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">Total</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-success bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-success bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-checkbox-circle-line text-success fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="paidPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">Payés</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-time-line text-warning fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="partiallyPaidPaiements">0</h5>
+                                    <p class="mb-0 text-muted small">Partiellement payés</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-info bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-info bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-money-cny-circle-line text-info fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalMontant">0 DA</h5>
+                                    <p class="mb-0 text-muted small">Montant total</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-filter text-info me-2"></i>
+                                    <h5 class="card-title mb-0 text-info">Filtres</h5>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="search-box position-relative">
+                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px; padding-right: 40px; z-index: 1;">
+                                        <i class="fas fa-search text-muted search-icon" style="pointer-events: none;"></i>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <label for="dateFrom" class="me-2 mb-0">Du:</label>
+                                        <input type="date" id="dateFrom" class="form-control form-control-sm rounded-pill" style="width: 150px;">
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <label for="dateTo" class="me-2 mb-0">Au:</label>
+                                        <input type="date" id="dateTo" class="form-control form-control-sm rounded-pill" style="width: 150px;">
+                                    </div>
+                                    <div>
+                                        <button id="filterByDate" class="btn btn-primary btn-sm rounded-pill">
+                                            <i class="ri-filter-line me-1"></i>Filtrer
+                                        </button>
+                                        <button id="clearDateFilter" class="btn btn-light btn-sm rounded-pill">
+                                            <i class="ri-close-line me-1"></i>Effacer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            
+                        <div class="card-body p-3">
+                            <div class="table-responsive">
+                                <table id="example" class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="border-0 rounded-start">Client</th>
+                                            <th class="border-0">Facture</th>
+                                            <th class="border-0">Montant</th>
+                                            <th class="border-0">Type</th>
+                                            <th class="border-0">Statut</th>
+                                            <th class="border-0">Date</th>
+                                            <th class="border-0 rounded-end text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- container-fluid -->
+    </div>
+    <!-- End Page-content -->
+</div>
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
+                </lord-icon>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous étes sur le point de supprimer le paiement</h4>
+                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                    <div class="hstack gap-2 justify-content-center">
+                        
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<script>
+    $(document).ready(function(){
+        // Initialize DataTable
+        var table = $('#example').DataTable({
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json",
+                "emptyTable": "Aucune donnée disponible dans le tableau"
+            },
+            "pageLength": 10,
+            "ordering": true,
+            "searching": false, // Disable DataTables built-in search
+            "info": true,
+            "lengthChange": true,
+            "autoWidth": false,
+            "responsive": true,
+            "columnDefs": [
+                { "orderable": true, "targets": [0, 1, 2, 3, 5] },
+                { "orderable": false, "targets": [4, 6] }
+            ],
+            "data": [], // Initialize with empty data
+            "dom": '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+
+        // Store all payment data for filtering
+        var allPaymentData = [];
+        var currentSearchTerm = '';
+
+        function loadItems(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiListePaiements' %}", // This URL should be adjusted based on your actual API endpoint
+                dataType : 'JSON',
+                type : 'GET',
+                success : function(data){
+                    // Store all data for filtering
+                    allPaymentData = data;
+                    
+                    // Clear existing data
+                    table.clear();
+                    
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            var row = [];
+                            row.push('<strong><a href="/comptabilite/paiements/details-paiement/'+p.id+'">'+p.nom+" "+p.prenom+'</a></strong>');
+                            row.push('<strong>'+p.facture+'</strong>');
+                            row.push('<strong>'+p.montant+' DA</strong>');
+                            row.push('<strong>'+p.type+'</strong>');
+                            row.push('<strong><span class="badge bg-success">'+p.statut+'</span></strong>');
+                            row.push(p.date.split('T')[0]);
+                            
+                            var actions = '<div class="dropdown d-inline-block">'+
+                                '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+
+                                '<i class="ri-more-fill align-middle"></i>'+
+                                '</button>'+
+                                '<ul class="dropdown-menu dropdown-menu-end">'+
+                                '<li><a href="/comptabilite/paiements/details-paiement/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
+                                '<li><button id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>'+
+                                '<li>'+
+                                '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">'+
+                                '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer'+
+                                '</button>'+
+                                '</li>'+
+                                '</ul>'+
+                                '</div>';
+                            row.push(actions);
+                            
+                            // Add row to table
+                            table.row.add(row);
+                        });
+                    }
+
+                    // Draw the table
+                    table.draw();
+                }
+            });
+        }
+
+        function loadStatistics() {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiListePaiements' %}", // This URL should be adjusted based on your actual API endpoint
+                dataType: 'JSON',
+                type: 'GET',
+                success: function(data) {
+                    // Calculer les statistiques
+                    var total = data.length;
+                    var paid = 0;
+                    var partiallyPaid = 0;
+                    var totalMontant = 0;
+                    
+                    $.each(data, function(index, p) {
+                        if (p.statut == 'payé') {
+                            paid++;
+                        } else if (p.statut == 'partiel') {
+                            partiallyPaid++;
+                        }
+                        
+                        totalMontant += parseFloat(p.montant) || 0;
+                    });
+                    
+                    // Mettre à jour les statistiques
+                    $('#totalPaiements').text(total);
+                    $('#paidPaiements').text(paid);
+                    $('#partiallyPaidPaiements').text(partiallyPaid);
+                    $('#totalMontant').text(totalMontant.toLocaleString('fr-FR') + ' DA');
+                },
+                error: function() {
+                    console.error("Erreur lors du chargement des statistiques");
+                }
+            });
+        }
+
+        // Search functionality
+        $('#table-filter').on('keyup', function() {
+            currentSearchTerm = this.value.toLowerCase();
+            applyFilters();
+        });
+        
+        // Enhanced filtering that combines search and date filters
+        function applyFilters() {
+            var dateFrom = $('#dateFrom').val();
+            var dateTo = $('#dateTo').val();
+            
+            // Clear existing data
+            table.clear();
+            
+            var filteredData = allPaymentData;
+            
+            // Apply search filter
+            if (currentSearchTerm) {
+                filteredData = filteredData.filter(function(payment) {
+                    // Search in client name, invoice, amount, type, status, and date
+                    return (
+                        (payment.nom && payment.nom.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.prenom && payment.prenom.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.facture && payment.facture.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.montant && payment.montant.toString().includes(currentSearchTerm)) ||
+                        (payment.type && payment.type.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.statut && payment.statut.toLowerCase().includes(currentSearchTerm))
+                    );
+                });
+            }
+            
+            // Apply date filtering if dates are provided
+            if (dateFrom || dateTo) {
+                filteredData = filteredData.filter(function(payment) {
+                    var paymentDate = new Date(payment.date);
+                    
+                    if (dateFrom && dateTo) {
+                        var fromDate = new Date(dateFrom);
+                        var toDate = new Date(dateTo);
+                        toDate.setHours(23, 59, 59, 999); // Include the entire end date
+                        return paymentDate >= fromDate && paymentDate <= toDate;
+                    } else if (dateFrom) {
+                        var fromDate = new Date(dateFrom);
+                        return paymentDate >= fromDate;
+                    } else if (dateTo) {
+                        var toDate = new Date(dateTo);
+                        toDate.setHours(23, 59, 59, 999); // Include the entire end date
+                        return paymentDate <= toDate;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Add filtered data to table
+            if (filteredData.length > 0){
+                $.each(filteredData, function(index, p){
+                    var row = [];
+                    row.push('<strong><a href="/comptabilite/paiements/details-paiement/'+p.id+'">'+p.nom+" "+p.prenom+'</a></strong>');
+                    row.push('<strong>'+p.facture+'</strong>');
+                    row.push('<strong>'+p.montant+' DA</strong>');
+                    row.push('<strong>'+p.type+'</strong>');
+                    row.push('<strong><span class="badge bg-success">'+p.statut+'</span></strong>');
+                    row.push(p.date.split('T')[0]);
+                    
+                    var actions = '<div class="dropdown d-inline-block">'+
+                        '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+
+                        '<i class="ri-more-fill align-middle"></i>'+
+                        '</button>'+
+                        '<ul class="dropdown-menu dropdown-menu-end">'+
+                        '<li><a href="/comptabilite/paiements/details-paiement/'+p.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
+                        '<li><button id="updateBtn" data-id='+ p.id +' class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>'+
+                        '<li>'+
+                        '<button id="deleteConfirmation" data-id="'+p.id+'" class="dropdown-item remove-item-btn">'+
+                        '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer'+
+                        '</button>'+
+                        '</li>'+
+                        '</ul>'+
+                        '</div>';
+                    row.push(actions);
+                    
+                    // Add row to table
+                    table.row.add(row);
+                });
+            }
+            
+            // Draw the table
+            table.draw();
+            
+            // Update statistics based on filtered data
+            updateFilteredStatistics(filteredData);
+        }
+        
+        // Date filtering functionality
+        function filterByDateRange() {
+            applyFilters();
+        }
+        
+        // Update statistics based on filtered data
+        function updateFilteredStatistics(filteredData) {
+            var total = filteredData.length;
+            var paid = 0;
+            var partiallyPaid = 0;
+            var totalMontant = 0;
+            
+            $.each(filteredData, function(index, p) {
+                if (p.statut == 'payé') {
+                    paid++;
+                } else if (p.statut == 'partiel') {
+                    partiallyPaid++;
+                }
+                
+                totalMontant += parseFloat(p.montant) || 0;
+            });
+            
+            // Mettre à jour les statistiques
+            $('#totalPaiements').text(total);
+            $('#paidPaiements').text(paid);
+            $('#partiallyPaidPaiements').text(partiallyPaid);
+            $('#totalMontant').text(totalMontant.toLocaleString('fr-FR') + ' DA');
+        }
+
+        // Charger les données initiales
+        loadItems();
+        loadStatistics();
+
+        // Rafraîchir les données
+        $(document).on('click', '#refreshPaiements', function(){
+            loadItems();
+            loadStatistics();
+            // Clear date filters and search
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            $('#table-filter').val('');
+            currentSearchTerm = '';
+        });
+
+        // Date filter button
+        $(document).on('click', '#filterByDate', function(){
+            filterByDateRange();
+        });
+        
+        // Clear date filter button
+        $(document).on('click', '#clearDateFilter', function(){
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            applyFilters();
+        });
+        
+        // Also filter when pressing Enter in date fields
+        $(document).on('keypress', '#dateFrom, #dateTo', function(e){
+            if (e.which === 13) { // Enter key
+                filterByDateRange();
+            }
+        });
+
+        $(document).on('click', '#deleteConfirmation', function(){
+            var id_paiement = $(this).data('id');
+            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id_paiement+' class="btn btn-danger">Confirmer</button>';
+
+            $('.hstack').html(row);
+
+            $('.deleteModal').modal('show');
+        });
+        
+        // Confirmer la suppression
+        $(document).on('click', '#confirmDeleteBtn', function(){
+            var id_paiement = $(this).data('id');
+            
+            $.ajax({
+                url: '/comptabilite/paiements/delete/'+id_paiement+'/', // This URL should be adjusted based on your actual delete endpoint
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val(),
+                },
+                success: function(response){
+                    // Recharger la liste après suppression
+                    loadItems();
+                    loadStatistics();
+                    $('.deleteModal').modal('hide');
+                    
+                    // Afficher un message de succès
+                    alert('Paiement supprimé avec succès');
+                },
+                error: function(){
+                    alert('Erreur lors de la suppression du paiement');
+                }
+            });
+        });
+    });
+</script>
+{% endblock content %}

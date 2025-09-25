@@ -22,9 +22,10 @@ def AttentesPaiements(request):
 @login_required(login_url="insitut_app:login")
 def ApiListeDemandePaiement(request):
     listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").all()
-    
     data = []
     for obj in listes:
+        has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
+
         data.append({
             "id": obj.id,
             "motif": obj.motif,
@@ -40,6 +41,7 @@ def ApiListeDemandePaiement(request):
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "etat": obj.etat,
             "etat_label": obj.get_etat_display() if hasattr(obj, "get_etat_display") else None,
+            "has_rembourssement" : has_rembourssement,
         })
     
     return JsonResponse(data, safe=False)
@@ -125,6 +127,7 @@ def ApiGetDetailsDemandePaiement(request):
     paiements_done_data = []
     has_due_paiement = False
     has_paiement = False
+    has_pending_refund = False
 
     due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -213,6 +216,11 @@ def ApiGetDetailsDemandePaiement(request):
     if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
         echeancier_data = special_echeancier_data
     
+    refund = Rembourssements.objects.filter(client = obj.client, is_done=False).last()
+    if refund:
+        has_pending_refund = True
+    
+
     user_data = {
         "demandeur_nom": obj.client.nom,
         "demandeur_prenom": obj.client.prenom,
@@ -249,12 +257,11 @@ def ApiGetDetailsDemandePaiement(request):
         "total_paiement" : total_paiement if has_paiement else 0,
         "total_initial" : total_initial if has_due_paiement else 0,
         "total_solde" : total_solde ,
+        "has_pending_refund" : has_pending_refund,
     }
 
     return JsonResponse(data, safe=False)
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
-
-
 
 def ApiDeleteDemandePaiement(request):
     id_demande = request.GET.get('id_demande')

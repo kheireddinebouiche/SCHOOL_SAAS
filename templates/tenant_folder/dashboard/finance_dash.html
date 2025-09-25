@@ -1,0 +1,413 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Tableau de bord financier {% endblock title %}
+
+{% block content %}
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .icon-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Card styling */
+    .table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Dashboard specific styles */
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .dashboard-card {
+        transition: transform 0.2s;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .upcoming-deadlines .table-responsive {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .deadline-status {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-overdue {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    
+    .status-upcoming {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    
+    .status-due-soon {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+    
+    .progress {
+        height: 8px;
+    }
+    
+    .progress-bar {
+        background-color: #3b7ddd;
+    }
+</style>
+
+<!-- ============================================================== -->
+<!-- Start right Content here -->
+<!-- ============================================================== -->
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- start page title -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="dashboard-header">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="mb-1">Tableau de bord financier</h3>
+                                <p class="mb-0 opacity-75">Vue d'ensemble des finances de votre établissement</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <button class="btn btn-light btn-sm rounded-pill" id="refreshDashboard">
+                                    <i class="ri-refresh-line me-1"></i>Actualiser
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Statistics Section -->
+            <div class="row mb-4" id="statisticsSection">
+                <div class="col-md-4 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card dashboard-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-money-dollar-circle-line text-primary fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalPayments">0 DA</h5>
+                                    <p class="mb-0 text-muted small">Paiements effectués</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-danger bg-opacity-10 stat-card dashboard-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-danger bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-time-line text-danger fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="overdueAmount">0 DA</h5>
+                                    <p class="mb-0 text-muted small">Paiements en retard</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card dashboard-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-calendar-2-line text-warning fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="upcomingDeadlinesCount">0</h5>
+                                    <p class="mb-0 text-muted small">Échéances à venir</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-white p-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-chart-bar text-primary me-2"></i>
+                                <h5 class="card-title mb-0 text-primary">Progression financière</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Taux de recouvrement</span>
+                                        <span class="fw-bold" id="collectionRate">0%</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%" id="collectionProgressBar"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Paiements en cours</span>
+                                        <span class="fw-bold" id="pendingAmount">0 DA</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%" id="pendingProgressBar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Deadlines Table -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4 upcoming-deadlines">
+                        <div class="card-header border-0 bg-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-clock text-info me-2"></i>
+                                    <h5 class="card-title mb-0 text-info">Échéances à venir</h5>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="search-box position-relative">
+                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control form-control-sm rounded-pill" style="width: 200px;">
+                                        <i class="fas fa-search text-muted search-icon" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="border-0 rounded-start">Client</th>
+                                            <th class="border-0">Facture</th>
+                                            <th class="border-0">Montant</th>
+                                            <th class="border-0">Date d'échéance</th>
+                                            <th class="border-0">Jours restants</th>
+                                            <th class="border-0">Statut</th>
+                                            <th class="border-0 rounded-end text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deadlinesTableBody">
+                                        <!-- Demo data will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- container-fluid -->
+    </div>
+    <!-- End Page-content -->
+</div>
+
+<script>
+    $(document).ready(function(){
+        // Demo data for the dashboard
+        var demoPayments = [
+            { id: 1, client: "Jean Dupont", invoice: "INV-2023-001", amount: 1500, dueDate: "2023-10-15", status: "paid", daysRemaining: -10 },
+            { id: 2, client: "Marie Martin", invoice: "INV-2023-002", amount: 2300, dueDate: "2023-10-20", status: "overdue", daysRemaining: -5 },
+            { id: 3, client: "Pierre Bernard", invoice: "INV-2023-003", amount: 800, dueDate: "2023-10-25", status: "due-soon", daysRemaining: 0 },
+            { id: 4, client: "Sophie Laurent", invoice: "INV-2023-004", amount: 3200, dueDate: "2023-11-01", status: "upcoming", daysRemaining: 7 },
+            { id: 5, client: "Thomas Petit", invoice: "INV-2023-005", amount: 1200, dueDate: "2023-11-05", status: "upcoming", daysRemaining: 11 },
+            { id: 6, client: "Émilie Moreau", invoice: "INV-2023-006", amount: 950, dueDate: "2023-10-18", status: "overdue", daysRemaining: -7 },
+            { id: 7, client: "Lucas Girard", invoice: "INV-2023-007", amount: 2750, dueDate: "2023-10-30", status: "due-soon", daysRemaining: 5 },
+            { id: 8, client: "Camille Rousseau", invoice: "INV-2023-008", amount: 1800, dueDate: "2023-11-10", status: "upcoming", daysRemaining: 16 }
+        ];
+
+        function calculateStatistics() {
+            var totalPayments = 0;
+            var overdueAmount = 0;
+            var pendingAmount = 0;
+            var upcomingDeadlinesCount = 0;
+            
+            demoPayments.forEach(function(payment) {
+                if (payment.status === 'paid') {
+                    totalPayments += payment.amount;
+                } else if (payment.status === 'overdue') {
+                    overdueAmount += payment.amount;
+                } else if (payment.status === 'due-soon' || payment.status === 'upcoming') {
+                    pendingAmount += payment.amount;
+                    upcomingDeadlinesCount++;
+                }
+            });
+            
+            var collectionRate = ((totalPayments / (totalPayments + overdueAmount + pendingAmount)) * 100).toFixed(1);
+            
+            // Update the dashboard statistics
+            $('#totalPayments').text(totalPayments.toLocaleString('fr-FR') + ' DA');
+            $('#overdueAmount').text(overdueAmount.toLocaleString('fr-FR') + ' DA');
+            $('#upcomingDeadlinesCount').text(upcomingDeadlinesCount);
+            $('#collectionRate').text(collectionRate + '%');
+            $('#pendingAmount').text(pendingAmount.toLocaleString('fr-FR') + ' DA');
+            
+            // Update progress bars
+            $('#collectionProgressBar').css('width', collectionRate + '%');
+            var pendingRate = ((pendingAmount / (totalPayments + overdueAmount + pendingAmount)) * 100).toFixed(1);
+            $('#pendingProgressBar').css('width', pendingRate + '%');
+        }
+
+        function populateDeadlinesTable() {
+            var tbody = $('#deadlinesTableBody');
+            tbody.empty();
+
+            demoPayments.forEach(function(payment) {
+                if (payment.status !== 'paid') { // Only show non-paid payments
+                    var statusClass = '';
+                    var statusText = '';
+                    
+                    switch(payment.status) {
+                        case 'overdue':
+                            statusClass = 'status-overdue';
+                            statusText = 'En retard';
+                            break;
+                        case 'due-soon':
+                            statusClass = 'status-due-soon';
+                            statusText = 'Bientôt due';
+                            break;
+                        case 'upcoming':
+                            statusClass = 'status-upcoming';
+                            statusText = 'À venir';
+                            break;
+                        default:
+                            statusClass = 'status-upcoming';
+                            statusText = 'À venir';
+                    }
+                    
+                    var statusBadge = '<span class="deadline-status ' + statusClass + '">' + statusText + '</span>';
+                    var daysRemainingText = payment.daysRemaining < 0 ? 
+                        Math.abs(payment.daysRemaining) + ' jours en retard' : 
+                        payment.daysRemaining + ' jours restants';
+                    
+                    var row = '<tr>' +
+                        '<td><strong>' + payment.client + '</strong></td>' +
+                        '<td><strong>' + payment.invoice + '</strong></td>' +
+                        '<td><strong>' + payment.amount.toLocaleString('fr-FR') + ' DA</strong></td>' +
+                        '<td>' + formatDate(payment.dueDate) + '</td>' +
+                        '<td>' + daysRemainingText + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td class="text-center">' +
+                            '<div class="dropdown d-inline-block">' +
+                                '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">' +
+                                    '<i class="ri-more-fill align-middle"></i>' +
+                                '</button>' +
+                                '<ul class="dropdown-menu dropdown-menu-end">' +
+                                    '<li><a href="#" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>' +
+                                    '<li><a href="#" class="dropdown-item"><i class="ri-money-dollar-circle-line align-bottom me-2 text-muted"></i> Marquer comme payé</a></li>' +
+                                    '<li><a href="#" class="dropdown-item"><i class="ri-contacts-book-line align-bottom me-2 text-muted"></i> Contacter client</a></li>' +
+                                '</ul>' +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
+                    
+                    tbody.append(row);
+                }
+            });
+        }
+        
+        function formatDate(dateString) {
+            var date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+        
+        // Search functionality
+        $('#table-filter').on('keyup', function() {
+            var searchTerm = this.value.toLowerCase();
+            var tbody = $('#deadlinesTableBody');
+            var rows = tbody.find('tr');
+            
+            rows.each(function() {
+                var row = $(this);
+                var text = row.text().toLowerCase();
+                
+                if (text.includes(searchTerm)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+        });
+
+        // Initialize the dashboard
+        calculateStatistics();
+        populateDeadlinesTable();
+        
+        // Refresh dashboard
+        $(document).on('click', '#refreshDashboard', function(){
+            calculateStatistics();
+            populateDeadlinesTable();
+        });
+    });
+</script>
+{% endblock content %}

@@ -540,7 +540,7 @@
                     </div>
                     
                     <!-- Notification de succès pour la réduction appliquée -->
-                    <div style="display: none !important;" class="alert alert-success d-flex align-items-center notification-banner" role="alert" id="reductionSuccessNotification">
+                    <div  style="display: none !important;" class="alert alert-success d-flex align-items-center notification-banner" role="alert" id="reductionSuccessNotification">
                         <i class="ri-checkbox-circle-line me-3 fs-4"></i>
                         <div class="flex-grow-1">
                             <strong>Réduction appliquée avec succès !</strong>
@@ -549,7 +549,7 @@
                     </div>
                     
                     <!-- Notification d'attente de remboursement -->
-                    <div class="alert alert-warning d-flex align-items-center notification-banner" role="alert" id="remboursementEnAttenteNotification">
+                    <div style="display: none !important;" class="alert alert-warning d-flex align-items-center notification-banner" role="alert" id="remboursementEnAttenteNotification">
                         <i class="ri-refund-line me-3 fs-4"></i>
                         <div class="flex-grow-1">
                             <strong>Remboursement en attente de traitement.</strong>
@@ -2565,6 +2565,52 @@
     </div>
 </div>
 
+<!-- Modal pour notifier que le paiement précédent n'est pas passé -->
+<div class="modal fade" id="unpaidPaymentModal" tabindex="-1" aria-labelledby="unpaidPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-alert-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="unpaidPaymentModalLabel">Paiement en attente</h5>
+                        <p class="text-muted small mb-0">Un paiement précédent n'est pas encore traité</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
+                            <i class="ri-money-euro-circle-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mb-4">
+                    <h5>Attention: Paiement en attente</h5>
+                    <p class="text-muted">Le paiement précédent pour cette échéance n'est pas encore enregistré comme effectué.</p>
+                </div>
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <div>
+                        Veuillez vous assurer que le paiement précédent a été correctement enregistré avant de continuer.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-warning px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-check-line me-2"></i>Compris
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     
@@ -2576,7 +2622,9 @@
         var prixFormationReduction = 0.00;
         let hasReduction =  false;
         let reductionApprouved = false;
-        var clientId = null; // Variable to store client ID
+        var clientId = null;
+        let promoCode = null;
+        let has_pending_refund = false;
         let has_special_echeancier = false;
         let specialEcheancierState = false;
         let IdSpecialEcheancier = null; 
@@ -2646,8 +2694,9 @@
                     
                     // Store client ID
                     clientId = data.user_data.client_id;
+                    promoCode = data.voeux.promo;
                     $('#clientIdInput').val(clientId);
-                    console.log("Client ID:", clientId); // Debugging line to check client ID
+                    
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#clientEmail').text(data.user_data.email || 'Non spécifié');
@@ -2848,12 +2897,29 @@
                         document.getElementById('btnConfirmInscription').disabled = true;
 
                     }
+                
+                    ShowRefundNotification(data.has_pending_refund);
                 },
             });
         }
 
         loadDatas();
         
+        function ShowRefundNotification(has_pending_refund){
+            if(has_pending_refund){
+                document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "flex", "important");
+                document.getElementById('btnNewPaiementModal').disabled = true;
+                document.getElementById('btnRefundRequestModal').disabled = true;
+                document.getElementById('btnConfirmInscription').disabled = true;
+                document.getElementById('btnPrintEngagement').disabled = true;
+            }else{
+                document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
+                document.getElementById('btnNewPaiementModal').disabled = false;
+                document.getElementById('btnRefundRequestModal').disabled = false;  
+                document.getElementById('btnConfirmInscription').disabled = false;
+                document.getElementById('btnPrintEngagement').disabled = false;
+            }
+        }
 
         // Gestion du bouton de changement de modèle d'échéancier
         $(document).on('click', '#changeEcheancierModel', function(){
@@ -3653,6 +3719,7 @@
                     'reference' : reference,
                     'observation' : observation,
                     'clientId' : clientIdPaiement,
+                    'promo' : promoCode,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
 
@@ -3661,8 +3728,7 @@
                         alertify.success("Le paiement à été enregistrer avec succès");
                         loadDatas();
                     }else{
-                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
-                        
+                        showUnpaidPaymentNotification();
                     }
                 }
             })
@@ -3979,10 +4045,14 @@
 
         });
         
+         function showUnpaidPaymentNotification() {
+            $('#unpaidPaymentModal').modal('show');
+        }
     });
-
-     
+ 
 
 </script>
+
+
 
 {% endblock content %}
