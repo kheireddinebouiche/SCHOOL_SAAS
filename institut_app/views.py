@@ -141,6 +141,9 @@ def rh_dashboard(request):
 def default_dashboard(request):
     pass
 
+def FinanceDashboard(request):
+    return render(request, 'tenant_folder/dashboard/finance_dash.html')
+
 @login_required(login_url="institut_app:login")
 def Index(request):
     tenant = getattr(request, 'tenant', None)

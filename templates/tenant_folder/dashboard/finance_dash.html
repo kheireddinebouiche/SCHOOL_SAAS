@@ -4,19 +4,6 @@
 
 {% block content %}
 <style>
-    .stat-card {
-        border-radius: 0.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    }
-    
-    .icon-center {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-    }
-    
     /* Update badge styles with low opacity but visible text */
     .badge.bg-success {
         background-color: rgba(40, 167, 69, 0.2) !important;
@@ -59,22 +46,6 @@
     }
     
     /* Dashboard specific styles */
-    .dashboard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .dashboard-card {
-        transition: transform 0.2s;
-    }
-    
-    .dashboard-card:hover {
-        transform: translateY(-2px);
-    }
-    
     .upcoming-deadlines .table-responsive {
         max-height: 400px;
         overflow-y: auto;
@@ -109,6 +80,41 @@
     .progress-bar {
         background-color: #3b7ddd;
     }
+    
+    /* Prevent horizontal scrolling */
+    .main-content {
+        overflow-x: hidden;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Set max width for tables to prevent overflow */
+    .table {
+        max-width: 100%;
+        table-layout: auto;
+    }
+    
+    /* Specific fix for small screens */
+    @media (max-width: 768px) {
+        .table th,
+        .table td {
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+        
+        .table th:nth-child(1),
+        .table td:nth-child(1) {
+            min-width: 100px;
+        }
+        
+        .table th:nth-child(2),
+        .table td:nth-child(2) {
+            min-width: 80px;
+        }
+    }
 </style>
 
 <!-- ============================================================== -->
@@ -119,147 +125,397 @@
         <div class="container-fluid">
 
             <!-- start page title -->
-            <div class="row mb-4">
+            <div class="row">
                 <div class="col-12">
-                    <div class="dashboard-header">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h3 class="mb-1">Tableau de bord financier</h3>
-                                <p class="mb-0 opacity-75">Vue d'ensemble des finances de votre établissement</p>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <button class="btn btn-light btn-sm rounded-pill" id="refreshDashboard">
-                                    <i class="ri-refresh-line me-1"></i>Actualiser
-                                </button>
-                            </div>
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Tableau de bord financier</h4>
+
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Finance</a></li>
+                                <li class="breadcrumb-item active">Tableau de bord</li>
+                            </ol>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- end page title -->
 
-            <!-- Statistics Section -->
-            <div class="row mb-4" id="statisticsSection">
-                <div class="col-md-4 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card dashboard-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-money-dollar-circle-line text-primary fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="totalPayments">0 DA</h5>
-                                    <p class="mb-0 text-muted small">Paiements effectués</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-danger bg-opacity-10 stat-card dashboard-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-danger bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-time-line text-danger fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="overdueAmount">0 DA</h5>
-                                    <p class="mb-0 text-muted small">Paiements en retard</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card dashboard-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-calendar-2-line text-warning fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="upcomingDeadlinesCount">0</h5>
-                                    <p class="mb-0 text-muted small">Échéances à venir</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Section -->
-            <div class="row mb-4">
-                <div class="col-lg-12">
-                    <div class="card border-0 shadow-sm rounded-4">
-                        <div class="card-header border-0 bg-white p-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-chart-bar text-primary me-2"></i>
-                                <h5 class="card-title mb-0 text-primary">Progression financière</h5>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row">
-                                <div class="col-md-6 mb-4">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Taux de recouvrement</span>
-                                        <span class="fw-bold" id="collectionRate">0%</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div class="progress-bar" role="progressbar" style="width: 0%" id="collectionProgressBar"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-4">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Paiements en cours</span>
-                                        <span class="fw-bold" id="pendingAmount">0 DA</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div class="progress-bar" role="progressbar" style="width: 0%" id="pendingProgressBar"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Upcoming Deadlines Table -->
+            <!-- Overview Row - KPIs -->
             <div class="row">
-                <div class="col-lg-12">
-                    <div class="card border-0 shadow-sm rounded-4 upcoming-deadlines">
-                        <div class="card-header border-0 bg-white p-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-clock text-info me-2"></i>
-                                    <h5 class="card-title mb-0 text-info">Échéances à venir</h5>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Total Paiements</p>
                                 </div>
-                                
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="search-box position-relative">
-                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control form-control-sm rounded-pill" style="width: 200px;">
-                                        <i class="fas fa-search text-muted search-icon" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
-                                    </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-success fs-14 mb-0">
+                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +12.34 %
+                                    </h5>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="bg-light">
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="totalPayments">0 DA</span></h4>
+                                    <a href="#" class="text-decoration-underline">Voir détails</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-primary-subtle rounded fs-3">
+                                        <i class="ri-money-dollar-circle-line text-primary"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div><!-- end card body -->
+                    </div><!-- end card -->
+                </div><!-- end col -->
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Paiements en retard</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-danger fs-14 mb-0">
+                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +5.21 %
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="overdueAmount">0 DA</span></h4>
+                                    <a href="#" class="text-decoration-underline">Voir détails</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-danger-subtle rounded fs-3">
+                                        <i class="ri-time-line text-danger"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div><!-- end card body -->
+                    </div><!-- end card -->
+                </div><!-- end col -->
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Échéances à venir</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-success fs-14 mb-0">
+                                        <i class="ri-arrow-down-line fs-13 align-middle"></i> -2.45 %
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="upcomingDeadlinesCount">0</span></h4>
+                                    <a href="#" class="text-decoration-underline">Voir détails</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-warning-subtle rounded fs-3">
+                                        <i class="ri-calendar-2-line text-warning"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div><!-- end card body -->
+                    </div><!-- end card -->
+                </div><!-- end col -->
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Taux de recouvrement</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-success fs-14 mb-0">
+                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +3.67 %
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="collectionRate">0%</span></h4>
+                                    <a href="#" class="text-decoration-underline">Voir détails</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-info-subtle rounded fs-3">
+                                        <i class="ri-chart-line text-info"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div><!-- end card body -->
+                    </div><!-- end card -->
+                </div><!-- end col -->
+            </div> <!-- end row -->
+
+            <!-- Main Content Row -->
+            <div class="row">
+                <!-- Left Column - Upcoming Deadlines -->
+                <div class="col-xl-8">
+                    <!-- Upcoming Deadlines Section -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Échéances à Venir</h4>
+                            <div class="flex-shrink-0">
+                                <button type="button" class="btn btn-soft-info btn-sm" id="refreshDashboard">
+                                    <i class="ri-refresh-line align-middle"></i> Actualiser
+                                </button>
+                                <button type="button" class="btn btn-soft-primary btn-sm ms-2">
+                                    + Nouveau
+                                </button>
+                            </div>
+                        </div><!-- end card header -->
+
+                        <div class="card-body">
+                            <div class="table-responsive table-card">
+                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 500px;">
+                                    <thead class="text-muted table-light">
                                         <tr>
-                                            <th class="border-0 rounded-start">Client</th>
-                                            <th class="border-0">Facture</th>
-                                            <th class="border-0">Montant</th>
-                                            <th class="border-0">Date d'échéance</th>
-                                            <th class="border-0">Jours restants</th>
-                                            <th class="border-0">Statut</th>
-                                            <th class="border-0 rounded-end text-center">Action</th>
+                                            <th scope="col">Client</th>
+                                            <th scope="col">Facture</th>
+                                            <th scope="col">Montant</th>
+                                            <th scope="col">Date d'échéance</th>
+                                            <th scope="col">Statut</th>
                                         </tr>
                                     </thead>
                                     <tbody id="deadlinesTableBody">
                                         <!-- Demo data will be populated by JavaScript -->
                                     </tbody>
                                 </table>
+                            </div>
+                            
+                            <div class="mt-3 text-center">
+                                <a href="javascript:void(0);" class="text-muted text-decoration-underline">Voir tous les paiements</a>
+                            </div>
+                        </div><!-- end cardbody -->
+                    </div><!-- end card -->
+                    
+                    <!-- Additional financial metrics section -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Analyse Financière</h4>
+                            <div class="flex-shrink-0">
+                                <div class="dropdown card-header-dropdown">
+                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Date<i class="mdi mdi-chevron-down ms-1"></i></span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <a class="dropdown-item" href="#">Date</a>
+                                        <a class="dropdown-item" href="#">Montant</a>
+                                        <a class="dropdown-item" href="#">Client</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- end card header -->
+
+                        <div class="card-body">
+                            <div class="table-responsive table-card">
+                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 500px;">
+                                    <thead class="text-muted table-light">
+                                        <tr>
+                                            <th scope="col">Période</th>
+                                            <th scope="col">Revenus</th>
+                                            <th scope="col">Dépenses</th>
+                                            <th scope="col">Bénéfice</th>
+                                            <th scope="col">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><h6 class="mb-0">Ce mois</h6></td>
+                                            <td>245,300 DA</td>
+                                            <td>185,200 DA</td>
+                                            <td><span class="badge bg-success">+60,100 DA</span></td>
+                                            <td><span class="text-success">24.5%</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><h6 class="mb-0">Mois dernier</h6></td>
+                                            <td>220,150 DA</td>
+                                            <td>175,800 DA</td>
+                                            <td><span class="badge bg-success">+44,350 DA</span></td>
+                                            <td><span class="text-success">20.1%</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><h6 class="mb-0">Moyenne</h6></td>
+                                            <td>210,450 DA</td>
+                                            <td>180,300 DA</td>
+                                            <td><span class="badge bg-success">+30,150 DA</span></td>
+                                            <td><span class="text-success">14.3%</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Financial Distribution and Metrics -->
+                <div class="col-xl-4">
+                    <!-- Répartition des paiements par statut -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Répartition par Statut</h4>
+                            <div class="flex-shrink-0">
+                                <div class="dropdown card-header-dropdown">
+                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Volume<i class="mdi mdi-chevron-down ms-1"></i></span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <a class="dropdown-item" href="#">Volume</a>
+                                        <a class="dropdown-item" href="#">Montant</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- end card header -->
+
+                        <div class="card-body">
+                            <div class="table-responsive table-card">
+                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 300px;">
+                                    <thead class="text-muted table-light">
+                                        <tr>
+                                            <th scope="col">Statut</th>
+                                            <th scope="col">Volume</th>
+                                            <th scope="col">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><h6 class="mb-0">Payé</h6></td>
+                                            <td>145</td>
+                                            <td>65%</td>
+                                        </tr>
+                                        <tr>
+                                            <td><h6 class="mb-0">En attente</h6></td>
+                                            <td>45</td>
+                                            <td>20%</td>
+                                        </tr>
+                                        <tr>
+                                            <td><h6 class="mb-0">En retard</h6></td>
+                                            <td>35</td>
+                                            <td>15%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Répartition par méthode de paiement -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Répartition par Méthode</h4>
+                            <div class="flex-shrink-0">
+                                <div class="dropdown card-header-dropdown">
+                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Montant<i class="mdi mdi-chevron-down ms-1"></i></span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <a class="dropdown-item" href="#">Montant</a>
+                                        <a class="dropdown-item" href="#">Volume</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- end card header -->
+
+                        <div class="card-body">
+                            <div class="table-responsive table-card">
+                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 300px;">
+                                    <thead class="text-muted table-light">
+                                        <tr>
+                                            <th scope="col">Méthode</th>
+                                            <th scope="col">Volume</th>
+                                            <th scope="col">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <div class="avatar-xs">
+                                                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-6">
+                                                                <i class="ri-bank-card-line"></i>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">Carte</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>98</td>
+                                            <td>44%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <div class="avatar-xs">
+                                                            <span class="avatar-title bg-info-subtle text-info rounded-circle fs-6">
+                                                                <i class="ri-bank-line"></i>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">Virement</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>72</td>
+                                            <td>32%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <div class="avatar-xs">
+                                                            <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-6">
+                                                                <i class="ri-cash-line"></i>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">Espèces</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>55</td>
+                                            <td>24%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Progression Financière</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Taux de recouvrement</span>
+                                <span class="fw-bold" id="collectionRate">0%</span>
+                            </div>
+                            <div class="progress mb-4" style="height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="collectionProgressBar"></div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Paiements en cours</span>
+                                <span class="fw-bold" id="pendingAmount">0 DA</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="pendingProgressBar"></div>
                             </div>
                         </div>
                     </div>
@@ -329,23 +585,23 @@
                     
                     switch(payment.status) {
                         case 'overdue':
-                            statusClass = 'status-overdue';
+                            statusClass = 'badge bg-danger';
                             statusText = 'En retard';
                             break;
                         case 'due-soon':
-                            statusClass = 'status-due-soon';
+                            statusClass = 'badge bg-warning';
                             statusText = 'Bientôt due';
                             break;
                         case 'upcoming':
-                            statusClass = 'status-upcoming';
+                            statusClass = 'badge bg-success';
                             statusText = 'À venir';
                             break;
                         default:
-                            statusClass = 'status-upcoming';
+                            statusClass = 'badge bg-success';
                             statusText = 'À venir';
                     }
                     
-                    var statusBadge = '<span class="deadline-status ' + statusClass + '">' + statusText + '</span>';
+                    var statusBadge = '<span class="' + statusClass + '">' + statusText + '</span>';
                     var daysRemainingText = payment.daysRemaining < 0 ? 
                         Math.abs(payment.daysRemaining) + ' jours en retard' : 
                         payment.daysRemaining + ' jours restants';
@@ -355,20 +611,7 @@
                         '<td><strong>' + payment.invoice + '</strong></td>' +
                         '<td><strong>' + payment.amount.toLocaleString('fr-FR') + ' DA</strong></td>' +
                         '<td>' + formatDate(payment.dueDate) + '</td>' +
-                        '<td>' + daysRemainingText + '</td>' +
                         '<td>' + statusBadge + '</td>' +
-                        '<td class="text-center">' +
-                            '<div class="dropdown d-inline-block">' +
-                                '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">' +
-                                    '<i class="ri-more-fill align-middle"></i>' +
-                                '</button>' +
-                                '<ul class="dropdown-menu dropdown-menu-end">' +
-                                    '<li><a href="#" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>' +
-                                    '<li><a href="#" class="dropdown-item"><i class="ri-money-dollar-circle-line align-bottom me-2 text-muted"></i> Marquer comme payé</a></li>' +
-                                    '<li><a href="#" class="dropdown-item"><i class="ri-contacts-book-line align-bottom me-2 text-muted"></i> Contacter client</a></li>' +
-                                '</ul>' +
-                            '</div>' +
-                        '</td>' +
                     '</tr>';
                     
                     tbody.append(row);
@@ -410,4 +653,6 @@
         });
     });
 </script>
+
+         
 {% endblock content %}

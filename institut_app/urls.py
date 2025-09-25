@@ -60,6 +60,9 @@ urlpatterns = [
     path('ApiLoadBankAccountDetails', ApiLoadBankAccountDetails, name="ApiLoadBankAccountDetails"),
     path('ApiArchiveBankAccount',ApiArchiveBankAccount, name="ApiArchiveBankAccount"),
 
+
+    path('tableau-de-bord/finance/', FinanceDashboard, name="FinanceDashboard"),
+
     
 ]
 
