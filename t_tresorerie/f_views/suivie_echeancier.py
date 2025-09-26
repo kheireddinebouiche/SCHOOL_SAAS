@@ -10,6 +10,7 @@ from t_crm.models import RemiseAppliquer, Prospets, FicheDeVoeux
 from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 from institut_app.decorators import *
 from t_crm.models import *
+from datetime import datetime
 
 @login_required(login_url="institut_app:login")
 @ajax_required
@@ -80,6 +81,7 @@ def ApiGetClientEcheancier(request):
         has_paiement = False
         has_pending_refund = False
         has_processed_refund = False
+        is_appliced = False
 
         due_paiement = DuePaiements.objects.filter(client=obj).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -101,15 +103,16 @@ def ApiGetClientEcheancier(request):
         done_paiements = Paiements.objects.filter(prospect = obj)
         if done_paiements.count()>0:
             has_paiement = True
-            total_paiement = done_paiements.aggregate(total=Sum('montant_paye'))['total'] or 0
+            total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
                 paiements_done_data.append({
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
-                    'label_paiements' : i.due_paiements.label,
+                    'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
+                    'is_refund' : i.is_refund,
                 })
 
         else:
@@ -175,16 +178,23 @@ def ApiGetClientEcheancier(request):
                 has_pending_refund = True
             else:
                 has_processed_refund = True
+            
+            if refund.is_appliced:
+                is_appliced = True
 
             refund_data = {
                 'id' : refund.id,
                 'motif_rembourssement' : refund.motif_rembourssement,
                 'allowed_amount' : refund.allowed_amount,
                 'etat' : refund.get_etat_display(),
+                'etat_key' : refund.etat,
                 'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                 'date_de_traitement' : refund.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
                 'observation' : refund.observation, 
+                'mode_rembourssement' : refund.mode_rembourssement,
+                "mode_rembourssement_label" : refund.get_mode_rembourssement_display(),
                 'montant_paye' : paiements,
+                'is_appliced' : refund.is_appliced,
             }
         else:
             has_pending_refund = False
@@ -195,6 +205,12 @@ def ApiGetClientEcheancier(request):
             "demandeur_nom": obj.nom,
             "demandeur_prenom": obj.prenom,
             "statut_demandeur": obj.get_statut_display(),
+            "demandeur_email" : obj.email,
+            "demandeur_telephone" : obj.telephone,
+            "demandeur_date_naissance" : obj.date_naissance if obj.date_naissance else "Non complété",
+            "demandeur_adresse" : obj.adresse if obj.adresse else "Non complété",
+            "demandeur_lieu_naissance" : obj.lieu_naissance if obj.date_naissance else "Non complété",
+            "demandeur_date_inscription" : obj.created_at.strftime("%Y-%m-%d"),
             "client_id" : obj.id,
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "client_id": obj.id,  # Add client ID to the response
@@ -228,6 +244,7 @@ def ApiGetClientEcheancier(request):
             "total_solde" : total_solde ,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
+            'is_appliced' : is_appliced,
             "refund_data" : refund_data,
         }
 
@@ -235,10 +252,31 @@ def ApiGetClientEcheancier(request):
     
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiSaveRefundOperation(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
         amount = request.POST.get('refund_amount')
+        mode_rembourssement = request.POST.get('mode_rembourssement')
+        id_refund = request.POST.get('id_refund')
 
+        obj_refund = Rembourssements.objects.get(id = id_refund)
+        refund_paiement = Paiements(
 
-        pass
+            prospect = Prospets.objects.get(id = id_client),
+            paiement_label = "Rembourssement",
+            montant_paye = amount,
+            date_paiement = datetime.now(),
+            mode_paiement = mode_rembourssement,
+            is_refund = True,
+            refund_id = obj_refund,
+        )
+
+        refund_paiement.save()
+        obj_refund.is_appliced = True
+        obj_refund.save()
+       
+
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error"})

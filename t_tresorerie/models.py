@@ -88,6 +88,7 @@ class Paiements(models.Model):
     
     is_done = models.BooleanField(default=False)
     is_refund = models.BooleanField(default=False)
+    refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -130,6 +131,8 @@ class Rembourssements(models.Model):
     observation = models.CharField(max_length=1000, null=True, blank=True)
 
     mode_rembourssement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
+    
+    is_appliced = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

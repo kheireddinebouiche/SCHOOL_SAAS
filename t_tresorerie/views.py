@@ -121,11 +121,7 @@ def ApiRejectRembourssement(request):
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
-def ApiGetDetailsDemandePaiement(request):
-    
-    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({"status": "error", "message": "Accès non autorisé"}, status=403)
-    
+def ApiGetDetailsDemandePaiement(request):  
     if request.method == "GET":
         id= request.GET.get('id_demande')
         obj = ClientPaiementsRequest.objects.get(id = id)
@@ -140,6 +136,7 @@ def ApiGetDetailsDemandePaiement(request):
         has_paiement = False
         has_pending_refund = False
         has_processed_refund = False
+        is_appliced = False
 
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -161,15 +158,16 @@ def ApiGetDetailsDemandePaiement(request):
         done_paiements = Paiements.objects.filter(prospect = obj.client)
         if done_paiements.count()>0:
             has_paiement = True
-            total_paiement = done_paiements.aggregate(total=Sum('montant_paye'))['total'] or 0
+            total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
                 paiements_done_data.append({
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
-                    'label_paiements' : i.due_paiements.label,
+                    'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
+                    'is_refund' : i.is_refund,
                 })
 
         else:
@@ -237,13 +235,19 @@ def ApiGetDetailsDemandePaiement(request):
             else:
                 has_processed_refund = True
 
+            if refund.is_appliced:
+                is_appliced = True
+
             refund_data = {
                 'id' : refund.id,
                 'motif_rembourssement' : refund.motif_rembourssement,
                 'allowed_amount' : refund.allowed_amount,
                 'etat' : refund.get_etat_display(),
+                'etat_key' : refund.etat,
                 'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                 'date_de_traitement' : refund.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'mode_rembourssement' : refund.mode_rembourssement,
+                "mode_rembourssement_label" : refund.get_mode_rembourssement_display(),
                 'observation' : refund.observation, 
                 'montant_paye' : paiements,
             }
@@ -255,6 +259,12 @@ def ApiGetDetailsDemandePaiement(request):
         user_data = {
             "demandeur_nom": obj.client.nom,
             "demandeur_prenom": obj.client.prenom,
+            "demandeur_email" : obj.client.email,
+            "demandeur_telephone" : obj.client.telephone,
+            "demandeur_date_naissance" : obj.client.date_naissance if obj.client.date_naissance else "Non complété",
+            "demandeur_adresse" : obj.client.adresse if obj.client.adresse else "Non complété",
+            "demandeur_lieu_naissance" : obj.client.lieu_naissance if obj.client.date_naissance else "Non complété",
+            "demandeur_date_inscription" : obj.client.created_at.strftime("%Y-%m-%d"),
             "statut_demandeur": obj.client.statut,
             "client_id" : obj.client.id,
             "motif": obj.get_motif_display(),
@@ -290,12 +300,12 @@ def ApiGetDetailsDemandePaiement(request):
             "total_solde" : total_solde ,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
+            'is_appliced' : is_appliced,
             "refund_data" : refund_data,
         }
 
         return JsonResponse(data, safe=False)
-    else:
-        return JsonResponse({"status" : 'error', "message" : "methode non autoriser"})
+
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 
 def ApiDeleteDemandePaiement(request):
