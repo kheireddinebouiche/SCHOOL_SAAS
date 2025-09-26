@@ -8,10 +8,11 @@ from django.views.decorators.http import require_http_methods
 import json
 from t_crm.models import RemiseAppliquer,FicheDeVoeux
 from django.db.models import Q
-
+from institut_app.decorators import *
 
 
 @login_required(login_url="institut_app:login")
+@ajax_required
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
     
