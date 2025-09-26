@@ -52,6 +52,7 @@ class clientPaiementsRequestLine(models.Model):
         return self.paiement_request
 
 class DuePaiements(models.Model):
+
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
     ordre = models.IntegerField(null=True, blank=True)
@@ -61,7 +62,7 @@ class DuePaiements(models.Model):
     date_echeance = models.DateField(null=True, blank=True)
 
     is_done = models.BooleanField(default=False)
-
+    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
