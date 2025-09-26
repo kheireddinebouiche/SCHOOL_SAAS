@@ -87,6 +87,7 @@ class Paiements(models.Model):
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True, related_name="promo_paiements")
     
     is_done = models.BooleanField(default=False)
+    is_refund = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

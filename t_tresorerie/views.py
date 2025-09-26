@@ -8,10 +8,10 @@ from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
 from t_remise.models import *
 from django.db.models import Sum
 from django.db.models import Q
+from institut_app.decorators import *
 
-
+@login_required(login_url="institut_app:login")
 def AttentesPaiements(request):
-    
     context = {
        
         'tenant' : request.tenant,
@@ -20,8 +20,9 @@ def AttentesPaiements(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
 
 @login_required(login_url="insitut_app:login")
+@ajax_required
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").filter(client__statut = "instance")
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").all()
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
@@ -55,6 +56,7 @@ def PageDetailsDemandePaiement(request, pk):
     return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
 
 @login_required(login_url="institut_app:login")
+@ajax_required
 def ApiLoadRefundData(request):
     liste = Rembourssements.objects.all().values('is_done','client__nom', 'client__prenom', 'client__id', 'motif_rembourssement', 'etat','created_at', 'id').order_by('-created_at')
     for i in liste:
@@ -63,6 +65,7 @@ def ApiLoadRefundData(request):
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@ajax_required
 def ApiLoadRefundDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -119,172 +122,179 @@ def ApiRejectRembourssement(request):
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
 def ApiGetDetailsDemandePaiement(request):
-    id= request.GET.get('id_demande')
-    obj = ClientPaiementsRequest.objects.get(id = id)
-    voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
-
-    special_echeancier_data = []
-    has_special_echeancier = False
-    echeancier_state_approuvel = False
-    due_paiement_data = []
-    paiements_done_data = []
-    has_due_paiement = False
-    has_paiement = False
-    has_pending_refund = False
-    has_processed_refund = False
-
-    due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
-
-    if due_paiement.count() > 0:
-        has_due_paiement = True
-        total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
-        for i in due_paiement:
-            due_paiement_data.append({
-                'id_due_paiement' : i.id,
-                'montant_due'  : i.montant_due,
-                'montant_restant' : i.montant_restant,
-                'label' : i.label,
-                'date_echeance' : i.date_echeance,
-            })
-    else:
-        has_due_paiement = False
-        due_paiement_data = []
-
-    done_paiements = Paiements.objects.filter(prospect = obj.client)
-    if done_paiements.count()>0:
-        has_paiement = True
-        total_paiement = done_paiements.aggregate(total=Sum('montant_paye'))['total'] or 0
-        for i in done_paiements:
-            paiements_done_data.append({
-                'montant_paye' : i.montant_paye,
-                'date_paiement' : i.date_paiement,
-                'label_paiements' : i.due_paiements.label,
-                'num' : i.num,
-                'mode_paiement' : i.get_mode_paiement_display(),
-                'reference_paiement' : i.reference_paiement,
-            })
-
-    else:
-        paiements_done_data = []
-
-    obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
-    if obj_echeacncier_speial:
-        line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
-        echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
-        has_special_echeancier = True
+    
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({"status": "error", "message": "Accès non autorisé"}, status=403)
+    
+    if request.method == "GET":
+        id= request.GET.get('id_demande')
+        obj = ClientPaiementsRequest.objects.get(id = id)
+        voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
         special_echeancier_data = []
-        for i in line_echeancier_special:
-            special_echeancier_data.append({
-                'id_echeancier_special' : i.id,
+        has_special_echeancier = False
+        echeancier_state_approuvel = False
+        due_paiement_data = []
+        paiements_done_data = []
+        has_due_paiement = False
+        has_paiement = False
+        has_pending_refund = False
+        has_processed_refund = False
+
+        due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
+
+        if due_paiement.count() > 0:
+            has_due_paiement = True
+            total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
+            for i in due_paiement:
+                due_paiement_data.append({
+                    'id_due_paiement' : i.id,
+                    'montant_due'  : i.montant_due,
+                    'montant_restant' : i.montant_restant,
+                    'label' : i.label,
+                    'date_echeance' : i.date_echeance,
+                })
+        else:
+            has_due_paiement = False
+            due_paiement_data = []
+
+        done_paiements = Paiements.objects.filter(prospect = obj.client)
+        if done_paiements.count()>0:
+            has_paiement = True
+            total_paiement = done_paiements.aggregate(total=Sum('montant_paye'))['total'] or 0
+            for i in done_paiements:
+                paiements_done_data.append({
+                    'montant_paye' : i.montant_paye,
+                    'date_paiement' : i.date_paiement,
+                    'label_paiements' : i.due_paiements.label,
+                    'num' : i.num,
+                    'mode_paiement' : i.get_mode_paiement_display(),
+                    'reference_paiement' : i.reference_paiement,
+                })
+
+        else:
+            paiements_done_data = []
+
+        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
+        if obj_echeacncier_speial:
+            line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
+            echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
+            has_special_echeancier = True
+
+            special_echeancier_data = []
+            for i in line_echeancier_special:
+                special_echeancier_data.append({
+                    'id_echeancier_special' : i.id,
+                    'taux' : i.taux,
+                    'value' : i.value,
+                    'date_echeancier' : i.date_echeancier,
+                    'montant_tranche' : i.montant_tranche,
+                })
+
+
+        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
+        liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
+        
+        remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj.client).last()
+
+        if remiseObj and remiseObj.remise_appliquer:
+            
+            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            is_approuved_remise = remiseObj.remise_appliquer.is_approuved
+            reduction_type = remiseObj.remise_appliquer.remise.label
+            id_reduction = remiseObj.remise_appliquer.id
+
+            remiseDatas = {
+                'valeur' : remise_appliquer,
+                'remise_approuver' : is_approuved_remise,
+                'type_remise' : reduction_type,
+                'id_applied_reduction' : id_reduction,
+            }
+
+        else:
+            remiseDatas = None
+
+        echeancier_data=[]
+        for i in liste_echeancier:
+            echeancier_data.append({
+                'id': i.id,
                 'taux' : i.taux,
                 'value' : i.value,
-                'date_echeancier' : i.date_echeancier,
                 'montant_tranche' : i.montant_tranche,
+                'date_echeancier' : i.date_echeancier,
             })
 
-
-    echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
-    liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
-    
-    remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj.client).last()
-
-    if remiseObj and remiseObj.remise_appliquer:
+        ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
+        if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
+            echeancier_data = special_echeancier_data
         
-        remise_appliquer = remiseObj.remise_appliquer.remise.taux
-        is_approuved_remise = remiseObj.remise_appliquer.is_approuved
-        reduction_type = remiseObj.remise_appliquer.remise.label
-        id_reduction = remiseObj.remise_appliquer.id
-
-        remiseDatas = {
-            'valeur' : remise_appliquer,
-            'remise_approuver' : is_approuved_remise,
-            'type_remise' : reduction_type,
-            'id_applied_reduction' : id_reduction,
-        }
-
-    else:
-        remiseDatas = None
-
-    echeancier_data=[]
-    for i in liste_echeancier:
-        echeancier_data.append({
-            'id': i.id,
-            'taux' : i.taux,
-            'value' : i.value,
-            'montant_tranche' : i.montant_tranche,
-            'date_echeancier' : i.date_echeancier,
-        })
-
-    ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
-    if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
-        echeancier_data = special_echeancier_data
-    
-    refund = Rembourssements.objects.filter(client = obj.client).last()
-    refund_data = []
-    if refund:
-        paiements = Paiements.objects.filter(prospect = obj.client, context = "frais_f" ).aggregate(total=Sum('montant_paye'))['total'] or 0
-        if not refund.is_done:
-            has_pending_refund = True
-        else:
-            has_processed_refund = True
-
-        refund_data = {
-            'id' : refund.id,
-            'motif_rembourssement' : refund.motif_rembourssement,
-            'allowed_amount' : refund.allowed_amount,
-            'etat' : refund.get_etat_display(),
-            'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            'observation' : refund.observation, 
-            'montant_paye' : paiements,
-        }
-    else:
-        has_pending_refund = False
+        refund = Rembourssements.objects.filter(client = obj.client).last()
         refund_data = []
-    
+        if refund:
+            paiements = Paiements.objects.filter(prospect = obj.client, context = "frais_f" ).aggregate(total=Sum('montant_paye'))['total'] or 0
+            if not refund.is_done:
+                has_pending_refund = True
+            else:
+                has_processed_refund = True
 
-    user_data = {
-        "demandeur_nom": obj.client.nom,
-        "demandeur_prenom": obj.client.prenom,
-        "statut_demandeur": obj.client.statut,
-        "client_id" : obj.client.id,
-        "motif": obj.get_motif_display(),
-        "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "client_id": obj.client.id,  # Add client ID to the response
-    }
+            refund_data = {
+                'id' : refund.id,
+                'motif_rembourssement' : refund.motif_rembourssement,
+                'allowed_amount' : refund.allowed_amount,
+                'etat' : refund.get_etat_display(),
+                'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'observation' : refund.observation, 
+                'montant_paye' : paiements,
+            }
+        else:
+            has_pending_refund = False
+            refund_data = []
+        
 
-    voeux_data = {
-        'specialite_id' : voeux.specialite.id,
-        'specialite_label' : voeux.specialite.label,
-        'promo' : voeux.promo.code,
-        'prix_formation' : voeux.specialite.formation.prix_formation,
-        'frais_inscription' : voeux.specialite.formation.frais_inscription,
-    }
+        user_data = {
+            "demandeur_nom": obj.client.nom,
+            "demandeur_prenom": obj.client.prenom,
+            "statut_demandeur": obj.client.statut,
+            "client_id" : obj.client.id,
+            "motif": obj.get_motif_display(),
+            "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "client_id": obj.client.id,  # Add client ID to the response
+        }
 
-    total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
+        voeux_data = {
+            'specialite_id' : voeux.specialite.id,
+            'specialite_label' : voeux.specialite.label,
+            'promo' : voeux.promo.code,
+            'prix_formation' : voeux.specialite.formation.prix_formation,
+            'frais_inscription' : voeux.specialite.formation.frais_inscription,
+        }
 
-    data = {
-        'user_data' : user_data,
-        'voeux' : voeux_data,
-        'echeancier' : list(echeancier_data),
-        'remise' : remiseDatas,
-        'has_special_echeancier' : has_special_echeancier,
-        'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
-        'special_echeancier_line' : list(special_echeancier_data),
-        'echeancier_special_state_approuvel' : echeancier_state_approuvel,
-        "has_due_paiement" : has_due_paiement,
-        "due_paiement_data" : due_paiement_data,
-        "has_paiement" : has_paiement,
-        "paiements_done_data" : paiements_done_data,
-        "total_paiement" : total_paiement if has_paiement else 0,
-        "total_initial" : total_initial if has_due_paiement else 0,
-        "total_solde" : total_solde ,
-        "has_pending_refund" : has_pending_refund,
-        'has_processed_refund'  : has_processed_refund,
-        "refund_data" : refund_data,
-    }
+        total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
 
-    return JsonResponse(data, safe=False)
+        data = {
+            'user_data' : user_data,
+            'voeux' : voeux_data,
+            'echeancier' : list(echeancier_data),
+            'remise' : remiseDatas,
+            'has_special_echeancier' : has_special_echeancier,
+            'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
+            'special_echeancier_line' : list(special_echeancier_data),
+            'echeancier_special_state_approuvel' : echeancier_state_approuvel,
+            "has_due_paiement" : has_due_paiement,
+            "due_paiement_data" : due_paiement_data,
+            "has_paiement" : has_paiement,
+            "paiements_done_data" : paiements_done_data,
+            "total_paiement" : total_paiement if has_paiement else 0,
+            "total_initial" : total_initial if has_due_paiement else 0,
+            "total_solde" : total_solde ,
+            "has_pending_refund" : has_pending_refund,
+            'has_processed_refund'  : has_processed_refund,
+            "refund_data" : refund_data,
+        }
+
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({"status" : 'error', "message" : "methode non autoriser"})
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 
 def ApiDeleteDemandePaiement(request):
