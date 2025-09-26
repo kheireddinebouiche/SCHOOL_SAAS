@@ -243,6 +243,7 @@ def ApiGetDetailsDemandePaiement(request):
                 'allowed_amount' : refund.allowed_amount,
                 'etat' : refund.get_etat_display(),
                 'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'date_de_traitement' : refund.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
                 'observation' : refund.observation, 
                 'montant_paye' : paiements,
             }
