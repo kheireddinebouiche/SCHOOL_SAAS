@@ -85,7 +85,6 @@ def ApiApplyRemiseToPaiement(request):
     else:
         return JsonResponse({"status" : "error"})
 
-
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiStoreClientPaiement(request):
@@ -156,7 +155,6 @@ def ApiDeletePaiement(request):
     else:
         return JsonResponse({"status" : "error"})
     
-
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiApplyEcheancierSpecial(request):
@@ -199,7 +197,6 @@ def ApiRequestRefundPaiement(request):
     else:
         return JsonResponse({"status" : "error"})
     
-
 @login_required(login_url="institut_app:login")
 def SuivieEcheancier(request):
     return render(request, 'tenant_folder/comptabilite/echeancier/suivie_echeancier.html')
