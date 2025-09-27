@@ -755,8 +755,18 @@
                 document.getElementById('activityHistoryModal').addEventListener('show.bs.modal', function () {
                     loadActivityHistory();
                 });
+                
+                // Initialiser les fonctionnalités de tri et de filtrage
+                initSorting();
+                initFilters();
             });
             
+            // Variables pour la pagination
+            let currentData = [];
+            let filteredData = [];
+            let currentPage = 1;
+            const itemsPerPage = 10;
+
             // Fonction pour charger l'historique des activités
             function loadActivityHistory() {
                 $.ajax({
@@ -764,7 +774,7 @@
                     type: 'GET',
                     dataType: 'JSON',
                     success: function(data) {
-                        let tableContent = '';
+                        currentData = [];
                         
                         if (data.length > 0) {
                             data.forEach(item => {
@@ -776,33 +786,38 @@
                                     year: 'numeric'
                                 });
                                 
-                                tableContent += `
-                                    <tr>
-                                        <td>${formattedDate}</td>
-                                        <td>Visites</td>
-                                        <td>${item.visits}</td>
-                                        <td>${item.user}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>${formattedDate}</td>
-                                        <td>Appels Téléphoniques</td>
-                                        <td>${item.calls}</td>
-                                        <td>${item.user}</td>
-                                    </tr>
-                                `;
+                                // Ajouter une entrée pour les visites
+                                if (item.visits !== undefined) {
+                                    currentData.push({
+                                        date: item.date,
+                                        formattedDate: formattedDate,
+                                        type: 'Visites',
+                                        count: item.visits,
+                                        user: item.user
+                                    });
+                                }
+                                
+                                // Ajouter une entrée pour les appels
+                                if (item.calls !== undefined) {
+                                    currentData.push({
+                                        date: item.date,
+                                        formattedDate: formattedDate,
+                                        type: 'Appels Téléphoniques',
+                                        count: item.calls,
+                                        user: item.user
+                                    });
+                                }
                             });
-                        } else {
-                            tableContent = `
-                                <tr>
-                                    <td colspan="4" class="text-center">
-                                        <i class="ri-history-line ri-2x text-muted mb-2"></i>
-                                        <p class="text-muted mb-0">Aucun historique disponible</p>
-                                    </td>
-                                </tr>
-                            `;
                         }
                         
-                        document.getElementById('activity-history-body').innerHTML = tableContent;
+                        // Initialiser les données filtrées
+                        filteredData = [...currentData];
+                        
+                        // Afficher les données
+                        displayActivityHistory();
+                        
+                        // Mettre à jour le total
+                        document.getElementById('total-activities').textContent = filteredData.length;
                     },
                     error: function() {
                         document.getElementById('activity-history-body').innerHTML = `
@@ -815,42 +830,286 @@
                     }
                 });
             }
+
+            // Fonction pour afficher l'historique des activités avec pagination
+            function displayActivityHistory() {
+                // Trier les données avant l'affichage
+                sortActivityHistory();
+
+                // Calculer les index de pagination
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const pageData = filteredData.slice(startIndex, endIndex);
+
+                let tableContent = '';
+                        
+                if (pageData.length > 0) {
+                    pageData.forEach(item => {
+                        tableContent += `
+                            <tr>
+                                <td>${item.formattedDate}</td>
+                                <td>${item.type}</td>
+                                <td><span class="badge bg-primary">${item.count}</span></td>
+                                <td>${item.user}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tableContent = `
+                        <tr>
+                            <td colspan="4" class="text-center py-4">
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <i class="ri-history-line ri-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">Aucun historique disponible</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+                        
+                document.getElementById('activity-history-body').innerHTML = tableContent;
+                        
+                // Mettre à jour la pagination
+                updatePagination();
+            }
+
+            // Fonction pour trier les données
+            function sortActivityHistory() {
+                const sortColumn = document.querySelector('.sortable.active');
+                if (!sortColumn) return;
+                
+                const sortKey = sortColumn.dataset.sort;
+                const sortOrder = sortColumn.classList.contains('asc') ? 1 : -1;
+                
+                filteredData.sort((a, b) => {
+                    let valA = a[sortKey];
+                    let valB = b[sortKey];
+                    
+                    // Pour les dates, on convertit en timestamp pour le tri
+                    if (sortKey === 'date') {
+                        valA = new Date(valA).getTime();
+                        valB = new Date(valB).getTime();
+                    } else if (typeof valA === 'string') {
+                        valA = valA.toLowerCase();
+                        valB = valB.toLowerCase();
+                    }
+                    
+                    if (valA < valB) return -1 * sortOrder;
+                    if (valA > valB) return 1 * sortOrder;
+                    return 0;
+                });
+            }
+
+            // Fonction pour filtrer les données
+            function filterActivityHistory() {
+                const typeFilter = document.getElementById('activity-type-filter').value;
+                const dateFromFilter = document.getElementById('date-from-filter').value;
+                const dateToFilter = document.getElementById('date-to-filter').value;
+                
+                filteredData = currentData.filter(item => {
+                    // Filtrer par type d'activité
+                    if (typeFilter && item.type !== typeFilter) {
+                        return false;
+                    }
+                    
+                    // Filtrer par date de début
+                    if (dateFromFilter && new Date(item.date) < new Date(dateFromFilter)) {
+                        return false;
+                    }
+                    
+                    // Filtrer par date de fin
+                    if (dateToFilter && new Date(item.date) > new Date(dateToFilter)) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                // Réinitialiser la page courante
+                currentPage = 1;
+                
+                // Mettre à jour le total
+                document.getElementById('total-activities').textContent = filteredData.length;
+                
+                // Afficher les données filtrées
+                displayActivityHistory();
+            }
+
+            // Fonction pour mettre à jour la pagination
+            function updatePagination() {
+                const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+                const paginationContainer = document.getElementById('pagination-container');
+                paginationContainer.innerHTML = '';
+                
+                if (totalPages <= 1) return;
+                
+                // Bouton "Précédent"
+                const prevButton = document.createElement('li');
+                prevButton.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                prevButton.innerHTML = `<a class="page-link" href="#" aria-label="Previous" onclick="changePage(${currentPage - 1})">Précédent</a>`;
+                paginationContainer.appendChild(prevButton);
+                
+                // Pages
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageButton = document.createElement('li');
+                    pageButton.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    pageButton.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+                    paginationContainer.appendChild(pageButton);
+                }
+                
+                // Bouton "Suivant"
+                const nextButton = document.createElement('li');
+                nextButton.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                nextButton.innerHTML = `<a class="page-link" href="#" aria-label="Next" onclick="changePage(${currentPage + 1})">Suivant</a>`;
+                paginationContainer.appendChild(nextButton);
+            }
+
+            // Fonction pour changer de page
+            function changePage(page) {
+                const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                
+                currentPage = page;
+                displayActivityHistory();
+            }
+
+            // Initialiser les événements de tri
+            function initSorting() {
+                document.querySelectorAll('.sortable').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const currentSort = this.classList.contains('asc') ? 'asc' : 'desc';
+                        
+                        // Retirer la classe active des autres en-têtes
+                        document.querySelectorAll('.sortable').forEach(h => {
+                            h.classList.remove('active', 'asc', 'desc');
+                        });
+                        
+                        // Ajouter la classe active à l'en-tête cliqué
+                        if (currentSort === 'asc') {
+                            this.classList.add('active', 'desc');
+                        } else {
+                            this.classList.add('active', 'asc');
+                        }
+                        
+                        // Réinitialiser la page courante
+                        currentPage = 1;
+                        
+                        // Afficher les données triées
+                        displayActivityHistory();
+                    });
+                });
+            }
+
+            // Initialiser les événements de filtre
+            function initFilters() {
+                document.getElementById('apply-filters-btn').addEventListener('click', function() {
+                    filterActivityHistory();
+                });
+
+                // Réinitialiser les champs de filtre
+                document.getElementById('activity-type-filter').addEventListener('change', function() {
+                    if (this.value === '') filterActivityHistory();
+                });
+            }
         </script>
 
         <!-- Modal pour l'historique des activités -->
         <div class="modal fade" id="activityHistoryModal" tabindex="-1" aria-labelledby="activityHistoryModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
-                    <div class="modal-header">
+                    <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title" id="activityHistoryModalLabel">Historique des Activités</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped">
-                                <thead>
+                    <div class="modal-body p-4">
+                        <!-- Filtres et recherche -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <label for="activity-type-filter" class="form-label">Type d'activité</label>
+                                <select class="form-select" id="activity-type-filter">
+                                    <option value="">Tous les types</option>
+                                    <option value="Visites">Visites</option>
+                                    <option value="Appels Téléphoniques">Appels Téléphoniques</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date-from-filter" class="form-label">Date début</label>
+                                <input type="date" class="form-control" id="date-from-filter">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date-to-filter" class="form-label">Date fin</label>
+                                <input type="date" class="form-control" id="date-to-filter">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary w-100" id="apply-filters-btn">
+                                    <i class="ri-filter-line align-middle me-1"></i> Filtrer
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Pagination et tri -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <label class="me-2">Afficher</label>
+                                <select class="form-select form-select-sm w-auto" id="items-per-page">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <label class="ms-2">éléments</label>
+                            </div>
+                            <div class="text-muted">Total: <span id="total-activities">0</span> activités</div>
+                        </div>
+
+                        <!-- Tableau d'historique -->
+                        <div class="table-responsive shadow-sm rounded border">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Type d'activité</th>
-                                        <th>Nombre</th>
-                                        <th>Utilisateur</th>
+                                        <th class="sortable" data-sort="date">
+                                            Date 
+                                            <i class="ri-arrow-down-s-line sort-icon ms-1"></i>
+                                        </th>
+                                        <th class="sortable" data-sort="type">
+                                            Type d'activité 
+                                            <i class="ri-arrow-down-s-line sort-icon ms-1"></i>
+                                        </th>
+                                        <th class="sortable" data-sort="count">
+                                            Nombre 
+                                            <i class="ri-arrow-down-s-line sort-icon ms-1"></i>
+                                        </th>
+                                        <th class="sortable" data-sort="user">
+                                            Utilisateur 
+                                            <i class="ri-arrow-down-s-line sort-icon ms-1"></i>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody id="activity-history-body">
                                     <!-- Les données seront chargées ici via AJAX -->
                                     <tr>
-                                        <td colspan="4" class="text-center">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Chargement...</span>
+                                        <td colspan="4" class="text-center py-5">
+                                            <div class="d-flex flex-column align-items-center justify-content-center">
+                                                <div class="spinner-border text-primary mb-3" role="status">
+                                                    <span class="visually-hidden">Chargement...</span>
+                                                </div>
+                                                <p class="text-muted mb-0">Chargement de l'historique des activités...</p>
                                             </div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination -->
+                        <nav class="mt-3 d-flex justify-content-center" aria-label="Navigation de pagination">
+                            <ul class="pagination" id="pagination-container">
+                                <!-- Les boutons de pagination seront générés ici dynamiquement -->
+                            </ul>
+                        </nav>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
                     </div>
                 </div>
             </div>

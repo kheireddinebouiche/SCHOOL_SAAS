@@ -11,9 +11,9 @@ from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 from institut_app.decorators import *
 from t_crm.models import *
 from datetime import datetime
+from django.utils.timezone import now
 
 @login_required(login_url="institut_app:login")
-@ajax_required
 def ApiLoadConvertedProspects(request):
 
     clients = Prospets.objects.filter(statut="convertit").values('id', 'nom', 'prenom', 'email', 'telephone').annotate(
@@ -22,15 +22,17 @@ def ApiLoadConvertedProspects(request):
 
     promos = (Promos.objects.filter(etat="active").annotate(
             total_inscrit=Count('promo_fiche_voeux',filter=Q(promo_fiche_voeux__is_confirmed=True) & Q(promo_fiche_voeux__prospect__statut="convertit")) ,
-            montant_total=Sum('promo_fiche_voeux__specialite__formation__prix_formation',filter=Q(promo_fiche_voeux__is_confirmed=True))
+            montant_total=Sum('promo_fiche_voeux__specialite__formation__prix_formation',filter=Q(promo_fiche_voeux__is_confirmed=True, promo_fiche_voeux__prospect__statut="convertit"))
             
         ).values('id','code','date_debut','date_fin','begin_year','end_year','session','total_inscrit','montant_total')
     )
 
     for promo in promos:
         promo['montant_paye'] = Paiements.objects.filter(promo_id=promo['id'],context="frais_f", prospect__statut="convertit").aggregate(total=Sum('montant_paye'))['total'] or 0
-        
-
+        promo['montant_echus'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit", date_echeance__lt = now().date()).aggregate(total=Sum('montant_restant'))['total'] or 0
+        promo['montant_restant'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
+        promo['montant_rembouser'] = Paiements.objects.filter(is_refund=True, promo_id=promo['id']).aggregate(total=Sum('montant_paye'))['total'] or 0
+    
     data = {
         'clients': list(clients),
         'promos': list(promos),
@@ -261,15 +263,17 @@ def ApiSaveRefundOperation(request):
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
 
+        promo = FicheDeVoeux.objects.get(prospect__id = id_client, is_confirmed=True).last()
+
         obj_refund = Rembourssements.objects.get(id = id_refund)
         refund_paiement = Paiements(
-
             prospect = Prospets.objects.get(id = id_client),
             paiement_label = "Rembourssement",
             montant_paye = amount,
             date_paiement = datetime.now(),
             mode_paiement = mode_rembourssement,
             is_refund = True,
+            promo = promo.promo.id,
             refund_id = obj_refund,
         )
 

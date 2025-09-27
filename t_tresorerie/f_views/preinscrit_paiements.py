@@ -12,7 +12,6 @@ from institut_app.decorators import *
 
 
 @login_required(login_url="institut_app:login")
-@ajax_required
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
     
@@ -20,7 +19,7 @@ def ApiGetPaiementRequestDetails(request):
 
     # Récuperer la promo de l etudiant
     obj_promo  = FicheDeVoeux.objects.get(prospect_id = id_client, is_confirmed=True)
-    
+    obj_promo.promo.code
     
     # Récupérer les données de l'échéancier depuis la requête
     echeancier_data = request.GET.get('echeancier_data')
@@ -42,14 +41,15 @@ def ApiGetPaiementRequestDetails(request):
             'total_initial': str(total_initial),
             'total_final': str(total_final),
             'reduction': request.GET.get('reduction', '0') + '%' if request.GET.get('has_reduction') else '0%',
+            "promo_id" : obj_promo.promo.id
             
         }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
-            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.id)  
+            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id)  
                
              
-        return JsonResponse({"status":"success", 'data' : data})
+        return JsonResponse({"status":"success"})
     
     else:
         
@@ -90,6 +90,7 @@ def ApiApplyRemiseToPaiement(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@ajax_required
 def ApiStoreClientPaiement(request):
     echeance = request.POST.get('echeance')
     datePaiement = request.POST.get('datePaiement')

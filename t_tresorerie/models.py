@@ -62,7 +62,7 @@ class DuePaiements(models.Model):
     date_echeance = models.DateField(null=True, blank=True)
 
     is_done = models.BooleanField(default=False)
-    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True)
+    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True, related_name="due_paiement_promo")
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
