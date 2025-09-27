@@ -245,7 +245,6 @@ def ApiValidateProspect(request):
             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
-
 @login_required(login_url='institut_app:login')
 def ApiCheckStatutProspect(request):
     
@@ -256,7 +255,6 @@ def ApiCheckStatutProspect(request):
         'etat': prospect.etat
     }
     return JsonResponse({'data': data})
-
 
 @login_required(login_url="institut_app:login")
 def ApiLoadFormationAndSpecialite(request):
