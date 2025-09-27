@@ -121,6 +121,7 @@ def ApiRejectRembourssement(request):
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
+@ajax_required
 def ApiGetDetailsDemandePaiement(request):  
     if request.method == "GET":
         id= request.GET.get('id_demande')
