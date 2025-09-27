@@ -65,7 +65,7 @@ class Prospets(models.Model):
 
     context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Acceuil'),('con','Conseil')])
 
-    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','A déja appeler'),('est_passer','Visiste')])
+    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visiste')])
 
     has_refund = models.BooleanField(default=False)
 
