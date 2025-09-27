@@ -22,6 +22,7 @@ def ApiLoadConvertedProspects(request):
 
     promos = (Promos.objects.filter(etat="active").annotate(
             total_inscrit=Count('promo_fiche_voeux',filter=Q(promo_fiche_voeux__is_confirmed=True) & Q(promo_fiche_voeux__prospect__statut="convertit")) ,
+            
             montant_total=Sum('promo_fiche_voeux__specialite__formation__prix_formation',filter=Q(promo_fiche_voeux__is_confirmed=True, promo_fiche_voeux__prospect__statut="convertit"))
             
         ).values('id','code','date_debut','date_fin','begin_year','end_year','session','total_inscrit','montant_total')
@@ -32,12 +33,35 @@ def ApiLoadConvertedProspects(request):
         promo['montant_echus'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit", date_echeance__lt = now().date()).aggregate(total=Sum('montant_restant'))['total'] or 0
         promo['montant_restant'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
         promo['montant_rembouser'] = Paiements.objects.filter(is_refund=True, promo_id=promo['id']).aggregate(total=Sum('montant_paye'))['total'] or 0
-    
+        promo['nombre_paiement'] = Paiements.objects.filter(promo_id = promo['id'], is_refund=False).count()
+
     data = {
         'clients': list(clients),
         'promos': list(promos),
     }
     return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiStats(request):
+    nombre_inscrit = Prospets.objects.filter(statut="convertit").count()
+    nombre_paiement = Paiements.objects.filter(is_refund=False).count()
+
+    montant_echu = (
+        DuePaiements.objects.filter(date_echeance__lt=now().date(), is_done=False).aggregate(total=Sum('montant_restant'))['total'] or 0
+    )
+
+    paiement_attente = (
+        DuePaiements.objects.filter(is_done=False).aggregate(total=Sum('montant_restant'))['total'] or 0
+    )
+
+    data = {
+        'nombre_inscrit': nombre_inscrit,
+        'nombre_paiement': nombre_paiement,
+        'montant_echu': montant_echu,
+        'paiement_attente': paiement_attente,
+    }
+
+    return JsonResponse({"data": data})
 
 
 @login_required(login_url="institut_app:login")

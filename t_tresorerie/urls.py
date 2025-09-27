@@ -91,5 +91,6 @@ urlpatterns = [
     path('ApiGetClientEcheancier', ApiGetClientEcheancier, name="ApiGetClientEcheancier"),
 
     path('ApiSaveRefundOperation', ApiSaveRefundOperation, name="ApiSaveRefundOperation"),
+    path('ApiStats', ApiStats, name="ApiStats"),
 
 ]

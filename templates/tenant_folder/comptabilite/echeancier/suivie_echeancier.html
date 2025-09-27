@@ -502,8 +502,6 @@
                         };
                     });
                     
-                    // Update statistics
-                    updatePromoStatistics(allPromoData);
                     
                     // Render data
                     renderPromoTable(allPromoData);
@@ -558,8 +556,6 @@
                     html += '<td><div class="fw-medium text-danger">' + item.restant_a_paye.toLocaleString('fr-FR') + ' DA</div></td>';
                     html += '<td><div class="fw-medium text-danger">' + item.montant_echu.toLocaleString('fr-FR') + ' DA</div></td>';
                     html += '<td><div class="fw-medium text-danger">' + item.rembourssement.toLocaleString('fr-FR') + ' DA</div></td>';
-                   
-                    //html += '<td class="text-center"><span class="payment-status-badge ' + (item.paymentRate > 80 ? 'paid' : item.paymentRate > 50 ? 'pending' : 'overdue') + '">' + (item.paymentRate > 80 ? 'Bon' : item.paymentRate > 50 ? 'Moyen' : 'Faible') + '</span></td>';
                     html += '</tr>';
                 });
             } else {
@@ -616,35 +612,22 @@
         }
         
         // Update promo statistics
-        function updatePromoStatistics(data) {
-            var totalStudents = 0;
-            var totalPaid = 0;
-            var totalPending = 0;
-            var totalOverdue = 0;
-            
-            $.each(data, function(index, item) {
-                totalStudents += item.studentCount;
-                
-                // Calculate based on actual payment rates from the API
-                if (item.paymentRate >= 100) {
-                    totalPaid += item.studentCount;
-                } else if (item.paymentRate > 0) {
-                    // Estimate based on payment percentage
-                    var paidCount = Math.floor(item.studentCount * (item.paymentRate / 100));
-                    var pendingCount = item.studentCount - paidCount;
-                    totalPaid += paidCount;
-                    totalPending += pendingCount;
-                } else {
-                    // If no payment made, all are overdue/awaiting payment
-                    totalOverdue += item.studentCount;
+        function updatePromoStatistics() {
+
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiStats' %}",
+                dataType : "JSON",
+                type : "GET",
+                success : function(data){
+                    $('#totalConvertedProspects').text(data.data.nombre_inscrit);
+                    $('#paidCount').text(data.data.nombre_paiement);
+                    $('#pendingCount').text(data.data.montant_echu);
+                    $('#overdueCount').text(data.data.paiement_attente);
                 }
-            });
-            
-            $('#totalConvertedProspects').text(totalStudents);
-            $('#paidCount').text(totalPaid);
-            $('#pendingCount').text(totalPending);
-            $('#overdueCount').text(totalOverdue);
+            })
         }
+
+        updatePromoStatistics();
         
         // Store all promo data for filtering
         var allPromoData = [];
