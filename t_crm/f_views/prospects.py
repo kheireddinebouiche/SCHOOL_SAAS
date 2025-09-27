@@ -229,11 +229,17 @@ def ApiLoadRendezVousDetails(request):
 def ApiValidateProspect(request):
     if request.method == 'POST':
         id_prospect = request.POST.get('id_prospect')
+        id_fiche_voeux = request.POST.get("id_fiche_voeux")
         try:
             prospect = Prospets.objects.get(id=id_prospect)
             prospect.etat = "accepte"
             prospect.statut = "prinscrit"
             prospect.save()
+
+            voeux = FicheDeVoeux.objects.get(id = id_fiche_voeux)
+            voeux.is_confirmed = True
+            voeux.save()
+
             return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
