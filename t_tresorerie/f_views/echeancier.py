@@ -62,7 +62,13 @@ def ApiSaveEcheancier(request):
             # Convertir les données JSON en objet Python
             import json
             tranches = json.loads(tranches_data)
-            
+            modele = ModelEcheancier.objects.get(id = modele_id)
+            has_aleready = EcheancierPaiement.objects.filter(formation_id = formation_id, model__promo = modele.promo )
+           
+            if has_aleready.exists():
+
+                return JsonResponse({"status" : "error-head-already"})
+
             # Créer l'échéancier principal
             echeancier = EcheancierPaiement.objects.create(
                 model=ModelEcheancier.objects.get(id=modele_id),

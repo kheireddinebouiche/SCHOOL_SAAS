@@ -197,7 +197,7 @@ class EcheancierPaiement(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.label
+        return self.formation.nom
 
 class EcheancierPaiementLine(models.Model):
     echeancier = models.ForeignKey(EcheancierPaiement, null=True, blank=True, on_delete=models.CASCADE)
