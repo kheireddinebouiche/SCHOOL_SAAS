@@ -52,7 +52,7 @@ class Prospets(models.Model):
     niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 am'),('2_am','2 am'),('3_am', '3_am'),('4_am','4 am'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminal'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','Licence'),('m','Master')])
     diplome = models.CharField(max_length=100, null=True, blank=True)
     etablissement = models.CharField(max_length=100, null=True, blank=True)
-    statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance de paiement'),('convertit','Convertit')])
+    statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance de paiement'),('convertit','Convertit'),('annuler','Inscription Annulé')])
 
     profile_completed = models.BooleanField(default=False)
     has_completed_doc = models.BooleanField(default=False)

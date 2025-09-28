@@ -70,6 +70,7 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo):
             montant_restant=montant,
             date_echeance=date_echeance,
             promo_id = promo,
+            type = "frais_f",
         )
         return JsonResponse({"status": "success"})
     except Exception as e:

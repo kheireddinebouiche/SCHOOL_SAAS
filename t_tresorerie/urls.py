@@ -5,6 +5,7 @@ from .f_views.preinscrit_paiements import *
 from .f_views.echeancier_special import *
 from .f_views.suivie_echeancier import *
 from .f_views.paiements import *
+from .f_views.rembourssement import *
 
 app_name="t_tresorerie"
 
@@ -92,5 +93,9 @@ urlpatterns = [
 
     path('ApiSaveRefundOperation', ApiSaveRefundOperation, name="ApiSaveRefundOperation"),
     path('ApiStats', ApiStats, name="ApiStats"),
+    path('ApiShowRefundTraiteResult', ApiShowRefundTraiteResult, name="ApiShowRefundTraiteResult"),
+
+    path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
+    path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
 
 ]

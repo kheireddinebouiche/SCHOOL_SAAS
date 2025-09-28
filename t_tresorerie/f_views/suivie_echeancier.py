@@ -29,11 +29,19 @@ def ApiLoadConvertedProspects(request):
     )
 
     for promo in promos:
-        promo['montant_paye'] = Paiements.objects.filter(promo_id=promo['id'],context="frais_f", prospect__statut="convertit").aggregate(total=Sum('montant_paye'))['total'] or 0
-        promo['montant_echus'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit", date_echeance__lt = now().date()).aggregate(total=Sum('montant_restant'))['total'] or 0
-        promo['montant_restant'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'], client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
-        promo['montant_rembouser'] = Paiements.objects.filter(is_refund=True, promo_id=promo['id']).aggregate(total=Sum('montant_paye'))['total'] or 0
-        promo['nombre_paiement'] = Paiements.objects.filter(promo_id = promo['id'], is_refund=False).count()
+        total_paye = Paiements.objects.filter(promo_id=promo['id'],context="frais_f").filter(Q(prospect__statut="convertit") | Q(prospect__statut="annuler")).aggregate(total=Sum('montant_paye'))['total'] or 0
+
+        # Total remboursé pour cette promo
+        total_rembourse = Paiements.objects.filter(promo_id=promo['id'],is_refund=True).aggregate(total=Sum('montant_paye'))['total'] or 0
+
+        # Montant payé effectif après remboursement
+        promo['montant_paye'] = total_paye - total_rembourse
+
+        # Autres calculs
+        promo['montant_rembouser'] = total_rembourse
+        promo['montant_echus'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'],client__statut="convertit",date_echeance__lt=now().date()).aggregate(total=Sum('montant_restant'))['total'] or 0
+        promo['montant_restant'] = DuePaiements.objects.filter( is_done=False,promo_id=promo['id'],client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
+        promo['nombre_paiement'] = Paiements.objects.filter(promo_id=promo['id'], is_refund=False).count()
 
     data = {
         'clients': list(clients),
@@ -47,11 +55,11 @@ def ApiStats(request):
     nombre_paiement = Paiements.objects.filter(is_refund=False).count()
 
     montant_echu = (
-        DuePaiements.objects.filter(date_echeance__lt=now().date(), is_done=False).aggregate(total=Sum('montant_restant'))['total'] or 0
+        DuePaiements.objects.filter(date_echeance__lt=now().date(), is_done=False, is_annulated = False).aggregate(total=Sum('montant_restant'))['total'] or 0
     )
 
     paiement_attente = (
-        DuePaiements.objects.filter(is_done=False).aggregate(total=Sum('montant_restant'))['total'] or 0
+        DuePaiements.objects.filter(is_done=False, is_annulated=False).aggregate(total=Sum('montant_restant'))['total'] or 0
     )
 
     data = {
@@ -287,7 +295,7 @@ def ApiSaveRefundOperation(request):
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
 
-        promo = FicheDeVoeux.objects.get(prospect__id = id_client, is_confirmed=True).last()
+        promo = FicheDeVoeux.objects.filter(prospect__id = id_client, is_confirmed=True).last()
 
         obj_refund = Rembourssements.objects.get(id = id_refund)
         refund_paiement = Paiements(
@@ -297,15 +305,48 @@ def ApiSaveRefundOperation(request):
             date_paiement = datetime.now(),
             mode_paiement = mode_rembourssement,
             is_refund = True,
-            promo = promo.promo.id,
+            promo_id = promo.promo.id,
             refund_id = obj_refund,
         )
 
         refund_paiement.save()
         obj_refund.is_appliced = True
         obj_refund.save()
-       
 
+        change_client = Prospets.objects.get(id = id_client)
+        change_client.statut = "annuler"
+        change_client.save()
+
+        DuePaiements.objects.filter(client_id = change_client, type="frais_f").update(is_annulated=True)
+
+       
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+def ApiShowRefundTraiteResult(request):
+    id_demande = request.GET.get('id_demande')
+    rembourssement_obj = Rembourssements.objects.get(id=id_demande)
+    client_paiement = (
+        Paiements.objects.filter(prospect=rembourssement_obj.client, is_refund=False)
+        .aggregate(total=Sum('montant_paye'))['total'] or 0
+    )
+
+    data = {
+        'client__prenom': rembourssement_obj.client.prenom,
+        'client__nom': rembourssement_obj.client.nom,
+        'motif_rembourssement': rembourssement_obj.motif_rembourssement,
+        'allowed_amount': rembourssement_obj.allowed_amount,
+        'etat': rembourssement_obj.get_etat_display(),
+        'is_done': rembourssement_obj.is_done,
+        'observation': rembourssement_obj.observation,
+        'mode_rembourssement': rembourssement_obj.mode_rembourssement,
+        'is_appliced': rembourssement_obj.is_appliced,
+        'created_at': rembourssement_obj.created_at.strftime("%d/%m/%Y") if rembourssement_obj.created_at else None,
+        'updated_at': rembourssement_obj.updated_at.strftime("%d/%m/%Y") if rembourssement_obj.updated_at else None,
+        'client_paiement' : client_paiement,
+    }
+
+    return JsonResponse({"data": data})
+    

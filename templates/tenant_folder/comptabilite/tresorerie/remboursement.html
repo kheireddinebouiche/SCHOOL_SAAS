@@ -951,51 +951,33 @@
         });
         
         function loadResultatDetails(id_demande) {
-            // Since we already have the data in allRefundData, we can filter it
-            var refund = allRefundData.find(function(item) {
-                return item.id == id_demande;
-            });
-            
-            if (refund) {
-                // Format the date
-                var date = new Date(refund.created_at);
-                var formattedDate = date.toLocaleDateString('fr-FR', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                
-                // Populate the modal with result details
-                $('#resultat_client').val((refund.client__nom || '') + ' ' + (refund.client__prenom || ''));
-                $('#resultat_date').val(formattedDate);
-                $('#resultat_motif').val(refund.motif_rembourssement || 'N/A');
-                $('#resultat_decision').val(getDecisionLabel(refund.etat));
-                $('#resultat_montant_paye').val((refund.montant_paye || 'N/A') + ' DA');
-                $('#resultat_montant_rembourse').val((refund.montant_rembourse || 'N/A') + ' DA');
-                $('#resultat_date_traitement').val(refund.date_traitement || 'N/A');
-                $('#resultat_mode_paiement').val(getModePaiementLabel(refund.mode_paiement) || 'N/A');
-                
-                // Show/hide appropriate result sections based on decision
-                if (refund.etat === 'rejete') {
-                    $('#resultat_motif_rejet').show();
-                    $('#resultat_contenu_motif_rejet').val(refund.motif_rejet || 'N/A');
-                    $('#resultat_accepte').hide();
-                } else if (refund.etat === 'accepte') {
-                    $('#resultat_motif_rejet').hide();
-                    $('#resultat_accepte').show();
-                    $('#resultat_contenu_accepte').val('Remboursement traité avec succès');
-                } else {
-                    $('#resultat_motif_rejet').hide();
-                    $('#resultat_accepte').hide();
+
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiShowRefundTraiteResult' %}",
+                dataType : "JSON",
+                type : "GET",
+                data : {
+                    'id_demande':id_demande,
+                },
+                success : function(data){
+                    var refund = data.data;
+                    // Populate the modal with result details
+                    $('#resultat_client').val((refund.client__nom || '') + ' ' + (refund.client__prenom || ''));
+                    $('#resultat_date').val(refund.created_at);
+                    $('#resultat_motif').val(refund.motif_rembourssement || 'N/A');
+                    $('#resultat_decision').val(getDecisionLabel(refund.etat));
+                    $('#resultat_montant_paye').val((refund.client_paiement || 'N/A') + ' DA');
+                    $('#resultat_montant_rembourse').val((refund.allowed_amount || 'N/A') + ' DA');
+                    $('#resultat_date_traitement').val(refund.date_traitement || 'N/A');
+                    //$('#resultat_mode_paiement').val(getModePaiementLabel(refund.mode_paiement) || 'N/A');
+                    
+                    
+                    
+                    // Show the modal
+                    $('.resultatModal').modal('show');
                 }
-                
-                // Show the modal
-                $('.resultatModal').modal('show');
-            } else {
-                // If we don't have the data locally, we would need to fetch it from the server
-                // For now, just show an error message
-                alertify.error("Impossible de charger les détails de la demande de remboursement");
-            }
+            }); 
+          
         }
         
         // Helper function to get decision label

@@ -62,7 +62,10 @@ class DuePaiements(models.Model):
     date_echeance = models.DateField(null=True, blank=True)
 
     is_done = models.BooleanField(default=False)
+    is_annulated= models.BooleanField(default=False)
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True, related_name="due_paiement_promo")
+    type = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f',"Frais de formation"),('dette','Module en dette'),('autre','Autre')])
+    observation = models.CharField(max_length=1000, null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
@@ -89,7 +92,7 @@ class Paiements(models.Model):
     
     is_done = models.BooleanField(default=False)
     is_refund = models.BooleanField(default=False)
-    refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.CASCADE)
+    refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -141,7 +144,6 @@ class Rembourssements(models.Model):
     def __str__(self):
         return self.paiements
     
-
 ## ne pas utiliser cette classe
 class PaiementRemboursement(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
