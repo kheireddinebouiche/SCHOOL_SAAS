@@ -14,7 +14,7 @@ from institut_app.decorators import *
 @login_required(login_url="institut_app:login")
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
-    
+    id_echeancier = request.GET.get('id_echeancier')
     obj_client = Prospets.objects.get(id= id_client)
 
     # Récuperer la promo de l etudiant
@@ -46,7 +46,7 @@ def ApiGetPaiementRequestDetails(request):
         }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
-            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id)  
+            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier)  
                
              
         return JsonResponse({"status":"success"})
@@ -57,7 +57,7 @@ def ApiGetPaiementRequestDetails(request):
 
 ### Fonction qui stock les echeanciers de paiements
 @transaction.atomic
-def ApiStorePaiements(client,label,date_echeance,montant,promo):
+def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
     try:
         last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
         ordre = (last.ordre + 1) if last else 1
@@ -71,6 +71,7 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo):
             date_echeance=date_echeance,
             promo_id = promo,
             type = "frais_f",
+            ref_echeancier_id = echeancier,
         )
         return JsonResponse({"status": "success"})
     except Exception as e:

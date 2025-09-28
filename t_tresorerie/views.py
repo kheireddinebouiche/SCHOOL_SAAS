@@ -127,6 +127,9 @@ def ApiGetDetailsDemandePaiement(request):
         obj = ClientPaiementsRequest.objects.get(id = id)
         voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
+        echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+        print(echeancierId.id)
+
         special_echeancier_data = []
         has_special_echeancier = False
         echeancier_state_approuvel = False
@@ -190,7 +193,7 @@ def ApiGetDetailsDemandePaiement(request):
                 })
 
 
-        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
+        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True, model__promo = voeux.promo)
         liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
         
         remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj.client).last()
@@ -289,6 +292,7 @@ def ApiGetDetailsDemandePaiement(request):
             'remise' : remiseDatas,
             'has_special_echeancier' : has_special_echeancier,
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
+            'id_echeancier' : echeancierId.id,
             'special_echeancier_line' : list(special_echeancier_data),
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,

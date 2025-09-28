@@ -211,3 +211,12 @@ def ApiLoadEcheanciersConfigures(request):
 def echeancierAppliquer(request):
 
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
+
+
+@login_required(login_url="institut_app:login")
+def ApiCheckEcheancierState(request):
+    id_echeancier = request.GET.get('id_echeancier')
+    due_paiements = DuePaiements.objects.filter(ref_echeancier_id = id_echeancier).exists()
+
+    if due_paiements:
+        return JsonResponse({"status" : "has_due_paiement"})

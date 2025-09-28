@@ -107,6 +107,9 @@ def ApiGetClientEcheancier(request):
         
         voeux = FicheDeVoeux.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
 
+        echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+        
+
         special_echeancier_data = []
         has_special_echeancier = False
         echeancier_state_approuvel = False
@@ -169,7 +172,7 @@ def ApiGetClientEcheancier(request):
                     'montant_tranche' : i.montant_tranche,
                 })
 
-        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True)
+        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True, model__promo = voeux.promo)
         liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
         
         remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj).last()

@@ -789,6 +789,7 @@ $(document).ready(function () {
     // Variables pour la pagination
     let currentPage = 1;
     const recordsPerPage = 10;
+    let stateEchancier = false;
     
     // Charger la liste des échéanciers
     function loadEcheanciers(page = 1) {
@@ -1087,17 +1088,38 @@ $(document).ready(function () {
 
     // Modal for active echeancier editing restriction
     $(document).on('click', '.btn-edit-echeancier', function() {
-        var echeancierId = $(this).data('id');
-        var statusElement = $(this).data('status');
-        if (statusElement) {
-            // Show the alert modal
-            $('#echeancierActiveModal').modal('show');
-        } else {
-            // If not active, proceed with normal edit functionality
-            alertify.warning("Fonctionnalité de modification en cours de développement");
-            // In a real implementation, redirect to edit page or open edit modal
-        }
+      var echeancierId = $(this).data('id');
+
+        CheckEcheancierState(echeancierId, function(stateEchancier) {
+              if (stateEchancier) {
+                  $('#echeancierActiveModal').modal('show');
+              } else {
+                  alertify.warning("Fonctionnalité de modification en cours de développement");
+              }
+          });
     });
+
+
+    function CheckEcheancierState(id_echeancier, callback){
+        $.ajax({
+          url : "{% url 't_tresorerie:ApiCheckEcheancierState' %}",
+          dataType :"JSON",
+          type : "GET",
+          data :{
+            'id_echeancier' : id_echeancier,
+          },
+          success : function(response){
+            if(response.status === "has_due_paiement"){
+              callback(true);
+            } else {
+              callback(false);
+            }
+          },
+          error: function() {
+            callback(false); // en cas d'erreur on considère comme inactif
+          }
+        });
+    }
 
 });
 </script>

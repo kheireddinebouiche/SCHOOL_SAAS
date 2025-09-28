@@ -98,4 +98,6 @@ urlpatterns = [
     path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
 
+    path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
+
 ]
