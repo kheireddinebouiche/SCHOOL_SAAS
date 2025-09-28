@@ -214,6 +214,70 @@ def echeancierAppliquer(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiSetEcheancierDefault(request):
+    if request.method == 'POST':
+        try:
+            echeancier_id = request.POST.get('id')
+            
+            # Get the echeancier to set as default
+            echeancier_to_set = EcheancierPaiement.objects.get(id=echeancier_id)
+            
+            # Then, set the selected one as default
+            echeancier_to_set.is_default = True
+            echeancier_to_set.save()
+            
+            return JsonResponse({"status": "success", "message": "Échéancier défini comme par défaut avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateEcheancier(request):
+    if request.method == 'POST':
+        try:
+            echeancier_id = request.POST.get('id')
+            is_active = request.POST.get('is_active')
+            tranche_updates_data = request.POST.get('tranche_updates')
+            
+            # Convertir les données JSON en objet Python
+            import json
+            tranche_updates = json.loads(tranche_updates_data)
+            
+            # Récupérer l'échéancier existant
+            echeancier = EcheancierPaiement.objects.get(id=echeancier_id)
+            
+            # Mettre à jour seulement le statut
+            echeancier.is_active = bool(int(is_active))  # Convertir '1'/'0' en booléen
+            
+            # Sauvegarder les modifications
+            echeancier.save()
+            
+            # Mettre à jour les dates et libellés des tranches
+            for update in tranche_updates:
+                tranche_id = update['id']
+                new_date = update['date']
+                new_value = update['value']
+                
+                # Récupérer la ligne d'échéancier spécifique
+                tranche_line = EcheancierPaiementLine.objects.get(id=tranche_id)
+                
+                # Mettre à jour la date d'échéance et le libellé
+                tranche_line.date_echeancier = new_date if new_date else None
+                tranche_line.value = new_value
+                tranche_line.save()
+            
+            return JsonResponse({"status": "success", "message": "Échéancier mis à jour avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
 def ApiCheckEcheancierState(request):
     id_echeancier = request.GET.get('id_echeancier')
     due_paiements = DuePaiements.objects.filter(ref_echeancier_id = id_echeancier).exists()

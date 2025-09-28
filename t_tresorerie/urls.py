@@ -43,6 +43,8 @@ urlpatterns = [
 
     path('ApiLoadEcheancierDetails', ApiLoadEcheancierDetails, name="ApiLoadEcheancierDetails"),
     path('ApiSaveEcheancier', ApiSaveEcheancier, name="ApiSaveEcheancier"),
+    path('ApiUpdateEcheancier', ApiUpdateEcheancier, name="ApiUpdateEcheancier"),
+    path('ApiSetEcheancierDefault', ApiSetEcheancierDefault, name="ApiSetEcheancierDefault"),
     path('ApiSaveModeleEcheancier', ApiSaveModeleEcheancier, name="ApiSaveModeleEcheancier"),
     path('ApiLoadModeleEcheancierDetails', ApiLoadModeleEcheancierDetails, name="ApiLoadModeleEcheancierDetails"),
     path('ApiUpdateModeleEcheancier', ApiUpdateModeleEcheancier, name="ApiUpdateModeleEcheancier"),
