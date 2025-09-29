@@ -140,6 +140,7 @@ def ApiGetDetailsDemandePaiement(request):
         has_pending_refund = False
         has_processed_refund = False
         is_appliced = False
+        special_echeancier_validate = False
 
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -181,6 +182,7 @@ def ApiGetDetailsDemandePaiement(request):
             line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
             echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
             has_special_echeancier = True
+            special_echeancier_validate = obj_echeacncier_speial.is_validate
 
             special_echeancier_data = []
             for i in line_echeancier_special:
@@ -306,6 +308,7 @@ def ApiGetDetailsDemandePaiement(request):
             'has_processed_refund'  : has_processed_refund,
             'is_appliced' : is_appliced,
             "refund_data" : refund_data,
+            'special_echeancier_validate' : special_echeancier_validate,
         }
 
         return JsonResponse(data, safe=False)

@@ -723,10 +723,53 @@
   </div>
 </div>
 
+<!-- Modal alert for applied echeancier model -->
+<div class="modal fade" id="appliedModelAlertModal" tabindex="-1" aria-labelledby="appliedModelAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center w-100">
+          <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0">
+            <i class="ri-error-warning-line text-warning fs-4"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h5 class="modal-title fw-bold text-warning mb-1" id="appliedModelAlertModalLabel">Modèle d'échéancier appliqué</h5>
+            <p class="text-muted small mb-0">Attention aux modifications</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center py-3">
+          <div class="mb-4">
+            <i class="ri-error-warning-line text-warning" style="font-size: 64px;"></i>
+          </div>
+          <h4 class="text-dark mb-3">Modèle en cours d'utilisation</h4>
+          <p class="text-muted mb-0">
+            Ce modèle d'échéancier est actuellement appliqué et toute modification pourrait affecter la cohérence des paiements.
+            Veuillez procéder avec prudence et vérifier que les changements n'auront pas d'impact indésirable sur les échéanciers déjà configurés.
+          </p>
+          <div class="mt-4 p-3 bg-light rounded-3 text-start">
+            <p class="mb-2"><i class="ri-checkbox-circle-line text-success me-2"></i> Vérifiez que les modifications ne perturberont pas les paiements existants</p>
+            <p class="mb-2"><i class="ri-checkbox-circle-line text-success me-2"></i> Prévenez les responsables concernés avant d'apporter des modifications</p>
+            <p class="mb-0"><i class="ri-checkbox-circle-line text-success me-2"></i> Documentez les changements effectués pour une traçabilité optimale</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   
 $(document).ready(function () {
-    
+    let stateModel = false;
 
     function loadPromo(){
         $.ajax({
@@ -823,7 +866,58 @@ $(document).ready(function () {
         }); 
     }
 
-    // Générer les tranches dynamiquement
+    function CheckStateModel(id_model){
+      $.ajax({
+        url : "{% url 't_tresorerie:ApiCheckStateModel' %}",
+        dataType: "JSON",
+        type : "GET",
+        data : {
+          'id_model' : id_model,
+        },
+        success: function(response){
+          if (response.status === "success"){
+              $('#appliedModelAlertModal').modal('show');
+          }else{
+              loadEcheancierDetails(id_model);
+          }
+        }
+      })
+    }
+
+    function loadEcheancierDetails(echeancierId){
+      // Charger les données de l'échéancier à modifier
+        $.ajax({
+          url: "{% url 't_tresorerie:ApiLoadModeleEcheancierDetails' %}",
+          type: 'GET',
+          data: { 'id': echeancierId },
+          dataType: 'JSON',
+          success: function(response) {
+            if(response.status === 'success') {
+              var data = response.data;
+              
+              // Remplir le formulaire de modification
+              $('#editEcheancierId').val(data.id);
+              $('#editLibelleEcheancier').val(data.label);
+              $('#editDescriptionEcheancier').val(data.description);
+              $('#editNbtranche').val(data.nb_tranche);
+              
+              // Charger les promotions et sélectionner celle de l'échéancier
+              loadEditPromo(data.promo_id);
+              
+              // Afficher la modale
+              $('#modifierEcheancierModal').modal('show');
+            } else {
+              alertify.error("Erreur lors du chargement des données de l'échéancier");
+            }
+          },
+          error: function() {
+            alertify.error("Erreur lors de la communication avec le serveur");
+          }
+        });
+    }
+    
+   
+      // Générer les tranches dynamiquement
     $('#genererTranches').on('click', function() {
       var nombreTranches = parseInt($('#nombreTranches').val()) || 1;
       var container = $('#listeTranchesContainer');
@@ -978,36 +1072,7 @@ $(document).ready(function () {
     
     $(document).on('click','.btn-edit-echeancier', function(){
         var echeancierId = $(this).data('id');
-        
-        // Charger les données de l'échéancier à modifier
-        $.ajax({
-          url: "{% url 't_tresorerie:ApiLoadModeleEcheancierDetails' %}",
-          type: 'GET',
-          data: { 'id': echeancierId },
-          dataType: 'JSON',
-          success: function(response) {
-            if(response.status === 'success') {
-              var data = response.data;
-              
-              // Remplir le formulaire de modification
-              $('#editEcheancierId').val(data.id);
-              $('#editLibelleEcheancier').val(data.label);
-              $('#editDescriptionEcheancier').val(data.description);
-              $('#editNbtranche').val(data.nb_tranche);
-              
-              // Charger les promotions et sélectionner celle de l'échéancier
-              loadEditPromo(data.promo_id);
-              
-              // Afficher la modale
-              $('#modifierEcheancierModal').modal('show');
-            } else {
-              alertify.error("Erreur lors du chargement des données de l'échéancier");
-            }
-          },
-          error: function() {
-            alertify.error("Erreur lors de la communication avec le serveur");
-          }
-        });
+        CheckStateModel(echeancierId); 
     }); 
     
     // Sauvegarder les modifications de l'échéancier

@@ -284,3 +284,16 @@ def ApiCheckEcheancierState(request):
 
     if due_paiements:
         return JsonResponse({"status" : "has_due_paiement"})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiCheckStateModel(request):
+    id_model = request.GET.get('id_model')
+    model_obj = ModelEcheancier.objects.get(id = id_model)
+
+    due_paiements = DuePaiements.objects.filter(ref_echeancier__model = model_obj).exists()
+
+    if due_paiements:
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status" :"error"})

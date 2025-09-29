@@ -101,5 +101,6 @@ urlpatterns = [
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
 
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
+    path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),
 
 ]
