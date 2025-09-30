@@ -156,7 +156,7 @@
                                 <!-- Contenu dynamique de la fiche de voeux -->
                             </div>
                         </div>
-                        <div class="card-footer bg-light bg-opacity-50 border-0 px-4 py-3">
+                        <div style="display:none !important;" id="idAffichageVoeuxSpu" class="card-footer bg-light bg-opacity-50 border-0 px-4 py-3">
                             <div class="d-flex justify-content-center align-items-center">
                                 <a href="javascript:void(0);" class="text-decoration-none me-3" id="voirVoeuxSuppLink">
                                     <i class="ri-eye-line me-1"></i>
@@ -1330,6 +1330,8 @@
         let promoListee = [];
         let IdFicheVeoux = [];
 
+        console.log('Id du client' , id);
+
         function loadNotes(){
             $.ajax({
                 url :"{% url 't_crm:ApiLoadNote' %}",
@@ -1390,8 +1392,8 @@
                 data : {'id_prospect' : id},
                 success : function(data){
                     var html="";
-                    IdFicheVeoux = data.fiche_voeux[0].id;
                     if (data.fiche_voeux.length > 0){
+                        IdFicheVeoux = data.fiche_voeux[0].id;
                         $.each(data.fiche_voeux, function(index, item){
                             html += '<div class="col-12 col-md-4 text-center mb-4 mb-md-0">';
                                     html += '<div class="avatar-lg mx-auto mb-4">';
@@ -1477,7 +1479,7 @@
                         $.each(data, function(index, item){
                             
                             row += "<tr>";
-                            row += "<td>"+item.specialite__label+"</td>";
+                            row += "<td>"+item.id+' '+item.specialite__label+"</td>";
                             row += "<td>"+(item.commentaires || "")+"</td>";
                             row += "<td>";
                             row += "<div class='d-flex gap-2'>";
@@ -1512,6 +1514,17 @@
                     $('#statut_prospect').text(data.statut_label);
 
                     has_second_wished = data.has_second_wish;
+
+                    if(data.statut === "annuler"){
+                        document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "none", 'important');
+
+                    }else if (data.statut === "prinscrit"){
+                        document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "none", 'important');
+
+                    }else if(data.statut === "visiteur"){
+                        document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "block", 'important');
+
+                    }
                 }
             });
         }
@@ -2149,7 +2162,7 @@
                         $('#validateProspectModal').modal('hide');
                         CheckPropspectStatut();
                         alertify.success(data.message);
-                        
+                        loadPersonalInfos();
                     }else{
                         alertify.error(data.message);
                     }

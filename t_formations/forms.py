@@ -174,8 +174,8 @@ class PromoForm(forms.ModelForm):
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'session' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={"class" : 'form-control'}),
-            'begin_year' : forms.NumberInput(attrs={"class" : 'form-control', "placeholder": "Année",'id' : "begin_year_id"}),
-            'end_year': forms.NumberInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
+            'begin_year' : forms.TextInput(attrs={"class" : 'form-control', "placeholder": "Année",'id' : "begin_year_id"}),
+            'end_year': forms.TextInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
             'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),
             'date_fin' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_fin"}),
         }

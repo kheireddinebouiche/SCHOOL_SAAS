@@ -56,6 +56,8 @@ def ApiConfirmeSecondWish(request):
     id_prospect = request.POST.get('id_prospect')
     id_voeux_sup = request.POST.get('id_voeux_sup')
 
+    print(id_prospect, id_voeux_sup)
+
     prospect = Prospets.objects.get(id = id_prospect)
     voeux_principal = FicheDeVoeux.objects.filter(prospect = prospect, is_confirmed=False).last()
 

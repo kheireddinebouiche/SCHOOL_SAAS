@@ -56,7 +56,7 @@ class VisiteurForm(forms.ModelForm):
     
 class NewProspecFormParticulier(forms.ModelForm):
     contact_situation = forms.ChoiceField(
-        choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visiste')],
+        choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visite')],
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
