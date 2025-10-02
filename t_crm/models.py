@@ -69,6 +69,11 @@ class Prospets(models.Model):
 
     has_refund = models.BooleanField(default=False)
 
+    prospect_date= models.DateField(null=True,blank=True)
+    preinscri_date= models.DateField(null=True, blank=True)
+    instance_date = models.DateField(null=True, blank=True)
+    convertit_date = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

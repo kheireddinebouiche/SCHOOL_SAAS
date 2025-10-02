@@ -297,6 +297,9 @@ def ApiLoadFormation(request):
         promo_liste.append({
             "id" : i.id,
             "code" : i.code,
+            'begin_year' : i.begin_year,
+            'end_year' : i.end_year,
+            'session' : i.get_session_display(),
         })
 
     return JsonResponse({'formation':formation_liste,"promo" : promo_liste})

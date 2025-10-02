@@ -83,7 +83,7 @@ urlpatterns = [
 
     path('ApiLoadFormationAndSpecialite', ApiLoadFormationAndSpecialite, name="ApiLoadFormationAndSpecialite"),
 
-    path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
+    #path('ApiLoadFormation', ApiLoadFormation , name="ApiLoadFormation"),
     path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"),
     path('ApiLoadSpecialiteProspect', ApiLoadSpecialiteProspect, name="ApiLoadSpecialiteProspect"),
     path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
