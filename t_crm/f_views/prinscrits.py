@@ -67,6 +67,10 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
         'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
 
+        'preinscri_date' : prospect.preinscri_date.strftime("%Y-%m-%d") if prospect.preinscri_date else None,
+        'instance_date' : prospect.instance_date.strftime("%Y-%m-%d") if prospect.instance_date else None,
+        'convertit_date' : prospect.convertit_date.strftime("%Y-%m-%d") if prospect.convertit_date else None,
+
         'nin' : prospect.nin,
         'groupe_sanguin' : prospect.groupe_sanguin,
         'nom_arabe' : prospect.nom_arabe,
