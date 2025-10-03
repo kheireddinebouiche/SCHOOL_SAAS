@@ -17,7 +17,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
@@ -34,7 +34,7 @@ def ApiLoadProspectRendezVous(request):
        l_obj = RendezVous.objects.get(id = l['id'])
        l['status_label'] = l_obj.get_statut_display()
        l['type_label'] = l_obj.get_type_display()
-       l['created_at'] = l_obj.created_at
+       l['created_at'] = l_obj.created_at.strftime("%Y-%m-%d")
    return JsonResponse(list(rendez_vous), safe=False)
 
 ################################### Gestion des notes ##################################################
@@ -347,6 +347,7 @@ def ApiUpdateProspectData(request):
     telephone = request.POST.get('telephone')
     observation = request.POST.get('observation')
     id_prospect = request.POST.get('id_prospect')
+    indic = request.POST.get('indic')
 
     prospect = Prospets.objects.get(id = id_prospect)
 
@@ -355,6 +356,7 @@ def ApiUpdateProspectData(request):
     prospect.email = email
     prospect.observation = observation
     prospect.telephone = telephone
+    prospect.indic = indic
 
     prospect.save()
 

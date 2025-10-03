@@ -68,9 +68,11 @@
                                     <p class="text-muted small mb-0">Détails du partenaire : <i>{{partenaire.nom}}</i></p>
                                 </div>
                                 {% if request.tenant.tenant_type == 'master' %}
+                                  {% if partenaire.type_partenaire == 'etranger' %}
                                     <button type="button" class="btn btn-primary px-4 py-2 ms-auto" data-bs-toggle="modal" data-bs-target="#showSyncState">
                                         <i class="ri-sync-line me-2"></i>Etat de synchronisation
                                     </button>
+                                  {% endif %}
                                 {% endif %}
                             </div>
                         </div>
@@ -183,9 +185,7 @@
                                         <tr>
                                             <th class="border-0 rounded-start">Code</th>
                                             <th class="border-0">Nom de la formation</th>
-                                            <th class="border-0">Description</th>
-                                            <th class="border-0">Durée</th>
-                                            <th class="border-0 rounded-end">Niveau</th>
+                                            <th class="border-0 rounded-end">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="listeFormations">
@@ -210,113 +210,151 @@
     </div>
     <!-- End Page-content -->
 </div>
-        {% if request.tenant.tenant_type == 'master' %}
-            <!-- Modal Etat de synchronisation des partenaires -->
-            <div class="modal fade" id="showSyncState" tabindex="-1" aria-labelledby="showSyncStateLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content rounded-4 shadow-lg border-0">
-                        <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-sync-line text-primary fs-4"></i>
-                                </div>
-                                <div>
-                                    <h5 class="modal-title fw-semibold text-primary mb-1" id="showSyncStateLabel">
-                                        Etat de synchronisation des partenaires
-                                    </h5>
-                                    <p class="text-muted small mb-0">Gestion de la synchronisation avec les instituts</p>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="border-0 rounded-start">Nom de l'institut</th>
-                                            <th class="border-0 rounded-end text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeItem">
-                                        <!-- Liste des instituts et états de synchronisation -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0 bg-light px-4 py-3">
-                            <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                                <i class="ri-close-line me-2"></i>Fermer
-                            </button>
-                        </div>
+       
+<!-- Modal Etat de synchronisation des partenaires -->
+<div class="modal fade" id="showSyncState" tabindex="-1" aria-labelledby="showSyncStateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="fas fa-sync-alt text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="showSyncStateLabel">
+                            Etat de synchronisation des partenaires
+                        </h5>
+                        <p class="text-muted small mb-0">Gestion de la synchronisation avec les instituts</p>
                     </div>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        {% endif %}
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 rounded-start">Nom de l'institut</th>
+                                <th class="border-0 rounded-end text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listeItem">
+                            <!-- Liste des instituts et états de synchronisation -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+       
+  
+<script>
+    $(document).ready(function(){
 
-    {% if request.tenant.tenant_type == 'master' %}
-        <script>
-            $(document).ready(function(){
-
-                var code_partenaire = "{{partenaire.code}}";
-                
-                function loadSync(){
-                    $.ajax({
-                        url : "{% url 't_formations:ApiGetPartenaireSync' %}",
-                        dataType: "JSON",
-                        type : 'GET',
-                        data : {
-                            'code_partenaire' : code_partenaire
-                        },
-                        success : function(data){
-                            $('#listeItem').empty();
-                            if (data.length > 0){
-                                 $.each(data, function(index, item) {
-                                    var row = '<tr>' +
-                                        '<td>' + item.schema_name + '</td>' +
-                                        '<td>' +
-                                            (item.has_partenaire 
-                                            ? '<button class="btn btn-success" disabled>Déjà lié</button>'
-                                            : '<button id="synBTN" class="btn btn-primary" data-name='+item.schema_name+'>Synchroniser</button>') +
-                                        '</td>' +
-                                    '</tr>';
+        var code_partenaire = "{{partenaire.code}}";
+        
+        function loadSync(){
+            $.ajax({
+                url : "{% url 't_formations:ApiGetPartenaireSync' %}",
+                dataType: "JSON",
+                type : 'GET',
+                data : {
+                    'code_partenaire' : code_partenaire
+                },
+                success : function(data){
+                    var row = "";
+                    if (data.length > 0){
+                            $.each(data, function(index, item) {
+                            row = '<tr>' +
+                                '<td>' + item.schema_name + '</td>' +
+                                '<td class="text-center">' +
+                                    (item.has_partenaire 
+                                    ? '<button class="btn btn-success btn-sm rounded-pill px-3" disabled><i class="ri-check-line me-1"></i>Déjà lié</button>'
+                                    : '<button id="synBTN" class="btn btn-primary btn-sm rounded-pill px-3" data-name='+item.schema_name+'><i class="ri-sync-line me-1"></i>Synchroniser</button>') +
                                     
-                                });
-                            }else{
-                                var row = "<tr><td colspan='2' class='text-muted text-center'>Aucun institut disponisble !</td></tr>";
-                            }
-                            $('#listeItem').append(row);
-                           
-                        }
-                    });
+                                '</td>' +
+                            '</tr>';
+                            
+                        });
+                    }else{
+                        row = "<tr><td colspan='2' class='text-muted text-center'>Aucun institut disponisble !</td>";
+                    }
+                    $('#listeItem').html(row);
                     
                 }
-
-                loadSync();
-
-                $(document).on('click', '#synBTN', function() {
-                    var schema_name = $(this).data('name');
-                    $.ajax({
-                        url : "{% url 't_formations:ApiSyncPartenaire' %}",
-                        dataType: "JSON",
-                        type : 'POST',
-                        data : {
-                            'code_partenaire' : code_partenaire,
-                            'schema_name' : schema_name,
-                            'csrfmiddlewaretoken' : '{{ csrf_token }}'
-                        },
-                        success : function(data){
-                            loadSync();
-                            alertify.success("Synchronisation réussie !");
-                        },
-                        error: function(xhr, status, error) {
-                            alertify.error("Erreur lors de la synchronisation : " +error);
-                        }
-                    });
-                });
             });
-        </script>
-    {% endif %}
+            
+        }
+
+        loadSync();
+
+        function listeDesSpecialites(){
+            $.ajax({
+
+                url : "{% url 't_formations:ApiLoadSpecForPartenaire' %}",
+                dataType: "JSON",
+                type : "GET",
+                data : {
+                    "id_partenaire" : code_partenaire,
+                },
+                success: function(data){
+                    if(data.length> 0){
+                        var html="";
+                        $.each(data, function(index, item){
+                            html += "<tr>";
+                            html += "<td>";
+                                html += '<strong>'+item.code+'</strong>';
+                            html += "</td>";
+                            html += "<td>";
+                                html += ''+item.label+' V. :' +item.version+'';
+                            html += "</td>";
+                            html += "<td>";
+                            html += "</td>";
+                            html += "</tr>";
+
+                        });
+                    }else{
+                        html = "<tr><td colspan='3'>Aucune spécialité affecter a cette formation</td></tr>";
+                    }
+
+                    $('#listeFormations').html(html);
+                }
+
+            });
+            
+        }
+
+        listeDesSpecialites();
+
+        $(document).on('click', '#synBTN', function() {
+            var schema_name = $(this).data('name');
+            $.ajax({
+                url : "{% url 't_formations:ApiSyncPartenaire' %}",
+                dataType: "JSON",
+                type : 'POST',
+                data : {
+                    'code_partenaire' : code_partenaire,
+                    'schema_name' : schema_name,
+                    'csrfmiddlewaretoken' : '{{ csrf_token }}'
+                },
+                success : function(data){
+                    loadSync();
+                    alertify.success("Synchronisation réussie !");
+                },
+                error: function(xhr, status, error) {
+                    alertify.error("Erreur lors de la synchronisation : " +error);
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock content %}
            
 

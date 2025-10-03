@@ -61,6 +61,8 @@ TENANT_APPS = [
     't_exam',
     't_conseil',
     't_remise',
+    'phonenumber_field',
+    'widget_tweaks',
     'django_countries',
     'django.contrib.auth',
     'django.contrib.admin',
@@ -110,8 +112,6 @@ TEMPLATES = [
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
 )
-
-
 
 WSGI_APPLICATION = 'school.wsgi.application'
 

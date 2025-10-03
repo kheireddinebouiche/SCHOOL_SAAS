@@ -743,6 +743,15 @@ def ApiDeleteDoc(request):
         return JsonResponse({'status' : 'success', 'message' : 'Document supprimer avec succès' })
     else:
         return JsonResponse({'status' : 'error', 'message' : 'Une erreur est survenue lors du traitement de la requete' })
+    
+
+@login_required(login_url="institut_app:login")
+def ApiLoadSpecForPartenaire(request):
+    if request.method == "GET":
+        code_partenaire = request.GET.get('id_partenaire')
+        print(code_partenaire)
+        liste = Specialites.objects.filter(formation__partenaire__code = code_partenaire).values('id', 'label','code','version')
+        return JsonResponse(list(liste),safe=False)
 
     
 

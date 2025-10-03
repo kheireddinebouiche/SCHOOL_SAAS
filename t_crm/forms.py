@@ -2,6 +2,9 @@ from  django import forms
 from .models import *
 
 
+
+
+
 class VisiteurForm(forms.ModelForm):
     class Meta:
         model = Visiteurs
@@ -54,12 +57,14 @@ class VisiteurForm(forms.ModelForm):
             'specialite' : 'Spécialité',
         }
     
+
 class NewProspecFormParticulier(forms.ModelForm):
     contact_situation = forms.ChoiceField(
         choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visite')],
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
+    
     
     class Meta:
         model = Prospets
@@ -74,8 +79,9 @@ class NewProspecFormParticulier(forms.ModelForm):
             "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name'}),
             "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_last_name'}),
             "email" : forms.EmailInput(attrs={'class':'form-control'}),
-            "telephone" : forms.TextInput(attrs={'class':'form-control'}),
             "canal" : forms.Select(attrs={'class':'form-control'}),
+            "indic" : forms.Select(attrs={"class" : "form-control"}),
+            "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "observation" : forms.Textarea(attrs={'class':'form-control', "rows" : "3"}),
             "lead_source" : forms.Select(attrs={'class' : "form-control"}),
         }
@@ -98,7 +104,8 @@ class NewProspecFormEntreprise(forms.ModelForm):
 
         widgets = {
             "email" : forms.EmailInput(attrs={'class':'form-control'}),
-            "telephone" : forms.TextInput(attrs={'class':'form-control'}),
+            "indic" : forms.Select(attrs={"class" : "form-control"}),
+            "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "canal" : forms.Select(attrs={'class':'form-control'}),
             "observation" : forms.Textarea(attrs={'class':'form-control'}),
             "entreprise": forms.TextInput(attrs={'class':'form-control', 'id' : 'id_entreprise'}),

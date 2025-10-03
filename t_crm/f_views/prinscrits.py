@@ -27,11 +27,12 @@ def ListeDesPrinscrits(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
     #liste = Prospets.objects.filter(statut = "prinscrit").values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
-    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut= "convertit")).values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut= "convertit")).values('statut','id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
     for i in liste:
         i_obj = Prospets.objects.get(id=i['id'])
         i['etat_label'] = i_obj.get_etat_display()
         i['type_prospect_label'] = i_obj.get_type_prospect_display()
+        i['statut_label'] = i_obj.get_statut_display()
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url='intitut_app:login')

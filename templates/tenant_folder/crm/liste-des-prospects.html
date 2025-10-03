@@ -12,6 +12,7 @@
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: none; /* Empêche l'icône de capturer les événements souris */
   }
   .table th {
     font-weight: 600;
@@ -733,58 +734,11 @@
       }
     });
 
-    function loadProspects(){
-        $.ajax({
-          url : '{% url "t_crm:ApiLoadProspects" %}',
-          dataType: "JSON",
-          type: 'GET',
-          success : function(data){
-            var row = "";
-            if (data.length === 0) {
-              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
-            }else{
-              $.each(data, function(index, item){
-                row += "<tr class='align-middle'>";
-                row += "<td><a href='/crm/details-prospect/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
-                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
-                row += "<td>" + (item.type_prospect === 'particulier' ? 
-                    "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
-                    "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
-                row += "<td>" + (item.etat === 'en_attente' ? 
-                    "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
-                    "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
-                row += '<td class="text-end">';
-                row += '<div class="dropdown d-inline-block">';
-                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                row += '<i class="ri-more-2-fill"></i>';
-                row += '</button>';
-                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-                if(item.etat == "en_attente"){
-                  row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                  row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                  row += '</button></li>';
-                }else{
-                   row += '<li><button id="deleteImpossible" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                   row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                   row += '</button></li>';
-                }
-                row += '</ul>';
-                row += '</div>';
-                row += '</td>';
-                row += "</tr>";
-            });
-            
-          }
-
-          $("#listeItem").html(row);
-          
-          // Update KPIs
-          updateKPIs(data);
-        }
-      });
-    }
+    // Global variables to store data and filter states
+    let allProspectsData = []; // Store all prospects data for search functionality
+    let currentFilterType = '0'; // Default: '0' means no type filter
+    let currentFilterDate = '0'; // Default: '0' means no date filter
+    let currentSearchTerm = ''; // Default: empty search term
     
     function updateKPIs(data) {
       // Total prospects
@@ -812,6 +766,140 @@
       $('#enAttenteCount').text(enAttente);
     }
 
+    function displayProspects(data) {
+      var row = "";
+      if (data.length === 0) {
+        row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
+      } else {
+        $.each(data, function(index, item) {
+          row += "<tr class='align-middle'>";
+          row += "<td><a href='/crm/details-prospect/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
+          row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" +item.indic+'-'+ item.telephone + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
+          row += "<td>" + (item.type_prospect === 'particulier' ? 
+              "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
+              "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
+          row += "<td>" + (item.etat === 'en_attente' ? 
+              "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
+              "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
+          row += '<td class="text-end">';
+          row += '<div class="dropdown d-inline-block">';
+          row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+          row += '<i class="ri-more-2-fill"></i>';
+          row += '</button>';
+          row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+          row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
+          row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+          if(item.type_prospect === "particulier"){
+            row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+            row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          }else{
+            row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+            row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          }
+          row += '<li><hr class="dropdown-divider my-1"></li>';
+          if(item.etat == "en_attente"){
+            row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+            row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+            row += '</button></li>';
+          }else{
+             row += '<li><button id="deleteImpossible" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+             row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+             row += '</button></li>';
+          }
+          row += '</ul>';
+          row += '</div>';
+          row += '</td>';
+          row += "</tr>";
+        });
+      }
+      $("#listeItem").html(row);
+      
+      // Update KPIs
+      updateKPIs(data);
+    }
+
+    function loadProspects(){
+        $.ajax({
+          url : '{% url "t_crm:ApiLoadProspects" %}',
+          dataType: "JSON",
+          type: 'GET',
+          success : function(data){
+            // Store the data for search functionality
+            allProspectsData = data;
+            
+            // Apply current filters and search
+            applyFiltersAndSearch();
+          },
+          error: function(xhr, status, error) {
+            console.error('Error loading prospects:', error);
+            alert('Erreur lors du chargement des prospects');
+          }
+        });
+    }
+
+    function applyFiltersAndSearch() {
+      try {
+        // Start with all prospects data
+        let filteredData = [...allProspectsData];
+        
+        // Apply search filter first if there's a search term
+        if (currentSearchTerm.trim() !== '') {
+          const searchTerm = currentSearchTerm.toLowerCase();
+          filteredData = filteredData.filter(function(item) {
+            return (item.nom.toLowerCase().includes(searchTerm) || 
+                    item.prenom.toLowerCase().includes(searchTerm) || 
+                    item.email.toLowerCase().includes(searchTerm) || 
+                    (item.entreprise && item.entreprise.toLowerCase().includes(searchTerm)) ||
+                    item.telephone.includes(searchTerm));
+          });
+        }
+        
+        // Apply type filter if not default
+        if (currentFilterType !== '0') {
+          filteredData = filteredData.filter(function(item) {
+            return item.type_prospect === currentFilterType;
+          });
+        }
+        
+        // Apply date filter if not default (for sorting)
+        if (currentFilterDate !== '0') {
+          filteredData.sort(function(a, b) {
+            // Check if created_at field exists and is valid, otherwise skip sorting or use id as fallback
+            var dateA, dateB;
+            
+            if (a.created_at && !isNaN(Date.parse(a.created_at))) {
+              dateA = new Date(a.created_at);
+            } else {
+              // If created_at is not available or invalid, use a fallback (like id as timestamp if possible)
+              dateA = new Date(0); // Default to epoch time if no valid date
+            }
+            
+            if (b.created_at && !isNaN(Date.parse(b.created_at))) {
+              dateB = new Date(b.created_at);
+            } else {
+              dateB = new Date(0); // Default to epoch time if no valid date
+            }
+            
+            if (currentFilterDate === '-created_at') {
+              // Sort by most recent first
+              return dateB - dateA;
+            } else if (currentFilterDate === 'created_at') {
+              // Sort by oldest first
+              return dateA - dateB;
+            }
+          });
+        }
+        
+        // Display the results
+        displayProspects(filteredData);
+      } catch (error) {
+        console.error('Error in applyFiltersAndSearch:', error);
+      }
+    }
+
+    // Load prospects on page load
     loadProspects();
 
     $(document).on('click','#deleteConfirmation', function(){
@@ -838,7 +926,7 @@
         success : function(response){
           if (response.status === "success"){
             alertify.success(response.message);
-            loadProspects();
+            loadProspects(); // Reload the full list after deletion
             $('.deleteModal').modal('hide');
           }else{
             alertify.error(response.message);
@@ -847,87 +935,76 @@
       });
     });
     
-    function loadFiltredProspect(filter_option, value){
-      $.ajax({
-        url : "{% url 't_crm:ApiFilterProspect' %}",
-        type : "GET",
-        dataType : "JSON",
-        data : {'filter_option' : filter_option, 'value' : value},
-        success : function(data){
-            var row = "";
-            if (data.length === 0) {
-              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect "+value+" trouvé</td></tr>";
-            }else{
-              $.each(data, function(index, item){
-                row += "<tr class='align-middle'>";
-                row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></td>";
-                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
-                row += "<td>" + (item.type_prospect === 'particulier' ? 
-                    "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
-                    "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
-                row += "<td>" + (item.etat === 'en_attente' ? 
-                    "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
-                    "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
-                row += '<td class="text-end">';
-                row += '<div class="dropdown d-inline-block">';
-                row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                row += '<i class="ri-more-2-fill"></i>';
-                row += '</button>';
-                row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-                row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
-                row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
-                if(item.type_prospect === "particulier"){
-                  row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }else{
-                  row += '<li><button id="btnUpdateEntreprise" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
-                  row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-                }
-                row += '<li><hr class="dropdown-divider my-1"></li>';
-                if(item.etat == "en_attente"){
-                  row += '<li><button id="deleteConfirmation" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                  row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                  row += '</button></li>';
-                }else{
-                   row += '<li><button id="deleteImpossible" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
-                   row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
-                   row += '</button></li>';
-                }
-                row += '</ul>';
-                row += '</div>';
-                row += '</td>';
-                row += "</tr>";
-              });
-            }
-            $("#listeItem").html(row);
-            
-            // Update KPIs when filtering
-            updateKPIs(data);
-          }
-      });
-    }
-
+    // Handle type filter change
     $(document).on('change','#filter-prospect', function(){
-      var filter_option = "filter-prospect";
-      let value = $(this).val();
-
-      loadFiltredProspect(filter_option, value);
-      
+      currentFilterType = $(this).val();
+      applyFiltersAndSearch();
     });
 
-    $(document).on('click','#date_filter-prospect', function(){
-      var filter_option = "date_filter-prospect";
-      let value = $(this).val();
-
-      loadFiltredProspect(filter_option, value);
-     
+    // Handle date filter change
+    $(document).on('change','#date_filter-prospect', function(){
+      currentFilterDate = $(this).val();
+      applyFiltersAndSearch();
     });
 
-   
+    // Handle search input - simplified version
+    $(document).on('input', '#table-filter', function() {
+        currentSearchTerm = $(this).val();
+        // Only apply the search filter part, without triggering all filters
+        try {
+            if (allProspectsData && allProspectsData.length > 0) {
+                let filteredData = [...allProspectsData];
+                
+                // Only apply the search filter
+                if (currentSearchTerm.trim() !== '') {
+                    const searchTerm = currentSearchTerm.toLowerCase();
+                    filteredData = filteredData.filter(function(item) {
+                        return (item.nom.toLowerCase().includes(searchTerm) || 
+                                item.prenom.toLowerCase().includes(searchTerm) || 
+                                item.email.toLowerCase().includes(searchTerm) || 
+                                (item.entreprise && item.entreprise.toLowerCase().includes(searchTerm)) ||
+                                item.telephone.includes(searchTerm));
+                    });
+                } else {
+                    // If search is empty, show all prospects that match other filters
+                    if (currentFilterType !== '0') {
+                        filteredData = filteredData.filter(function(item) {
+                            return item.type_prospect === currentFilterType;
+                        });
+                    }
+                    if (currentFilterDate !== '0') {
+                        filteredData.sort(function(a, b) {
+                            var dateA, dateB;
+
+                            if (a.created_at && !isNaN(Date.parse(a.created_at))) {
+                                dateA = new Date(a.created_at);
+                            } else {
+                                dateA = new Date(0);
+                            }
+
+                            if (b.created_at && !isNaN(Date.parse(b.created_at))) {
+                                dateB = new Date(b.created_at);
+                            } else {
+                                dateB = new Date(0);
+                            }
+
+                            if (currentFilterDate === '-created_at') {
+                                return dateB - dateA;
+                            } else if (currentFilterDate === 'created_at') {
+                                return dateA - dateB;
+                            }
+                        });
+                    }
+                }
+                
+                displayProspects(filteredData);
+            }
+        } catch (error) {
+            console.error('Error in search handler:', error);
+        }
+    });
+
     function loadProspectDetails(id_prospect){
-
       $.ajax({
         url : "{% url 't_crm:ApiLoadProspectDetails' %}",
         dataType : 'JSON',
@@ -968,7 +1045,6 @@
            
           $('#id_canal').html(canalOptions);
 
-
           $('#updateInfoProspect').modal('show');
         }
       });
@@ -1000,12 +1076,9 @@
            
           $('#id_canal_ets').html(canalOptions);
 
-
           $('#updateInfoProspectEntreprise').modal('show');
         }
       });
-
-      
     }
 
     $(document).on('click','#btnUpdate', function(){
@@ -1018,11 +1091,10 @@
       var id_prospect = $(this).data('id');
       loadProspectEntrepriseDetails(id_prospect);
       $('#btnUpdateEntreprise').data('id', id_prospect);
-      
     });
 
     $(document).on('click', '#updateInfoProspectEntrepriseBtn', function(){
-      var id_perospect = $('#btnUpdateEntreprise').data('id')
+      var id_prospect = $('#btnUpdateEntreprise').data('id')
 
       var last_name_ets = $('#id_last_name_ets').val();
       var first_name_ets = $('#id_first_name_ets').val();
@@ -1037,7 +1109,7 @@
         dataType : "JSON",
         type: 'POST',
         data : {
-          'id_prospect' : id_perospect,
+          'id_prospect' : id_prospect,
           'last_name_ets' : last_name_ets,
           'first_name_ets' : first_name_ets,
           'email_ets' : email_ets,
@@ -1057,7 +1129,6 @@
           }
         }
       })
-      
     })
 
     $(document).on('click','#updateInfoProspectBtn', function(){
@@ -1098,7 +1169,6 @@
           }
         }
       });
-    
     });
 
     // Handle prospect type selection
@@ -1110,17 +1180,9 @@
         window.location = "{% url 't_crm:inscription_particulier' %}";
       }else{
         window.location = "{% url 't_crm:inscription_entreprise' %}";
-
       }
-    
     });
-
-    
   });
-    
-    
-
-
 </script>
 
 

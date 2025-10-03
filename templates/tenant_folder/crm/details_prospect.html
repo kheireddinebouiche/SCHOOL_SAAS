@@ -23,6 +23,15 @@
     .btn span {
         vertical-align: middle;
     }
+    
+    /* Style pour le modal de chargement */
+    #loadingModal .modal-content {
+        background: rgba(0, 0, 0, 0.8) !important;
+    }
+    
+    #loadingModal .modal-backdrop {
+        background: rgba(0, 0, 0, 0.5);
+    }
 </style>
 
 <div class="main-content">
@@ -430,17 +439,22 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                               <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label fw-medium">Téléphone</label>
                                         <div class="input-group">
                                             <span class="input-group-text border-0 bg-light">
                                                 <i class="ri-phone-line text-muted"></i>
                                             </span>
-                                            <input type="tel" class="form-control border-0 bg-light py-2" id="edit_telephone">
+                                            <!-- Champ indicatif plus petit -->
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_indic" style="max-width: 70px;" />
+                                            
+                                            <!-- Champ téléphone prend tout l'espace restant -->
+                                            <input type="tel" class="form-control border-0 bg-light py-2 telephoneID" id="edit_telephone" />
                                         </div>
                                     </div>
                                 </div>
+
 
                                 <div class="col-md-12">
                                     <div class="form-group">
@@ -1290,6 +1304,29 @@
     <!-- End Page-content -->
 </div>
 
+<!-- Modal de chargement moderne -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 bg-transparent shadow-none">
+            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-5">
+                <div class="position-relative">
+                    <div class="spinner-border text-primary" style="width: 4rem; height: 4rem; border-width: 0.3em;" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="position-absolute top-50 start-50 translate-middle bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 1.8rem; height: 1.8rem;">
+                        <i class="ri-loader-line text-white fs-6"></i>
+                    </div>
+                </div>
+                <div class="mt-4 text-center">
+                    <h6 class="text-white mb-1 fw-semibold">Traitement en cours</h6>
+                    <p class="text-white text-opacity-75 mb-0">Veuillez patienter...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
 
     $(document).ready(function(){
@@ -1497,7 +1534,7 @@
                 success : function(data){
                     $('#nom_prenom').text(data.nom + ' ' + data.prenom);
                     $('#email').text(data.email);
-                    $('#phone').text(data.telephone);
+                    $('#phone').text(data.indic+'-'+data.telephone);
                     $('#created_at').text(data.created_at);
                     $('#statut_prospect').text(data.statut_label);
 
@@ -1565,7 +1602,7 @@
                                 row += '</td>';
                                 row += '<td>';
                                     row += '<div class="text-body">';
-                                        row += '<i class="ri-time-line text-muted me-2"></i>' + item.created_at + '';
+                                        row += '<i class="ri-time-line text-muted me-2"></i>' + item.date_rendez_vous +' '+item.heure_rendez_vous+ '';
                                     row += '</div>';
                                 row += '</td>';
                                 row += '<td>';
@@ -1801,11 +1838,16 @@
         });
 
         $(document).on('click', '#saveReminderBtn', function(){
+                
+
             var type = $('#reminderType').val();
             var subject = $('#reminderSubject').val();
             var date = $('#reminderDate').val();
             var time = $('#reminderTime').val();
             var description = $('#reminderDescription').val();
+
+            var btn = $(this);
+            btn.prop('disabled', true);
 
             $.ajax({
                 url: "{% url 't_crm:ApiStoreRappel' %}",
@@ -1828,6 +1870,12 @@
                     } else {
                         alertify.error(data.message);
                     }
+                },
+                error: function() {
+                    alertify.error("Une erreur est survenue lors de l'enregistrement du rappel.");
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
                 }
             });
         });
@@ -1843,6 +1891,8 @@
                 alert("Le contenu de la note ne peut pas être vide.");
                 return;
             }
+            var btn = $(this);
+            btn.prop('disabled', true);
             $.ajax({
                 url : "{% url 't_crm:ApiStoreNote' %}",
                 dataType : 'JSON',
@@ -1863,6 +1913,10 @@
                         alert("Erreur lors de l'enregistrement de la note. Veuillez réessayer.");
                         alertify.error(data.message);
                     }
+                },
+                complete : function(){
+                    // Réactiver le bouton (après succès ou erreur)
+                    $btn.prop('disabled', false);
                 }
             });
         });
@@ -2153,6 +2207,8 @@
 
         $(document).on('click', '#confirmeValidationBtn', function(){
             var id_prospect = $(this).data('id');
+            var btn = $(this);
+            btn.prop('disabled', true);
             $.ajax({
                 url : "{% url 't_crm:ApiValidateProspect' %}",
                 dataType : 'JSON',
@@ -2171,7 +2227,11 @@
                     }else{
                         alertify.error(data.message);
                     }
+                },
+                complete : function(){
+                    btn.prop('disabled', false);
                 }
+
             });
         });
 
@@ -2327,6 +2387,7 @@
                     $('#edit_nom').val(data.nom);
                     $('#edit_prenom').val(data.prenom);
                     $('#edit_email').val(data.email);
+                    $('#edit_indic').val(data.indic);
                     $('#edit_telephone').val(data.telephone);
                     $('#edit_observation').val(data.observation);
                     // Load the prospect details and show the edit modal
@@ -2344,8 +2405,11 @@
             var edit_email = $("#edit_email").val();
             var edit_telephone = $("#edit_telephone").val();
             var edit_observation = $('#edit_observation').val();
+            var edit_indic = $('#edit_indic').val();
 
-            
+            var btn = $(this);
+            btn.prop('disabled', true);  
+
             $.ajax({
                 url : "{% url 't_crm:ApiUpdateProspectData' %}",
                 dataType: "JSON",
@@ -2357,6 +2421,7 @@
                     'telephone' : edit_telephone,
                     'observation' : edit_observation,
                     'id_prospect' : id,
+                    'indic' : edit_indic,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
 
                 },
@@ -2370,11 +2435,16 @@
 
                     $('#editProspectModal').modal('hide');
 
+                },
+                complete : function(){
+                    btn.prop('disabled', false)
                 }
             })
         });
 
     });
 </script>
+
+
 
 {% endblock content %}
