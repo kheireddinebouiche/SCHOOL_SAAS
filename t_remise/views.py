@@ -71,17 +71,13 @@ def ApiUpdateRemise(request):
 def ApiCreateRemise(request):
     label = request.POST.get('label')
     taux = request.POST.get('taux')
-    activated = request.POST.get('activated')
-
-    if activated == "on":
-        is_activate = True
-    else:
-        is_activate = False
-
+    description = request.POST.get('description')
+    
     Remises.objects.create(
         label = label,
         taux = taux,
-        is_enabled = is_activate, 
+        is_enabled = False, 
+        description = description,
     )
 
     return JsonResponse({'status': "success"})

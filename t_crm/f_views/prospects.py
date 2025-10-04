@@ -223,6 +223,7 @@ def ApiLoadRendezVousDetails(request):
     return JsonResponse(list(object), safe=False)
 
 ###################################Fiche de voeux prospect #############################################
+from datetime import datetime
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -234,7 +235,9 @@ def ApiValidateProspect(request):
             prospect = Prospets.objects.get(id=id_prospect)
             prospect.etat = "accepte"
             prospect.statut = "prinscrit"
+            prospect.preinscri_date = datetime.now()
             prospect.save()
+
 
             voeux = FicheDeVoeux.objects.get(id = id_fiche_voeux)
             voeux.is_confirmed = True

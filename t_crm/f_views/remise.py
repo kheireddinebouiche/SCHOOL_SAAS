@@ -24,7 +24,7 @@ def AipLoadRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadProspectParticulier(request):
-    prospect = Prospets.objects.filter(type_prospect = 'particulier',statut='prinscrit' ).values('id','nom','prenom','date_naissance','statut')
+    prospect = Prospets.objects.filter(type_prospect = 'particulier').filter(Q(statut = "visiteur") | Q(statut = "prinscrit")).values('id','nom','prenom','date_naissance','statut','nin','created_at')
 
     for i in prospect:
         i_obj = Prospets.objects.get(id= i['id'])
@@ -148,3 +148,12 @@ def ApiLoadRemiseAppliquerDetails(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
     return JsonResponse({'status': 'error', 'message': 'Paramètre ID manquant'}, status=400)
+
+@login_required(login_url="institut_app:login")
+def ApiGetReductionDetails(request):
+    if request.method =="GET":
+        id_reduction = request.GET.get('id_reduction')
+
+        object = Remises.objects.get(id = id_reduction)
+    else:
+        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})

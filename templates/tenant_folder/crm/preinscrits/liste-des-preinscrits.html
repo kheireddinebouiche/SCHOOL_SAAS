@@ -9,9 +9,13 @@
   }
   .search-box .search-icon {
     position: absolute;
-    right: 15px;
+    left: 15px;
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: none; /* Prevents the icon from interfering with clicks */
+  }
+  .search-box input {
+    padding-left: 40px; /* Make sure text doesn't overlap with icon */
   }
   .table th {
     font-weight: 600;
@@ -167,17 +171,17 @@
 
                 <div class="d-flex align-items-center gap-3">
                   <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill ps-4" style="width: 220px;"/>
                     <i class="fas fa-search text-muted search-icon"></i>
                   </div>
                   <select id="filter-prospect" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Filtrer par type de client</option>
+                    <option value="">Filtrer par type de client</option>
                     <option value="particulier">Particulier</option>
                     <option value="entreprise">Entreprise</option>
                   </select>
 
                   <select id="date_filter-prospect" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Filtrer par date de création</option>
+                    <option value="">Filtrer par date de création</option>
                     <option value="-created_at">Date (récent)</option>
                     <option value="created_at">Date (ancien)</option>
                   </select>
@@ -194,7 +198,7 @@
                       <th class="border-0">Téléphone</th>
                       <th class="border-0">Email</th>
                       <th class="border-0">État</th>
-                      
+                      <th class="border-0 text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="listeItem" class="border-top-0">
@@ -539,8 +543,13 @@
 </div>
 
 <script>
+  // Store original data for filtering
+  
+  
   // Fix dropdown positioning
   $(document).ready(function () {
+    let originalData = [];
+
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
     
@@ -570,7 +579,7 @@
           instanceCount++;
         } else if (item.statut && item.statut === 'prinscrit') {
           preinscritCount++;
-        } else if (item.statut && item.statut === 'converti') {
+        } else if (item.statut && item.statut === 'convertit') {
           convertiCount++;
         }
       });
@@ -587,86 +596,155 @@
           dataType: "JSON",
           type: 'GET',
           success : function(data){
-            var row = "";
-            if (data.length === 0) {
-              row += "<tr><td colspan='6' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
-            }else{
-              $.each(data, function(index, item){
-                row += "<tr class='align-middle'>";
-                row += "<td><a href='/crm/details-preinscrit/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></td>";
-                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
-               
-
-                row += "<td><span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.statut_label +"</span></td>";
-              
-                row += "</tr>";
-            });
-            
+            originalData = data; 
+            renderData(data);
+          },
+          error: function(xhr, status, error) {
+            console.error("Erreur lors du chargement des prospects:", error);
+            console.log("Statut:", status);
+            console.log("Réponse:", xhr.responseText);
+            // Afficher un message d'erreur dans le tableau
+            $("#listeItem").html("<tr><td colspan='6' class='text-center text-danger'>Erreur de chargement des données</td></tr>");
           }
-
-          $("#listeItem").html(row);
-          
-          // Update statistics after loading data
-          updateStatistics(data);
-        }
-      });
+        });
     }
 
+    // Function to render data to the table
+    function renderData(data) {
+      var row = "";
+      if (data.length === 0) {
+        row += "<tr><td colspan='6' class='text-center text-muted'>Aucun prospect trouvé</td></tr>";
+      } else {
+        $.each(data, function(index, item) {
+          row += "<tr class='align-middle'>";
+          row += "<td><a href='/crm/details-preinscrit/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></td>";
+          row += "<td><div class='fw-medium'>" + 
+                  (item.entreprise ? 
+                    "<span class='text-info fw-semibold'>" + item.entreprise + "</span>" : 
+                    "<span class='text-muted'>N/A</span>") + 
+                 "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
+
+          // Gestion du statut avec badges
+          if (item.statut === 'instance') {
+            row += "<td><span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='fas fa-user me-1'></i>" + item.statut_label + "</span></td>";
+          } else if (item.statut === 'prinscrit') {
+            row += "<td><span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='fas fa-clock me-1'></i>" + item.statut_label + "</span></td>";
+          } else if (item.statut === 'convertit') {
+            row += "<td><span class='badge bg-success-subtle text-success px-2 py-1'><i class='fas fa-check me-1'></i>" + item.statut_label + "</span></td>";
+          } else {
+            row += "<td><span class='badge bg-secondary-subtle text-secondary px-2 py-1'><i class='fas fa-question me-1'></i>" + (item.statut_label || 'Inconnu') + "</span></td>";
+          }
+
+          // Action dropdown
+          row += "<td class='text-end'><div class='dropdown'><button class='btn btn-soft-secondary btn-sm' type='button' data-bs-toggle='dropdown' aria-expanded='false'><i class='ri-more-fill align-middle'></i></button><ul class='dropdown-menu dropdown-menu-end'><li><a class='dropdown-item' href='/crm/details-preinscrit/" + item.id + "/'><i class='ri-eye-line me-2 align-middle'></i> Voir détails</a><li><a class='dropdown-item edit-prospect' href='javascript:void(0);' data-prospect-id='" + item.id + "' data-bs-toggle='modal' data-bs-target='#updateInfoProspect'><i class='ri-pencil-line me-2 align-middle'></i> Modifier</a><li><a class='dropdown-item delete-prospect' href='javascript:void(0);' data-prospect-id='" + item.id + "'><i class='ri-delete-bin-line me-2 align-middle'></i> Supprimer</a></ul></div></td>";
+
+          row += "</tr>";
+        });
+      }
+
+      $("#listeItem").html(row);
+      updateStatistics(data);
+    }
+    
+    // Load prospects when the document is ready
     loadProspects();
 
-   
-    function loadFiltredProspect(filter_option, value){
-      $.ajax({
-        url : "{% url 't_crm:ApiFilterPrinscrit' %}",
-        type : "GET",
-        dataType : "JSON",
-        data : {'filter_option' : filter_option, 'value' : value},
-        success : function(data){
-            var row = "";
-            if (data.length === 0) {
-              row += "<tr><td colspan='7' class='text-center text-muted'>Aucun prospect "+value+" trouvé</td></tr>";
-            }else{
-              $.each(data, function(index, item){
-                row += "<tr class='align-middle'>";
-                row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></td>";
-                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + item.telephone + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
-                row += "<td>" + (item.type_prospect === 'particulier' ? 
-                    "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
-                    "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
-                row += "<td>" + (item.etat === 'en_attente' ? 
-                    "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
-                    "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
-              
-                row += "</tr>";
-              });
-            }
-            $("#listeItem").html(row);
-          }
-      });
-    }
 
-    $(document).on('change','#filter-prospect', function(){
-      var filter_option = "filter-prospect";
-      let value = $(this).val();
-
-      loadFiltredProspect(filter_option, value);
+    // Client-side filter by prospect type
+    $(document).on('change', '#filter-prospect', function() {
+      var filterValue = $(this).val();
       
+      if (filterValue === '') {
+        // Show all original data
+        renderData(originalData);
+      } else {
+        // Filter based on prospect type
+        var filteredData = originalData.filter(function(item) {
+          // Assuming 'particulier' and 'entreprise' are types - adjust as needed
+          if (filterValue === 'particulier') {
+            // Filter for particular - may need to adjust based on actual data structure
+            return !item.entreprise || item.entreprise === '';
+          } else if (filterValue === 'entreprise') {
+            return item.entreprise && item.entreprise !== '';
+          }
+          return true;
+        });
+        
+        renderData(filteredData);
+      }
     });
 
-    $(document).on('click','#date_filter-prospect', function(){
-      var filter_option = "date_filter-prospect";
-      let value = $(this).val();
 
-      loadFiltredProspect(filter_option, value);
-     
+    // Client-side search functionality
+    $(document).on('input', '#table-filter', function() {
+      var searchTerm = $(this).val().trim().toLowerCase();
+      
+      if (searchTerm === '') {
+        // If search is empty, show all original data
+        renderData(originalData);
+      } else {
+        // Filter the original data based on search term
+        var filteredData = originalData.filter(function(item) {
+          return (
+            item.nom.toLowerCase().includes(searchTerm) ||
+            item.prenom.toLowerCase().includes(searchTerm) ||
+            (item.entreprise && item.entreprise.toLowerCase().includes(searchTerm)) ||
+            item.telephone.toLowerCase().includes(searchTerm) ||
+            item.email.toLowerCase().includes(searchTerm) ||
+            item.statut_label.toLowerCase().includes(searchTerm)
+          );
+        });
+        
+        renderData(filteredData);
+      }
+    });
+    
+    // Client-side filter by date
+    $(document).on('change', '#date_filter-prospect', function() {
+      var sortValue = $(this).val();
+      
+      if (sortValue === '') {
+        // Show all original data
+        renderData(originalData);
+      } else {
+        // Sort the data based on date
+        var sortedData = [...originalData]; // Create a copy to avoid modifying original
+        
+        if (sortValue === '-created_at') {
+          // Sort by date - recent first
+          sortedData.sort(function(a, b) {
+            // Assuming there's a created_at field - adjust as needed
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        } else if (sortValue === 'created_at') {
+          // Sort by date - old first
+          sortedData.sort(function(a, b) {
+            return new Date(a.created_at) - new Date(b.created_at);
+          });
+        }
+        
+        renderData(sortedData);
+      }
     });
 
-   
- 
+    // Handle edit prospect action
+    $(document).on('click', '.edit-prospect', function() {
+      var prospectId = $(this).data('prospect-id');
+      // You would load the prospect data into the modal here
+      console.log('Edit prospect with ID:', prospectId);
+      // Additional code to populate the form would go here
+    });
+    
+    // Handle delete prospect action
+    $(document).on('click', '.delete-prospect', function() {
+      var prospectId = $(this).data('prospect-id');
+      // Show the delete confirmation modal
+      $('.deleteModal').modal('show');
+      console.log('Delete prospect with ID:', prospectId);
+      // Additional code to handle deletion would go here
+    });
 
   });
 </script>

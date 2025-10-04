@@ -502,9 +502,14 @@
             <div class="row g-3">
               <div class="col-lg-12">
                 <label class="form-label fw-medium" for="typeRemise">Type de réduction</label>
-                <select class="form-select border-0 bg-light py-2" id="typeRemise" name="type_remise">
-                  <!--Chargement des remise disponible dans le systeme-->
-                </select>
+                <div class="input-group">
+                  <select class="form-select border-0 bg-light py-2" id="typeRemise" name="type_remise">
+                    <!--Chargement des remise disponible dans le systeme-->
+                  </select>
+                  <button class="btn btn-outline-primary" type="button" id="showDiscountDetails">
+                    <i class="ri-eye-line me-2"></i> Détails
+                  </button>
+                </div>
                 <div class="form-text">Sélectionnez le type de réduction à appliquer</div>
               </div>
               <div class="col-lg-12" id="justificatifPourRemise">
@@ -614,6 +619,7 @@
                 <th class="border-0 rounded-start">Nom & Prénom</th>
                 <th class="border-0">Date de naissance</th>
                 <th class="border-0">Statut</th>
+                <th class="border-0">Date d'inscription</th>
                 <th class="border-0 rounded-end text-center">Action</th>
               </tr>
             </thead>
@@ -723,6 +729,73 @@
   </div>
 </div>
 
+<!-- Modal for discount details -->
+<div class="modal fade" id="discountDetailsModalNew" tabindex="-1" aria-labelledby="discountDetailsModalNewLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-information-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="discountDetailsModalNewLabel">
+              Détails de la réduction
+            </h5>
+            <p class="text-muted small mb-0">Informations détaillées sur le type de réduction sélectionné</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header border-0 bg-white pt-3">
+            <div class="d-flex align-items-center">
+              <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                <i class="ri-coupon-line text-primary"></i>
+              </span>
+              <h6 class="card-title mb-0 text-primary">Détails de la réduction</h6>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Label</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailLabelRemise">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Taux</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailTauxRemise">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Activé</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailIsEnabled">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Nécessite justificatif</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailHasToJustify">-</div>
+              </div>
+              <div class="col-lg-12">
+                <label class="form-label fw-medium">Description</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailDescriptionRemise">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Date de création</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailCreatedAt">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   
   $(document).ready(function () {
@@ -802,11 +875,15 @@
           window.prospectData = data;                    
           var row = "";          
           if (data.length > 0) {            
-            $.each(data, function(index, item){              
+            $.each(data, function(index, item){    
+              let date = new Date(item.created_at);
+              let formattedDate = date.toLocaleDateString('fr-FR');  
+                      
               row += '<tr>';                  
               row += "<td>"+item.prenom+' '+item.nom+"</td>";                  
-              row += "<td>"+item.date_naissance+"</td>";                  
+              row += "<td>"+(item.date_naissance ? item.date_naissance : "--" )+"</td>";                  
               row += "<td>"+item.statut_label+"</td>";                  
+              row += "<td>"+formattedDate+"</td>";                  
               row += '<td class="text-end">';                    
               row += '<button class="btn btn-sm btn-outline-primary select-prospect" data-date_naisance='+item.date_naissance+' data-name='+item.nom+' data-prenom='+item.prenom+' data-id='+item.id+'>';                      
               row +=  '<i class="ri-check-line me-1"></i>Sélectionner';                    
@@ -1007,6 +1084,41 @@
           alert('Erreur lors du chargement des détails: ' + error);
         }
       });
+    });
+
+    function ShowReductionDetails(id_reduction){
+      $.ajax({
+        url : "{% url 't_remise:ApiGetReductionDetails' %}",
+        dataType: "JSON",
+        type : "GET",
+        data : {
+          'id_reduction' : id_reduction,
+        },
+        success : function(data){
+          $('#detailLabelRemise').text(data.label || '-');
+          $('#detailTauxRemise').text(data.taux ? data.taux + '%' : '-');
+          $('#detailIsEnabled').text(data.is_enabled ? 'Oui' : 'Non');
+          $('#detailHasToJustify').text(data.has_to_justify ? 'Oui' : 'Non');
+          $('#detailDescriptionRemise').text(data.description || '-');
+          $('#detailCreatedAt').text(data.created_at || '-');
+        }
+      });
+    }
+    
+    // Handle click on discount details button
+    $(document).on('click', '#showDiscountDetails', function() {
+      var selectedOption = $('#typeRemise').find('option:selected');
+      var typeId = $('#typeRemise').val();
+      
+      if (typeId === '0' || typeId === 0) {
+        alertify.error('Veuillez d\'abord sélectionner un type de réduction.');
+        return;
+      }
+      
+      ShowReductionDetails(typeId);
+      
+      // Show modal
+      $('#discountDetailsModalNew').modal('show');
     });
 
     // Handle form submission to apply reduction    

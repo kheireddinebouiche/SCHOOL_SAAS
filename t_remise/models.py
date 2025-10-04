@@ -10,6 +10,8 @@ class Remises(models.Model):
 
     is_archived = models.BooleanField(default=False)
 
+    description = models.TextField(max_length=3000, null=True, blank=True)
+
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)

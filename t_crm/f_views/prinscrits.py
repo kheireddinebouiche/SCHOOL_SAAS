@@ -158,6 +158,7 @@ def ApiUpdatePreinscritInfos(request):
     etablissement_diplome = request.POST.get('etablissement_diplome')
     id_preinscrit = request.POST.get('id_preinscrit')
     nin = request.POST.get('nin')
+    nationnalite = request.POST.get('nationnalite')
     pays = request.POST.get('pays')
     wilaya = request.POST.get('wilaya')
     code_zip = request.POST.get('code_zip')
@@ -181,6 +182,7 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.diplome = diplome
     preinscrit.etablissement = etablissement_diplome
     preinscrit.nin = nin
+    preinscrit.nationnalite = nationnalite
     preinscrit.profile_completed= True
     preinscrit.pays = pays
     preinscrit.wilaya = wilaya

@@ -238,6 +238,7 @@
                                 <div>
                                     <small class="text-muted d-block mb-1">Statut</small>
                                     <span class="fw-semibold" id="statut_preinscrit">-</span>
+                                    <p class="text-muted" id="date_changement">-</p>
                                 </div>
                             </div>
                             <div class="mb-4 d-flex align-items-start">
@@ -660,12 +661,20 @@
                                     <input type="text" id="lieu_naissance" class="form-control form-control-lg border rounded-3 py-3">
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label fw-medium text-muted">N° identification national (NIN)</label>
-                                    <input type="text" id="nin" class="form-control form-control-lg border rounded-3 py-3" placeholder="Numéro d'identification national">
+                                    <input type="text" id="nin" class="form-control form-control-lg border rounded-3 py-3"  maxlength="18" placeholder="Numéro d'identification national">
                                 </div>
                             </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium text-muted">Nationnalite</label>
+                                    <input type="text" id="nationnalite" class="form-control form-control-lg border rounded-3 py-3" placeholder="Nationnalité du preinscrit">
+                                </div>
+                            </div>
+
+                            
                         </div>
                     </div>
                     
@@ -2380,7 +2389,7 @@
                     $('#phone').text(data.telephone);
                     $('#created_at').text(data.created_at);
                     $('#statut_preinscrit').text(data.statut);
-                         
+                    $('#date_changement').text(data.preinscri_date);
 
                     $('#profile_nom_arabe').text(data.nom_arabe);
                     $('#profile_prenom_arabe').text(data.prenom_arabe);
@@ -2390,6 +2399,7 @@
                     $('#profile_wilaya').text(data.wilaya);
                     $('#profile_code_zip').text(data.code_zip);
                     $('#profile_nin').text(data.nin);
+                    
                     $('#profile_prenom_pere').text(data.prenom_pere);
                     $('#profile_tel_pere').text(data.tel_mere);
                     $('#profile_nom_mere').text(data.nom_mere);
@@ -2408,6 +2418,7 @@
                     $('#prenom_arabe').val(data.prenom_arabe);
                     $('#date_naissance').val(data.date_naissance);
                     $('#nin').val(data.nin);
+                    $('#nationnalite').val(data.nationnalite);
                     $('#prenom_pere').val(data.prenom_pere);
                     $('#tel_pere').val(data.tel_pere);
                     $('#nom_mere').val(data.nom_mere);
@@ -2973,6 +2984,7 @@
                     $('#profile_date_naissance').text(data.date_naissance || '-');
                     $('#profile_nin').text(data.nin || '-');
                     
+                    
                     // Informations des parents
                     $('#profile_prenom_pere').text(data.prenom_pere || '-');
                     $('#profile_tel_pere').text(data.tel_pere || '-');
@@ -3068,6 +3080,7 @@
                 'prenom_arabe': $('#prenom_arabe').val(),
                 'date_naissance': $('#date_naissance').val(),
                 'nin': $('#nin').val(),
+                'nationnalite' : $('#nationnalite').val(),
                 
                 // Parents
                 'prenom_pere': $('#prenom_pere').val(),
@@ -3099,6 +3112,7 @@
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Prénom en arabe</p><h6 class="mb-0">' + (formData.prenom_arabe || '-') + '</h6></div></div>';
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Date de naissance</p><h6 class="mb-0">' + (formData.date_naissance || '-') + '</h6></div></div>';
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">N° identification national (NIN)</p><h6 class="mb-0">' + (formData.nin || '-') + '</h6></div></div>';
+            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Nationnalite</p><h6 class="mb-0">' + (formData.nationnalite || '-') + '</h6></div></div>';
             
             // Parents
             confirmationHtml += '<div class="col-12 mt-3"><h5 class="text-success fw-bold border-bottom pb-2 mb-3">Informations des parents</h5></div>';
@@ -3132,7 +3146,7 @@
             $('#confirmAdditionalInfoModal').modal('show');
         });
 
-        function loadDataToUpdate(pays,wilaya,code_zip,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome){
+        function loadDataToUpdate(pays,wilaya,code_zip,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome){
             $.ajax({
                 url : "{% url 't_crm:ApiUpdatePreinscritInfos' %}",
                 dataType: "JSON",
@@ -3142,6 +3156,7 @@
                     'prenom_arabe' : prenom_arabe,
                     'date_naissance' : date_naissance,
                     'nin' : nin,
+                    'nationnalite' : nationnalite,
                     'prenom_pere' : prenom_pere,
                     'tel_pere' : tel_pere,
                     'nom_mere' : nom_mere,
@@ -3167,7 +3182,8 @@
                         alertify.success(response.message);
                         $('#confirmAdditionalInfoModal').modal('hide');
                         loadPersonalInfos();
-                        loadFinancialData(); // Recharger les données financières après mise à jour
+                        loadFinancialData(); 
+                        CheckCompletedInfos();
                 }else{
                     alertify.error("Une erreur c'est produite lors du traitement de la requête");
                 }
@@ -3181,6 +3197,7 @@
             var prenom_arabe = $('#prenom_arabe').val();
             var date_naissance = $('#date_naissance').val();
             var nin = $('#nin').val();
+            var nationnalite = $("#nationnalite").val();
             var prenom_pere = $('#prenom_pere').val();
             var tel_pere = $('#tel_pere').val();
             var nom_mere = $('#nom_mere').val();
@@ -3225,13 +3242,23 @@
                 alertify.error("Dossier incomplet. Champs manquants : " + champsManquants.join(', '));
                 
             }else{
-                loadDataToUpdate(pays,wilaya,code_zip,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome)
+                loadDataToUpdate(pays,wilaya,code_zip,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome)
             }
                       
         });
 
         
         document.getElementById("saveDocumentBtn").addEventListener("click", function () {
+            let btn = this; // Référence du bouton
+            btn.disabled = true; // Désactiver le bouton
+            let originalText = btn.innerHTML; // Sauvegarder le texte original
+
+            // Afficher un spinner pendant le chargement
+            btn.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Enregistrement...
+            `;
+
             let formData = new FormData();
             formData.append("name", document.getElementById("documentName").value);
             formData.append("type", document.getElementById("documentType").value);
@@ -3245,17 +3272,26 @@
             })
             .then(response => response.json())
             .then(data => {
-                if(data.success){
-                    alertify.success("Le document a été ajouter avec succes");
+                if (data.success) {
+                    alertify.success("Le document a été ajouté avec succès");
                     $('#addDocumentModal').modal('hide');
                     loadDocuments();
                     handleDocs();
                 } else {
-                    alertify.error(data.error);
-                }   
+                    alertify.error(data.error || "Erreur lors de l'ajout du document");
+                }
             })
-            .catch(error => console.error("Erreur AJAX:", error));
+            .catch(error => {
+                console.error("Erreur AJAX:", error);
+                alertify.error("Une erreur s'est produite !");
+            })
+            .finally(() => {
+                // Réactiver le bouton dans tous les cas
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
         });
+
 
 
         // Gestion de l'affichage dans la modal
