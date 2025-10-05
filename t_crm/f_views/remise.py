@@ -69,7 +69,8 @@ def ApiStoreApplicedReduction(request):
             remise_appliquer = RemiseAppliquer.objects.create(
                 remise=remise,
                 fichie_justificatif=fichier_justificatif if remise.has_to_justify else None,
-                is_approuved=False  # Par défaut, la remise n'est pas approuvée
+                is_approuved=False,  # Par défaut, la remise n'est pas approuvée
+                is_applicated=False,
             )
             
             # Créer les lignes de remise appliquée pour chaque prospect
@@ -107,7 +108,7 @@ def ApiStoreApplicedReduction(request):
 
 @login_required(login_url="institut_app:login")
 def ApiloadRemiseAppliquer(request):
-    liste = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','created_at')
+    liste = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','is_applicated','created_at')
     return JsonResponse(list(liste), safe=False)
 
 
@@ -155,5 +156,15 @@ def ApiGetReductionDetails(request):
         id_reduction = request.GET.get('id_reduction')
 
         object = Remises.objects.get(id = id_reduction)
+
+        data = {
+            'label' : object.label,
+            'description' : object.description,
+            'taux' : object.taux,
+            'has_to_justify' : object.has_to_justify,
+            'created_at': object.created_at.strftime("%Y-%m-%d"),
+        }
+
+        return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
