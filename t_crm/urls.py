@@ -152,5 +152,7 @@ urlpatterns = [
     path('ApiGeneratePaiementRequest', ApiGeneratePaiementRequest, name="ApiGeneratePaiementRequest"),
 
     path('ApiLoadFinancialData', ApiLoadFinancialData, name="ApiLoadFinancialData"),
+
+    path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
     
 ]

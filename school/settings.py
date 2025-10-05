@@ -62,7 +62,6 @@ TENANT_APPS = [
     't_conseil',
     't_remise',
     'phonenumber_field',
-    'widget_tweaks',
     'django_countries',
     'django.contrib.auth',
     'django.contrib.admin',
