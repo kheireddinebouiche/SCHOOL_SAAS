@@ -154,5 +154,7 @@ urlpatterns = [
     path('ApiLoadFinancialData', ApiLoadFinancialData, name="ApiLoadFinancialData"),
 
     path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
+
+    path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
     
 ]

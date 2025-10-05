@@ -168,3 +168,20 @@ def ApiGetReductionDetails(request):
         return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiActivateRemiseAppliquer(request):
+    if request.method == "POST":
+        discountId = request.POST.get('id')
+
+        remise_obj = RemiseAppliquer.objects.get(id = discountId)
+        if remise_obj:
+            remise_obj.is_approuved = True
+            remise_obj.save()
+            return JsonResponse({"status" : "success" , "message" : "La remise a été activé avec succès"})
+        else:
+            return JsonResponse({"status" : "error" , "message" : "La remise n'existe pas"})
+            
+    else:
+        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
