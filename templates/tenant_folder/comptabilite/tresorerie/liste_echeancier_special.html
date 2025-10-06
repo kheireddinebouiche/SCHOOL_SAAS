@@ -451,16 +451,6 @@
                     <h5 class="fw-semibold">Confirmation d'acceptation</h5>
                     <p class="text-muted">Êtes-vous sûr de vouloir accepter cet échéancier spécial ?</p>
                 </div>
-                <div class="bg-light bg-opacity-50 rounded-3 p-3 mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">ID Échéancier:</span>
-                        <span class="fw-semibold" id="acceptEcheancierId"></span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Client:</span>
-                        <span class="fw-semibold" id="acceptEcheancierClient"></span>
-                    </div>
-                </div>
                 <div class="form-group mb-3">
                     <label for="acceptComment" class="form-label">Commentaire (optionnel)</label>
                     <textarea class="form-control" id="acceptComment" rows="3" placeholder="Ajoutez un commentaire sur l'acceptation..."></textarea>
@@ -683,6 +673,16 @@
         });
 
         $(document).on('click', "#confirmEcheancierAcceptBtn", function(){
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             var echeancierId = $(this).data('id');
             $.ajax({
                 url : "{% url 't_tresorerie:ApiApproveEcheancierSpecial' %}",
@@ -694,10 +694,16 @@
                 success : function(response){
                     if(response.status === "success"){
                         alertify.success("Echéancier validé avec succès");
+                        $('#acceptEcheancierModal').modal('hide');
                         loadEcheanciers();
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete.");
                     }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             })
         });

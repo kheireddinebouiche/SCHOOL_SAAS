@@ -2395,7 +2395,19 @@
                     $('#phone').text(data.telephone);
                     $('#created_at').text(data.created_at);
                     $('#statut_preinscrit').text(data.statut);
-                    $('#date_changement').text(data.preinscri_date);
+
+                    if(data.statut_clean === "prinscrit"){
+                        $('#date_changement').text(data.preinscri_date);
+
+                    }else if(data.statut_clean === "instance"){
+                        $('#date_changement').text(data.instance_date);
+
+                    }else if(data.statut_clean === "convertit"){
+                        $('#date_changement').text(data.convertit_date);
+                    }else{
+                        $('#date_changement').text("Aucune date trouvée");
+
+                    }
 
                     $('#profile_nom_arabe').text(data.nom_arabe);
                     $('#profile_prenom_arabe').text(data.prenom_arabe);
@@ -2883,6 +2895,15 @@
         });
 
         $(document).on('click', '#confirmeValidationBtn', function(){
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
             $.ajax({
                 url : "{% url 't_crm:ApiValidatePreinscrit' %}",
                 dataType : "JSON",
@@ -2900,6 +2921,11 @@
                         alertify.error(response.message);
                     }
                 },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
             });              
         });
 
@@ -3493,6 +3519,17 @@
 
          // Gérer la soumission de la demande de validation par un responsable
         $(document).on('click', '#submitValidationRequestBtn', function() {
+
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             var reason = $('#validationRequestReason').val();
             
             $.ajax({
@@ -3514,6 +3551,11 @@
                     }else{
                         alertify.error(response.message);
                     }
+                },
+                 complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             });      
         });

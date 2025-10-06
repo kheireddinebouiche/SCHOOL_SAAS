@@ -20,9 +20,8 @@ def AttentesPaiements(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
 
 @login_required(login_url="insitut_app:login")
-@ajax_required
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").all()
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").filter(client__statut = "instance")
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()

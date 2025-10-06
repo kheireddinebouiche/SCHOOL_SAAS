@@ -58,6 +58,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'id': prospect.id,
         'statut_key' : prospect.statut,
         'statut': prospect.get_statut_display(), 
+        'statut_clean' : prospect.statut,
         'nom': prospect.nom,
         'prenom': prospect.prenom,
         'email': prospect.email,
@@ -484,6 +485,8 @@ def prospects_incomplets_view(request):
     }
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)
 
+from django.utils.timezone import now
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiValidatePreinscrit(request):
@@ -506,6 +509,7 @@ def ApiValidatePreinscrit(request):
         
         
         preinscrit.statut = "instance"
+        preinscrit.instance_date = now()
 
         preinscrit.save()
 

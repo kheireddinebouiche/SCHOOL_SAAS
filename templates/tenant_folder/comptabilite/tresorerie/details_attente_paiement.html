@@ -1136,28 +1136,7 @@
             </div>
             <div class="modal-body p-4">
                 <div class="row mb-4">
-                    <div class="col-lg-6">
-                        <div class="card border border-primary card-equal-height">
-                            <div class="card-header bg-primary bg-opacity-10">
-                                <h6 class="mb-0 text-primary">Informations de la formation</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Spécialité:</span>
-                                    <span class="fw-medium" id="modalSpecialite"></span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Promo:</span>
-                                    <span class="fw-medium" id="modalPromo"></span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Prix de la formation:</span>
-                                    <span class="fw-bold text-primary" id="modalPrixFormation"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
+                    <div class="col-lg-12">
                         <div class="card border border-warning card-equal-height">
                             <div class="card-header bg-warning bg-opacity-10">
                                 <h6 class="mb-0 text-warning">Configuration de l'échéancier</h6>
@@ -2856,6 +2835,12 @@
                         $('#echeancierSpecialLinesTable').html(rowSpecial);
                     }
 
+                    if(data.echeancier_special_state_approuvel){
+                        document.getElementById('specialBoutonConf').disabled = true;
+                    }else{
+                        document.getElementById('specialBoutonConf').disabled = false;
+
+                    }
                     
                     if(data.special_echeancier_validate){
                         document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
@@ -3320,6 +3305,15 @@
         
         // Confirmer l'enregistrement de l'échéancier
         $(document).on('click', '#confirmSaveEcheancierBtn', function(){
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
             // Collect data from the special echeancier table
             var echeancierLines = [];
             var isValid = true;
@@ -3386,12 +3380,28 @@
                 error: function(xhr, status, error) {
                     console.error("Erreur lors de l'enregistrement:", error);
                     alert("Erreur lors de l'enregistrement de l'échéancier spécial.");
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             });
         });
         
         // Confirmation définitive de l'échéancier
         $(document).on('click', '#finalConfirmBtn', function(){
+
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             // Récupérer les données nécessaires
             var id_demande = "{{pk}}";
             
@@ -3443,6 +3453,11 @@
                 error: function(xhr, status, error) {
                     console.error('Erreur lors de la récupération des détails du paiement:', error);
                     alert('Erreur lors de la récupération des détails du paiement.');
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             });
         });
@@ -4230,6 +4245,15 @@
         });
 
         $(document).on('click', '#confirmApplyEcheancierSpecialBtn', function(){
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
 
             $.ajax({
                 url : "{% url 't_tresorerie:ApiApplyEcheancierSpecial' %}",
@@ -4248,6 +4272,11 @@
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
 
                     }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             });
             $('#specialEcheancierModal').modal('hide');
