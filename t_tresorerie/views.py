@@ -507,3 +507,21 @@ def ApiSetRembourssement(request):
     paiement.save()
 
     return JsonResponse({'status' : 'success', 'message' : "La demande de remboursement à été enregistrer avec succès"})
+
+@login_required(login_url="institut_app:login")
+def ApiGetEntrepriseDetails(request):
+    id_demande = request.GET.get('id_demande')
+    object = ClientPaiementsRequest.objects.get(id = id_demande)
+    voeux = FicheDeVoeux.objects.filter(prospect = object.client, is_confirmed = True).first()
+   
+    entreprise = Entreprise.objects.get(id = voeux.specialite.formation.entite_legal.id)
+
+    data = {
+        'designation' : entreprise.designation,
+        'rc' : entreprise.rc,
+        'nif' : entreprise.nif,
+        'art' : entreprise.art,
+        'telephone' : entreprise.telephone,
+    }
+
+    return JsonResponse(data, safe=False)

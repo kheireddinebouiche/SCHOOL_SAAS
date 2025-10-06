@@ -103,4 +103,6 @@ urlpatterns = [
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
     path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),
 
+    path('ApiGetEntrepriseDetails', ApiGetEntrepriseDetails, name="ApiGetEntrepriseDetails"),
+
 ]

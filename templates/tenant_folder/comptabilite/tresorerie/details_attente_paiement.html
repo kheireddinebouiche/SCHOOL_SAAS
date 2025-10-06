@@ -2709,7 +2709,8 @@
         let IdSpecialEcheancier = null; 
         let RefundState = false;
         let id_echeancier = null;
-
+        let entreprise_data = [];
+        var paymentData = {};
        
         function HideReducNotif(){
            
@@ -2728,11 +2729,24 @@
            
         }
 
+
+        function loadEntrepriseDatas(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiGetEntrepriseDetails' %}",
+                dataType : "JSON",
+                type: 'GET',
+                data : {
+                    'id_demande' : id_demande,
+                },
+                success : function(data){
+                    entreprise_data = data;
+                    console.log(entreprise_data);
+                }
+            })
+        }
+
         
-    
-        // Add a global variable to store payment data
-        var paymentData = {};
-               
+        
 
         function SummeryPaiement(totalPaye,total_initial,total_solde){
             $('#totalPaidAmount').text(parseFloat(totalPaye).toFixed(2) + ' DA');
@@ -2839,7 +2853,6 @@
                         document.getElementById('specialBoutonConf').disabled = true;
                     }else{
                         document.getElementById('specialBoutonConf').disabled = false;
-
                     }
                     
                     if(data.special_echeancier_validate){
@@ -3955,6 +3968,17 @@
         
         // Confirmer le paiement
         $(document).on('click', '#confirmerPaiementBtn', function(){
+
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             // Récupérer les données stockées
             var id_due_paiement = $(this).data('id_due_paiement');
             var echeance = $(this).data('echeance');
@@ -3989,6 +4013,11 @@
                     }else{
                         showUnpaidPaymentNotification();
                     }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             })
             
@@ -4087,6 +4116,9 @@
             }
         }
         
+
+        
+
         // Fonction pour créer le PDF de la quittance
         function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance) {
             try {
