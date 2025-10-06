@@ -489,16 +489,12 @@
                 dataType: 'JSON',
                 type: 'GET',
                 success: function(data) {
-                    console.log('Data loaded successfully:', data); // Debug logging
                     allRemboursementsData = data;
-                    console.log('allRemboursementsData set to:', allRemboursementsData); // Debug logging
                     populatePromoFilter(data);
                     displayRemboursements(data);
                 },
                 error: function(xhr, status, error) {
-                    console.error("Erreur lors du chargement des données des remboursements:", error);
-                    console.error("Status:", status);
-                    console.error("Response:", xhr.responseText);
+                
                     var html = '<tr><td colspan="10" class="text-center text-danger">Erreur lors du chargement des données des remboursements.</td></tr>';
                     $('#remboursementTableBody').html(html);
                 }
@@ -519,34 +515,38 @@
         }
 
         function displayRemboursements(data) {
-                    var html = ""; // Define the html variable
-                    $.each(data, function(index, item){
-                        console.log('Processing item:', item); // Debug logging
-                        var remboursementId = item.remboursement_id || item.id || item.pk || item._id;
-                        html += '<tr class="remboursement-row" data-remboursement-id="' + remboursementId + '" data-prospect-name="' + item.nom + ' ' + item.prenom + '">';
-                        html += '<td><strong>' + item.nom + ' ' + item.prenom + '</strong></td>';
-                       
-                        html += '<td>'+item.promotion_session + '-' +item.promotion_start +'/'+item.promotion_end+'</td>';
-                        html += '<td><strong class="text-danger">'+item.allowed_amount+' DA</strong></td>';
-                       
-                        html += '<td>'+item.updated_at+'</td>'; 
-                        html += '<td>'+item.mode_rembourssement+'</td>'; 
-                        html += '<td class="text-center">';
-                        html += '<div class="dropdown d-inline-block">';
-                        html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">';
-                        html += '<i class="ri-more-fill align-middle"></i>';
-                        html += '</button>';
-                        html += '<ul class="dropdown-menu dropdown-menu-end">';
-                        html += '<li><a class="btn-details-remboursement dropdown-item" href="javascript:void(0);" data-remboursement-id="' + remboursementId + '">';
-                        html += '<i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
-                        html += '</ul>';
-                        html += '</div>';
-                        html += '</td>';
-                        html += '</tr>';   
-                    });
+            var html = "";
+            if(data.lenght > 0){
+                $.each(data, function(index, item){
+                    
+                    var remboursementId = item.remboursement_id || item.id || item.pk || item._id;
+                    html += '<tr class="remboursement-row" data-remboursement-id="' + remboursementId + '" data-prospect-name="' + item.nom + ' ' + item.prenom + '">';
+                    html += '<td><strong>' + item.nom + ' ' + item.prenom + '</strong></td>';
+                    
+                    html += '<td>'+item.promotion_session + '-' +item.promotion_start +'/'+item.promotion_end+'</td>';
+                    html += '<td><strong class="text-danger">'+item.allowed_amount+' DA</strong></td>';
+                    
+                    html += '<td>'+item.updated_at+'</td>'; 
+                    html += '<td>'+item.mode_rembourssement+'</td>'; 
+                    html += '<td class="text-center">';
+                    html += '<div class="dropdown d-inline-block">';
+                    html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">';
+                    html += '<i class="ri-more-fill align-middle"></i>';
+                    html += '</button>';
+                    html += '<ul class="dropdown-menu dropdown-menu-end">';
+                    html += '<li><a class="btn-details-remboursement dropdown-item" href="javascript:void(0);" data-remboursement-id="' + remboursementId + '">';
+                    html += '<i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
+                    html += '</ul>';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '</tr>';   
+                });
+            }else{
+                html = "<tr><td colspan='6' class='text-muted text-center'>Aucune informations trouvé </td></tr> ";
+            }
 
-                    $('#remboursementTableBody').html(html);
-                }
+            $('#remboursementTableBody').html(html);
+        }
 
         // Filter functionality
         $('#promoFilter, #table-filter').on('input change', function() {

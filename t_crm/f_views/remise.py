@@ -108,8 +108,20 @@ def ApiStoreApplicedReduction(request):
 
 @login_required(login_url="institut_app:login")
 def ApiloadRemiseAppliquer(request):
-    liste = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','is_applicated','created_at')
-    return JsonResponse(list(liste), safe=False)
+    remises = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','is_applicated','created_at')
+    for remise in remises:
+        prospects = list(RemiseAppliquerLine.objects.filter(remise_appliquer_id = remise['id']).values("id",'prospect__nom','prospect__prenom'))
+
+    data = []
+    data.append({
+        'id': remise['id'],
+        'label': remise['remise__label'],
+        'is_approuved': remise['is_approuved'],
+        'is_applicated': remise['is_applicated'],
+        'created_at': remise['created_at'].strftime("%Y-%m-%d %H:%M:%S"),
+        'prospects': prospects
+    })
+    return JsonResponse({'liste': data})
 
 
 @login_required(login_url="institut_app:login")
@@ -141,10 +153,11 @@ def ApiLoadRemiseAppliquerDetails(request):
                     for p in prospects
                 ]
             }
-            
             return JsonResponse({'status': 'success', 'data': data})
+        
         except RemiseAppliquer.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Réduction non trouvée'}, status=404)
+        
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     

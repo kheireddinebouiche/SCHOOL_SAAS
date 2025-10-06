@@ -1005,6 +1005,7 @@
 
     // Function to render data to the table
     function renderData(data) {
+      var data = data.liste;
       var row = "";
       
       // Calculate statistics
@@ -1044,23 +1045,28 @@
           });
             
           row += '<tr class="align-middle">';
-          row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.remise__label + "</div></div></td>";
+          row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + "</div></div></td>";
           
-          // Add prospect examples column
-          if (item.prospects && item.prospects.length > 0) {
+          
+          if (item.prospects) {
+
             row += "<td>";
-            row += "<small class='text-muted'>Exemples de prospects:</small><br>";
-            // Show first 2 prospects
+            
+            
             for (let i = 0; i < Math.min(item.prospects.length, 2); i++) {
               const prospect = item.prospects[i];
-              row += "<small class='badge bg-light text-dark me-1'>" + prospect.prenom + ' ' + prospect.nom + "</small>";
+              row += "<small class='badge bg-light text-dark me-1'>" + prospect.prospect__nom + ' ' + prospect.prospect__prenom + "</small>";
             }
             if (item.prospects.length > 2) {
               row += "<small class='text-muted ms-1'>+" + (item.prospects.length - 2) + " autres</small>";
             }
+
             row += "</td>";
+
           } else {
+
             row += "<td><small class='text-muted'>Aucun prospect associé</small></td>";
+
           }
           
           row += "<td>" + statusBadge + "</td>";
@@ -1074,10 +1080,11 @@
           row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
           row += '<li><button class="btn-detail-discount dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
           row += '<i class="ri-eye-line text-info me-2"></i>Voir détails</button></li>';
+
           // Show activate button only for non-activated discounts
           if (!item.is_approuved) {
             row += '<li><button class="btn-activate-discount dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'" data-label="'+item.remise__label+'">';
-            row += '<i class="ri-check-double-line text-success me-2"></i>Activer la réduction</button></li>';
+            row += '<i class="ri-check-double-line text-success me-2"></i>Approuver la réduction</button></li>';
           }
           row += '</ul>';
           row += '</div>';
@@ -1179,8 +1186,7 @@
       loadProspect();
       $('#prospectListModal').modal('show');
     });
-    
-    
+      
     $('#prospectListModal').on('hidden.bs.modal', function () {
       // Réouvrir la modale principale
       $('#newProspectModal').modal('show');
@@ -1361,72 +1367,82 @@
 
     // Handle form submission to apply reduction    
     $('#applyReductionBtn').on('click', function() {      
-          var typeId = $('#typeRemise').val();     
-          var justificatif = $('#fichierJustificatif')[0].files[0];  
+        var typeId = $('#typeRemise').val();     
+        var justificatif = $('#fichierJustificatif')[0].files[0];  
 
-          // Validation      
-          if (typeId === '0' || typeId === 0) {        
-            alert('Veuillez sélectionner un type de réduction.');        
-            return;      
-          }           
-          if (selectedProspects.length === 0) {        
-            alert('Veuillez sélectionner au moins un prospect.');        
-            return;      
-          }            
-          
-          // Check if justification is required      
-          var selectedOption = $('#typeRemise option:selected');  
-
-          var besoinJustificatif = selectedOption.data("justificatif");
-
-          if (besoinJustificatif && !justificatif) {        
-            alert('Veuillez fournir un fichier justificatif.');        
-            return;      
-          }            
-          // Prepare form data      
-          var formData = new FormData();      
-          formData.append('type_remise', typeId);      
-          if (justificatif) {        
-            formData.append('fichier_justificatif', justificatif);      
-          }            
-          // Add selected prospects to form data      
-          selectedProspects.forEach(function(prospect, index) {        
-            formData.append('prospects[' + index + '][id]', prospect.id);        
-            formData.append('prospects[' + index + '][name]', prospect.name);        
-            formData.append('prospects[' + index + '][prenom]', prospect.prenom);      
-            formData.append('prospects[' + index + '][date_naissance]', prospect.date_naissance);      
-          });            
-          // Send data to API      
-          $.ajax({        
-            url: "{% url 't_crm:ApiStoreApplicedReduction' %}",        
-            type: 'POST',        
-            data: formData,        
-            processData: false,        
-            contentType: false,        
-            headers: {          
-              'X-CSRFToken': '{{ csrf_token }}'       
-            },        
-            success: function(response) {          
-                // Handle success          
-                alert('Réduction appliquée avec succès.');          
-                $('#configureRemiseModal').modal('hide');          
-                // Reset form          
-                $('#typeRemise').val('0');          
-                $('#fichierJustificatif').val('');          
-                selectedProspects = [];          
-                updateSelectedProspectsList();
-                // Reload applied discounts
-                loadAppliedDiscounts();
-            },       
-            error: function(xhr, status, error) {          
-              // Handle error         
-              alert('Erreur lors de l\'application de la réduction: ' + error);        
-            }      
-          });    
-        });  
+        // Validation      
+        if (typeId === '0' || typeId === 0) {        
+          alert('Veuillez sélectionner un type de réduction.');        
+          return;      
+        }           
+        if (selectedProspects.length === 0) {        
+          alert('Veuillez sélectionner au moins un prospect.');        
+          return;      
+        }            
         
-    // Handle click on activate discount button
-    $(document).on('click', '.btn-activate-discount', function() {
+        // Check if justification is required      
+        var selectedOption = $('#typeRemise option:selected');  
+
+        var besoinJustificatif = selectedOption.data("justificatif");
+
+        if (besoinJustificatif && !justificatif) {        
+          alert('Veuillez fournir un fichier justificatif.');        
+          return;      
+        }            
+        // Prepare form data      
+        var formData = new FormData();      
+        formData.append('type_remise', typeId);      
+        if (justificatif) {        
+          formData.append('fichier_justificatif', justificatif);      
+        }            
+        // Add selected prospects to form data      
+        selectedProspects.forEach(function(prospect, index) {        
+          formData.append('prospects[' + index + '][id]', prospect.id);        
+          formData.append('prospects[' + index + '][name]', prospect.name);        
+          formData.append('prospects[' + index + '][prenom]', prospect.prenom);      
+          formData.append('prospects[' + index + '][date_naissance]', prospect.date_naissance);      
+        });      
+        
+        var btn = $(this);
+        btn.prop('disabled', true)
+
+        // Send data to API      
+        $.ajax({        
+          url: "{% url 't_crm:ApiStoreApplicedReduction' %}",        
+          type: 'POST',        
+          data: formData,        
+          processData: false,     
+          contentType: false,        
+          headers: {          
+            'X-CSRFToken': '{{ csrf_token }}'       
+          },        
+          success: function(response) {          
+              // Handle success          
+              alert('Réduction appliquée avec succès.');          
+              $('#configureRemiseModal').modal('hide');          
+              // Reset form          
+              $('#typeRemise').val('0');          
+              $('#fichierJustificatif').val('');          
+              selectedProspects = [];          
+              updateSelectedProspectsList();
+              // Reload applied discounts
+              loadAppliedDiscounts();
+          },       
+          error: function(xhr, status, error) {          
+            // Handle error         
+            alert('Erreur lors de l\'application de la réduction: ' + error);        
+          },
+          complete : function(){
+            btn.prop("disabled", false);
+          }  
+        });    
+      });  
+        
+    
+    
+        // Handle click on activate discount button
+    
+        $(document).on('click', '.btn-activate-discount', function() {
       var discountId = $(this).data('id');
       var discountLabel = $(this).data('label');
       
