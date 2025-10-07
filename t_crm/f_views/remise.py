@@ -109,19 +109,22 @@ def ApiStoreApplicedReduction(request):
 @login_required(login_url="institut_app:login")
 def ApiloadRemiseAppliquer(request):
     remises = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','is_applicated','created_at')
-    for remise in remises:
-        prospects = list(RemiseAppliquerLine.objects.filter(remise_appliquer_id = remise['id']).values("id",'prospect__nom','prospect__prenom'))
-
     data = []
-    data.append({
-        'id': remise['id'],
-        'label': remise['remise__label'],
-        'is_approuved': remise['is_approuved'],
-        'is_applicated': remise['is_applicated'],
-        'created_at': remise['created_at'].strftime("%Y-%m-%d %H:%M:%S"),
-        'prospects': prospects
-    })
+    for remise in remises:
+        prospects = list(
+            RemiseAppliquerLine.objects.filter(remise_appliquer_id=remise['id']).values('prospect__id','prospect__nom','prospect__prenom'))
+
+        data.append({
+            'id': remise['id'],
+            'label': remise['remise__label'],
+            'is_approuved': remise['is_approuved'],
+            'is_applicated': remise['is_applicated'],
+            'created_at': remise['created_at'].strftime("%Y-%m-%d %H:%M:%S"),
+            'prospects': prospects
+        })
+
     return JsonResponse({'liste': data})
+
 
 
 @login_required(login_url="institut_app:login")

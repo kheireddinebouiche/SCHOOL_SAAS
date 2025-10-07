@@ -205,10 +205,12 @@ def ApiGetDetailsDemandePaiement(request):
             is_approuved_remise = remiseObj.remise_appliquer.is_approuved
             reduction_type = remiseObj.remise_appliquer.remise.label
             id_reduction = remiseObj.remise_appliquer.id
+            is_appliced_remise = remiseObj.remise_appliquer.is_applicated
 
             remiseDatas = {
                 'valeur' : remise_appliquer,
                 'remise_approuver' : is_approuved_remise,
+                'remise_appliquer' : is_appliced_remise,
                 'type_remise' : reduction_type,
                 'id_applied_reduction' : id_reduction,
             }
