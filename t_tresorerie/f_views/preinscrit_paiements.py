@@ -83,7 +83,7 @@ def ApiApplyRemiseToPaiement(request):
         remiseId = request.POST.get('remiseId')
 
         remise_obj = RemiseAppliquer.objects.get(id = remiseId)
-        remise_obj.is_approuved = True
+        remise_obj.is_applicated = True
         remise_obj.save()
 
         return JsonResponse({"status" : "success"})
