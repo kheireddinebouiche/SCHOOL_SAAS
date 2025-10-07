@@ -16,7 +16,7 @@ def ListeRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeRemise(request):
-    liste = Remises.objects.all().values('id','label','taux','is_enabled','created_at').order_by('-created_at')
+    liste = Remises.objects.all().values('id','label','taux','is_enabled','created_at','has_to_justify','description').order_by('-created_at')
     return JsonResponse(list(liste), safe=False)
 
 
@@ -73,18 +73,19 @@ def ApiCreateRemise(request):
     taux = request.POST.get('taux')
     description = request.POST.get('description')
     justificatif = request.POST.get('justificatif_requis')
-
-    if justificatif == "on":
-        justificatif = True
-    else:
-        justificatif = False
+    print(justificatif)
     
-    Remises.objects.create(
-        label = label,
-        taux = taux,
-        is_enabled = False, 
-        description = description,
-        has_to_justify = justificatif
-    )
+    # if justificatif == "on":
+    #     justificatif = True
+    # else:
+    #     justificatif = False
+    
+    # Remises.objects.create(
+    #     label = label,
+    #     taux = taux,
+    #     is_enabled = False, 
+    #     description = description,
+    #     #has_to_justify = justificatif
+    # )
 
     return JsonResponse({'status': "success"})
