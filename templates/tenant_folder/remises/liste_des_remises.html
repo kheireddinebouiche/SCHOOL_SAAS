@@ -4,14 +4,69 @@
 
 {% block content %}
 <style>
-  .search-box {
-    position: relative;
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
   }
-  .search-box .search-icon {
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .prospect-type-card[data-type="entreprise"]:hover {
+    border-color: #dc3545;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
     position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
+  }
+  
+  /* Remise status colors */
+  .status-active {
+    background-color: #198754;
+  }
+  
+  .status-inactive {
+    background-color: #dc3545;
   }
   .table th {
     font-weight: 600;
@@ -177,11 +232,16 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
-                  <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
-                    <i class="fas fa-search text-muted search-icon"></i>
+                  <div class="position-relative" style="width: 220px;">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill ps-4" />
+                    <i class="fas fa-search text-muted position-absolute end-0 top-50 translate-middle-y me-3"></i>
                   </div>
-                 
+                  
+                  <select id="status-filter" class="form-select rounded-pill" style="width: 150px;">
+                    <option value="">Tous les statuts</option>
+                    <option value="active">Actives</option>
+                    <option value="inactive">Inactives</option>
+                  </select>
                   
                   <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#createRemiseModal">
                     <i class="ri-add-line me-1"></i> Nouvelle remise
@@ -603,6 +663,9 @@
                     
                     // Update KPIs
                     updateKPIs(data);
+                    
+                    // Re-apply search filter after data reload
+                    applySearchFilter();
                 },
                 error: function(xhr, status, error) {
                     console.error("Erreur lors du chargement des remises:", error);
@@ -646,6 +709,7 @@
                 if(response.status === "success"){
                   alertify.success("La remise est activée.")
                   loadRemises();
+                  applySearchFilter(); // Re-apply search filter
                 }else{
                   alertify.error("Une erreur c'est produite lors du traitement de la requete")
                 }
@@ -667,6 +731,7 @@
                 if(response.status === "success"){
                   alertify.success("La remise est descativée.");
                   loadRemises();
+                  applySearchFilter(); // Re-apply search filter
                 }else{
                   alertify.error("Une erreur c'est produite lors du traitement de la requete")
                 }
@@ -706,6 +771,7 @@
                     if(response.status === "success"){
                         alertify.success("Remise créée avec succès");
                         loadRemises();
+                        applySearchFilter(); // Re-apply search filter
                     }else{
                         alertify.error("Une erreur s'est produite lors de l'exécution de la requête !");
                     }
@@ -763,7 +829,6 @@
             var remiseId = $(this).data('id');
             DeactivateRemise(remiseId);
             $('.deactivateRemiseModal').modal('hide');
-            loadRemises(); 
         });
 
         // Gestionnaire d'événements pour le bouton de confirmation de suppression
@@ -774,6 +839,7 @@
             // Pour le moment, on ferme simplement la modale
             $('.deleteRemiseModal').modal('hide');
             loadRemises(); // Recharger la liste
+            applySearchFilter(); // Re-apply search filter
         });
 
         // Gestionnaire d'événements pour le bouton de sauvegarde de création
@@ -789,6 +855,7 @@
             $('#createRemiseModal').modal('hide');
             $('#createRemiseForm')[0].reset(); // Réinitialiser le formulaire
             loadRemises(); // Recharger la liste
+            applySearchFilter(); // Re-apply search filter
         });
 
         // Gestionnaire d'événements pour le bouton de mise à jour
@@ -798,10 +865,58 @@
             // Pour le moment, on ferme simplement la modale
             $('#updateRemiseModal').modal('hide');
             loadRemises(); // Recharger la liste
+            applySearchFilter(); // Re-apply search filter
         });
+
+        // Function to apply all filters
+        function applyFilters() {
+            var searchValue = $('#table-filter').val().toLowerCase();
+            var statusValue = $('#status-filter').val();
+            
+            $('#listeItem tr').each(function() {
+                var $row = $(this);
+                var textMatch = true;
+                var statusMatch = true;
+                
+                // Check search text match
+                if (searchValue) {
+                    textMatch = $row.text().toLowerCase().indexOf(searchValue) > -1;
+                }
+                
+                // Check status match
+                if (statusValue) {
+                    var hasActiveClass = $row.find('td:eq(3) span').hasClass('bg-success'); // Active has bg-success
+                    var hasInactiveClass = $row.find('td:eq(3) span').hasClass('bg-danger'); // Inactive has bg-danger
+                    
+                    if (statusValue === 'active') {
+                        statusMatch = hasActiveClass;
+                    } else if (statusValue === 'inactive') {
+                        statusMatch = hasInactiveClass;
+                    }
+                }
+                
+                // Toggle visibility based on both filters
+                $row.toggle(textMatch && statusMatch);
+            });
+        }
+        
+        // Re-apply filters after data reload
+        function applySearchFilter() {
+            applyFilters(); // Use the combined filter function
+        }
 
         // Charger les remises au démarrage
         loadRemises();
+
+        // Filter the table based on search input
+        $('#table-filter').on('keyup', function() {
+            applyFilters();
+        });
+        
+        // Filter the table based on status
+        $('#status-filter').on('change', function() {
+            applyFilters();
+        });
 
         // Modal for warning when editing active discounts
         function showActiveDiscountWarning(remiseId, label, taux) {
