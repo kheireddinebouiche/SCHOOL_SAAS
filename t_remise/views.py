@@ -73,19 +73,13 @@ def ApiCreateRemise(request):
     taux = request.POST.get('taux')
     description = request.POST.get('description')
     justificatif = request.POST.get('justificatif_requis')
-    print(justificatif)
     
-    # if justificatif == "on":
-    #     justificatif = True
-    # else:
-    #     justificatif = False
-    
-    # Remises.objects.create(
-    #     label = label,
-    #     taux = taux,
-    #     is_enabled = False, 
-    #     description = description,
-    #     #has_to_justify = justificatif
-    # )
+    Remises.objects.create(
+        label = label,
+        taux = taux,
+        is_enabled = False, 
+        description = description,
+        has_to_justify = justificatif
+    )
 
     return JsonResponse({'status': "success"})
