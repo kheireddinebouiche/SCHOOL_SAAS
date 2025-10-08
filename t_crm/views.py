@@ -365,6 +365,7 @@ def InscriptionEntreprise(request):
         if form.is_valid():
             donnee = form.save()
             donnee.type_prospect = "entreprise"
+            donnee.context = "acc"
             donnee.etat
             donnee.save()
             messages.success(request, "Prospect ajouté avec succès")

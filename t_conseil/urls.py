@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import *
+from .f_views.prospects import *
 
 app_name="t_conseil"
 
@@ -29,6 +30,8 @@ urlpatterns = [
   path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
   path('ApiLoadProspect',ApiLoadProspect, name="ApiLoadProspect"),
   path('ApiTransformeToClient',ApiTransformeToClient, name="ApiTransformeToClient"),
+
+  path('ApiListeProspect',ApiListeProspect, name="ApiListeProspect"),
   
    
 ]

@@ -52,14 +52,14 @@ def ApiLoadConvertedProspects(request):
 @login_required(login_url="institut_app:login")
 def ApiStats(request):
     nombre_inscrit = Prospets.objects.filter(statut="convertit").count()
-    nombre_paiement = Paiements.objects.filter(is_refund=False).count()
+    nombre_paiement = Paiements.objects.filter(is_refund=False, prospect__statut="convertit").count()
 
     montant_echu = (
-        DuePaiements.objects.filter(date_echeance__lt=now().date(), is_done=False, is_annulated = False).aggregate(total=Sum('montant_restant'))['total'] or 0
+        DuePaiements.objects.filter(date_echeance__lt=now().date(), is_done=False, is_annulated = False, client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
     )
 
     paiement_attente = (
-        DuePaiements.objects.filter(is_done=False, is_annulated=False).aggregate(total=Sum('montant_restant'))['total'] or 0
+        DuePaiements.objects.filter(is_done=False, is_annulated=False, client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
     )
 
     data = {

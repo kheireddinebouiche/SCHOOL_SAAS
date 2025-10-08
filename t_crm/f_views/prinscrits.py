@@ -79,9 +79,11 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'prenom_arabe' : prospect.prenom_arabe,
         'prenom_pere' : prospect.prenom_pere,
         'tel_pere' : prospect.tel_pere,
+        'indic_pere' : prospect.indic1,
         'nom_mere' : prospect.nom_mere,
         'prenom_mere' : prospect.prenom_mere,
         'tel_mere' : prospect.tel_mere,
+        'indic_mere' : prospect.indic2,
         'has_endicap' : prospect.has_endicap,
         'type_handicap' : prospect.type_handicap,
         'adresse' : prospect.adresse,
@@ -165,9 +167,14 @@ def ApiUpdatePreinscritInfos(request):
     wilaya = request.POST.get('wilaya')
     code_zip = request.POST.get('code_zip')
     lieu_naissance = request.POST.get('lieu_naissance')
+    indic_pere = request.POST.get('indic_pere')
+    indic_mere = request.POST.get('indic_mere')
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
+    preinscrit.indic1 = indic_pere
+    preinscrit.indic2 = indic_mere
+    
     preinscrit.nom_arabe = nom_arabe
     preinscrit.prenom_arabe = prenom_arabe
     preinscrit.date_naissance = date_naissance
