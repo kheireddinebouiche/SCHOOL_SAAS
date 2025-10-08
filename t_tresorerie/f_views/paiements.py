@@ -16,6 +16,20 @@ def ListeDesPaiements(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListePaiements(request):
-    liste = Paiements.objects.filter(is_refund=False).values('id','num','prospect','montant_paye','date_paiement','mode_paiement','context')
+    liste = Paiements.objects.filter(is_refund=False)
     
-    return JsonResponse(list(liste), safe=False)
+    data= []
+    for i in liste:
+        data.append({
+            'id' : i.id,
+            'num' : i.num,
+            'prospect_nom' : i.prospect.nom,
+            'prospect_prenom' : i.prospect.prenom,
+            'montant_paye' :i.montant_paye,
+            'date_paiement':i.date_paiement,
+            'mode_paiement' : i.get_mode_paiement_display(),
+            'context' : i.get_context_display(),
+            'context_key' : i.context
+        })
+        
+    return JsonResponse(data, safe=False)

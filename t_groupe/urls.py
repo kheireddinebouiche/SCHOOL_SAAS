@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from .views import *
+from .f_views.affectations import *
 
 app_name="t_groupe"
 
@@ -15,4 +16,8 @@ urlpatterns = [
     path('valider-groupe/<int:pk>/',validateGroupe, name="validateGroupe"),
 
     path('ApiGetGroupeList', ApiGetGroupeList, name="ApiGetGroupeList"),
+
+    path('affectation-en-attente/',AffectationPage, name="AffectationPage"),
+    path('ApiLoadAttenteAffectation',ApiLoadAttenteAffectation, name="ApiLoadAttenteAffectation"),
+    path('ApiListePromosEnAttente', ApiListePromosEnAttente, name="ApiListePromosEnAttente"),
 ]
