@@ -527,3 +527,24 @@ def ApiGetEntrepriseDetails(request):
     }
 
     return JsonResponse(data, safe=False)
+
+
+@login_required(login_url="institut_app:login")
+def ApiCheckForPayments(request):
+    if request.method == "GET":
+        id_demande = request.GET.get('id_demande')
+        demande = ClientPaiementsRequest.objects.get(id = id_demande)
+        client = demande.client
+        if client:
+            paiements = Paiements.objects.filter(prospect = client)
+
+            if paiements.exists():
+                return JsonResponse({"status" : "success"})
+            else:
+                return JsonResponse({"status" : "error"})
+        else:
+
+            return JsonResponse({"status" : "system-error",'message' : "ID client manquant"})
+    else:
+
+        return JsonResponse({'status' : "system-error",'message' : "Methode non autoriser"})

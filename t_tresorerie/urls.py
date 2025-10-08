@@ -105,4 +105,6 @@ urlpatterns = [
 
     path('ApiGetEntrepriseDetails', ApiGetEntrepriseDetails, name="ApiGetEntrepriseDetails"),
 
+    path('ApiCheckForPayments', ApiCheckForPayments, name="ApiCheckForPayments"),
+
 ]

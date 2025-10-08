@@ -1465,6 +1465,50 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<!-- Modal Aucun Paiement pour Remboursement -->
+<div class="modal fade" id="noPaymentForRefundModal" tabindex="-1" aria-labelledby="noPaymentForRefundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-error-warning-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="noPaymentForRefundModalLabel">Aucun paiement enregistré</h5>
+                        <p class="text-muted small mb-0">Impossible de demander un remboursement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+                            <i class="ri-forbid-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mb-4">
+                    <h5>Impossible de demander un remboursement</h5>
+                    <p class="text-muted">Il n'y a aucun paiement enregistré pour ce client. Vous ne pouvez pas effectuer une demande de remboursement sans paiement préalable.</p>
+                </div>
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <div>
+                        Veuillez d'abord enregistrer un paiement avant de pouvoir demander un remboursement.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-primary px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-check-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Modal Détails du Client -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-labelledby="clientDetailsModalLabel" aria-hidden="true">
@@ -2758,7 +2802,9 @@
         let id_echeancier = null;
         let entreprise_data = [];
         var paymentData = {};
-       
+        var hasPayments = false;
+        var paymentsExists = false;
+        
         function HideReducNotif(){
            
             let notif = document.getElementById("reductionNotification");
@@ -3066,8 +3112,6 @@
                         $('#ListePaiementRequestLineDone').html('<tr><td colspan="6" class="text-center">Aucun paiement effectué</td></tr>');
                         $('#NbrPaiementDone').text('0');
                         document.getElementById('btnConfirmInscription').disabled = true;
-                        document.getElementById('btnRefundRequestModal').disabled = true;
-
                     }
                     $('#echeancierTable').html(echeancierHtml);
 
@@ -3127,7 +3171,8 @@
 
         loadDatas();
         
-         function ShowRefundNotification(has_pending_refund, has_processed_refund = false, is_appliced = false){
+        
+        function ShowRefundNotification(has_pending_refund, has_processed_refund = false, is_appliced = false){
             if(has_processed_refund && !is_appliced){
                 console.log(has_processed_refund,is_appliced);
                 // Show the processed refund notification
@@ -3713,7 +3758,7 @@
             
             // Récupérer les paiements dus
             var paymentsData = [];
-            var hasPayments = false;
+           
             
             $('#ListePaiementRequestLine tr').each(function() {
                 var label = $(this).find('td:eq(1)').text().trim();
@@ -4115,6 +4160,8 @@
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
+
+            
         });
         
         // Imprimer la quittance
@@ -4304,25 +4351,62 @@
             // À implémenter : Logique d'impression de la facture
         });   
         
+        function checkForPaiements(){
+            
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiCheckForPayments' %}",
+                dataType : "JSON",
+                type : "GET",
+                data : {
+                    'id_demande' : id_demande,
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        $('#confirmRefundBtn').data('clientId', clientId);
+                        $('.refundModal').modal('show');
+                    }else if(response.status == "system-error"){
+                        alertify.error(response.message);
+                    }else{
+                        $('#noPaymentForRefundModal').modal('show');
+                    }
+                }
+            }); 
+        }
+        
         // Demande de remboursement (nouveau bouton)
         $(document).on('click', '#btnRefundRequestModal', function(){
             
-            $('#confirmRefundBtn').data('clientId', clientId);
-            $('.refundModal').modal('show');
+            checkForPaiements();
+            
         });
         
         // Confirmation de remboursement
         $(document).on('click', '#confirmRefundBtn', function(){
+
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             var clientId = $(this).data('clientId');
             var reason = $('#refundReason').val();
            
             if (!reason.trim()) {
                 alertify.error("Veuillez indiquer le motif du remboursement.");
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
             
             if (!clientId) {
                 alertify.error("Aucun client sélectionné pour la demande de remboursement.");
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
             
@@ -4343,8 +4427,14 @@
                         $('#refundReason').val(''); // Clear the reason field
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
-
+                        btn.prop('disabled', false);
+                        btn.html(originalText);
                     }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             });
             
