@@ -371,3 +371,47 @@ def ApiGetEntrepriseInfos(request):
     }
 
     return JsonResponse(data, safe=False)
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetProspectsList(request):
+    """API endpoint to get list of prospects for the modal"""
+    if request.method == "GET":
+       
+        promo_id = request.GET.get('promo_id')
+        specialite_id = request.GET.get('specialite_id')
+        
+       
+        if specialite_id and promo_id:
+            prospects = Prospets.objects.filter(
+                statut="convertit",
+                fichedevoeux__promo_id=promo_id,
+                fichedevoeux__specialite_id=specialite_id
+            ).distinct().values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
+        elif promo_id:
+            
+            prospects = Prospets.objects.filter(
+                statut="convertit",
+                fichedevoeux__promo_id=promo_id
+            ).distinct().values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
+        else:
+           
+            prospects = Prospets.objects.filter(statut="convertit").values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
+        
+        prospects_list = []
+        for prospect in prospects:
+            
+            created_at = prospect['created_at'].strftime("%Y-%m-%d") if prospect['created_at'] else ""
+            prospects_list.append({
+                'id': prospect['id'],
+                'nom': prospect['nom'],
+                'prenom': prospect['prenom'],
+                'full_name': prospect['nom'] + ' ' + prospect['prenom'],
+                'email': prospect['email'],
+                'telephone': prospect['telephone'],
+                'created_at': created_at
+            })
+        
+        return JsonResponse({'prospects': prospects_list}, safe=False)
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)

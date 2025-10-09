@@ -3,94 +3,265 @@
 {% block title %} Scolarité - Liste des étudiants {% endblock title %}
 
 {% block content %}
-        <!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .icon-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+    
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Add search box styling */
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none; /* Make sure icon doesn't block input */
+    }
+    
+    /* Ensure search input is accessible */
+    #table-filter {
+        padding-right: 40px; /* Space for search icon */
+        z-index: 1; /* Ensure input is above icon */
+    }
+    
+    /* Table styling */
+    .table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Rounded elements */
+    .rounded-pill {
+        border-radius: 50rem !important;
+    }
+</style>
 
-            <div class="page-content">
-                <div class="container-fluid">
+<!-- ============================================================== -->
+<!-- Start right Content here -->
+<!-- ============================================================== -->
+<div class="main-content">
 
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Liste des étudiants</h4>
+    <div class="page-content">
+        <div class="container-fluid">
 
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Scolarité</a></li>
-                                        <li class="breadcrumb-item active">Liste des étudiants</li>
-                                    </ol>
-                                </div>
-
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-user-line text-primary"></i>
                             </div>
+                            <h4 class="mb-0 text-primary">Liste des étudiants</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Scolarité</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Liste des étudiants</li>
+                                </ol>
+                            </nav>
+                            <button class="btn btn-primary rounded-pill" id="refreshStudents">
+                                <i class="ri-refresh-line me-1"></i>Actualiser
+                            </button>
                         </div>
                     </div>
-                    <!-- end page title -->
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">Liste des étudiants</h5>
-                                </div>
-                                <div class="card-body">
-                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                        <thead>
-                                            <tr>
-                                                
-                                                <th>Nom & Prénom</th>
-                                                <th>N° CIN</th>
-                                                <th>Date de naissance</th>
-                                                <th>N° Téléphone</th>
-                                                <th>@ EMAIL</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-
-                                            {% if liste.count != 0 %}
-                                                {% for i in liste %}
-                                                    <tr> 
-                                                        <td>{{i.nom}} {{i.prenom}}</td>
-                                                        <td><b>{{i.cin}}</b></td>
-                                                        <td>{{i.date_naissance}}</td>
-                                                        <td>{{i.telephone}}</td>
-                                                        <td>{{i.email}}</td>
-                                                        <td>
-                                                            <div class="dropdown d-inline-block">
-                                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="ri-more-fill align-middle"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a href="{% url 't_formations:detailSpecialite' pk=i.id %}" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
-                                                                    <li><a class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                                    {% if i.formation.type_formation != 'etranger' or request.tenant.tenant_type == 'master' %}
-                                                                        <li>
-                                                                            <a href="{% url 't_formations:deleteSpecialite' pk=i.id %}" class="dropdown-item remove-item-btn">
-                                                                                <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                                            </a>
-                                                                        </li>
-                                                                    {% endif %}
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                            {% else %}
-                                                <tr><td colspan="6" class="text-muted text-center">Aucune donnée trouvée</td></tr>
-                                            {% endif %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-                <!-- container-fluid -->
             </div>
-            <!-- End Page-content -->
+            <!-- end page title -->
+
+            <!-- Statistics Section -->
+            <div class="row mb-4" id="statisticsSection">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-user-line text-primary fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="totalStudents">0</h5>
+                                    <p class="mb-0 text-muted small">Total étudiants</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-success bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-success bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-graduation-cap-line text-success fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="activeStudents">0</h5>
+                                    <p class="mb-0 text-muted small">Actifs</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-time-line text-warning fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="pendingStudents">0</h5>
+                                    <p class="mb-0 text-muted small">En attente</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm rounded-3 bg-info bg-opacity-10 stat-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-info bg-opacity-10 rounded-circle icon-center me-3">
+                                    <i class="ri-group-line text-info fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="groupedStudents">0</h5>
+                                    <p class="mb-0 text-muted small">Affectés</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-filter text-info me-2"></i>
+                                    <h5 class="card-title mb-0 text-info">Filtres</h5>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="search-box position-relative">
+                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px; padding-right: 40px; z-index: 1;">
+                                        <i class="fas fa-search text-muted search-icon" style="pointer-events: none;"></i>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <label for="statusFilter" class="me-2 mb-0">Statut:</label>
+                                        <select id="statusFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
+                                            <option value="">Tous</option>
+                                            <option value="active">Actif</option>
+                                            <option value="pending">En attente</option>
+                                            <option value="grouped">Affecté</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <button id="applyFilters" class="btn btn-primary btn-sm rounded-pill">
+                                            <i class="ri-filter-line me-1"></i>Filtrer
+                                        </button>
+                                        <button id="clearFilters" class="btn btn-light btn-sm rounded-pill">
+                                            <i class="ri-close-line me-1"></i>Effacer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            
+                        <div class="card-body p-3">
+                            <div class="table-responsive">
+                                <table id="example" class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="border-0 rounded-start">Nom & Prénom</th>
+                                            <th class="border-0">N° NIN</th>
+                                            <th class="border-0">Date de naissance</th>
+                                            <th class="border-0">N° Téléphone</th>
+                                            <th class="border-0">Email</th>
+                                            <th class="border-0 rounded-end text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listItems">
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- container-fluid -->
+    </div>
+    <!-- End Page-content -->
+</div>
+
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<script>
+    $(document).ready(function(){
+       
+        function loadItems(){
+            //affichage de la liste des etudiants
+        }
+
+    });
+</script>
 {% endblock content %}
            
 

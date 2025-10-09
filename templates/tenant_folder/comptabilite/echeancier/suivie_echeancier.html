@@ -399,16 +399,62 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Liste des spécialités</h6>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Spécialité</th>
                                 <th>Nombre d'étudiants</th>
+                                <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="specialitesTableBody">
                             <!-- Les spécialités seront chargées ici dynamiquement -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour afficher les prospects d'une promotion -->
+<div class="modal fade" id="prospectListModal" tabindex="-1" aria-labelledby="prospectListModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-3 shadow-lg border-0">
+            <div class="modal-header bg-success bg-opacity-10 px-4 py-3 border-0">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-2 p-2 me-3">
+                        <i class="ri-user-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-0" id="prospectListModalLabel">Liste des prospects de la promotion</h5>
+                        <p class="text-muted small mb-0 fs-6"><span id="promoNameForProspects"></span></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom & Prénom</th>
+                                <th>Email</th>
+                                <th>Téléphone</th>
+                                <th>Date d'inscription</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prospectListTableBody">
+                            <!-- Les prospects seront chargées ici dynamiquement -->
                         </tbody>
                     </table>
                 </div>
@@ -729,7 +775,7 @@
         
      
         function loadSpecialitesForPromo(promoId) {
-            
+            var p = promoId;
             $('#specialitesTableBody').html('<tr><td colspan="3" class="text-center text-muted">Chargement des spécialités...</td></tr>');
             
             $.ajax({
@@ -743,10 +789,10 @@
                     var html = '';
                     if (data.length > 0) {
                         $.each(data, function(index, i) {
-                            html += '<tr>';
+                            html += '<tr data-specialite-id="' + i.specialite__id + '">';
                             html += '<td>' + i.specialite__label + '</td>';
                             html += '<td>'+ i.total_student+ '</td>';
-                            html += '<td><span class="badge bg-success"></span></td>';
+                            html += '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-specialite-prospects" data-promo="'+p+'" data-specialite-id="' + i.specialite__id + '"><i class="ri-user-line me-1"></i>Afficher les prospects</button></td>';
                             html += '</tr>';
                         });
                     } else {
@@ -758,6 +804,121 @@
             })
             
             
+        }
+
+
+        // Function to load prospects for a given promotion
+        function loadProspectsForPromo(promoId) {
+            // Show loading message
+            $('#prospectListTableBody').html('<tr><td colspan="4" class="text-center text-muted">Chargement des prospects...</td></tr>');
+            
+            // Make an API call to get prospects for this promotion
+            // Since there's no specific API for this purpose, we need to get prospects via existing APIs
+            // We'll get all converted prospects and then determine which ones belong to the promotion
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadConvertedProspects' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data: {
+                    'promo_id': promoId  // This would need to be handled server-side
+                },
+                success: function(response) {
+                    // For now, we'll use the clients data and need to get the actual prospect data
+                    // This would require an updated backend API to get prospects by promotion
+                    // For now, we'll use a placeholder implementation that fetches from the API we just created
+                    loadProspectsByPromoId(promoId);
+                },
+                error: function() {
+                    var html = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des prospects.</td></tr>';
+                    $('#prospectListTableBody').html(html);
+                }
+            });
+        }
+
+        // Function to load prospects by promo ID
+        function loadProspectsByPromoId(promoId) {
+            // Show loading message
+            $('#prospectListTableBody').html('<tr><td colspan="4" class="text-center text-muted">Chargement des prospects...</td></tr>');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGetProspectsList' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data: {
+                    'promo_id': promoId
+                },
+                success: function(data) {
+                    var html = '';
+                    if (data.prospects && data.prospects.length > 0) {
+                        $.each(data.prospects, function(index, prospect) {
+                            html += '<tr>';
+                            html += '<td><strong>' + prospect.full_name + '</strong></td>';
+                            html += '<td>' + prospect.email + '</td>';
+                            html += '<td>' + prospect.telephone + '</td>';
+                            html += '<td>' + prospect.created_at + '</td>';
+                            html += '</tr>';
+                        });
+                    } else {
+                        html = '<tr><td colspan="4" class="text-center text-muted">Aucun prospect disponible pour cette promotion</td></tr>';
+                    }
+                    
+                    $('#prospectListTableBody').html(html);
+                },
+                error: function() {
+                    var html = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des prospects.</td></tr>';
+                    $('#prospectListTableBody').html(html);
+                }
+            });
+        }
+
+        // Handle click on specialty-specific prospect button
+        $(document).on('click', '.btn-specialite-prospects', function() {
+            var specialiteId = $(this).data('specialite-id');
+            var currentPromoId = $(this).data('promo');
+            
+            console.log(specialiteId, currentPromoId);
+            // Load the prospects for this specialty within the promotion
+            loadProspectsForSpecialite(currentPromoId, specialiteId);
+            // Show the modal
+            $('#prospectListModal').modal('show');
+            
+        });
+
+        // Function to load prospects for a specific specialty within a promotion
+        function loadProspectsForSpecialite(promoId, specialiteId) {
+            // Show loading message
+            $('#prospectListTableBody').html('<tr><td colspan="4" class="text-center text-muted">Chargement des prospects...</td></tr>');
+           
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGetProspectsList' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data: {
+                    'promo_id': promoId,
+                    'specialite_id': specialiteId
+                },
+                success: function(data) {
+                    var html = '';
+                    if (data.prospects && data.prospects.length > 0) {
+                        $.each(data.prospects, function(index, prospect) {
+                            html += '<tr>';
+                            html += '<td><strong>' + prospect.full_name + '</strong></td>';
+                            html += '<td>' + prospect.email + '</td>';
+                            html += '<td>' + prospect.telephone + '</td>';
+                            html += '<td>' + prospect.created_at + '</td>';
+                            html += '</tr>';
+                        });
+                    } else {
+                        html = '<tr><td colspan="4" class="text-center text-muted">Aucun prospect disponible pour cette spécialité</td></tr>';
+                    }
+                    
+                    $('#prospectListTableBody').html(html);
+                },
+                error: function() {
+                    var html = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des prospects.</td></tr>';
+                    $('#prospectListTableBody').html(html);
+                }
+            });
         }
 
         
