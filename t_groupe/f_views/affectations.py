@@ -54,3 +54,10 @@ def ApiSpecialiteByPromo(request):
 
         return JsonResponse(list(specialites),safe=False) 
 
+@login_required(login_url="institut_app:login")
+def AffectationAuGroupe(request, pk, code):
+    context = {
+        'specialite_id': pk,
+        'promo_code': code,
+    }
+    return render(request, 'tenant_folder/scolarite/affectation_au_groupe.html', context)

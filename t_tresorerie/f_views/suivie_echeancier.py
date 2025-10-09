@@ -375,28 +375,20 @@ def ApiGetEntrepriseInfos(request):
 
 @login_required(login_url="institut_app:login")
 def ApiGetProspectsList(request):
-    """API endpoint to get list of prospects for the modal"""
+    
     if request.method == "GET":
        
         promo_id = request.GET.get('promo_id')
         specialite_id = request.GET.get('specialite_id')
         
+        
+        prospects = Prospets.objects.filter(
+            statut="convertit",
+            prospect_fiche_voeux__promo_id=promo_id,
+            prospect_fiche_voeux__specialite_id=specialite_id,
+            prospect_fiche_voeux__is_confirmed = True
+        ).distinct().values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
        
-        if specialite_id and promo_id:
-            prospects = Prospets.objects.filter(
-                statut="convertit",
-                fichedevoeux__promo_id=promo_id,
-                fichedevoeux__specialite_id=specialite_id
-            ).distinct().values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
-        elif promo_id:
-            
-            prospects = Prospets.objects.filter(
-                statut="convertit",
-                fichedevoeux__promo_id=promo_id
-            ).distinct().values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
-        else:
-           
-            prospects = Prospets.objects.filter(statut="convertit").values('id', 'nom', 'prenom', 'email', 'telephone', 'created_at')
         
         prospects_list = []
         for prospect in prospects:

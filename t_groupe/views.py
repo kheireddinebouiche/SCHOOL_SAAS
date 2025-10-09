@@ -4,6 +4,7 @@ from .forms import *
 from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 
 @transaction.atomic
 def NewGroupe(request):
@@ -110,3 +111,4 @@ def PrintSuivieCours(request):
 
 def PrintPvExamen(request):
     pass
+
