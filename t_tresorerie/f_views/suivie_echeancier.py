@@ -352,4 +352,22 @@ def ApiShowRefundTraiteResult(request):
     }
 
     return JsonResponse({"data": data})
-    
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetEntrepriseInfos(request):
+    id_client = request.GET.get('id_client')
+    print(id_client)
+    voeux = FicheDeVoeux.objects.filter(prospect_id = id_client, is_confirmed = True).first()
+   
+    entreprise = Entreprise.objects.get(id = voeux.specialite.formation.entite_legal.id)
+
+    data = {
+        'designation' : entreprise.designation,
+        'rc' : entreprise.rc,
+        'nif' : entreprise.nif,
+        'art' : entreprise.art,
+        'telephone' : entreprise.telephone,
+    }
+
+    return JsonResponse(data, safe=False)

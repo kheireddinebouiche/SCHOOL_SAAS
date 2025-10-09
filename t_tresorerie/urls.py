@@ -103,7 +103,11 @@ urlpatterns = [
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
     path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),
 
+    ## details attente paiement
     path('ApiGetEntrepriseDetails', ApiGetEntrepriseDetails, name="ApiGetEntrepriseDetails"),
+
+    ## details suivie echeancier
+    path('ApiGetEntrepriseInfos', ApiGetEntrepriseInfos, name="ApiGetEntrepriseInfos"),
 
     path('ApiCheckForPayments', ApiCheckForPayments, name="ApiCheckForPayments"),
 

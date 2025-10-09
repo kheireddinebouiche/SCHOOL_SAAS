@@ -234,6 +234,8 @@ class Prospets(models.Model):
     instance_date = models.DateField(null=True, blank=True)
     convertit_date = models.DateField(null=True, blank=True)
 
+    is_affected = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -2819,24 +2819,6 @@
         }
 
 
-        function loadEntrepriseDatas(){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiGetEntrepriseDetails' %}",
-                dataType : "JSON",
-                type: 'GET',
-                data : {
-                    'id_demande' : id_demande,
-                },
-                success : function(data){
-                    entreprise_data = data;
-                    console.log(entreprise_data);
-                }
-            })
-        }
-
-        
-        
-
         function SummeryPaiement(totalPaye,total_initial,total_solde){
             $('#totalPaidAmount').text(parseFloat(totalPaye).toFixed(2) + ' DA');
             $('#totalDueAmount').text(parseFloat(total_initial).toFixed(2) + ' DA');
@@ -4192,167 +4174,180 @@
             var currentDate = new Date().toLocaleDateString('fr-FR');
             
             // Generate PDF
-            generateQuittancePDF(payment, studentName, formation, promo, currentDate);
+            generateQuittancePDF(payment, studentName, formation, promo, currentDate,id_demande);
         });
         
-        // Fonction pour générer le PDF de la quittance
-        function generateQuittancePDF(payment, studentName, formation, promo, currentDate) {
-            // Vérifier si jsPDF est disponible
-            var jsPDFInstance = null;
-            
-            // Méthode 1: jsPDF direct
-            if (typeof jsPDF !== 'undefined') {
-                jsPDFInstance = jsPDF;
-            }
-            // Méthode 2: window.jspdf.jsPDF
-            else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-                jsPDFInstance = window.jspdf.jsPDF;
-            }
-            // Méthode 3: jspdf.jsPDF
-            else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
-                jsPDFInstance = jspdf.jsPDF;
-            }
-            
-            if (jsPDFInstance) {
-                // jsPDF est déjà disponible
-                createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance);
-            } else {
-                // Charger jsPDF dynamiquement
-                var script1 = document.createElement('script');
-                script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                script1.onload = function() {
-                    // Charger autoTable
-                    var script2 = document.createElement('script');
-                    script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js';
-                    script2.onload = function() {
-                        // Réessayer de générer le PDF
-                        var loadedJsPDF = null;
-                        if (typeof jsPDF !== 'undefined') {
-                            loadedJsPDF = jsPDF;
-                        } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-                            loadedJsPDF = window.jspdf.jsPDF;
-                        }
-                        if (loadedJsPDF) {
-                            createQuittancePDF(payment, studentName, formation, promo, currentDate, loadedJsPDF);
-                        } else {
-                            alert("Erreur lors du chargement de la bibliothèque PDF.");
-                        }
-                    };
-                    script2.onerror = function() {
-                        alert("Erreur lors du chargement de la bibliothèque PDF (AutoTable).");
-                    };
-                    document.head.appendChild(script2);
-                };
-                script1.onerror = function() {
-                    alert("Erreur lors du chargement de la bibliothèque PDF.");
-                };
-                document.head.appendChild(script1);
-            }
+        // === Charger les infos entreprise ===
+        function loadEntrepriseDatas(id_demande) {
+            return $.ajax({
+                url: "{% url 't_tresorerie:ApiGetEntrepriseDetails' %}",
+                dataType: "JSON",
+                type: 'GET',
+                data: { 'id_demande': id_demande },
+            });
         }
-        
-        // Fonction pour créer le PDF de la quittance
-        function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance) {
-            try {
-                // Créer le PDF
-                var doc = new jsPDFInstance();
-                
-                // Définir la police et la taille
-                doc.setFont("helvetica");
-                
-                // Ajouter le titre
-                doc.setFontSize(18);
-                doc.setTextColor(40, 40, 40);
-                doc.text("QUITTANCE DE PAIEMENT", 105, 20, null, null, 'center');
-                
-                // Ajouter une ligne de séparation
-                doc.setDrawColor(59, 125, 221); // Couleur bleue
-                doc.setLineWidth(0.5);
-                doc.line(20, 25, 190, 25);
-                
-                // Informations de l'établissement (simulées)
-                doc.setFontSize(10);
-                doc.setTextColor(80, 80, 80);
-                doc.text("Établissement de formation", 20, 35);
-                doc.text("Adresse de l'établissement", 20, 40);
-                doc.text("Tél: +213 XX XX XX XX", 20, 45);
-                
-                // Date et numéro de quittance
-                doc.setTextColor(40, 40, 40);
-                doc.text("Date: " + currentDate, 150, 35);
-                doc.text("N° Quittance: " + payment.num, 150, 40);
-                
-                // Informations de l'étudiant
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.text("Reçu de:", 20, 60);
-                doc.setFontSize(11);
-                doc.text(studentName, 45, 60);
-                
-                doc.setFontSize(12);
-                doc.text("Formation:", 20, 68);
-                doc.setFontSize(11);
-                doc.text(formation, 45, 68);
-                
-                doc.setFontSize(12);
-                doc.text("Promo:", 20, 76);
-                doc.setFontSize(11);
-                doc.text(promo, 45, 76);
-                
-                // Détails du paiement
-                doc.setFontSize(14);
-                doc.setTextColor(59, 125, 221);
-                doc.text("DÉTAILS DU PAIEMENT", 20, 95);
-                
-               
-                doc.setTextColor(40, 40, 40);
-                doc.text("Montant payé:", 20, 115);
-                doc.setFontSize(12);
-                doc.text("Motif de paiement :", 20, 105);
-                doc.text(payment.label_paiements, 60, 105);
 
+        // === Fonction principale pour générer le PDF ===
+        function generateQuittancePDF(payment, studentName, formation, promo, currentDate, id_demande) {
+
+            // Étape 1 : Charger les infos de l'entreprise avant de générer le PDF
+            loadEntrepriseDatas(id_demande).done(function(entreprise) {
                 
-                doc.setFontSize(14);
-                doc.setFont("helvetica", "bold");
-                doc.text(payment.montant_paye + " DA", 60, 115);
-                
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(12);
-                doc.text("Date de paiement:", 20, 125);
-                doc.text(payment.date_paiement, 60, 125);
-                
-                doc.text("Mode de paiement:", 20, 135);
-                doc.text(payment.mode_paiement, 60, 135);
-                
-                doc.text("Référence:", 20, 145);
-                doc.text(payment.reference, 60, 145);
-                
-                // Message de remerciement
-                doc.setFontSize(12);
-                doc.setTextColor(40, 167, 69); // Vert
-                doc.text("Merci pour votre paiement.", 20, 160);
-                
-                // Signature
-                doc.setFontSize(11);
-                doc.setTextColor(80, 80, 80);
-                doc.text("Signature de l'agent:", 20, 185);
-                doc.line(20, 195, 80, 195); // Ligne pour la signature
-                
-                doc.text("Signature du responsable:", 120, 185);
-                doc.line(120, 195, 180, 195); // Ligne pour la signature
-                
-               
-                
-                // Télécharger le PDF
+                // Étape 2 : Vérifier jsPDF
+                var jsPDFInstance = null;
+
+                if (typeof jsPDF !== 'undefined') {
+                    jsPDFInstance = jsPDF;
+                    createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise);
+                } 
+                else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                    jsPDFInstance = window.jspdf.jsPDF;
+                    createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise);
+                } 
+                else {
+                    // Étape 3 : Charger jsPDF dynamiquement
+                    var script1 = document.createElement('script');
+                    script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                    script1.onload = function() {
+                        var script2 = document.createElement('script');
+                        script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js';
+                        script2.onload = function() {
+                            var loadedJsPDF = null;
+                            if (typeof jsPDF !== 'undefined') {
+                                loadedJsPDF = jsPDF;
+                            } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                                loadedJsPDF = window.jspdf.jsPDF;
+                            }
+
+                            if (loadedJsPDF) {
+                                createQuittancePDF(payment, studentName, formation, promo, currentDate, loadedJsPDF, entreprise);
+                            } else {
+                                alert("Erreur lors du chargement de jsPDF.");
+                            }
+                        };
+                        script2.onerror = function() {
+                            alert("Erreur lors du chargement de jsPDF AutoTable.");
+                        };
+                        document.head.appendChild(script2);
+                    };
+                    script1.onerror = function() {
+                        alert("Erreur lors du chargement de jsPDF.");
+                    };
+                    document.head.appendChild(script1);
+                }
+            })
+            .fail(function() {
+                alert("Impossible de charger les informations de l'entreprise.");
+            });
+        }
+
+        // === Fonction pour créer le PDF ===
+       function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise) {
+            try {
+                var doc = new jsPDFInstance('p', 'mm', 'a4');
+                doc.setFont("helvetica");
+
+                const pageHeight = doc.internal.pageSize.height;
+                const middle = pageHeight / 2;
+
+                // Get current print date
+                var today = new Date();
+                var printDate = today.toLocaleDateString('fr-FR');
+
+                function drawQuittance(yOffset) {
+                    doc.setFontSize(14);
+                    doc.setTextColor(40, 40, 40);
+                    doc.text("QUITTANCE DE PAIEMENT", 105, yOffset + 15, null, null, 'center');
+
+                    doc.setDrawColor(59, 125, 221);
+                    doc.setLineWidth(0.5);
+                    doc.line(20, yOffset + 20, 190, yOffset + 20);
+
+                    doc.setFontSize(8);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text(entreprise.designation || "Nom de l'entreprise", 20, yOffset + 28);
+                    doc.text(entreprise.adresse || "Adresse non spécifiée", 20, yOffset + 32);
+                    doc.text("Tél: " + (entreprise.telephone || "+213 XX XX XX XX"), 20, yOffset + 36);
+                    if (entreprise.email) doc.text("Email: " + entreprise.email, 20, yOffset + 40);
+
+                    doc.setTextColor(40, 40, 40);
+                    doc.text("Date: " + currentDate, 150, yOffset + 28);
+                    doc.text("N° Quittance: " + payment.num, 150, yOffset + 32);
+
+                    doc.setFontSize(10);
+                    doc.text("Reçu de:", 20, yOffset + 50);
+                    doc.setFontSize(9);
+                    doc.text(studentName, 45, yOffset + 50);
+
+                    doc.setFontSize(10);
+                    doc.text("Formation:", 20, yOffset + 56);
+                    doc.setFontSize(9);
+                    doc.text(formation, 45, yOffset + 56);
+
+                    doc.setFontSize(10);
+                    doc.text("Promo:", 20, yOffset + 62);
+                    doc.setFontSize(9);
+                    doc.text(promo, 45, yOffset + 62);
+
+                    doc.setFontSize(11);
+                    doc.setTextColor(59, 125, 221);
+                    doc.text("DÉTAILS DU PAIEMENT", 20, yOffset + 75);
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(40, 40, 40);
+                    doc.text("Motif de paiement :", 20, yOffset + 82);
+                    doc.text(payment.label_paiements || "N/A", 60, yOffset + 82);
+
+                    doc.text("Montant payé :", 20, yOffset + 88);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(payment.montant_paye + " DA", 60, yOffset + 88);
+                    doc.setFont("helvetica", "normal");
+
+                    doc.text("Date de paiement :", 20, yOffset + 94);
+                    doc.text(payment.date_paiement, 60, yOffset + 94);
+
+                    doc.text("Mode de paiement :", 20, yOffset + 100);
+                    doc.text(payment.mode_paiement, 60, yOffset + 100);
+
+                    doc.text("Référence :", 20, yOffset + 106);
+                    doc.text(payment.reference || "N/A", 60, yOffset + 106);
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(40, 167, 69);
+                    doc.text("Merci pour votre paiement.", 20, yOffset + 115);
+
+                    doc.setFontSize(8);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text("Date d'impression: " + printDate, 20, yOffset + 122);
+                    doc.text("Signature de l'agent:", 20, yOffset + 128);
+                    doc.line(20, yOffset + 131, 80, yOffset + 131);
+
+                    doc.text("Signature du responsable:", 120, yOffset + 128);
+                    doc.line(120, yOffset + 131, 180, yOffset + 131);
+                }
+
+                // Première quittance
+                drawQuittance(0);
+
+                // Ligne de séparation
+                doc.setFontSize(8);
+                // Dessiner le texte "À découper ici" sur toute la largeur
+                doc.text("--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", 10, middle - 2);
+                doc.text("À découper ici", 105, middle - 2, null, null, 'center');
+
+                // Deuxième quittance
+                drawQuittance(middle + 5);
+
+                // Sauvegarde
                 doc.save("quittance_" + payment.num + "_" + studentName.replace(/\s+/g, '_') + ".pdf");
-                
-                alertify.success("Quittance générée avec succès !");
-                
+                alertify.success("Deux quittances générées avec succès !");
             } catch (error) {
                 console.error("Erreur lors de la génération du PDF:", error);
-                alert("Erreur lors de la génération de la quittance. Détails: " + error.message);
+                alert("Erreur : " + error.message);
             }
         }
-        
+
+
         // Imprimer la facture
         $(document).on('click', '.print-facture-btn', function(e){
             e.preventDefault();

@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from t_crm.models import *
+from django.db.models import Count
 
 @login_required(login_url="institut_app:login")
 def AffectationPage(request):
@@ -14,5 +16,41 @@ def AffectationPage(request):
 def ApiLoadAttenteAffectation(request):
     pass
 
+@login_required(login_url="institut_app:login")
 def ApiListePromosEnAttente(request):
-    pass
+    promo = Promos.objects.filter(etat = "active")
+    data = []
+    for i in promo:
+
+        nombre_etudiant = FicheDeVoeux.objects.filter(promo_id = i.id, is_confirmed = True,prospect__statut = "convertit", prospect__is_affected=False).count()
+
+        data.append({
+            'id' : i.id,
+            'label': i.label,
+            'code': i.code,
+            'begin_year': i.begin_year,
+            'end_year': i.end_year,
+            'session': i.get_session_display(),
+            'session_key': i.session,
+            'date_debut': i.date_debut,
+            'date_fin': i.date_fin,
+            'created_at': i.created_at.strftime("%Y-%m-%d"),
+            'nombre_etudiants' : nombre_etudiant,
+        })
+
+    return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app")
+def ApiSpecialiteByPromo(request):
+    if request.method == "GET":
+        promoCode = request.GET.get('promoCode')
+
+        specialites = (FicheDeVoeux.objects.filter(promo__code = promoCode, is_confirmed=True)
+                        .filter(promo__code=promoCode, is_confirmed=True,prospect__statut = "convertit")
+                        .values('specialite__id', 'specialite__label')
+                        .annotate(nombre_etudiants=Count('id'))
+                        .order_by('specialite__label')
+                    )
+
+        return JsonResponse(list(specialites),safe=False) 
+

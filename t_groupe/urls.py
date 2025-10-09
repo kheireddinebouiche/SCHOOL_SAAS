@@ -20,4 +20,5 @@ urlpatterns = [
     path('affectation-en-attente/',AffectationPage, name="AffectationPage"),
     path('ApiLoadAttenteAffectation',ApiLoadAttenteAffectation, name="ApiLoadAttenteAffectation"),
     path('ApiListePromosEnAttente', ApiListePromosEnAttente, name="ApiListePromosEnAttente"),
+    path('ApiSpecialiteByPromo', ApiSpecialiteByPromo, name="ApiSpecialiteByPromo"),
 ]
