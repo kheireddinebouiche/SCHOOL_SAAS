@@ -529,12 +529,8 @@
         loadGroups();
         loadStudents();
 
-        var promoId = "{{promo_code}}";
-        var specialite = "{{specialite_id}}";
-
-        console.log(promoId);
-        console.log(specialite);
         
+
         // Search functionality
         $('#student-table-filter').on('keyup', function() {
             applyTableFilter();
@@ -756,35 +752,32 @@
         
         // Load students data from API
         function loadStudents() {
-            // For demonstration, using hardcoded values
-            // In a real application, you would load from an API
+            var promoId = "{{promo_code}}";
+            var specialite = "{{specialite_id}}";
+            
             $.ajax({
                 url : "{% url 't_groupe:ApiListeStudentNotAffected' %}",
                 dataType : "JSON",
                 type: "GET",
                 data : {
+                    'promoId' : promoId,
+                    'specialite' : specialite,
+                },
+                success : function(data){
+                    allStudentData = data;
+
+                    // Check if a default speciality filter is set and display its details
+                    var defaultSpecialiteId = $('#specialiteFilter').val();
+                    if (defaultSpecialiteId) {
+                        displaySpecialiteDetails(defaultSpecialiteId);
+                    }
                     
-                }
+                    // Render data with current filters applied
+                    renderStudentTable(allStudentData);
+                },
             })
-            allStudentData = [
-                {id: 1, matricule: 'STU001', nom: 'Dupont', prenom: 'Jean', email: 'jean.dupont@example.com', telephone: '0612345678', specialite_id: 1, specialite_label: 'Développement Web', promo_id: 2, promo_name: 'L2 Informatique (2024-2025)', groupe_id: 1, groupe_name: 'Groupe A', status: 'active'},
-                {id: 2, matricule: 'STU002', nom: 'Martin', prenom: 'Marie', email: 'marie.martin@example.com', telephone: '0612345679', specialite_id: 1, specialite_label: 'Développement Web', promo_id: 2, promo_name: 'L2 Informatique (2024-2025)', groupe_id: 1, groupe_name: 'Groupe A', status: 'active'},
-                {id: 3, matricule: 'STU003', nom: 'Bernard', prenom: 'Pierre', email: 'pierre.bernard@example.com', telephone: '0612345680', specialite_id: 2, specialite_label: 'Réseaux et Sécurité', promo_id: 1, promo_name: 'L1 Informatique (2023-2024)', groupe_id: 2, groupe_name: 'Groupe B', status: 'active'},
-                {id: 4, matricule: 'STU004', nom: 'Petit', prenom: 'Sophie', email: 'sophie.petit@example.com', telephone: '0612345681', specialite_id: 2, specialite_label: 'Réseaux et Sécurité', promo_id: 1, promo_name: 'L1 Informatique (2023-2024)', groupe_id: 3, groupe_name: 'Groupe C', status: 'pending'},
-                {id: 5, matricule: 'STU005', nom: 'Robert', prenom: 'Thomas', email: 'thomas.robert@example.com', telephone: '0612345682', specialite_id: 3, specialite_label: 'Intelligence Artificielle', promo_id: 3, promo_name: 'L3 Informatique (2025-2026)', groupe_id: null, groupe_name: 'Non assigné', status: 'active'},
-                {id: 6, matricule: 'STU006', nom: 'Richard', prenom: 'Julie', email: 'julie.richard@example.com', telephone: '0612345683', specialite_id: 3, specialite_label: 'Intelligence Artificielle', promo_id: 3, promo_name: 'L3 Informatique (2025-2026)', groupe_id: null, groupe_name: 'Non assigné', status: 'active'},
-                {id: 7, matricule: 'STU007', nom: 'Durand', prenom: 'Lucas', email: 'lucas.durand@example.com', telephone: '0612345684', specialite_id: 4, specialite_label: 'Gestion de Projet', promo_id: 4, promo_name: 'M1 Informatique (2025-2026)', groupe_id: null, groupe_name: 'Non assigné', status: 'pending'},
-                {id: 8, matricule: 'STU008', nom: 'Moreau', prenom: 'Emma', email: 'emma.moreau@example.com', telephone: '0612345685', specialite_id: 4, specialite_label: 'Gestion de Projet', promo_id: 4, promo_name: 'M1 Informatique (2025-2026)', groupe_id: 1, groupe_name: 'Groupe A', status: 'active'}
-            ];
+        
             
-            // Check if a default speciality filter is set and display its details
-            var defaultSpecialiteId = $('#specialiteFilter').val();
-            if (defaultSpecialiteId) {
-                displaySpecialiteDetails(defaultSpecialiteId);
-            }
-            
-            // Render data with current filters applied
-            renderStudentTable(allStudentData);
         }
         
         // Render student table
@@ -795,13 +788,13 @@
                     html += '<tr data-student-id="' + student.id + '">';
                     html += '<td><div class="form-check"><input class="form-check-input student-checkbox" type="checkbox" value="' + student.id + '"><label class="form-check-label"></label></div></td>';
                     html += '<td><strong>STD' + student.id + '</strong></td>';  // New Matricule column
-                    html += '<td><strong>' + student.matricule + '</strong></td>';  // Old Matricule now Matricule interne
+                    html += '<td><strong>' + (student.matricule || '-') + '</strong></td>';  // Old Matricule now Matricule interne
                     html += '<td><strong>' + student.nom + ' ' + student.prenom + '</strong></td>';
                     html += '<td>' + student.email + '</td>';
                     html += '<td>' + student.telephone + '</td>';
                     html += '<td>' + (student.groupe_name || 'Non assigné') + '</td>';
-                    html += '<td><span class="badge status-badge ' + (student.status === 'active' ? 'active' : student.status === 'pending' ? 'pending' : 'inactive') + '">' + 
-                            (student.status === 'active' ? 'Actif' : student.status === 'pending' ? 'En attente' : 'Inactif') + '</span></td>';
+                    html += '<td><span class="badge status-badge ' + (student.statut === 'active' ? 'active' : student.statut === 'pending' ? 'pending' : 'inactive') + '">' + 
+                            (student.statut === 'active' ? 'Actif' : student.statut === 'pending' ? 'En attente' : 'Inactif') + '</span></td>';
                     
                     var actions = '<div class="dropdown d-inline-block">'+
                         '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+

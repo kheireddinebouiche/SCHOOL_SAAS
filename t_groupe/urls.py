@@ -22,4 +22,5 @@ urlpatterns = [
     path('ApiListePromosEnAttente', ApiListePromosEnAttente, name="ApiListePromosEnAttente"),
     path('ApiSpecialiteByPromo', ApiSpecialiteByPromo, name="ApiSpecialiteByPromo"),
     path('affectation-au-groupe/<int:pk>/<str:code>/', AffectationAuGroupe, name="AffectationAuGroupe"),
+    path('ApiListeStudentNotAffected', ApiListeStudentNotAffected, name="ApiListeStudentNotAffected"),
 ]

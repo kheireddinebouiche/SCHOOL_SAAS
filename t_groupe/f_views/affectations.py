@@ -61,3 +61,18 @@ def AffectationAuGroupe(request, pk, code):
         'promo_code': code,
     }
     return render(request, 'tenant_folder/scolarite/affectation_au_groupe.html', context)
+
+
+@login_required(login_url="insitut_app:login")
+def ApiListeStudentNotAffected(request):
+    promoId = request.GET.get('promoId')
+    specialite = request.GET.get('specialite') 
+
+    print(promoId)
+    print(specialite) 
+
+    liste = (Prospets.objects
+             .filter(statut = "convertit", prospect_fiche_voeux__specialite_id=specialite, prospect_fiche_voeux__promo__code = promoId)
+             .values('id','nom','prenom','email','telephone','statut'))
+
+    return JsonResponse(list(liste), safe=False)
