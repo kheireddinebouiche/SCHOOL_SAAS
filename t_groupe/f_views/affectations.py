@@ -108,7 +108,17 @@ def ApiGetSpecialiteDatas(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiAffectStudentToGroupe(request):
     studentId = request.POST.get('studentId')
     groupId = request.POST.get('groupId')
-    pass
+    
+
+    GroupeLine.objects.create(
+        groupe_id = studentId,
+        student_id = groupId,
+
+    )
+
+    
+    return JsonResponse({"status":  "success"})
