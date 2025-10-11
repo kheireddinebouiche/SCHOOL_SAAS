@@ -25,4 +25,5 @@ urlpatterns = [
     path('ApiListeStudentNotAffected', ApiListeStudentNotAffected, name="ApiListeStudentNotAffected"),
     path('ApiGroupeListeForAffectation', ApiGroupeListeForAffectation, name="ApiGroupeListeForAffectation"),
     path('ApiGetSpecialiteDatas', ApiGetSpecialiteDatas, name="ApiGetSpecialiteDatas"),
+    path('ApiAffectStudentToGroupe', ApiAffectStudentToGroupe, name="ApiAffectStudentToGroupe"),
 ]

@@ -236,6 +236,9 @@ class Prospets(models.Model):
 
     is_affected = models.BooleanField(default=False)
 
+    matricule = models.CharField(max_length=100, null=True, blank=True)
+    matricule_interne = models.CharField(max_length=100, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

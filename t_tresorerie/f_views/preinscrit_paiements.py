@@ -9,6 +9,8 @@ import json
 from t_crm.models import RemiseAppliquer,FicheDeVoeux
 from django.db.models import Q
 from institut_app.decorators import *
+from datetime import datetime
+from django.db.models import Max
 
 
 @login_required(login_url="institut_app:login")
@@ -173,12 +175,45 @@ def ApiApplyEcheancierSpecial(request):
     else:
         return JsonResponse({"status" : "error"})
 
+
+
+def generate_matricule_interne(promo_code):
+    
+    today = datetime.now()
+    jour_mois = today.strftime("%d%m")  # ex: 1110 pour 11 octobre
+    prefix = f"{promo_code}/{jour_mois}"
+
+    # Chercher le dernier matricule généré avec ce préfixe
+    last_matricule = Prospets.objects.filter(
+        matricule_interne__startswith=prefix
+    ).aggregate(max_code=Max('matricule_interne'))['max_code']
+
+    if last_matricule:
+        try:
+            last_seq = int(last_matricule.split('/')[-1])
+        except ValueError:
+            last_seq = 0
+        new_seq = last_seq + 1
+    else:
+        new_seq = 1
+
+    return f"{prefix}/{new_seq:04d}"
+
+
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiConfirmInscription(request):
     if request.method == "POST":
         id_client = request.POST.get('id_preinscrit')
+
+        promoObj = FicheDeVoeux.objects.get(prospect_id = id_client, is_confirmed=True)
+        promo = promoObj.promo.code
+        
+        matricule = generate_matricule_interne(promo)
+      
         client = Prospets.objects.get(id = id_client)
+        client.matricule_interne = matricule
         client.statut = 'convertit'
         client.save()
 

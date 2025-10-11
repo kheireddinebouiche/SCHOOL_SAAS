@@ -13,22 +13,7 @@ def NewGroupe(request):
         form = NewGroupeForms(request.POST)
         if form.is_valid():
             
-            designation = form.cleaned_data.get('nom')
-            start_date = form.cleaned_data.get('start_date')
-            end_date = form.cleaned_data.get('end_date')
-            description = form.cleaned_data.get('description')
-            min_student = form.cleaned_data.get('min_student')
-            max_student = form.cleaned_data.get('max_student')
-            specialite = form.cleaned_data.get('specialite')
-            annee_scolaire = form.cleaned_data.get('annee_scolaire')
-
-            groupe = Groupe.objects.create(
-                nom = designation,start_date = start_date, end_date = end_date, description = description,
-                min_student = min_student,max_student = max_student, specialite = specialite, createdy = request.user,
-                annee_scolaire = annee_scolaire
-            )
-
-            groupe.save()
+            form.save()
 
             messages.success(request, "Groupe enregistré avec succès")
             return redirect('t_groupe:listegroupes')
