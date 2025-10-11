@@ -71,7 +71,7 @@ def ApiListeStudentNotAffected(request):
 
     liste = (Prospets.objects
              .filter(statut = "convertit", prospect_fiche_voeux__specialite_id=specialite, prospect_fiche_voeux__promo__code = promoId)
-             .values('id','nom','prenom','email','telephone','statut','matricule','matricule_interne','is_affected'))
+             .values('id','nom','prenom','email','telephone','statut','matricule','matricule_interne','is_affected','groupe_line_student__groupe__id','groupe_line_student__groupe__nom'))
 
     return JsonResponse(list(liste), safe=False)
 
@@ -112,13 +112,17 @@ def ApiGetSpecialiteDatas(request):
 def ApiAffectStudentToGroupe(request):
     studentId = request.POST.get('studentId')
     groupId = request.POST.get('groupId')
-    
+
 
     GroupeLine.objects.create(
-        groupe_id = studentId,
-        student_id = groupId,
+        student_id = studentId,
+        groupe_id = groupId,
 
     )
 
-    
+    prospect = Prospets.objects.get(id = studentId)
+    prospect.is_affected = True
+    prospect.save()
+
+
     return JsonResponse({"status":  "success"})

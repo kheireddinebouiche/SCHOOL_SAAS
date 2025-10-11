@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from t_formations.models import *
-from t_etudiants.models import *
+from t_crm.models import *
 
 
 class Groupe(models.Model):
@@ -35,7 +35,7 @@ class Groupe(models.Model):
 
 class GroupeLine(models.Model):
     groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE, related_name='groupe_line_groupe')
-    student = models.ForeignKey(Etudiant, on_delete=models.CASCADE, related_name='groupe_line_student')
+    student = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='groupe_line_student')
 
     date_inscription = models.DateTimeField(auto_now_add=True)
     date_sortie = models.DateTimeField(null=True, blank=True)
@@ -45,4 +45,4 @@ class GroupeLine(models.Model):
         verbose_name_plural = "Groupes d'etudiants"
 
     def __str__(self):
-        return f"{self.groupe.nom} - {self.student.relation.prenom} {self.student.relation.nom}"
+        return f"{self.groupe.nom} - {self.student.prenom} {self.student.nom}"
