@@ -712,42 +712,51 @@
         
         // Load groups from API
         function loadGroups() {
-            // For demonstration, using hardcoded values
-            // In a real application, you would load from an API
-            var groups = [
-                {id: 1, name: 'Groupe A', code: 'GPA', specialite_id: 1, student_count: 15},
-                {id: 2, name: 'Groupe B', code: 'GPB', specialite_id: 1, student_count: 12},
-                {id: 3, name: 'Groupe C', code: 'GPC', specialite_id: 2, student_count: 10}
-            ];
+            var promoId = "{{promo_code}}";
+            var specialite = "{{specialite_id}}";
             
-            var groupFilter = $('#groupeFilter');
-            groupFilter.empty();
-            groupFilter.append($('<option>', {
-                value: '',
-                text: 'Tous les groupes'
-            }));
-            
-            $.each(groups, function(index, group) {
-                groupFilter.append($('<option>', {
-                    value: group.id,
-                    text: group.name + ' (' + group.code + ')'
-                }));
+            $.ajax({
+                url : "{% url 't_groupe:ApiGroupeListeForAffectation' %}",
+                dataType : "JSON",
+                type : "GET",
+                data: {
+                   'promoId' : promoId,
+                   'specialite' : specialite,
+                },
+                success : function(data){
+                    groups = data;
+
+                    var groupFilter = $('#groupeFilter');
+                    groupFilter.empty();
+                    groupFilter.append($('<option>', {
+                        value: '',
+                        text: 'Tous les groupes'
+                    }));
+                    
+                    $.each(groups, function(index, group) {
+                        groupFilter.append($('<option>', {
+                            value: group.id,
+                            text: group.name + ' (' + group.code + ')'
+                        }));
+                    });
+                    
+                    // Also populate the group assignment modal select
+                    var groupSelect = $('#groupSelect');
+                    groupSelect.empty();
+                    groupSelect.append($('<option>', {
+                        value: '',
+                        text: 'Choisir un groupe'
+                    }));
+                    
+                    $.each(groups, function(index, group) {
+                        groupSelect.append($('<option>', {
+                            value: group.id,
+                            text: group.name + ' (' + group.code + ')'
+                        }));
+                    });
+                },
             });
-            
-            // Also populate the group assignment modal select
-            var groupSelect = $('#groupSelect');
-            groupSelect.empty();
-            groupSelect.append($('<option>', {
-                value: '',
-                text: 'Choisir un groupe'
-            }));
-            
-            $.each(groups, function(index, group) {
-                groupSelect.append($('<option>', {
-                    value: group.id,
-                    text: group.name + ' (' + group.code + ')'
-                }));
-            });
+
         }
         
         // Load students data from API

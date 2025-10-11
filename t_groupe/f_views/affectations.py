@@ -76,3 +76,21 @@ def ApiListeStudentNotAffected(request):
              .values('id','nom','prenom','email','telephone','statut'))
 
     return JsonResponse(list(liste), safe=False)
+
+
+@login_required(login_url="institut_app:login")
+def ApiGroupeListeForAffectation(request):
+    promoId = request.GET.get('promoId')
+    specialite = request.GET.get('specialite') 
+    
+    liste = (Groupe.objects.filter(promotion__code = promoId, specialite_id = specialite).values('id','nom','min_student','max_student','etat'))
+
+    return JsonResponse(list(liste), safe=False)
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetSpecialiteDatas(request):
+    specialite = request.GET.get('specialite')
+
+    object = Specialites.objects.filter(id = specialite).values('id','label')
+    return JsonResponse(list(object), safe=False)
