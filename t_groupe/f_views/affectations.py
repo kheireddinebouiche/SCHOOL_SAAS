@@ -46,7 +46,7 @@ def ApiSpecialiteByPromo(request):
         promoCode = request.GET.get('promoCode')
 
         specialites = (FicheDeVoeux.objects.filter(promo__code = promoCode, is_confirmed=True)
-                        .filter(promo__code=promoCode, is_confirmed=True,prospect__statut = "convertit")
+                        .filter(promo__code=promoCode, is_confirmed=True,prospect__statut = "convertit", prospect__is_affected = False)
                         .values('specialite__id', 'specialite__label')
                         .annotate(nombre_etudiants=Count('id'))
                         .order_by('specialite__label')
