@@ -145,9 +145,16 @@
                                     <button class="btn btn-primary">
                                         <i class="ri-edit-line me-1"></i> Modifier
                                     </button>
-                                    <button class="btn btn-info">
-                                        <i class="ri-printer-line me-1"></i> Imprimer
-                                    </button>
+                                    <div class="dropdown">
+                                        <button class="btn btn-info dropdown-toggle" type="button" id="impressionDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="ri-printer-line me-1"></i> Impression
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="impressionDropdown">
+                                            <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i>Contrat</a></li>
+                                            <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Certificat de scolarité</a></li>
+                                            <li><a class="dropdown-item" href="#"><i class="ri-id-card-line me-2"></i>Carte étudiant</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -590,6 +597,10 @@
 </div>
 <!-- end main content-->
 
+<!-- Include jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize the first tab as active
@@ -597,6 +608,122 @@
         if (firstTabEl) {
             var firstTab = new bootstrap.Tab(firstTabEl);
             firstTab.show();
+        }
+        
+        // Event listeners are handled in the global click listener below
+    });
+    
+    // Function to generate school certificate with jsPDF
+    function generateSchoolCertificate() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(18);
+        doc.text("CERTIFICAT DE SCOLARITÉ", 105, 20, null, null, "center");
+        
+        // Add student information
+        doc.setFontSize(12);
+        doc.text("Je soussigné, Directeur de l'établissement,", 20, 40);
+        doc.text("Certifie que l'étudiant(e):", 20, 50);
+        doc.setFontSize(14);
+        doc.text("{{ etudiant.nom }} {{ etudiant.prenom }}", 20, 60);
+        doc.setFontSize(12);
+        doc.text("Né(e) le: {{ etudiant.date_naissance|date:"d M Y" }} à {{ etudiant.lieu_naissance }}", 20, 70);
+        doc.text("Nationalité: {{ etudiant.nationalite|default:"Non renseigné" }}", 20, 80);
+        doc.text("Est régulièrement inscrit(e) dans notre établissement pour l'année scolaire:", 20, 90);
+        doc.text("{{ groupe.groupe.annee_scolaire }}", 20, 100);
+        doc.text("Dans la spécialité de: {{ etudiant.groupe.specialite }}", 20, 110);
+        doc.text("Au niveau: {{ etudiant.get_niveau_etude_display|default:"Non renseigné" }}", 20, 120);
+        
+        // Add signature section
+        doc.text("Fait en certification conforme,", 20, 140);
+        doc.text("Le {{ current_date|date:"d M Y"|default:"date d'aujourd'hui" }}", 20, 150);
+        doc.text("Le Directeur", 150, 180);
+        
+        // Save the PDF
+        doc.save("certificat_scolarite_{{ etudiant.matricule_interne }}.pdf");
+    }
+    
+    // Function to generate student card with jsPDF
+    function generateStudentCard() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ 
+            orientation: 'landscape',
+            unit: 'mm',
+            format: [86, 54] // Standard card size (credit card size)
+        });
+        
+        // Define card dimensions
+        const cardWidth = 86;
+        const cardHeight = 54;
+        
+        // Draw card background
+        doc.setFillColor(59, 125, 221); // Blue background
+        doc.rect(0, 0, cardWidth, cardHeight, 'F');
+        
+        // Add institution logo (placeholder)
+        doc.setFillColor(255, 255, 255);
+        doc.circle(15, 12, 6); // Circle for logo
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text("LOGO", 10, 13, null, null, "center");
+        
+        // Add institution name
+        doc.setFontSize(10);
+        doc.text("Établissement Scolaire", 43, 10, null, null, "center");
+        
+        // Add student photo placeholder
+        doc.setDrawColor(255, 255, 255);
+        doc.setFillColor(240, 240, 240);
+        doc.rect(55, 8, 25, 30, 'FD');
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(6);
+        doc.text("PHOTO", 67, 23, null, null, "center");
+        doc.text("ÉTUDIANT", 67, 27, null, null, "center");
+        
+        // Add student information
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text("{{ etudiant.nom|truncatechars:15 }}", 15, 25);
+        doc.setFontSize(8);
+        doc.text("{{ etudiant.prenom|truncatechars:15 }}", 15, 32);
+        
+        // Add student ID
+        doc.setFontSize(7);
+        doc.text("ID: {{ etudiant.matricule_interne }}", 15, 40);
+        
+        // Add group and specialty
+        doc.text("{{ groupe.groupe.nom }}", 15, 46);
+        doc.text("{{ etudiant.groupe.specialite.label|truncatechars:20 }}", 50, 46);
+        
+        // Add expiry date
+        const currentDate = new Date();
+        const nextYear = new Date();
+        nextYear.setFullYear(currentDate.getFullYear() + 1);
+        const expiryDate = nextYear.toLocaleDateString('fr-FR');
+        
+        doc.setFontSize(6);
+        doc.text("Exp: " + expiryDate, 60, 15);
+        
+        // Save the PDF
+        doc.save("carte_etudiant_{{ etudiant.matricule_interne }}.pdf");
+    }
+    
+    // Fix for handling dropdown items with text content
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('a.dropdown-item')) {
+            e.preventDefault();
+            const text = e.target.text || e.target.textContent;
+            
+            if (text.includes('Certificat de scolarité')) {
+                generateSchoolCertificate();
+            } else if (text.includes('Carte étudiant')) {
+                generateStudentCard();
+            } else if (text.includes('Contrat')) {
+                // For now, showing an alert for contract
+                alert("Fonctionnalité de contrat non implémentée pour le moment");
+            }
         }
     });
 </script>
