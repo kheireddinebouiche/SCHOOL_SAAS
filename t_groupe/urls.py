@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 from .f_views.affectations import *
+from .f_views.student import *
 
 app_name="t_groupe"
 
@@ -27,4 +28,6 @@ urlpatterns = [
     path('ApiGroupeListeForAffectation', ApiGroupeListeForAffectation, name="ApiGroupeListeForAffectation"),
     path('ApiGetSpecialiteDatas', ApiGetSpecialiteDatas, name="ApiGetSpecialiteDatas"),
     path('ApiAffectStudentToGroupe', ApiAffectStudentToGroupe, name="ApiAffectStudentToGroupe"),
+
+    path('profile-etudiant/<int:pk>/', StudentDetails, name="StudentDetails"),
 ]
