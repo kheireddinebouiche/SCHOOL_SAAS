@@ -37,12 +37,14 @@ def ApiGetGroupeList(request):
     liste = Groupe.objects.all().values('id','nom')
     return JsonResponse(list(liste), safe=False)
 
+@login_required(login_url="institut_app:login")
 def detailsGroupe(request, pk):
     groupe = Groupe.objects.get(pk=pk)
     students = GroupeLine.objects.filter(groupe = groupe)
     context = {
         'groupe' : groupe,
         'students' : students,
+        "specialite" : groupe.specialite,
         'tenant' : request.tenant,
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
