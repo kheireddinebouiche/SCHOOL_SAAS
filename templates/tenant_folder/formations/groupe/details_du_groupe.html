@@ -118,8 +118,8 @@
                                             <i class="ri-printer-line me-1"></i> Impression
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
-                                            <li><a class="dropdown-item" href="#"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</a></li>
+                                            <li><a class="dropdown-item" href="#" ><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
+                                            <li><button type="button" class="dropdown-item"  id="PrintAttendenceSheet"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</button></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -517,10 +517,11 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script>
     $(document).ready(function(){
-      
-
+        // Handle button events
         $(document).on('click','#btnConfirmeBeginInscription', function(){
             window.location = "{% url 't_groupe:validateGroupe' pk=groupe.id %}";
         });
@@ -528,7 +529,132 @@
         $(document).on('click','#btnConfirmeCloseGroup', function(){
             window.location = "{% url 't_groupe:closeGroupe' pk=groupe.id %}";
         });
+
+
+        
+
+        // Function to generate attendance sheet PDF
+        function generateAttendanceSheet() {
+            // Get the jsPDF constructor from global scope
+            const { jsPDF } = window.jspdf;
+            
+            // Create new PDF in landscape mode (A4: 297 x 210 mm)
+            const doc = new jsPDF('l', 'mm', 'a4');
+            
+            // To use Poppins font, you would need to add the font file first
+            // This requires converting Poppins to a jsPDF-compatible format and adding it with doc.addFont()
+            // For this implementation, the default font is used, which is quite similar to Poppins
+            
+            // Title
+            doc.setFontSize(14);
+            doc.text("FICHE DE SUIVI DES COURS", 148.5, 10, null, null, 'center');
+            
+            // Group and specialty information - further reduced font size and spacing
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'bold');
+            doc.text("Détails du groupe", 20, 18);
+            doc.setFont(undefined, 'normal');
+            doc.text("Spécialité: {{groupe.specialite}}", 20, 24);
+            doc.text("Groupe: {{groupe.nom}}", 20, 30);
+            doc.text("Année scolaire: {{groupe.annee_scolaire}}", 20, 36);
+            
+            // Teacher and module fields - further reduced font size and spacing
+            doc.setFont(undefined, 'bold');
+            doc.text("Informations pédagogiques", 150, 18);
+            doc.setFont(undefined, 'normal');
+            doc.text("Nom de l'enseignant: ___________________", 150, 24);
+            doc.text("Nom du module: _______________________", 150, 30);
+            doc.text("Date: _________________", 150, 36);
+            
+            // Define headers for the attendance table - 15 date columns with free format
+            const headers = ["N°", "Étudiants"];
+            
+            // Add 15 date columns with "____/__/__" format as requested
+            for (let i = 1; i <= 15; i++) {
+                headers.push("____/__/__");
+            }
+            
+            const tableData = [];
+            
+            // Add students to table data with empty date fields directly
+            {% for student_line in students %}
+            tableData.push([
+                "{{forloop.counter}}",
+                "{{student_line.student.nom}} {{student_line.student.prenom}}",
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+            ]);
+            {% endfor %}
+            
+            // Create the attendance table with better styling (without date column headers for now)
+            doc.autoTable({
+                head: [headers],
+                body: tableData,
+                startY: 42, // Move table just below the tighter header sections
+                margin: { top: 42, left: 5, right: 5 }, // Adjust margin to match startY
+                styles: {
+                    fontSize: 7,
+                    cellPadding: 2,
+                    lineColor: [0, 0, 0], // Black lines for better visibility
+                    lineWidth: 0.1
+                },
+                headStyles: {
+                    fillColor: [59, 125, 221], // blue color
+                    textColor: [255, 255, 255],
+                    fontSize: 6, // Reduced font size for better fit
+                    fontStyle: 'bold',
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.2,
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                bodyStyles: {
+                    textColor: [0, 0, 0],
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 245, 245]
+                },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' }, // Number column
+                    1: { 
+                        cellWidth: 35, // Student names column
+                        fontStyle: 'bold' // Make student names bold
+                    }, // Student names column
+                    // Date columns
+                }
+            });
+            
+            // The headers with "____/__/__" format are already handled by autoTable
+            // Text rotation is too complex for this jsPDF version, so we'll skip it
+            // The table will display with horizontal text in headers as rendered by autoTable
+            
+            // Add signature area at the bottom
+            const finalY = doc.lastAutoTable.finalY || 75;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text("Signature de l'enseignant: _________________________", 180, finalY + 15);
+            
+            // Add institution info at the bottom
+            doc.text("Institution: {{tenant.name|default:'Nom de l\'institution'}}", 15, finalY + 15);
+            
+            // Save the PDF
+            doc.save("fiche_suivi_cours_{{groupe.nom}}.pdf");
+        }
+
+        $(document).on('click','#PrintAttendenceSheet', function(){
+            
+            generateAttendanceSheet();
+        }); 
+        
+        
+        // Function to generate exam report (will be implemented later)
+        function generateExamReport() {
+            alert("La génération du PV d'examen sera implémentée prochainement.");
+        }
     });
+
+    
 </script>
 {% endblock content %}
            

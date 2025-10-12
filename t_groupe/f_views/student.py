@@ -12,7 +12,9 @@ from django.db.models import Count
 
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
+    student = Prospets.objects.get(id = pk)
     context = {
         'pk' : pk,
+        'etudiant' : student
     }
     return render(request, 'tenant_folder/student/profile_etudiant.html',context)
