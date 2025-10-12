@@ -42,9 +42,16 @@
         border-color: #326bc9;
     }
     
-    .badge {
-        padding: 0.5em 1em;
+    .status-item {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
         font-weight: 500;
+    }
+    
+    .status-item.current {
+        font-weight: bold;
+        color: #3b7ddd;
     }
 </style>
 
@@ -82,25 +89,38 @@
                 <div class="col-lg-12">
                     <div class="card shadow border-0 rounded-3">
                         <div class="card-header bg-white p-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-group-line text-info fs-4"></i>
+                            <div class="d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                                            <i class="ri-group-line text-info fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title fw-semibold text-info mb-0">Détails du groupe : {{groupe.nom}}</h5>
+                                            <p class="text-muted mb-0 small">Informations générales sur le groupe</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-info mb-0">Détails du groupe : {{groupe.nom}}</h5>
-                                        <p class="text-muted mb-0 small">Informations générales sur le groupe</p>
+                                    
+                                    <div class="dropdown">
+                                        <button class="btn btn-soft-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="ri-printer-line me-1"></i> Impression
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
+                                            <li><a class="dropdown-item" href="#"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</a></li>
+                                        </ul>
                                     </div>
                                 </div>
                                 
-                                <div class="dropdown">
-                                    <button class="btn btn-soft-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="ri-printer-line me-1"></i> Impression
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</a></li>
-                                    </ul>
+                                <!-- Status Sequence -->
+                                <div class="d-flex justify-content-center">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status-item {% if groupe.etat == 'brouillon' %}current{% endif %}">Brouillon</span>
+                                        <span class="mx-2 text-muted">-</span>
+                                        <span class="status-item {% if groupe.etat == 'enc' or groupe.etat == 'inscription' %}current{% endif %}">En cours d'inscription</span>
+                                        <span class="mx-2 text-muted">-</span>
+                                        <span class="status-item {% if groupe.etat == 'cloture' %}current{% endif %}">Clôturé</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -194,9 +214,9 @@
                                             <a href="{% url 't_groupe:UpdateGroupe' groupe.id %}" class="btn btn-primary px-4 py-2" id="_updateGroupeBtn" title="Modifier les informations du groupe">
                                                 <i class="ri-pencil-line me-1"></i> Modifier
                                             </a>
-                                            <a href="{% url 't_groupe:validateGroupe' pk=groupe.id %}" class="btn btn-success px-4 py-2" id="startCours" title="Valider le cours pour permettre le début des inscriptions">
-                                                <i class="ri-check-line me-1"></i> Valider le groupe
-                                            </a>
+                                            <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" data-bs-target="#confirmStartRegistrationModal" title="Valider le cours pour permettre le début des inscriptions">
+                                                <i class="ri-check-line me-1"></i> Lancer les inscriptions
+                                            </button>
                                         {% endif %}
                                         {% if groupe.etat == "valider" %}
                                             <a href="{% url 't_groupe:makeGroupeBrouillon' groupe.id %}" class="btn btn-warning px-4 py-2" id="_updateGroupeBtn" title="Revenir en brouillon">
@@ -204,7 +224,7 @@
                                             </a>
                                         {% endif %}
                                         {% if groupe.etat == "inscription" %}
-                                            <button class="btn btn-danger px-4 py-2" id="startCours" title="La clôture du groupe lance le debut des cours, toute modification est désactivée">
+                                            <button type="button" class="btn btn-danger px-4 py-2" data-bs-toggle="modal" data-bs-target="#confirmCloseGroupModal" title="La clôture du groupe lance le debut des cours, toute modification est désactivée">
                                                 <i class="ri-lock-line me-1"></i> Clôturer
                                             </button>
                                         {% endif %}
@@ -318,12 +338,139 @@
     </div>
 </div>
 
+<!-- Modal for confirming start of registrations -->
+<div class="modal fade" id="confirmStartRegistrationModal" tabindex="-1" aria-labelledby="confirmStartRegistrationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-check-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="confirmStartRegistrationModalLabel">
+                            Confirmer le démarrage des inscriptions
+                        </h5>
+                        <p class="text-muted small mb-0">Validation du groupe pour début des inscriptions</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-alert-line text-warning fs-4 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Attention !</h6>
+                            <p class="mb-0">Vous êtes sur le point de valider ce groupe et d'autoriser le début des inscriptions.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-lock-line text-info fs-4 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Information importante</h6>
+                            <p class="mb-0">Une fois le début des inscriptions autorisé, il ne sera plus possible de modifier les informations du groupe.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <p>En validant ce groupe, vous confirmez que toutes les informations sont correctes et que le groupe est prêt à recevoir des inscriptions.</p>
+                
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                    <i class="ri-information-line text-primary fs-5 me-3"></i>
+                    <div>
+                        <h6 class="mb-1">Détails du groupe</h6>
+                        <p class="mb-0 small text-muted">Nom : <strong>{{groupe.nom}}</strong> | Spécialité : <strong>{{groupe.specialite}}</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button id="btnConfirmeBeginInscription" type="button" class="btn btn-success px-4" >Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for confirming group closure -->
+<div class="modal fade" id="confirmCloseGroupModal" tabindex="-1" aria-labelledby="confirmCloseGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-lock-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="confirmCloseGroupModalLabel">
+                            Confirmer la clôture du groupe
+                        </h5>
+                        <p class="text-muted small mb-0">Fermeture du groupe pour de nouvelles inscriptions</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-alert-line text-warning fs-4 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Attention !</h6>
+                            <p class="mb-0">Vous êtes sur le point de clôturer ce groupe.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-user-unfollow-line text-info fs-4 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Information importante</h6>
+                            <p class="mb-0">Une fois le groupe clôturé, il ne sera plus possible d'inscrire de nouveaux étudiants à ce groupe.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <p>En clôturant ce groupe, vous confirmez que le nombre d'inscrits est final et que le groupe est prêt à commencer officiellement.</p>
+                
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                    <i class="ri-information-line text-primary fs-5 me-3"></i>
+                    <div>
+                        <h6 class="mb-1">Détails du groupe</h6>
+                        <p class="mb-0 small text-muted">Nom : <strong>{{groupe.nom}}</strong> | Spécialité : <strong>{{groupe.specialite}}</strong> | Étudiants inscrits : <strong>{{students.count}}</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button id="btnConfirmeCloseGroup" type="submit" class="btn btn-danger px-4">Confirmer</button>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
         $(document).on('click','#btnSpecialiteDetails', function(){
             $('#specialiteModel').modal('show');
             var id = $(this).data('id');
             console.log(id);
+        });
+
+        $(document).on('click','#btnConfirmeBeginInscription', function(){
+            window.location = "{% url 't_groupe:validateGroupe' pk=groupe.id %}";
+        });
+        
+        $(document).on('click','#btnConfirmeCloseGroup', function(){
+            window.location = "{% url 't_groupe:closeGroupe' pk=groupe.id %}";
         });
     });
 </script>

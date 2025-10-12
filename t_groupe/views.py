@@ -68,6 +68,7 @@ def UpdateGroupe(request, pk):
     }
     return render(request,"tenant_folder/formations/groupe/update_groupe.html", context)
 
+@login_required(login_url="institut_app:login")
 def makeGroupeBrouillon(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "brouillon"
@@ -75,15 +76,23 @@ def makeGroupeBrouillon(request, pk):
     messages.success(request, "Le groupe est en mode brouillon")
     return redirect('t_groupe:detailsgroupe', pk)
 
+@login_required(login_url="insitut_app:login")
+@transaction.atomic
 def validateGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)
-    groupe.etat = "valider"
+    groupe.etat = "inscription"
     groupe.save()
-    messages.success(request, "Le groupe est en mode brouillon")
+    messages.success(request, "Le début des inscription est programmé")
     return redirect('t_groupe:detailsgroupe', pk)
 
-def clotureGroupe(request,pk):
-    pass
+@login_required(login_url="insitut_app:login")
+@transaction.atomic
+def closeGroupe(request, pk):
+    groupe = Groupe.objects.get(id = pk)
+    groupe.etat = "cloture"
+    groupe.save()
+    messages.success(request, "Le groupe a été cloturé avec suucès")
+    return redirect('t_groupe:detailsgroupe', pk)
 
 def deleteGroupe(request, pk):
     groupe = Groupe.objects.get(pk=pk)

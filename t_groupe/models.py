@@ -5,11 +5,10 @@ from t_crm.models import *
 
 
 class Groupe(models.Model):
-    createdy = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groupe_createdy')
+    createdy = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groupe_createdy', null=True, blank=True)
 
     nom = models.CharField(max_length=100, null=True, blank=True)
-    description = models.TextField(blank=True, null=True)
-
+   
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
     promotion = models.ForeignKey(Promos, on_delete=models.DO_NOTHING, null=True)
 
@@ -21,7 +20,7 @@ class Groupe(models.Model):
 
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='groupe_specialite', null=True, blank=True)
 
-    etat = models.CharField(max_length=200, choices=[('valider','Groupe valider'),('brouillon','Brouillon'),('inscription',"En cours d'inscription"),('enc', 'En cours'), ('Cloturé', 'Cloturé')], default='brouillon')
+    etat = models.CharField(max_length=200, choices=[('valider','Groupe valider'),('brouillon','Brouillon'),('inscription',"En cours d'inscription"),('enc', 'En cours'), ('cloture', 'Cloturé')], default='brouillon')
 
     date_creation = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

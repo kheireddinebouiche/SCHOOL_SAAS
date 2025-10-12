@@ -81,7 +81,7 @@ def ApiGroupeListeForAffectation(request):
     promoId = request.GET.get('promoId')
     specialite = request.GET.get('specialite') 
     
-    liste = Groupe.objects.filter(promotion__code=promoId,specialite_id=specialite).annotate(total=Count('groupe_line_groupe')).values('id', 'nom', 'min_student', 'max_student', 'etat', 'total')
+    liste = Groupe.objects.filter(promotion__code=promoId,specialite_id=specialite,etat='inscription').annotate(total=Count('groupe_line_groupe')).values('id', 'nom', 'min_student', 'max_student', 'etat', 'total')
 
     return JsonResponse(list(liste), safe=False)
 
@@ -95,7 +95,7 @@ def ApiGetSpecialiteDatas(request):
         promo = request.GET.get('promo')
         
         object = Specialites.objects.filter(id = specialite).values('id','label','code','condition_access')
-        nb_groupe= Groupe.objects.filter(promotion__code = promo, specialite_id = specialite).count()
+        nb_groupe= Groupe.objects.filter(promotion__code = promo, specialite_id = specialite,etat='inscription').count()
 
         data = {
             'specialite' : list(object),
