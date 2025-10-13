@@ -182,7 +182,7 @@
                                     </div>
                                     
                                     <div class="row">
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <div class="mb-3">
                                                 <label class="form-label text-muted">Spécialité</label>
                                                 <div class="d-flex align-items-center">
@@ -193,7 +193,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <div class="mb-3">
                                                 <label class="form-label text-muted">Statut</label>
                                                 <div class="d-flex align-items-center">
@@ -210,6 +210,17 @@
                                                             <span class="badge bg-secondary bg-opacity-10 text-secondary">{{groupe.get_etat_display}}</span>
                                                         {% endif %}
                                                     </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted">Code partenaire</label>
+                                                <div class="d-flex align-items-center">
+                                                    <div id="partnerCodeDisplay" class="form-control bg-light border-0 flex-grow-1 me-2" style="min-height: auto;">{{groupe.code_partenaire}}</div>
+                                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editPartnerCodeModal" title="Modifier le code partenaire">
+                                                        <i class="ri-pencil-line"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -649,10 +660,115 @@
         function generateExamReport() {
             alert("La génération du PV d'examen sera implémentée prochainement.");
         }
+        
+        // Handle partner code update
+        $(document).on('click', '#savePartnerCodeBtn', function() {
+            var newCode = $('#partnerCodeInput').val().trim();
+            var $errorDiv = $('#partnerCodeError');
+            
+            // Clear previous errors
+            $errorDiv.hide();
+            
+            // Basic validation
+            if (!newCode) {
+                $errorDiv.text('Le code partenaire ne peut pas être vide.').show();
+                return;
+            }
+            
+            // Disable the button while processing
+            var originalBtnText = $('#savePartnerCodeBtn').html();
+            $('#savePartnerCodeBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+            
+            // Send AJAX request to update the partner code
+            $.ajax({
+                url: '{% url "t_groupe:ApiUpdateGroupeCode" %}',  // API endpoint for updating partner code
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    'code_partenaire': newCode,
+                    'groupeId' : '{{groupe.id}}',
+                },
+                success: function(response) {
+                    if(response.status == "success") {
+                        // Update the displayed value
+                        $('#partnerCodeDisplay').text(newCode);
+                        
+                        // Update the input field in the modal too
+                        $('#partnerCodeInput').val(newCode);
+                        
+                        // Show success message
+                        alertify.success(response.message);
+                        
+                        // Close the modal
+                        $('#editPartnerCodeModal').modal('hide');
+                    } else {
+                        $errorDiv.text(response.message || 'Une erreur est survenue lors de la mise à jour.').show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    var errorMessage = 'Une erreur est survenue lors de la mise à jour.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    $errorDiv.text(errorMessage).show();
+                },
+                complete: function() {
+                    // Re-enable the button
+                    $('#savePartnerCodeBtn').prop('disabled', false).html(originalBtnText);
+                }
+            });
+        });
     });
 
     
 </script>
+
+<!-- Modal for editing partner code -->
+<div class="modal fade" id="editPartnerCodeModal" tabindex="-1" aria-labelledby="editPartnerCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-pencil-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="editPartnerCodeModalLabel">
+                            Modifier le code partenaire
+                        </h5>
+                        <p class="text-muted small mb-0">Mettre à jour le code partenaire du groupe</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-information-line text-info fs-5 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Information importante</h6>
+                            <p class="mb-0">Le code partenaire doit être fourni par le partenaire concerné. Veuillez vous assurer d'avoir reçu ce code avant de le renseigner.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="editPartnerCodeForm">
+                    <div class="mb-3">
+                        <label for="partnerCodeInput" class="form-label">Code partenaire</label>
+                        <input type="text" class="form-control" id="partnerCodeInput" name="code_partenaire" value="{{groupe.code_partenaire}}" placeholder="Entrez le code partenaire">
+                        <div id="partnerCodeError" class="text-danger mt-1" style="display: none;"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary px-4" id="savePartnerCodeBtn">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
            
 

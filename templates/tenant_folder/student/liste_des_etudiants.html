@@ -110,6 +110,19 @@
                                     <li class="breadcrumb-item active">Liste des étudiants</li>
                                 </ol>
                             </nav>
+                            <div class="dropdown">
+                                <button class="btn btn-success dropdown-toggle rounded-pill me-2" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri-download-2-line me-1"></i>Exporter
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li><button class="dropdown-item" type="button" id="exportExcel">
+                                        <i class="ri-file-excel-line me-1 text-success"></i>Exporter en Excel
+                                    </button></li>
+                                    <li><button class="dropdown-item" type="button" id="exportPDF">
+                                        <i class="ri-file-pdf-line me-1 text-danger"></i>Exporter en PDF
+                                    </button></li>
+                                </ul>
+                            </div>
                             <button class="btn btn-primary rounded-pill" id="refreshStudents">
                                 <i class="ri-refresh-line me-1"></i>Actualiser
                             </button>
@@ -208,6 +221,21 @@
                                             <option value="grouped">Affecté</option>
                                         </select>
                                     </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <label for="groupFilter" class="me-2 mb-0">Groupe:</label>
+                                        <select id="groupFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
+                                            <option value="">Tous</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <label for="specialtyFilter" class="me-2 mb-0">Spécialité:</label>
+                                        <select id="specialtyFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
+                                            <option value="">Tous</option>
+                                        </select>
+                                    </div>
+                                    
                                     <div>
                                         <button id="applyFilters" class="btn btn-primary btn-sm rounded-pill">
                                             <i class="ri-filter-line me-1"></i>Filtrer
@@ -260,7 +288,13 @@
 
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
 <script>
@@ -274,6 +308,9 @@
                 type: "GET",
                 success : function(data){
                     var row = "";
+                    var groups = [];
+                    var specialties = [];
+                    
                     if (data.length > 0){
                         $.each(data, function(index, p){
                             row += "<tr>";
@@ -281,16 +318,45 @@
                             row += "<td>"+(p.nin || 'Non renseigner')+"</td>";
                             row += "<td>"+(p.indic ||'')+''+p.telephone+"</td>";
                             row += "<td>"+p.email+"</td>";
-                            row += "<td>"+p.groupe_line_student__groupe__specialite__label+"<a href='#' title='Afficher les détails de la spécialité'><span class='mdi mdi-link-variant'></span></a></td>";
-                            row += "<td>"+p.groupe_line_student__groupe__nom+"<a href='/scolarite/groupes/details-groupe/"+p.groupe_line_student__groupe__id+"' title='Afficher les détails du groupe'><span class='mdi mdi-link-variant'></span></a></td>";
+                            row += "<td class='specialty-col'>"+p.groupe_line_student__groupe__specialite__label+"<a href='#' title='Afficher les détails de la spécialité'><span class='mdi mdi-link-variant'></span></a></td>";
+                            row += "<td class='group-col'>"+p.groupe_line_student__groupe__nom+"<a href='/scolarite/groupes/details-groupe/"+p.groupe_line_student__groupe__id+"' title='Afficher les détails du groupe'><span class='mdi mdi-link-variant'></span></a></td>";
                             row += "</tr>";
+                            
+                            // Collect unique groups and specialties for the dropdowns
+                            if (p.groupe_line_student__groupe__nom && !groups.includes(p.groupe_line_student__groupe__nom)) {
+                                groups.push(p.groupe_line_student__groupe__nom);
+                            }
+                            if (p.groupe_line_student__groupe__specialite__label && !specialties.includes(p.groupe_line_student__groupe__specialite__label)) {
+                                specialties.push(p.groupe_line_student__groupe__specialite__label);
+                            }
                         });
+                        
+                        // Populate the group dropdown
+                        var groupFilter = $('#groupFilter');
+                        groupFilter.empty();
+                        groupFilter.append('<option value="">Tous</option>');
+                        $.each(groups, function(index, group) {
+                            groupFilter.append('<option value="'+group+'">'+group+'</option>');
+                        });
+                        
+                        // Populate the specialty dropdown
+                        var specialtyFilter = $('#specialtyFilter');
+                        specialtyFilter.empty();
+                        specialtyFilter.append('<option value="">Tous</option>');
+                        $.each(specialties, function(index, specialty) {
+                            specialtyFilter.append('<option value="'+specialty+'">'+specialty+'</option>');
+                        });
+                        
                         // Show the table and hide the no results message when there are students
                         $('#listItems').html(row);
                         $('#noResultsMessage').hide();
                         $('#listItems').show();
                     }else{
                         $('#listItems').html('');
+                        // Clear and reset dropdowns when no data
+                        $('#groupFilter').empty().append('<option value="">Tous</option>');
+                        $('#specialtyFilter').empty().append('<option value="">Tous</option>');
+                        
                         // Show the no results message for no data
                         $('#noResultsMessage').removeClass('d-none').html(`
                             <div class="d-flex flex-column align-items-center justify-content-center py-5">
@@ -330,26 +396,54 @@
         // Search functionality
         $('#table-filter').on('keyup', function() {
             var searchTerm = $(this).val().toLowerCase();
-            filterTable(searchTerm, $('#statusFilter').val());
+            var statusFilter = $('#statusFilter').val();
+            var groupFilter = $('#groupFilter').val();
+            var specialtyFilter = $('#specialtyFilter').val();
+            filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter);
         });
 
         // Status filter functionality
         $('#statusFilter').on('change', function() {
             var searchTerm = $('#table-filter').val().toLowerCase();
-            filterTable(searchTerm, $(this).val());
+            var statusFilter = $(this).val();
+            var groupFilter = $('#groupFilter').val();
+            var specialtyFilter = $('#specialtyFilter').val();
+            filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter);
+        });
+
+        // Group filter functionality
+        $('#groupFilter').on('change', function() {
+            var searchTerm = $('#table-filter').val().toLowerCase();
+            var statusFilter = $('#statusFilter').val();
+            var groupFilter = $(this).val();
+            var specialtyFilter = $('#specialtyFilter').val();
+            filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter);
+        });
+
+        // Specialty filter functionality
+        $('#specialtyFilter').on('change', function() {
+            var searchTerm = $('#table-filter').val().toLowerCase();
+            var statusFilter = $('#statusFilter').val();
+            var groupFilter = $('#groupFilter').val();
+            var specialtyFilter = $(this).val();
+            filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter);
         });
 
         // Apply filters button
         $('#applyFilters').on('click', function() {
             var searchTerm = $('#table-filter').val().toLowerCase();
             var statusFilter = $('#statusFilter').val();
-            filterTable(searchTerm, statusFilter);
+            var groupFilter = $('#groupFilter').val();
+            var specialtyFilter = $('#specialtyFilter').val();
+            filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter);
         });
 
         // Clear filters button
         $('#clearFilters').on('click', function() {
             $('#table-filter').val('');
             $('#statusFilter').val('');
+            $('#groupFilter').val('');
+            $('#specialtyFilter').val('');
             loadItems(); // Reload all items
         });
 
@@ -357,11 +451,13 @@
         $('#refreshStudents').on('click', function() {
             $('#table-filter').val('');
             $('#statusFilter').val('');
+            $('#groupFilter').val('');
+            $('#specialtyFilter').val('');
             loadItems(); // Reload all items
         });
 
         // Filter table function
-        function filterTable(searchTerm, statusFilter) {
+        function filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter) {
             // Get all table rows
             var $allRows = $('#listItems tr');
             var visibleCount = 0;
@@ -379,12 +475,18 @@
                 // Determine student status for filtering based on available data in the row
                 var groupCell = $row.find('td:eq(5)').text(); // Group column is the 6th column (index 5)
                 var studentStatus = groupCell && groupCell.trim() !== '' && groupCell !== 'null' ? 'grouped' : 'pending';
-                
-                // For this implementation, we'll default to 'grouped' for all students
                 var matchesStatus = !statusFilter || studentStatus === statusFilter;
                 
-                // Show/hide row based on filters
-                if (!(matchesSearch && matchesStatus)) {
+                // Check if row matches selected group
+                var groupText = $row.find('td.group-col').text().trim();
+                var matchesGroup = !groupFilter || groupText === groupFilter;
+                
+                // Check if row matches selected specialty
+                var specialtyText = $row.find('td.specialty-col').text().trim();
+                var matchesSpecialty = !specialtyFilter || specialtyText === specialtyFilter;
+                
+                // Show/hide row based on all filters
+                if (!(matchesSearch && matchesStatus && matchesGroup && matchesSpecialty)) {
                     $row.hide();
                 } else {
                     visibleCount++;
@@ -413,6 +515,149 @@
                 $('#listItems').show();
             }
         }
+
+        // Export to Excel functionality
+        $('#exportExcel').on('click', function() {
+            // Create array for Excel data with headers as the first row
+            var data = [];
+            // Add headers as the first row
+            data.push(['Nom & Prénom', 'N° NIN', 'N° Téléphone', 'Email', 'Spécialité', 'Groupe']);
+            
+            // Add visible rows data
+            $('#listItems tr:visible').each(function() {
+                var rowData = [];
+                var $currentRow = $(this);
+                
+                // First column: Name and Surname (without the link)
+                var nameCell = $currentRow.find('td:eq(0)').clone();
+                nameCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var nameValue = nameCell.text().trim();
+                rowData.push(nameValue);
+                
+                // Second column: NIN
+                var ninValue = $currentRow.find('td:eq(1)').text().trim();
+                rowData.push(ninValue);
+                
+                // Third column: Phone number
+                var phoneValue = $currentRow.find('td:eq(2)').text().trim();
+                rowData.push(phoneValue);
+                
+                // Fourth column: Email
+                var emailValue = $currentRow.find('td:eq(3)').text().trim();
+                rowData.push(emailValue);
+                
+                // Fifth column: Specialty (without the link)
+                var specialtyCell = $currentRow.find('td:eq(4)').clone();
+                specialtyCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var specialtyValue = specialtyCell.text().trim();
+                rowData.push(specialtyValue);
+                
+                // Sixth column: Group (without the link)
+                var groupCell = $currentRow.find('td:eq(5)').clone();
+                groupCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var groupValue = groupCell.text().trim();
+                rowData.push(groupValue);
+                
+                data.push(rowData);
+            });
+            
+            // Create a worksheet from the data array
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Create a workbook and add the worksheet
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Liste des étudiants");
+            
+            // Export the workbook
+            XLSX.writeFile(wb, "liste_des_etudiants.xlsx");
+        });
+
+        // Export to PDF functionality
+        $('#exportPDF').on('click', function() {
+            // Get the currently visible rows and build data for PDF
+            var docDefinition = {
+                pageOrientation: 'landscape',
+                content: [
+                    { text: 'Liste des étudiants', style: 'header', alignment: 'center' },
+                    '\n', // Add a blank line for spacing
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', '*', '*', '*', '*', '*'],
+                            body: [
+                                ['Nom & Prénom', 'N° NIN', 'N° Téléphone', 'Email', 'Spécialité', 'Groupe'] // Header row is first
+                            ]
+                        },
+                        layout: 'lightHorizontalLines'
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        margin: [0, 0, 0, 10]
+                    },
+                    tableHeader: {
+                        bold: true,
+                        fontSize: 12,
+                        color: 'black'
+                    }
+                }
+            };
+            
+            // Add visible rows to the PDF
+            $('#listItems tr:visible').each(function() {
+                var rowData = [];
+                var $currentRow = $(this);
+                
+                // First column: Name and Surname (without the link)
+                var nameCell = $currentRow.find('td:eq(0)').clone();
+                nameCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var nameValue = nameCell.text().trim();
+                rowData.push(nameValue);
+                
+                // Second column: NIN
+                var ninValue = $currentRow.find('td:eq(1)').text().trim();
+                rowData.push(ninValue);
+                
+                // Third column: Phone number
+                var phoneValue = $currentRow.find('td:eq(2)').text().trim();
+                rowData.push(phoneValue);
+                
+                // Fourth column: Email
+                var emailValue = $currentRow.find('td:eq(3)').text().trim();
+                rowData.push(emailValue);
+                
+                // Fifth column: Specialty (without the link)
+                var specialtyCell = $currentRow.find('td:eq(4)').clone();
+                specialtyCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var specialtyValue = specialtyCell.text().trim();
+                rowData.push(specialtyValue);
+                
+                // Sixth column: Group (without the link)
+                var groupCell = $currentRow.find('td:eq(5)').clone();
+                groupCell.find('a').each(function() {
+                    $(this).replaceWith($(this).text());
+                });
+                var groupValue = groupCell.text().trim();
+                rowData.push(groupValue);
+                
+                docDefinition.content[2].table.body.push(rowData);
+            });
+            
+            // Create and download the PDF
+            pdfMake.createPdf(docDefinition).download('liste_des_etudiants.pdf');
+        });
 
     });
 </script>

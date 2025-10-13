@@ -8,7 +8,7 @@ class Groupe(models.Model):
     createdy = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groupe_createdy', null=True, blank=True)
 
     nom = models.CharField(max_length=100, null=True, blank=True)
-   
+    code_partenaire = models.CharField(max_length=100 ,null=True, blank=True)
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
     promotion = models.ForeignKey(Promos, on_delete=models.DO_NOTHING, null=True)
 

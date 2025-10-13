@@ -75,6 +75,23 @@ def UpdateGroupe(request, pk):
     return render(request,"tenant_folder/formations/groupe/update_groupe.html", context)
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateGroupeCode(request):
+    if request.method == "POST":
+        groupeId  = request.POST.get('groupeId')
+        code_partenaire = request.POST.get('code_partenaire')
+
+        groupe = Groupe.objects.get(id = groupeId)
+        groupe.code_partenaire = code_partenaire
+
+        groupe.save()
+
+        return JsonResponse({"status" : "success","message" : "Le code du groupe à été changer avec succès"})
+
+    else:
+        return JsonResponse({"status" : "erreur"})
+
+@login_required(login_url="institut_app:login")
 def makeGroupeBrouillon(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "brouillon"
