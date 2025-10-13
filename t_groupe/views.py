@@ -6,6 +6,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 
+@login_required(login_url="insitut_app:login")
 @transaction.atomic
 def NewGroupe(request):
     form = NewGroupeForms()
@@ -25,6 +26,7 @@ def NewGroupe(request):
 
     return render(request,'tenant_folder/formations/groupe/nouveau_groupe.html', context)
 
+@login_required(login_url="insitut_app:login")
 def ListeGroupe(request):
     groupes = Groupe.objects.all()
     context = {
@@ -33,6 +35,7 @@ def ListeGroupe(request):
     }
     return render(request,'tenant_folder/formations/groupe/liste_des_groupes.html', context)
 
+@login_required(login_url="insitut_app:login")
 def ApiGetGroupeList(request):
     liste = Groupe.objects.all().values('id','nom')
     return JsonResponse(list(liste), safe=False)
@@ -49,6 +52,7 @@ def detailsGroupe(request, pk):
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 
+@login_required(login_url="insitut_app:login")
 @transaction.atomic
 def UpdateGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)

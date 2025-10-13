@@ -17,6 +17,7 @@ def StudentDetails(request, pk):
     groupe = GroupeLine.objects.get(student = student)
     paiements = Paiements.objects.filter(prospect = student)
     documents = DocumentsDemandeInscription.objects.filter(prospect = student)
+    
 
     context = {
         'pk' : pk,

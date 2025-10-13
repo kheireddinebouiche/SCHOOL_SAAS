@@ -7,4 +7,5 @@ app_name="t_etudiants"
 urlpatterns = [
 
    path('liste-des-etudiants/', ListeStudents, name="ListeStudents"),
+   path('ApiListeDesEtudiants', ApiListeDesEtudiants, name="ApiListeDesEtudiants"),
 ]

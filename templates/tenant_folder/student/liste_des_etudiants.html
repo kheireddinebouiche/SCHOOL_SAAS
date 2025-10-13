@@ -227,16 +227,25 @@
                                         <tr>
                                             <th class="border-0 rounded-start">Nom & Prénom</th>
                                             <th class="border-0">N° NIN</th>
-                                            <th class="border-0">Date de naissance</th>
                                             <th class="border-0">N° Téléphone</th>
                                             <th class="border-0">Email</th>
-                                            <th class="border-0 rounded-end text-center">Action</th>
+                                            <th class="border-0">Specialite</th>
+                                            <th class="border-0">Groupe</th>
                                         </tr>
                                     </thead>
                                     <tbody id="listItems">
 
                                     </tbody>
                                 </table>
+                                <div id="noResultsMessage" class="d-none text-center py-5">
+                                    <div class="avatar-sm mx-auto mb-4 d-flex align-items-center justify-content-center mx-auto">
+                                        <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                            <i class="ri-search-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="mb-2">Aucun étudiant correspondant à la recherche</h5>
+                                    <p class="text-muted mb-0">Essayez de modifier vos critères de recherche</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -252,12 +261,157 @@
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
 <script>
     $(document).ready(function(){
        
         function loadItems(){
             //affichage de la liste des etudiants
+            $.ajax({
+                url : "{% url 't_etudiants:ApiListeDesEtudiants' %}",
+                dataType: "JSON",
+                type: "GET",
+                success : function(data){
+                    var row = "";
+                    if (data.length > 0){
+                        $.each(data, function(index, p){
+                            row += "<tr>";
+                            row += "<td><a href='/scolarite/groupes/profile-etudiant/"+p.id+"'>"+p.nom+' '+p.prenom+"</a></td>";
+                            row += "<td>"+(p.nin || 'Non renseigner')+"</td>";
+                            row += "<td>"+(p.indic ||'')+''+p.telephone+"</td>";
+                            row += "<td>"+p.email+"</td>";
+                            row += "<td>"+p.groupe_line_student__groupe__specialite__label+"<a href='#' title='Afficher les détails de la spécialité'><span class='mdi mdi-link-variant'></span></a></td>";
+                            row += "<td>"+p.groupe_line_student__groupe__nom+"<a href='/scolarite/groupes/details-groupe/"+p.groupe_line_student__groupe__id+"' title='Afficher les détails du groupe'><span class='mdi mdi-link-variant'></span></a></td>";
+                            row += "</tr>";
+                        });
+                        // Show the table and hide the no results message when there are students
+                        $('#listItems').html(row);
+                        $('#noResultsMessage').hide();
+                        $('#listItems').show();
+                    }else{
+                        $('#listItems').html('');
+                        // Show the no results message for no data
+                        $('#noResultsMessage').removeClass('d-none').html(`
+                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                                <div class="avatar-sm mb-4">
+                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                        <i class="ri-user-unfollow-line"></i>
+                                    </div>
+                                </div>
+                                <h5 class="mb-2">Aucun étudiant trouvé</h5>
+                                <p class="text-muted mb-0">Il n'y a aucun étudiant enregistré pour le moment</p>
+                            </div>
+                        `);
+                        $('#noResultsMessage').show();
+                        $('#listItems').hide(); // Hide the table when showing the message
+                    }
+                    
+                    // Update statistics
+                    updateStatistics();
+                }
+                    
+                
+            });
+        }
+
+        function updateStatistics() {
+            // For now, this function can be a placeholder
+            // In a more complete implementation, you would fetch statistics from your API
+            // For example, you could count active, pending, grouped students from the data
+            // For now, we'll just use placeholders or update from the table data
+            var totalStudents = $('#listItems tr').length;
+            $('#totalStudents').text(totalStudents);
+        }
+        
+        // Load items when the page is ready
+        loadItems();
+
+        // Search functionality
+        $('#table-filter').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            filterTable(searchTerm, $('#statusFilter').val());
+        });
+
+        // Status filter functionality
+        $('#statusFilter').on('change', function() {
+            var searchTerm = $('#table-filter').val().toLowerCase();
+            filterTable(searchTerm, $(this).val());
+        });
+
+        // Apply filters button
+        $('#applyFilters').on('click', function() {
+            var searchTerm = $('#table-filter').val().toLowerCase();
+            var statusFilter = $('#statusFilter').val();
+            filterTable(searchTerm, statusFilter);
+        });
+
+        // Clear filters button
+        $('#clearFilters').on('click', function() {
+            $('#table-filter').val('');
+            $('#statusFilter').val('');
+            loadItems(); // Reload all items
+        });
+
+        // Refresh button functionality
+        $('#refreshStudents').on('click', function() {
+            $('#table-filter').val('');
+            $('#statusFilter').val('');
+            loadItems(); // Reload all items
+        });
+
+        // Filter table function
+        function filterTable(searchTerm, statusFilter) {
+            // Get all table rows
+            var $allRows = $('#listItems tr');
+            var visibleCount = 0;
+            
+            // Show all student rows first to reset any previous filtering
+            $allRows.show();
+            
+            $allRows.each(function() {
+                var $row = $(this);
+                var text = $row.text().toLowerCase();
+                
+                // Check if row matches search term
+                var matchesSearch = !searchTerm || text.indexOf(searchTerm) !== -1;
+                
+                // Determine student status for filtering based on available data in the row
+                var groupCell = $row.find('td:eq(5)').text(); // Group column is the 6th column (index 5)
+                var studentStatus = groupCell && groupCell.trim() !== '' && groupCell !== 'null' ? 'grouped' : 'pending';
+                
+                // For this implementation, we'll default to 'grouped' for all students
+                var matchesStatus = !statusFilter || studentStatus === statusFilter;
+                
+                // Show/hide row based on filters
+                if (!(matchesSearch && matchesStatus)) {
+                    $row.hide();
+                } else {
+                    visibleCount++;
+                }
+            });
+            
+            // Handle the no results message div
+            if (visibleCount === 0 && $allRows.length > 0) {
+                // When there are students but none match the filter, show "no matching results"
+                $('#noResultsMessage').removeClass('d-none').html(`
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="avatar-sm mb-4">
+                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-search-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-2">Aucun étudiant correspondant à la recherche</h5>
+                        <p class="text-muted mb-0">Essayez de modifier vos critères de recherche</p>
+                    </div>
+                `);
+                $('#noResultsMessage').show();
+                $('#listItems').hide(); // Hide the table when showing the message
+            } else {
+                // When there are matching students, hide the no results message and show the table
+                $('#noResultsMessage').hide();
+                $('#listItems').show();
+            }
         }
 
     });
