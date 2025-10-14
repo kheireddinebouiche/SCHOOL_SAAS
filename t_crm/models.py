@@ -235,6 +235,7 @@ class Prospets(models.Model):
     convertit_date = models.DateField(null=True, blank=True)
 
     is_affected = models.BooleanField(default=False)
+    annee_inscription = models.CharField(max_length=100, null=True, blank=True, choices=[('1','1 Année'),('2','2 Année'),('stage','Stage')])
 
     matricule = models.CharField(max_length=100, null=True, blank=True)
     matricule_interne = models.CharField(max_length=100, null=True, blank=True)
