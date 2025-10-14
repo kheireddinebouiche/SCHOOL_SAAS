@@ -13,11 +13,13 @@ from django.db.models import Count
 
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
+    
     student = Prospets.objects.get(id = pk)
     groupe = GroupeLine.objects.get(student = student)
     paiements = Paiements.objects.filter(prospect = student)
     documents = DocumentsDemandeInscription.objects.filter(prospect = student)
-    
+    notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
+    rappels = RendezVous.object.filter(prospect = student, context="etudiant" )
 
     context = {
         'pk' : pk,
@@ -25,5 +27,7 @@ def StudentDetails(request, pk):
         'groupe' : groupe,
         'paiements' : paiements,
         'documents' : documents,
+        'notes' : notes,
+        'rappels' : rappels,
     }
     return render(request, 'tenant_folder/student/profile_etudiant.html',context)

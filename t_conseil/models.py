@@ -1,7 +1,8 @@
 from django.db import models
 from institut_app.models import ConfigurationDesDocument
-
+from t_crm.models import Prospets
 class Client(models.Model):
+    
     nom = models.CharField(max_length=255, null=True, blank=True, help_text="Nom du client")
     email = models.EmailField(max_length=255, null=True, blank=True, help_text="Email du client")
     telephone = models.CharField(max_length=20, null=True, blank=True, help_text="Téléphone du client")
@@ -38,7 +39,7 @@ class Thematiques(models.Model):
         return self.label if self.label else "Thématique sans label"
     
 class Devis(models.Model):
-    client = models.CharField(max_length=255, null=True, blank=True, help_text="Nom du client")
+    client = models.ForeignKey(Prospets,on_delete=models.CASCADE, null=True, blank=True, help_text="Nom du client", related_name="client_devis")
     num_devis = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="Numéro du devis")
     montant = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Montant du devis")
     date_emission = models.DateField(null=True, blank=True, help_text="Date d'émission du devis")

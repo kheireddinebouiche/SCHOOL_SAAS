@@ -117,11 +117,16 @@ def closeGroupe(request, pk):
     messages.success(request, "Le groupe a été cloturé avec suucès")
     return redirect('t_groupe:detailsgroupe', pk)
 
+@login_required(login_url="institut_app:login")
 def deleteGroupe(request, pk):
-    groupe = Groupe.objects.get(pk=pk)
-    groupe.delete()
-    messages.success(request, "Groupe supprimé avec succès")
-    return redirect('t_groupe:listegroupes')
+    groupe = Groupe.objects.get(id=pk)
+    if groupe.etat == "brouillon":
+        groupe.delete()
+        messages.success(request, "Groupe supprimé avec succès")
+        return redirect('t_groupe:listegroupes')
+    else:
+        messages.error(request, "Le groupe ne peux pas etre supprimer")
+        return redirect('t_groupe:listegroupes')
 
 def PrintSuivieCours(request):
     pass
