@@ -83,6 +83,14 @@ def configure_devis(request, pk):
 
         return render(request, 'tenant_folder/conseil/configure-devis.html', context)
 
+@login_required(login_url="institut_app:login")
+def ListeDesDevis(request):
+    devis = Devis.objects.all()
+    context = {
+        "devis" : devis,
+    }
+    return render(request,'tenant_folder/conseil/liste_des_devis.html', context)
+
 @login_required(login_url='institut_app:login')
 def ArchiveThematique(request):
     context = {

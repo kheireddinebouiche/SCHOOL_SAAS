@@ -10,7 +10,9 @@ def ApiListeProspect(request):
     liste = Prospets.objects.filter(type_prospect = "entreprise").values('id','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email')
     return JsonResponse(list(liste), safe=False)
 
-
+@login_required(login_url="institut_app:login")
+def ApiCreateProspect(request):
+    pass
     
     
     

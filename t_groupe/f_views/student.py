@@ -19,7 +19,7 @@ def StudentDetails(request, pk):
     paiements = Paiements.objects.filter(prospect = student)
     documents = DocumentsDemandeInscription.objects.filter(prospect = student)
     notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
-    rappels = RendezVous.object.filter(prospect = student, context="etudiant" )
+    rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
 
     context = {
         'pk' : pk,

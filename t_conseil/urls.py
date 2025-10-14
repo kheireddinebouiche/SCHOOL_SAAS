@@ -9,8 +9,8 @@ urlpatterns = [
   path('liste-des-thematiques/',ListeThematique, name="ListeThematique"),
 
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
-
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),
+  path('liste-des-devis/', ListeDesDevis, name="ListeDesDevis"),
 
   path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
 
@@ -33,5 +33,6 @@ urlpatterns = [
 
   path('ApiListeProspect',ApiListeProspect, name="ApiListeProspect"),
   
+  path('ApiCreateProspect', ApiCreateProspect, name="ApiCreateProspect"),
    
 ]

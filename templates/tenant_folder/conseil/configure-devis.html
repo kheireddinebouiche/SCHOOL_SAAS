@@ -1,0 +1,502 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Conseil - Configurer devis {% endblock title %}
+
+{% block extra_css %}
+<style>
+    .form-control, .form-select {
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3b7ddd;
+        box-shadow: 0 0 0 0.2rem rgba(59, 125, 221, 0.25);
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: 0.5rem;
+    }
+    
+    .card-header {
+        background-color: #fff;
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+    
+    .btn-primary {
+        background-color: #3b7ddd;
+        border-color: #3b7ddd;
+    }
+    
+    .btn-primary:hover {
+        background-color: #326bc9;
+        border-color: #326bc9;
+    }
+    
+    .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+    }
+    
+    .btn-success:hover {
+        background-color: #157347;
+        border-color: #157347;
+    }
+    
+    .form-text {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .bg-opacity-10 {
+        background-color: rgba(59, 125, 221, 0.1) !important;
+    }
+    
+    .rounded-lg {
+        border-radius: 0.5rem !important;
+    }
+    
+    .shadow-sm {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: 600;
+    }
+    
+    .item-row {
+        transition: all 0.2s ease;
+    }
+    
+    .item-row:hover {
+        background-color: rgba(59, 125, 221, 0.03);
+    }
+    
+    .summary-card {
+        border-left: 4px solid #3b7ddd;
+    }
+    
+    .remove-item {
+        cursor: pointer;
+        color: #dc3545;
+    }
+    
+    .remove-item:hover {
+        color: #bb2d3b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content bg-light">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="ri-settings-2-line text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-0 text-primary fw-semibold">Configurer le devis</h4>
+                                        <p class="text-muted mb-0 small">Ajouter les détails du devis pour le client</p>
+                                    </div>
+                                </div>
+                                <div class="page-title-right">
+                                    <nav aria-label="breadcrumb">
+                                        <ol class="breadcrumb m-0 bg-transparent">
+                                            <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-decoration-none">Conseil</a></li>
+                                            <li class="breadcrumb-item"><a href="{% url 't_conseil:AddNewDevis' %}" class="text-decoration-none">Nouveau devis</a></li>
+                                            <li class="breadcrumb-item active" aria-current="page">Configurer</li>
+                                        </ol>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    
+                    <!-- Summary Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card shadow border-0 summary-card">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="card-title fw-semibold text-primary mb-1">Résumé du devis</h5>
+                                            <p class="text-muted mb-0">Client: <strong>{{ devis.client.nom }} {{ devis.client.prenom }}</strong> | Date: <strong>{{ devis.date_emission|date:"d M Y" }}</strong></p>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-light" id="previewBtn">
+                                                <i class="ri-eye-line me-1"></i> Aperçu
+                                            </button>
+                                            <button type="button" class="btn btn-primary" id="saveBtn">
+                                                <i class="ri-save-line me-1"></i> Enregistrer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card shadow border-0 rounded-3">
+                                <div class="card-header bg-primary bg-opacity-10 border-0 px-4 py-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                                                <i class="ri-file-list-line text-primary fs-4"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="card-title fw-semibold text-primary mb-1">Détails des articles</h5>
+                                                <p class="text-muted small mb-0">Ajouter et configurer les articles du devis</p>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-success" id="addItemBtn">
+                                            <i class="ri-add-line me-1"></i> Ajouter Article
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body p-4">
+                                    <div class="table-responsive">
+                                        <table class="table mb-0" id="itemsTable">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th width="5%">#</th>
+                                                    <th width="35%">Désignation</th>
+                                                    <th width="15%">Quantité</th>
+                                                    <th width="15%">Prix unitaire (DZA)</th>
+                                                    <th width="15%">Total (DZA)</th>
+                                                    <th width="15%" class="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="itemsContainer">
+                                                <!-- Items will be added dynamically -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3 d-none" id="noItemsAlert">
+                                        <i class="ri-information-line me-2"></i> Aucun article ajouté. Cliquez sur "Ajouter Article" pour commencer.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <div class="card shadow border-0 rounded-3">
+                                <div class="card-header bg-success bg-opacity-10 border-0 px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                                            <i class="ri-calculator-line text-success fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="card-title fw-semibold text-success mb-1">Récapitulatif</h5>
+                                            <p class="text-muted small mb-0">Total et taxes du devis</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body p-4">
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">Sous-total:</span>
+                                            <strong id="subTotal">0,00 DZA</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">TVA (19%):</span>
+                                            <strong id="taxAmount">0,00 DZA</strong>
+                                        </div>
+                                        <hr class="my-2">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">Total:</span>
+                                            <strong id="totalAmount" class="text-primary">0,00 DZA</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Remarques:</label>
+                                        <textarea class="form-control" rows="4" id="notes" placeholder="Notes additionnelles pour ce devis..."></textarea>
+                                        <div class="form-text">Ces notes seront visibles sur le devis final</div>
+                                    </div>
+                                    
+                                    <div class="d-flex flex-column gap-2">
+                                        <button type="button" class="btn btn-primary" id="calculateBtn">
+                                            <i class="ri-refresh-line me-1"></i> Recalculer
+                                        </button>
+                                        <button type="button" class="btn btn-light" id="printBtn">
+                                            <i class="ri-printer-line me-1"></i> Imprimer le devis
+                                        </button>
+                                        <button type="button" class="btn btn-success" id="sendBtn">
+                                            <i class="ri-send-plane-line me-1"></i> Envoyer au client
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+        </div>
+        <!-- end main content-->
+
+        <!-- Modal for adding/editing items -->
+        <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-lg border-0">
+                    <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                                <i class="ri-file-add-line text-primary fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-semibold text-primary mb-1" id="itemModalLabel">Ajouter un article</h5>
+                                <p class="text-muted small mb-0">Remplissez les détails de l'article</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="itemDescription" class="form-label">Désignation</label>
+                            <input type="text" class="form-control" id="itemDescription" placeholder="Description de l'article ou service">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="itemQuantity" class="form-label">Quantité</label>
+                                    <input type="number" class="form-control" id="itemQuantity" min="1" value="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="itemPrice" class="form-label">Prix unitaire (DZA)</label>
+                                    <input type="number" class="form-control" id="itemPrice" min="0" step="0.01" value="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light px-4 py-3">
+                        <div class="hstack gap-2 justify-content-end w-100">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" id="saveItemBtn">Ajouter à la liste</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                let items = [];
+                let currentEditIndex = null;
+                
+                // Initialize
+                updateTotals();
+                
+                // Add item button
+                document.getElementById('addItemBtn').addEventListener('click', function() {
+                    currentEditIndex = null;
+                    document.getElementById('itemDescription').value = '';
+                    document.getElementById('itemQuantity').value = '1';
+                    document.getElementById('itemPrice').value = '0.00';
+                    document.getElementById('itemModalLabel').textContent = 'Ajouter un article';
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('itemModal')).show();
+                });
+                
+                // Save item
+                document.getElementById('saveItemBtn').addEventListener('click', function() {
+                    const description = document.getElementById('itemDescription').value.trim();
+                    const quantity = parseFloat(document.getElementById('itemQuantity').value);
+                    const price = parseFloat(document.getElementById('itemPrice').value);
+                    
+                    if (!description || isNaN(quantity) || isNaN(price) || quantity <= 0 || price < 0) {
+                        alert('Veuillez remplir correctement tous les champs.');
+                        return;
+                    }
+                    
+                    const item = {
+                        id: Date.now(), // temporary id
+                        description: description,
+                        quantity: quantity,
+                        unitPrice: price,
+                        total: quantity * price
+                    };
+                    
+                    if (currentEditIndex !== null) {
+                        items[currentEditIndex] = item;
+                        currentEditIndex = null;
+                    } else {
+                        items.push(item);
+                    }
+                    
+                    renderItems();
+                    updateTotals();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('itemModal')).hide();
+                });
+                
+                // Calculate totals
+                function updateTotals() {
+                    const subTotal = items.reduce((sum, item) => sum + item.total, 0);
+                    const taxAmount = subTotal * 0.19; // 19% VAT
+                    const total = subTotal + taxAmount;
+                    
+                    document.getElementById('subTotal').textContent = subTotal.toFixed(2) + ' DZA';
+                    document.getElementById('taxAmount').textContent = taxAmount.toFixed(2) + ' DZA';
+                    document.getElementById('totalAmount').textContent = total.toFixed(2) + ' DZA';
+                }
+                
+                // Render items in table
+                function renderItems() {
+                    const container = document.getElementById('itemsContainer');
+                    const noItemsAlert = document.getElementById('noItemsAlert');
+                    
+                    if (items.length === 0) {
+                        container.innerHTML = '';
+                        noItemsAlert.classList.remove('d-none');
+                        return;
+                    }
+                    
+                    noItemsAlert.classList.add('d-none');
+                    
+                    container.innerHTML = items.map((item, index) => `
+                        <tr class="item-row" data-item-id="${item.id}">
+                            <td>${index + 1}</td>
+                            <td>${item.description}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.unitPrice.toFixed(2)} DZA</td>
+                            <td>${item.total.toFixed(2)} DZA</td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm btn-outline-primary edit-item" data-index="${index}" title="Modifier">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger remove-item" data-index="${index}" title="Supprimer">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    
+                    // Add event listeners to edit buttons
+                    document.querySelectorAll('.edit-item').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const index = parseInt(this.getAttribute('data-index'));
+                            const item = items[index];
+                            
+                            document.getElementById('itemDescription').value = item.description;
+                            document.getElementById('itemQuantity').value = item.quantity;
+                            document.getElementById('itemPrice').value = item.unitPrice;
+                            
+                            currentEditIndex = index;
+                            document.getElementById('itemModalLabel').textContent = 'Modifier l\'article';
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('itemModal')).show();
+                        });
+                    });
+                    
+                    // Add event listeners to remove buttons
+                    document.querySelectorAll('.remove-item').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const index = parseInt(this.getAttribute('data-index'));
+                            if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                                items.splice(index, 1);
+                                renderItems();
+                                updateTotals();
+                            }
+                        });
+                    });
+                }
+                
+                // Add sample items for demo purposes
+                function addSampleItems() {
+                    items = [
+                        {
+                            id: 1,
+                            description: "Formation en développement web",
+                            quantity: 1,
+                            unitPrice: 150000,
+                            total: 150000
+                        },
+                        {
+                            id: 2,
+                            description: "Support technique 3 mois",
+                            quantity: 3,
+                            unitPrice: 25000,
+                            total: 75000
+                        }
+                    ];
+                    renderItems();
+                    updateTotals();
+                }
+                
+                // Initialize with sample data (in a real app, you'd load from the database)
+                addSampleItems();
+                
+                // Calculate button
+                document.getElementById('calculateBtn').addEventListener('click', function() {
+                    updateTotals();
+                    alert('Calculs mis à jour avec succès !');
+                });
+                
+                // Save button
+                document.getElementById('saveBtn').addEventListener('click', function() {
+                    if (items.length === 0) {
+                        alert('Veuillez ajouter au moins un article au devis.');
+                        return;
+                    }
+                    
+                    // In a real app, you would send this data to the server
+                    alert('Le devis a été enregistré avec succès !');
+                });
+                
+                // Print button
+                document.getElementById('printBtn').addEventListener('click', function() {
+                    alert('Fonction d\'impression du devis.');
+                });
+                
+                // Send button
+                document.getElementById('sendBtn').addEventListener('click', function() {
+                    if (items.length === 0) {
+                        alert('Veuillez ajouter au moins un article au devis.');
+                        return;
+                    }
+                    
+                    alert('Devis envoyé au client avec succès !');
+                });
+                
+                // Preview button
+                document.getElementById('previewBtn').addEventListener('click', function() {
+                    if (items.length === 0) {
+                        alert('Veuillez ajouter au moins un article au devis pour prévisualiser.');
+                        return;
+                    }
+                    
+                    alert('Aperçu du devis affiché.');
+                });
+            });
+        </script>
+{% endblock content %}
