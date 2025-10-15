@@ -22,7 +22,7 @@ def StudentDetails(request, pk):
     rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
     echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
 
-    remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = False)
+    remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)
 
     montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
     montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0

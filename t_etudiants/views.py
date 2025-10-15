@@ -18,6 +18,20 @@ def ApiListeDesEtudiants(request):
 def StudentDetails(request):
     pass
 
+
+@login_required(login_url="institut_app:login")
+def ApiSaveStudentDatas(request):
+    if request.method == "POST":
+        nom_pere = request.POST.get('nom_pere')
+        indicatif_pere = request.POST.get('indicatif_pere')
+        tel_pere = request.POST.get('tel_pere')
+        nom_mere = request.POST.get('nom_mere')
+        prenom_mere = request.POST.get('prenom_mere')
+
+        pass
+    else:
+        return JsonResponse({"status" : "error", 'message' : "Methode non autoriser"})
+
 @login_required(login_url='institut_app:login')
 def StudentTransfert(request):
     pass

@@ -8,4 +8,5 @@ urlpatterns = [
 
    path('liste-des-etudiants/', ListeStudents, name="ListeStudents"),
    path('ApiListeDesEtudiants', ApiListeDesEtudiants, name="ApiListeDesEtudiants"),
+   path('ApiSaveStudentDatas', ApiSaveStudentDatas, name="ApiSaveStudentDatas"),
 ]
