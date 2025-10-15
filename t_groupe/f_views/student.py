@@ -21,7 +21,7 @@ def StudentDetails(request, pk):
     notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
     rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
     echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
-
+    
     montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
     montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
     total_a_paye = FicheDeVoeux.objects.filter(prospect = student, is_confirmed=True).first()
