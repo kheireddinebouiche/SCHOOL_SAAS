@@ -27,8 +27,8 @@ def ApiSaveStudentDatas(request):
         tel_pere = request.POST.get('tel_pere')
         nom_mere = request.POST.get('nom_mere')
         prenom_mere = request.POST.get('prenom_mere')
-
-        pass
+        
+        return JsonResponse({'status' : "success"})
     else:
         return JsonResponse({"status" : "error", 'message' : "Methode non autoriser"})
 
