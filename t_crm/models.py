@@ -292,6 +292,8 @@ class NotesProcpects(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    observation = models.TextField(max_length=1000, null=True, blank=True)
+
     context= models.CharField(max_length=100, null=True, blank=True)
     is_done = models.BooleanField(default=False)
 

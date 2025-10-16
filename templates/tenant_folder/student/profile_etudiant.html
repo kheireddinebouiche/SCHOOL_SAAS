@@ -807,31 +807,53 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>18/10/2024</td>
-                                                <td>Réunion de suivi</td>
-                                                <td>Réunion avec le conseiller académique pour bilan du semestre</td>
-                                                <td><span class="badge bg-warning">Rendez-vous</span></td>
-                                                <td><span class="badge bg-primary">Programmé</span></td>
-                                                <td class="text-end">
-                                                    <div class="dropdown d-inline-block">
-                                                        <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                            <i class="ri-more-fill align-middle"></i>
-                                                        </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
-                                                            <li><a href="#" class="dropdown-item edit-rappel">
-                                                                <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
-                                                            </a></li>
-                                                            <li><a class="dropdown-item remove-item-btn" href="#">
-                                                                <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                            </a></li>
-                                                            <li><a class="dropdown-item" href="#">
-                                                                <i class="ri-check-line align-bottom me-2 text-muted"></i> Marquer comme fait
-                                                            </a></li>
-                                                        </ul>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            {% if rappels %}
+                                                {% for item in rappels %}
+                                                    <tr>
+                                                        <td><i class="ri-calendar-schedule-line me-2"></i>{{item.date_rendez_vous}} - {{item.heure_rendez_vous}}</td>
+                                                        <td>{{item.object}}</td>
+                                                        <td>{{item.description}}</td>
+                                                        <td><span class="badge bg-warning">{{item.get_type_display}}</span></td>
+                                                        <td><span class="badge bg-primary">{{item.get_statut_display}}</span></td>
+                                                        <td class="text-end">
+                                                            <div class="dropdown d-inline-block">
+                                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                                    <i class="ri-more-fill align-middle"></i>
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    <li><a href="#" class="dropdown-item edit-rappel" 
+                                                                        data-rappel-id="{{item.id}}" 
+                                                                        data-rappel-type="{{item.type}}" 
+                                                                        data-rappel-date="{{item.date_rendez_vous|date:'Y-m-d'}}" 
+                                                                        data-rappel-title="{{item.object}}" 
+                                                                        data-rappel-description="{{item.description}}" 
+                                                                        data-rappel-time="{{item.heure_rendez_vous}}" 
+                                                                        data-rappel-status="{{item.statut}}">
+                                                                        <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
+                                                                    </a></li>
+                                                                    <li><a class="dropdown-item" href="#">
+                                                                        <i class="ri-check-line align-bottom me-2 text-muted"></i> Marquer comme fait
+                                                                    </a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                    <tr>
+                                                        <td colspan="6">
+                                                             <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                                                                <div class="avatar-sm mb-4">
+                                                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                                                        <i class="ri-calendar-schedule-line"></i>
+                                                                    </div>
+                                                                </div>
+                                                                <h5 class="mb-2">Aucun rappel trouvé</h5>
+                                                                <p class="text-muted mb-0">Il n'y a aucun rappel enregistré pour le moment</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                            {% endif %}
                                         </tbody>
                                     </table>
                                 </div>
@@ -867,8 +889,8 @@
                                             <tr>
                                                 <th class="border-0 rounded-start">Date</th>
                                                 <th class="border-0">Contenu</th>
-                                                <th class="border-0">Priorité</th>
-                                                <th class="border-0">Catégorie</th>
+                                                <th class="border-0">Tag</th>
+                                                <th class="border-0">Etat</th>
                                                 <th class="border-0 rounded-end">Actions</th>
                                             </tr>
                                         </thead>
@@ -876,24 +898,40 @@
                                             {% if notes %}
                                                 {% for note in notes %}
                                                     <tr>
-                                                        <td>10/10/2024</td>
-                                                        <td>Discipline - Participation active en cours de programmation</td>
-                                                        <td><span class="badge bg-success">Élevé</span></td>
-                                                        <td><span class="badge bg-secondary">Académique</span></td>
+                                                        <td>{{note.created_at}}</td>
+                                                        <td>{{note.note}}</td>
+                                                        <td><span class="badge bg-success" data-value="{{note.tage}}">{{note.get_tage_display}}</span></td>
+                                                        <td>
+                                                            {% if note.is_done %}
+                                                                <span class="badge bg-success"><i class="ri-file-check-line me-2"></i>Terminer</span>
+                                                            {% else %}
+                                                                <span class="badge bg-danger"><i class="ri-timer-line me-2"></i>En cours</span>
+                                                            {% endif %}
+                                                        </td>
                                                         <td class="text-end">
                                                             <div class="dropdown d-inline-block">
                                                                 <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                                     <i class="ri-more-fill align-middle"></i>
                                                                 </button>
                                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a href="#" class="dropdown-item edit-note">
-                                                                        <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
-                                                                    </a></li>
-                                                                    <li><a class="dropdown-item remove-item-btn" href="#">
-                                                                        <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
-                                                                    </a></li>
+                                                                    {% if not note.is_done %}
+                                                                        <li><a href="#" class="dropdown-item edit-note" data-note-id="{{note.id}}" data-note="{{note.note}}" data-tage="{{note.tage}}">
+                                                                            <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
+                                                                        </a></li>
+                                                                        <li><a href="#" class="dropdown-item accomplir-note" data-note-id="{{note.id}}" data-note="{{note.note}}" data-tage="{{note.tage}}">
+                                                                        <i class="ri-check-line align-bottom me-2 text-muted"></i> Accomplir
+                                                                        </a></li>
+                                                                    {% endif %}
+                                                                    {% if note.is_done %}
+                                                                        <li><a href="#" class="dropdown-item show-note-details" data-note-id="{{note.id}}" data-note="{{note.note}}" data-tage="{{note.tage}}" data-created-at="{{note.created_at}}" data-is-done="{{note.is_done}}" data-observation="{{note.observation|default:'Aucune observation'}}">
+                                                                            <i class="ri-eye-line align-bottom me-2 text-muted"></i> Détails
+                                                                        </a></li>
+                                                                    {% endif %}
+                                                                   
                                                                 </ul>
                                                             </div>
+                                                            <!-- Hidden input to store note ID for JavaScript access -->
+                                                            <input type="hidden" name="noteId" value="{{note.id}}">
                                                         </td>
                                                     </tr>
                                                 {% endfor %}
@@ -1464,7 +1502,7 @@
 </div>
 <!-- Modal for creating a note -->
 <div class="modal fade" id="createNoteModal" tabindex="-1" aria-labelledby="createNoteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xs">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
                 <div class="d-flex align-items-center">
@@ -1481,43 +1519,25 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <form id="createNoteForm">
+                
                     <div class="mb-4">
                         <label for="noteContent" class="form-label fw-semibold">Contenu de la note</label>
                         <textarea class="form-control" id="noteContent" name="noteContent" rows="5" placeholder="Écrivez votre note ou observation ici..."></textarea>
                     </div>
                     
                     <div class="row">
-                        <div class="col-lg-6">
+                        <div class="col-lg-12">
                             <div class="mb-4">
-                                <label for="noteDate" class="form-label fw-semibold">Date</label>
-                                <input type="date" class="form-control" id="noteDate" name="noteDate" value="{{ current_date|date:'Y-m-d' }}">
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="mb-4">
-                                <label for="notePriority" class="form-label fw-semibold">Priorité</label>
-                                <select class="form-select" id="notePriority" name="notePriority">
-                                    <option value="low">Faible</option>
-                                    <option value="medium" selected>Moyen</option>
-                                    <option value="high">Élevé</option>
+                                <label for="note_tags" class="form-label fw-semibold">Étiquettes</label>
+                                <select id="note_tags" class="form-select border-0 bg-light py-2">
+                                    <option value="important">Important</option>
+                                    <option value="a_revoir">A revoir</option>
+                                    <option value="a_contacte">A contacter</option>
+                                    <option value="a_relancer">A relancer</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="noteCategory" class="form-label fw-semibold">Catégorie</label>
-                        <select class="form-select" id="noteCategory" name="noteCategory">
-                            <option value="academic" selected>Académique</option>
-                            <option value="behavior">Comportement</option>
-                            <option value="discipline">Discipline</option>
-                            <option value="follow-up">Suivi</option>
-                            <option value="other">Autre</option>
-                        </select>
-                    </div>
-                </form>
-                
                 <div id="noteError" class="alert alert-danger d-none mt-3" role="alert">
                     <!-- Error messages will be shown here -->
                 </div>
@@ -1532,9 +1552,63 @@
     </div>
 </div>
 
+<!-- Modal for editing a note -->
+<div class="modal fade" id="editNoteModal" tabindex="-1" aria-labelledby="editNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xs">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-sticky-note-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="editNoteModalLabel">
+                            Modifier la note
+                        </h5>
+                        <p class="text-muted small mb-0">Mettre à jour la note personnelle ou l'observation</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                    <div class="mb-4">
+                        <label for="editNoteContent" class="form-label fw-semibold">Contenu de la note</label>
+                        <textarea class="form-control" id="editNoteContent" name="editNoteContent" rows="5" placeholder="Écrivez votre note ou observation ici..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="mb-4">
+                                <label for="edit_note_tags" class="form-label fw-semibold">Étiquettes</label>
+                                <select id="edit_note_tags" class="form-select border-0 bg-light py-2">
+                                    <option value="important">Important</option>
+                                    <option value="a_revoir">A revoir</option>
+                                    <option value="a_contacte">A contacter</option>
+                                    <option value="a_relancer">A relancer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden field to store note ID -->
+                    <input type="hidden" id="editNoteId" name="editNoteId" value="">
+                <div id="editNoteError" class="alert alert-danger d-none mt-3" role="alert">
+                    <!-- Error messages will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success px-4" id="updateNoteBtn" >Mettre à jour la note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal for creating a reminder/appointment -->
 <div class="modal fade" id="createRappelModal" tabindex="-1" aria-labelledby="createRappelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xs">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
                 <div class="d-flex align-items-center">
@@ -1550,58 +1624,33 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <form id="createRappelForm">
-                    <div class="row">
-                        <div class="col-lg-6">
-                            <div class="mb-4">
-                                <label for="rappelType" class="form-label fw-semibold">Type</label>
-                                <select class="form-select" id="rappelType" name="rappelType">
-                                    <option value="reminder">Rappel</option>
-                                    <option value="appointment" selected>Rendez-vous</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="mb-4">
-                                <label for="rappelDate" class="form-label fw-semibold">Date</label>
-                                <input type="date" class="form-control" id="rappelDate" name="rappelDate" value="{{ current_date|date:'Y-m-d' }}">
-                            </div>
-                        </div>
+              <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Type de rappel</label>
+                        <select id="reminderType" class="form-select border-0 bg-light py-2">
+                            <option value="appel">Appel</option>
+                            <option value="rendez_vous">Rendez-vous</option>
+                            <option value="email">Email</option>
+                            <option value="autre">Autre</option>
+                        </select>
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="rappelTitle" class="form-label fw-semibold">Objet</label>
-                        <input type="text" class="form-control" id="rappelTitle" name="rappelTitle" placeholder="Objet du rappel ou rendez-vous">
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Objet</label>
+                        <input id="reminderSubject" type="text" class="form-control border-0 bg-light py-2" placeholder="Entrez l'objet du rappel">
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="rappelDescription" class="form-label fw-semibold">Description</label>
-                        <textarea class="form-control" id="rappelDescription" name="rappelDescription" rows="3" placeholder="Description détaillée du rappel ou rendez-vous"></textarea>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Date</label>
+                        <input id="reminderDate" type="date" class="form-control border-0 bg-light py-2">
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-lg-6">
-                            <div class="mb-4">
-                                <label for="rappelTime" class="form-label fw-semibold">Heure</label>
-                                <input type="time" class="form-control" id="rappelTime" name="rappelTime" value="09:00">
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="mb-4">
-                                <label for="rappelStatus" class="form-label fw-semibold">Statut</label>
-                                <select class="form-select" id="rappelStatus" name="rappelStatus">
-                                    <option value="scheduled" selected>Programmé</option>
-                                    <option value="completed">Terminé</option>
-                                    <option value="cancelled">Annulé</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Heure</label>
+                        <input id="reminderTime" type="time" class="form-control border-0 bg-light py-2">
                     </div>
-                </form>
-                
-                <div id="rappelError" class="alert alert-danger d-none mt-3" role="alert">
-                    <!-- Error messages will be shown here -->
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Description</label>
+                        <textarea id="reminderDescription" class="form-control border-0 bg-light" rows="3" placeholder="Entrez une description..."></textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -1676,6 +1725,234 @@
         </div>
     </div>
 </div>
+
+<!-- Modal for accomplir (process) a note -->
+<div class="modal fade" id="accomplirNoteModal" tabindex="-1" aria-labelledby="accomplirNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-check-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="accomplirNoteModalLabel">
+                            Traiter la note
+                        </h5>
+                        <p class="text-muted small mb-0">Détails de la note et observation</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted">Contenu de la note</label>
+                    <div class="form-control bg-light border-0" id="noteContentDisplay" style="min-height: 100px; max-height: 150px; overflow-y: auto;"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted">Étiquette</label>
+                    <div class="form-control bg-light border-0" id="noteTagDisplay"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="observation" class="form-label fw-semibold">Observation</label>
+                    <textarea class="form-control" id="observation" name="observation" rows="4" placeholder="Ajoutez vos observations sur cette note..."></textarea>
+                </div>
+                
+                <input type="hidden" id="noteIdToProcess" name="noteIdToProcess" value="">
+                
+                <div id="accomplirNoteError" class="alert alert-danger d-none mt-3" role="alert">
+                    <!-- Error messages will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success px-4" id="traiterNoteBtn">Traiter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation modal for note processing -->
+<div class="modal fade" id="confirmTraitementModal" tabindex="-1" aria-labelledby="confirmTraitementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-question-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="confirmTraitementModalLabel">
+                            Confirmer le traitement
+                        </h5>
+                        <p class="text-muted small mb-0">Êtes-vous sûr de vouloir traiter cette note ?</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">Voulez-vous vraiment marquer cette note comme traitée ? Cette action ne peut pas être annulée.</p>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success px-4" id="confirmTraitementBtn">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for showing note details -->
+<div class="modal fade" id="noteDetailsModal" tabindex="-1" aria-labelledby="noteDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-eye-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="noteDetailsModalLabel">
+                            Détails de la note
+                        </h5>
+                        <p class="text-muted small mb-0">Informations complètes sur la note</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted">Contenu de la note</label>
+                    <div class="form-control bg-light border-0" id="noteDetailsContent" style="min-height: 100px; max-height: 150px; overflow-y: auto;"></div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-muted">Étiquette</label>
+                            <div class="form-control bg-light border-0" id="noteDetailsTag"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-muted">Statut</label>
+                            <div class="form-control bg-light border-0" id="noteDetailsStatus"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted">Date de création</label>
+                    <div class="form-control bg-light border-0" id="noteDetailsDate"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted">Observation</label>
+                    <div class="form-control bg-light border-0" id="noteDetailsObservation" style="min-height: 60px; max-height: 120px; overflow-y: auto;">Aucune observation</div>
+                </div>
+                
+                <div id="noteDetailsError" class="alert alert-danger d-none mt-3" role="alert">
+                    <!-- Error messages will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for editing reminder/appointment -->
+<div class="modal fade" id="editRappelModal" tabindex="-1" aria-labelledby="editRappelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-calendar-2-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="editRappelModalLabel">
+                            Modifier le rappel ou rendez-vous
+                        </h5>
+                        <p class="text-muted small mb-0">Mettre à jour les détails du rappel ou rendez-vous</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editRappelForm">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <label for="editRappelType" class="form-label fw-semibold">Type</label>
+                                <select class="form-select" id="editRappelType" name="editRappelType">
+                                    <option value="reminder">Rappel</option>
+                                    <option value="appointment">Rendez-vous</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <label for="editRappelDate" class="form-label fw-semibold">Date</label>
+                                <input type="date" class="form-control" id="editRappelDate" name="editRappelDate">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="editRappelTitle" class="form-label fw-semibold">Objet</label>
+                        <input type="text" class="form-control" id="editRappelTitle" name="editRappelTitle" placeholder="Objet du rappel ou rendez-vous">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="editRappelDescription" class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control" id="editRappelDescription" name="editRappelDescription" rows="3" placeholder="Description détaillée du rappel ou rendez-vous"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <label for="editRappelTime" class="form-label fw-semibold">Heure</label>
+                                <input type="time" class="form-control" id="editRappelTime" name="editRappelTime">
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <label for="editRappelStatus" class="form-label fw-semibold">Statut</label>
+                                <select class="form-select" id="editRappelStatus" name="editRappelStatus">
+                                    <option value="scheduled">Programmé</option>
+                                    <option value="completed">Terminé</option>
+                                    <option value="cancelled">Annulé</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="editRappelId" name="editRappelId" value="">
+                </form>
+                
+                <div id="editRappelError" class="alert alert-danger d-none mt-3" role="alert">
+                    <!-- Error messages will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-info px-4" id="updateRappelBtn">Mettre à jour</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 
 <!-- Include jsPDF library -->
@@ -1982,6 +2259,192 @@
         $('#createNoteModal').modal('show');
     });
 
+    $(document).on('click','#saveNoteBtn', function(){
+
+        var btn = $(this); // référence du bouton
+        btn.prop('disabled', true); // désactive le bouton
+
+        // Optionnel : afficher un spinner pour indiquer le chargement
+        var originalText = btn.html();
+        btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Envoi en cours...
+        `);
+
+        var etudiant = "{{etudiant.id}}";
+        var noteContent = $('#noteContent').val();
+        var note_tags = $('#note_tags').val();
+
+
+        $.ajax({
+            url : "{% url 't_etudiants:ApiSaveStudentNote' %}",
+            dataType : 'JSON',
+            type: "POST",
+            data : {
+                'etudiant' : etudiant,
+                'noteContent' : noteContent,
+                'note_tags' : note_tags,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                
+                $('#saveNoteSpinner').hide();
+
+                if (response.status === "success") {
+                    let spinner = document.createElement("div");
+                    spinner.innerHTML = `
+                        <div id="loadingSpinner" style="
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 9999;
+                            backdrop-filter: blur(3px);">
+                            <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                            <div class="success-message" style="
+                                font-family: Arial, sans-serif;
+                                font-size: 18px;
+                                color: #3b7ddd;
+                                font-weight: 500;
+                                text-align: center;
+                                margin-bottom: 10px;">
+                                <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                            </div>
+                           
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                            .modern-spinner {
+                                width: 60px;
+                                height: 60px;
+                                border: 5px solid #e0e0e0;
+                                border-top: 5px solid #3b7ddd;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            }
+                        </style>
+                    `;
+                    document.body.appendChild(spinner);
+
+                   
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+
+                } else {
+                    alertify.error(response.message || "Erreur lors de l'enregistrement");
+                }
+            },
+            complete: function() {
+                
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            },
+            error: function() {
+                $('#saveNoteSpinner').hide();
+                alertify.error("Une erreur réseau est survenue !");
+            }
+        }); 
+    });
+
+    $(document).on('click','.edit-note', function(){
+        var note_id = $(this).data('note-id');
+        var note = $(this).data('note');
+        var tage = $(this).data('tage');    
+
+        $('#editNoteContent').val(note);
+        $('#edit_note_tags').val(tage);
+        $('#updateNoteBtn').data('id', note_id);
+
+        $('#editNoteModal').modal('show');
+    });
+
+    $(document).on('click', '#updateNoteBtn', function() {
+        var btn = $(this);
+        btn.prop('disabled', true);
+
+        // Optionnel : afficher un spinner pour indiquer le chargement
+        var originalText = btn.html();
+        btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Mise à jour en cours...
+        `);
+
+        var noteId = $(this).data('id');
+        var noteContent =$('#editNoteContent').val();
+        var noteTag = $('#edit_note_tags').val();
+
+
+        $.ajax({
+            url: "{% url 't_etudiants:ApiUpdateStudentNote' %}", // You'll need to create this endpoint
+            dataType: 'JSON',
+            type: "POST",
+            data: {
+                'id': noteId,
+                'noteContent': noteContent,
+                'note_tags': noteTag,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if(response.status === "success") {
+                    let spinner = document.createElement("div");
+                    spinner.innerHTML = `
+                        <div id="loadingSpinner" style="
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 9999;
+                            backdrop-filter: blur(3px);">
+                            <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                            <div class="success-message" style="
+                                font-family: Arial, sans-serif;
+                                font-size: 18px;
+                                color: #3b7ddd;
+                                font-weight: 500;
+                                text-align: center;
+                                margin-bottom: 10px;">
+                                <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                            </div>
+                           
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                            .modern-spinner {
+                                width: 60px;
+                                height: 60px;
+                                border: 5px solid #e0e0e0;
+                                border-top: 5px solid #3b7ddd;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            }
+                        </style>
+                    `;
+                    document.body.appendChild(spinner);
+
+                   
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    $('#editNoteError').removeClass('d-none').text(response.message || "Erreur lors de la mise à jour de la note.");
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#editNoteError').removeClass('d-none').text("Erreur technique: " + error);
+            },
+            complete: function() {
+                // Réactiver le bouton et restaurer son texte après la requête
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            }
+        });
+    });
+
     $(document).on('click', '#ajouterRappelBtn', function(){
         $('#createRappelModal').modal('show');
     });
@@ -1991,6 +2454,342 @@
     });
     
 
+    // Handle click on Accomplir button for notes
+    $(document).on('click', '.accomplir-note', function() {
+        var noteId = $(this).data('note-id');
+        var noteContent = $(this).data('note');
+        var noteTag = $(this).data('tage');
+        
+        // Fill the modal with note details
+        $('#noteContentDisplay').text(noteContent);
+        $('#noteTagDisplay').text($('#note_tags option[value="' + noteTag + '"]').text() || noteTag);
+        $('#noteIdToProcess').val(noteId);
+        $('#observation').val(''); // Clear any previous observation
+        
+        // Show the modal
+        $('#accomplirNoteModal').modal('show');
+    });
+    
+    // Handle click on Traiter button in the modal - show confirmation
+    $(document).on('click', '#traiterNoteBtn', function() {
+        $('#confirmTraitementModal').modal('show');
+    });
+    
+    // Handle click on Confirm button in confirmation modal
+    $(document).on('click', '#confirmTraitementBtn', function() {
+        var noteId = $('#noteIdToProcess').val();
+        var observation = $('#observation').val();
+        
+        // Close confirmation modal
+        $('#confirmTraitementModal').modal('hide');
+        
+        // Show loading state on the original modal's traiter button
+        var btn = $('#traiterNoteBtn');
+        btn.prop('disabled', true); // Disable the button
+        
+        var originalText = btn.html();
+        btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Traitement en cours...
+        `);
+        
+        // Process the note via AJAX
+        $.ajax({
+            url: "{% url 't_etudiants:ApiAccomplirNote' %}", // You'll need to create this endpoint
+            dataType: 'JSON',
+            type: "POST",
+            data: {
+                'id': noteId,
+                'observation': observation,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if(response.status === "success") {
+                    let spinner = document.createElement("div");
+                    spinner.innerHTML = `
+                        <div id="loadingSpinner" style="
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 9999;
+                            backdrop-filter: blur(3px);">
+                            <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                            <div class="success-message" style="
+                                font-family: Arial, sans-serif;
+                                font-size: 18px;
+                                color: #3b7ddd;
+                                font-weight: 500;
+                                text-align: center;
+                                margin-bottom: 10px;">
+                                <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Note traitée avec succès
+                            </div>
+                           
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                            .modern-spinner {
+                                width: 60px;
+                                height: 60px;
+                                border: 5px solid #e0e0e0;
+                                border-top: 5px solid #3b7ddd;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            }
+                        </style>
+                    `;
+                    document.body.appendChild(spinner);
+
+                   
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    $('#accomplirNoteError').removeClass('d-none').text(response.message || "Erreur lors du traitement de la note.");
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#accomplirNoteError').removeClass('d-none').text("Erreur technique: " + error);
+            },
+            complete: function() {
+                // Re-enable the button and restore its text
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            }
+        });
+    });
+    
+    // Handle click on show note details button
+    $(document).on('click', '.show-note-details', function() {
+        var noteId = $(this).data('note-id');
+        var noteContent = $(this).data('note');
+        var noteTag = $(this).data('tage');
+        var noteCreatedAt = $(this).data('created-at');
+        var noteIsDone = $(this).data('is-done');
+        var observation = $(this).data('observation') || 'Aucune observation'; // Default to 'No observation' if not provided
+        
+        // Convert the tag value to display text
+        var tagText = $('#note_tags option[value="' + noteTag + '"]').text() || noteTag;
+        
+        // Convert the status to display text
+        var statusText = noteIsDone === true || noteIsDone === 'True' ? 'Terminé' : 'En cours';
+        var statusClass = noteIsDone === true || noteIsDone === 'True' ? 'bg-success' : 'bg-danger';
+        
+        // Fill the modal with note details
+        $('#noteDetailsContent').text(noteContent);
+        $('#noteDetailsTag').text(tagText);
+        $('#noteDetailsStatus').html('<span class="badge ' + statusClass + '">' + statusText + '</span>');
+        $('#noteDetailsDate').text(noteCreatedAt);
+        $('#noteDetailsObservation').text(observation);
+        
+        // Show the modal
+        $('#noteDetailsModal').modal('show');
+    });
+    
+    // Handle click on edit reminder button
+    $(document).on('click', '.edit-rappel', function() {
+        var rappelId = $(this).data('rappel-id');
+        var rappelType = $(this).data('rappel-type');
+        var rappelDate = $(this).data('rappel-date');
+        var rappelTitle = $(this).data('rappel-title');
+        var rappelDescription = $(this).data('rappel-description');
+        var rappelTime = $(this).data('rappel-time');
+        var rappelStatus = $(this).data('rappel-status');
+        
+        // Fill the modal with reminder details
+        $('#editRappelId').val(rappelId);
+        $('#editRappelType').val(rappelType);
+        $('#editRappelDate').val(rappelDate);
+        $('#editRappelTitle').val(rappelTitle);
+        $('#editRappelDescription').val(rappelDescription);
+        $('#editRappelTime').val(rappelTime);
+        $('#editRappelStatus').val(rappelStatus);
+        
+        // Show the modal
+        $('#editRappelModal').modal('show');
+    });
+    
+    // Handle click on update reminder button
+    $(document).on('click', '#updateRappelBtn', function() {
+        var btn = $(this);
+        btn.prop('disabled', true); // Disable the button
+        
+        // Show loading state
+        var originalText = btn.html();
+        btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Mise à jour en cours...
+        `);
+        
+        var rappelId = $('#editRappelId').val();
+        var rappelType = $('#editRappelType').val();
+        var rappelDate = $('#editRappelDate').val();
+        var rappelTitle = $('#editRappelTitle').val();
+        var rappelDescription = $('#editRappelDescription').val();
+        var rappelTime = $('#editRappelTime').val();
+        var rappelStatus = $('#editRappelStatus').val();
+        
+        // Process the reminder update via AJAX
+        $.ajax({
+            url: "{% url 't_etudiants:ApiUpdateReminder' %}", // You'll need to create this endpoint
+            dataType: 'JSON',
+            type: "POST",
+            data: {
+                'id': rappelId,
+                'rappel_type': rappelType,
+                'rappel_date': rappelDate,
+                'rappel_title': rappelTitle,
+                'rappel_description': rappelDescription,
+                'rappel_time': rappelTime,
+                'rappel_status': rappelStatus,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if(response.status === "success") {
+                    let spinner = document.createElement("div");
+                    spinner.innerHTML = `
+                        <div id="loadingSpinner" style="
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 9999;
+                            backdrop-filter: blur(3px);">
+                            <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                            <div class="success-message" style="
+                                font-family: Arial, sans-serif;
+                                font-size: 18px;
+                                color: #3b7ddd;
+                                font-weight: 500;
+                                text-align: center;
+                                margin-bottom: 10px;">
+                                <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Mise à jour réussie
+                            </div>
+                           
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                            .modern-spinner {
+                                width: 60px;
+                                height: 60px;
+                                border: 5px solid #e0e0e0;
+                                border-top: 5px solid #3b7ddd;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            }
+                        </style>
+                    `;
+                    document.body.appendChild(spinner);
+
+                   
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    $('#editRappelError').removeClass('d-none').text(response.message || "Erreur lors de la mise à jour du rappel.");
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#editRappelError').removeClass('d-none').text("Erreur technique: " + error);
+            },
+            complete: function() {
+                // Re-enable the button and restore its text
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            }
+        });
+    });
+
+
+    $(document).on('click','#saveRappelBtn', function(){
+        var reminderType = $('#reminderType').val();
+        var reminderSubject = $('#reminderSubject').val();
+        var reminderDate = $('#reminderDate').val();
+        var reminderTime = $('#reminderTime').val();
+        var reminderDescription = $('#reminderDescription').val();
+
+        var btn = $(this); // référence du bouton
+        btn.prop('disabled', true); // désactive le bouton
+
+        // Optionnel : afficher un spinner pour indiquer le chargement
+        var originalText = btn.html();
+        btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Envoi en cours...
+        `);
+
+        $.ajax({
+            url : "{% url 't_etudiants:ApiSaveStudentRappel' %}",
+            dataType : "JSON",
+            type : "POST",
+            data : {
+                'etudiant' : "{{etudiant.id}}",
+                'reminderType' : reminderType,
+                'reminderSubject' : reminderSubject,
+                'reminderDate' : reminderDate,
+                'reminderTime' : reminderTime,
+                'reminderDescription' : reminderDescription,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success : function(response){
+                if(response.status === "success"){
+                    let spinner = document.createElement("div");
+                    spinner.innerHTML = `
+                        <div id="loadingSpinner" style="
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 9999;
+                            backdrop-filter: blur(3px);">
+                            <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                            <div class="success-message" style="
+                                font-family: Arial, sans-serif;
+                                font-size: 18px;
+                                color: #3b7ddd;
+                                font-weight: 500;
+                                text-align: center;
+                                margin-bottom: 10px;">
+                                <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                            </div>
+                           
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                            .modern-spinner {
+                                width: 60px;
+                                height: 60px;
+                                border: 5px solid #e0e0e0;
+                                border-top: 5px solid #3b7ddd;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            }
+                        </style>
+                    `;
+                    document.body.appendChild(spinner);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+
+                }else{  
+                    alertify.error(response.message);
+                }
+            },
+            complete: function() {
+                // Réactiver le bouton et restaurer son texte après la requête
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            }
+
+        }); 
+
+    });
 </script>
 
 

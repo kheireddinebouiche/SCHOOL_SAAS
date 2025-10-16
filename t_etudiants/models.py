@@ -43,5 +43,9 @@ class Etudiant(models.Model):
     def __str__(self):
         return f"{self.relation.nom} {self.relation.prenom}"
     
+class RegistrePresence(models.Model):
+    pass
 
+class LigneRegistrePresence(models.Model):
+    pass
 

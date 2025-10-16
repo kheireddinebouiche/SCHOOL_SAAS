@@ -3,6 +3,9 @@ from django.http import JsonResponse
 from .models import *
 from django.contrib.auth.decorators import login_required
 from .forms import *
+from t_crm.models import NotesProcpects, RendezVous
+from django.db import transaction
+
 
 
 @login_required(login_url='institut_app:login')
@@ -41,6 +44,100 @@ def ApiSaveStudentDatas(request):
         return JsonResponse({'status' : "success", "data" : data})
     else:
         return JsonResponse({"status" : "error", 'message' : "Methode non autoriser"})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiSaveStudentNote(request):
+    if request.method == "POST":
+        etudiant = request.POST.get('etudiant')
+        noteContent = request.POST.get('noteContent')
+        note_tags = request.POST.get('note_tags')
+        try:
+            NotesProcpects.objects.create(
+                prospect_id = etudiant,
+                note = noteContent,
+                tage = note_tags,
+                context = "etudiant"
+            )
+
+            return JsonResponse({"status" : "success",'message' : "La note est enregistrer avec succès"})
+        except:
+            return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+    else:
+        return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateStudentNote(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        noteContent = request.POST.get('noteContent')
+        note_tags = request.POST.get('note_tags')
+
+        note = NotesProcpects.objects.get(id= id)
+
+        note.note = noteContent
+        note.tage = note_tags
+        note.save()
+
+        return JsonResponse({'status': "success"})
+    else:
+        return JsonResponse({'status': "error", "message" : "Methode non autoriser"})
+    
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAccomplirNote(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        observation = request.POST.get('observation')
+
+        note = NotesProcpects.objects.get(id = id)
+        note.observation = observation
+        note.is_done = True
+        note.save()
+
+        return JsonResponse({"status" : "success", "message" : "Le statut de la note a été changer"})
+    else:
+        return JsonResponse({"status" : "error", "message":"Methode non autoriser"})
+
+
+@login_required(login_url="institut_app;login")
+@transaction.atomic
+def ApiSaveStudentRappel(request):
+    if request.method == "POST":
+        etudiant = request.POST.get('etudiant')
+        reminderType = request.POST.get('reminderType')
+        reminderSubject = request.POST.get('reminderSubject')
+        reminderDate = request.POST.get('reminderDate')
+        reminderTime = request.POST.get('reminderTime')
+        reminderDescription = request.POST.get('reminderDescription')
+
+        try:
+            student = Prospets.objects.get(id = etudiant)
+
+            RendezVous.objects.create(
+                prospect = student,
+                type = reminderType,
+                object = reminderSubject,
+                description = reminderDescription,
+                date_rendez_vous = reminderDate,
+                heure_rendez_vous = reminderTime,
+                context = "etudiant"
+            )
+
+            return JsonResponse({"status" : "success", "message" : "Les informations on été enregistrer avec suucès"})
+        except:
+            return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+
+    else:
+        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateReminder(request):
+    pass
 
 @login_required(login_url='institut_app:login')
 def StudentTransfert(request):
