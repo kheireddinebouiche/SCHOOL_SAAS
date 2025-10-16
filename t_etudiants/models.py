@@ -1,6 +1,6 @@
 from django.db import models
 from t_crm.models import Prospets
-
+from t_groupe.models import Groupe
 
 class Etudiant(models.Model):
     
@@ -44,8 +44,16 @@ class Etudiant(models.Model):
         return f"{self.relation.nom} {self.relation.prenom}"
     
 class RegistrePresence(models.Model):
-    pass
+    label = models.CharField(max_length=100, null=True, blank=True)
+    semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
+    groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+    
 class LigneRegistrePresence(models.Model):
     pass
 

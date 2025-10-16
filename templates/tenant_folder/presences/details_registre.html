@@ -1,0 +1,951 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Présences - Détails Registre {% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none; /* Prevents the icon from interfering with clicks */
+  }
+  .search-box input {
+    padding-left: 40px; /* Make sure text doesn't overlap with icon */
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                <i class="ri-calendar-check-line text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Détails Registre de Présence</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                <li class="breadcrumb-item">
+                  <a href="javascript: void(0);">Présences</a>
+                </li>
+                <li class="breadcrumb-item">
+                  <a href="{% url 't_etudiants:liste_registres' %}">Registres</a>
+                </li>
+                <li class="breadcrumb-item active">Détails</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <!-- Statistics Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-4 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1">Total Modules</p>
+                  <h4 class="mb-0" id="totalModules">0</h4>
+                </div>
+                <div class="flex-shrink-0">
+                  <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center">
+                    <i class="ri-book-open-line text-primary fs-4"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-xl-4 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1">Enseignants</p>
+                  <h4 class="mb-0" id="totalTeachers">0</h4>
+                </div>
+                <div class="flex-shrink-0">
+                  <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center">
+                    <i class="ri-user-line text-warning fs-4"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-xl-4 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                  <p class="text-muted mb-1">Sessions</p>
+                  <h4 class="mb-0" id="totalSessions">0</h4>
+                </div>
+                <div class="flex-shrink-0">
+                  <div class="avatar-sm rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center">
+                    <i class="ri-time-line text-success fs-4"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Register Details Section -->
+      <div class="row mb-4">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-info-circle text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Détails du Registre</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label text-muted">Nom du registre</label>
+                    <h6 class="mb-0">{{ registre.label|default:"Non spécifié" }}</h6>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted">Groupe</label>
+                    <h6 class="mb-0">{{ registre.groupe.nom|default:"Non spécifié" }}</h6>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label text-muted">Semestre</label>
+                    <h6 class="mb-0">{{ registre.get_semestre_display|default:"Non spécifié" }}</h6>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted">Date de création</label>
+                    <h6 class="mb-0">{{ registre.created_at|date:"d M Y"|default:"Non spécifié" }}</h6>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row mb-4">
+        <div class="col-lg-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0 text-info">Modules et Enseignants</h4>
+              <p class="text-muted mb-0">Gestion des modules et leurs enseignants pour ce registre</p>
+            </div>
+            <button class="btn btn-info px-4" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+              <i class="ri-add-line me-1"></i> Ajouter Module
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill ps-4" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                  
+                  <select id="filter-module" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="">Filtrer par module</option>
+                  </select>
+
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Module</th>
+                      <th class="border-0">Enseignant</th>
+                      <th class="border-0">Heures</th>
+                      <th class="border-0">Type</th>
+                      <th class="border-0">Salle</th>
+                      <th class="border-0 text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeItem" class="border-top-0">
+                    {% if modules %}
+                      {% for module in modules %}
+                        <tr>
+                          <td>{{ module.nom }}</td>
+                          <td>{{ module.enseignant.nom }} {{ module.enseignant.prenom }}</td>
+                          <td><span class="badge bg-info">{{ module.heures }}h</span></td>
+                          <td><span class="badge bg-success">{{ module.type }}</span></td>
+                          <td>{{ module.salle }}</td>
+                          <td class="text-end">
+                            <div class="dropdown d-inline-block">
+                              <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri-more-fill align-middle"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">
+                                  <i class="ri-eye-line align-bottom me-2 text-muted"></i> Voir Détails
+                                </a></li>
+                                <li><a class="dropdown-item edit-module-btn" data-id="{{ module.id }}" data-nom="{{ module.nom }}" data-enseignant="{{ module.enseignant.id }}" data-heures="{{ module.heures }}" data-type="{{ module.type }}" data-salle="{{ module.salle }}">
+                                  <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Modifier
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger delete-module-btn" data-id="{{ module.id }}">
+                                  <i class="ri-delete-bin-line align-bottom me-2 text-muted"></i> Supprimer
+                                </a></li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                        <tr>
+                          <td colspan="6">
+                             <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                                <div class="avatar-sm mb-4">
+                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                        <i class="ri-book-open-fill"></i>
+                                    </div>
+                                </div>
+                                <h5 class="mb-2">Aucun module trouvé</h5>
+                                <p class="text-muted mb-0">Il n'y a aucun module enregistré pour ce registre pour le moment</p>
+                              </div>
+                          </td>
+                        </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!-- Modal for adding a module -->
+<div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModuleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-book-add-line text-info fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-info mb-1" id="addModuleModalLabel">
+              Ajouter un nouveau module
+            </h5>
+            <p class="text-muted small mb-0">Ajoutez un module avec son enseignant pour ce registre</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="addModuleForm">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Module <span class="text-danger">*</span></label>
+                <select class="form-select" id="moduleSelect" name="module" required>
+                  <option value="">Sélectionnez un module</option>
+                  {% for module in all_modules %}
+                      <option value="{{ module.id }}">{{ module.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Enseignant <span class="text-danger">*</span></label>
+                <select class="form-select" id="teacherSelect" name="teacher" required>
+                  <option value="">Sélectionnez un enseignant</option>
+                  {% for enseignant in enseignants %}
+                      <option value="{{ enseignant.id }}">{{ enseignant.nom }} {{ enseignant.prenom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Heures <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="hoursInput" name="hours" placeholder="Ex: 30" required>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="typeSelect" name="type" required>
+                  <option value="">Sélectionnez un type</option>
+                  <option value="cours">Cours</option>
+                  <option value="td">TD (Travaux Dirigés)</option>
+                  <option value="tp">TP (Travaux Pratiques)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row g-4">
+            <div class="col-lg-12">
+              <div class="mb-4">
+                <label class="form-label text-muted">Salle</label>
+                <input type="text" class="form-control" id="roomInput" name="room" placeholder="Ex: Salle A101">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-end w-100">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i> Annuler
+          </button>
+          <button type="button" class="btn btn-info px-4" id="addModuleBtn">
+            <i class="ri-check-line me-1"></i> Ajouter Module
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for editing a module -->
+<div class="modal fade" id="editModuleModal" tabindex="-1" aria-labelledby="editModuleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-book-edit-line text-info fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-info mb-1" id="editModuleModalLabel">
+              Modifier un module
+            </h5>
+            <p class="text-muted small mb-0">Modifiez les informations du module sélectionné</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="editModuleForm">
+          <input type="hidden" id="editModuleId" name="module_id">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Module <span class="text-danger">*</span></label>
+                <select class="form-select" id="editModuleSelect" name="module" required>
+                  <option value="">Sélectionnez un module</option>
+                  {% for module in all_modules %}
+                      <option value="{{ module.id }}">{{ module.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Enseignant <span class="text-danger">*</span></label>
+                <select class="form-select" id="editTeacherSelect" name="teacher" required>
+                  <option value="">Sélectionnez un enseignant</option>
+                  {% for enseignant in enseignants %}
+                      <option value="{{ enseignant.id }}">{{ enseignant.nom }} {{ enseignant.prenom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Heures <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="editHoursInput" name="hours" placeholder="Ex: 30" required>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="mb-4">
+                <label class="form-label text-muted">Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="editTypeSelect" name="type" required>
+                  <option value="">Sélectionnez un type</option>
+                  <option value="cours">Cours</option>
+                  <option value="td">TD (Travaux Dirigés)</option>
+                  <option value="tp">TP (Travaux Pratiques)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row g-4">
+            <div class="col-lg-12">
+              <div class="mb-4">
+                <label class="form-label text-muted">Salle</label>
+                <input type="text" class="form-control" id="editRoomInput" name="room" placeholder="Ex: Salle A101">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-end w-100">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i> Annuler
+          </button>
+          <button type="button" class="btn btn-info px-4" id="updateModuleBtn">
+            <i class="ri-check-line me-1"></i> Mettre à jour
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--Modal for delete confirmation-->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Confirmation de suppression
+            </h5>
+            <p class="text-muted small mb-0">Cette action ne peut pas être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <lord-icon
+              src="https://cdn.lordicon.com/hwjcdycb.json"
+              trigger="loop"
+              colors="primary:#dc3545,secondary:#e9ecef"
+              style="width:120px;height:120px">
+            </lord-icon>
+          </div>
+          <h4 class="text-danger mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0">
+            Vous êtes sur le point de supprimer ce module. Cette action est irréversible et toutes les données associées seront définitivement supprimées.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+          <button id="confirmDeleteModuleBtn" class="btn btn-danger">Confirmer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /.modal -->
+
+<script>
+  // Store original data for filtering
+  let originalData = [];
+  let moduleToDeleteId = null;
+
+  // Fix dropdown positioning
+  $(document).ready(function () {
+
+    // Ensure table responsive container doesn't hide dropdowns
+    $('.table-responsive').css('overflow-x', 'visible');
+    
+    // Handle dropdown show events
+    $(document).on('show.bs.dropdown', function(e) {
+      var dropdownMenu = $(e.target).find('.dropdown-menu');
+      if (dropdownMenu.length) {
+        dropdownMenu.css({
+          'z-index': '1050',
+          'position': 'absolute'
+        });
+      }
+    });
+
+    function updateStatistics(data) {
+      // Count total records
+      const totalModules = data.length;
+      // Count unique teachers
+      const teachers = [...new Set(data.map(item => item.enseignant))];
+      const totalTeachers = teachers.length;
+      // Count sessions
+      const totalSessions = data.filter(item => item.type).length;
+      
+      $('#totalModules').text(totalModules);
+      $('#totalTeachers').text(totalTeachers);
+      $('#totalSessions').text(totalSessions);
+    }
+
+    // Load initial data - use the data passed from the template or make an API call
+    // Since we have template data, we'll process it into a format similar to API response
+    function loadModules() {
+      // Convert template data to a format for client-side filtering
+      var templateData = [];
+      $('#listeItem tr').each(function() {
+        var $row = $(this);
+        var cells = $row.find('td');
+        if (cells.length > 0) { // Check if this is not the "no data" row
+          var module = cells.eq(0).text().trim();
+          if (module !== '' && module !== 'Aucun module trouvé') {
+            templateData.push({
+              module: module,
+              enseignant: cells.eq(1).text().trim(),
+              heures: cells.eq(2).find('span').text().trim(), // Get the text from the badge
+              type: cells.eq(3).find('span').text().trim(), // Get the text from the badge
+              salle: cells.eq(4).text().trim(),
+              id: cells.eq(5).find('.delete-module-btn').data('id') || 0 // Get ID from delete button
+            });
+          }
+        }
+      });
+      
+      originalData = templateData;
+      updateStatistics(originalData);
+      populateModuleFilter(originalData);
+    }
+    
+    function populateModuleFilter(data) {
+      var moduleSelect = $('#filter-module');
+      moduleSelect.empty(); // Clear existing options
+      
+      // Add default option
+      moduleSelect.append($('<option>', {
+        value: '',
+        text: 'Filtrer par module'
+      }));
+      
+      // Extract unique modules
+      var modules = [];
+      $.each(data, function(index, item) {
+        if (item.module && modules.indexOf(item.module) === -1) {
+          modules.push(item.module);
+        }
+      });
+      
+      // Sort and add options
+      modules.sort().forEach(function(module) {
+        moduleSelect.append($('<option>', {
+          value: module,
+          text: module
+        }));
+      });
+    }
+
+    // Initialize with template data
+    loadModules();
+
+    // Client-side filter by module
+    $(document).on('change', '#filter-module', function() {
+      var filterValue = $(this).val();
+      
+      if (filterValue === '') {
+        // Show all original data
+        renderData(originalData);
+      } else {
+        // Filter based on module
+        var filteredData = originalData.filter(function(item) {
+          return item.module && item.module.toLowerCase().includes(filterValue.toLowerCase());
+        });
+        
+        renderData(filteredData);
+      }
+    });
+
+    // Function to render data to the table
+    function renderData(data) {
+      var row = "";
+      if (data.length === 0) {
+        row += `<tr>
+          <td colspan="6">
+             <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                <div class="avatar-sm mb-4">
+                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                        <i class="ri-book-open-fill"></i>
+                    </div>
+                </div>
+                <h5 class="mb-2">Aucun module trouvé</h5>
+                <p class="text-muted mb-0">Il n'y a aucun module enregistré pour ce registre pour le moment</p>
+              </div>
+          </td>
+        </tr>`;
+      } else {
+        $.each(data, function(index, item) {
+          row += "<tr class='align-middle'>";
+          row += "<td><div class='fw-medium'>" + item.module + "</div></td>";
+          row += "<td><div class='text-body'>" + item.enseignant + "</div></td>";
+          row += "<td><span class='badge bg-info bg-opacity-10 text-info px-2 py-1'>" + item.heures + "</span></td>";
+          row += "<td><span class='badge bg-success bg-opacity-10 text-success px-2 py-1'>" + item.type + "</span></td>";
+          row += "<td><div class='text-body'>" + item.salle + "</div></td>";
+
+          // Action dropdown
+          var actions = '<div class="dropdown"><button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-fill align-middle"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="#"><i class="ri-eye-line me-2 align-middle"></i> Voir détails</a><li><a class="dropdown-item edit-module-btn" data-id="' + item.id + '" data-module="' + item.module + '" data-enseignant="' + item.enseignant + '" data-heures="' + item.heures + '" data-type="' + item.type + '" data-salle="' + item.salle + '"><i class="ri-pencil-line me-2 align-middle"></i> Modifier</a><li><hr class="dropdown-divider"><li><a class="dropdown-item text-danger delete-module-btn" href="javascript:void(0);" data-id="' + item.id + '"><i class="ri-delete-bin-line me-2 align-middle"></i> Supprimer</a></ul></div>';
+          row += "<td class='text-end'>" + actions + "</td>";
+          row += "</tr>";
+        });
+      }
+
+      $("#listeItem").html(row);
+      updateStatistics(data);
+    }
+    
+    // Client-side search functionality
+    $(document).on('input', '#table-filter', function() {
+      var searchTerm = $(this).val().trim().toLowerCase();
+      
+      if (searchTerm === '') {
+        // If search is empty, show all original data
+        renderData(originalData);
+      } else {
+        // Filter the original data based on search term
+        var filteredData = originalData.filter(function(item) {
+          return (
+            item.module.toLowerCase().includes(searchTerm) ||
+            item.enseignant.toLowerCase().includes(searchTerm) ||
+            item.type.toLowerCase().includes(searchTerm) ||
+            item.salle.toLowerCase().includes(searchTerm)
+          );
+        });
+        
+        renderData(filteredData);
+      }
+    });
+    
+    // Add module button click handler
+    $(document).on('click', '#addModuleBtn', function() {
+      const moduleId = $('#moduleSelect').val();
+      const teacherId = $('#teacherSelect').val();
+      const hours = $('#hoursInput').val();
+      const type = $('#typeSelect').val();
+      const room = $('#roomInput').val();
+
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+      
+      $.ajax({
+        url : "#", // This URL needs to be defined in your Django app
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module_id' : moduleId,
+          'teacher_id' : teacherId,
+          'hours' : hours,
+          'type' : type,
+          'room' : room,
+          'registre_id' : {{ registre.id }}, // Assuming registre ID is passed from the view
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
+    });
+    
+    // Edit module button click handler
+    $(document).on('click', '.edit-module-btn', function() {
+      const moduleId = $(this).data('id');
+      const module = $(this).data('nom');
+      const enseignant = $(this).data('enseignant');
+      const heures = $(this).data('heures');
+      const type = $(this).data('type');
+      const salle = $(this).data('salle');
+      
+      $('#editModuleId').val(moduleId);
+      $('#editModuleSelect').val(module);
+      $('#editTeacherSelect').val(enseignant);
+      $('#editHoursInput').val(heures);
+      $('#editTypeSelect').val(type);
+      $('#editRoomInput').val(salle);
+      
+      $('#editModuleModal').modal('show');
+    });
+    
+    // Update module button click handler
+    $(document).on('click', '#updateModuleBtn', function() {
+      const moduleId = $('#editModuleId').val();
+      const module = $('#editModuleSelect').val();
+      const teacher = $('#editTeacherSelect').val();
+      const hours = $('#editHoursInput').val();
+      const type = $('#editTypeSelect').val();
+      const room = $('#editRoomInput').val();
+
+      var btn = $(this);
+      btn.prop('disabled', true);
+
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Mise à jour...
+      `);
+      
+      $.ajax({
+        url : "#", // This URL needs to be defined in your Django app
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module_id' : moduleId,
+          'module' : module,
+          'teacher' : teacher,
+          'hours' : hours,
+          'type' : type,
+          'room' : room,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Mise à jour en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        complete: function() {
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
+    });
+    
+    // Delete module button click handler
+    $(document).on('click', '.delete-module-btn', function() {
+      moduleToDeleteId = $(this).data('id');
+      $('.deleteModal').modal('show');
+    });
+    
+    // Confirm delete button click handler
+    $(document).on('click', '#confirmDeleteModuleBtn', function() {
+      var btn = $(this);
+      btn.prop('disabled', true);
+
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Suppression...
+      `);
+      
+      $.ajax({
+        url : "#", // This URL needs to be defined in your Django app
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module_id' : moduleToDeleteId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Suppression en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        complete: function() {
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
+    });
+    
+  });
+</script>
+
+{% endblock content %}

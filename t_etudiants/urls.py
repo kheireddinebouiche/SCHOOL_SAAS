@@ -18,4 +18,7 @@ urlpatterns = [
 
 
    path('registres-cours/', RegistrePage, name="RegistrePage"),
+   path('ApiSaveRegistreGroupe', ApiSaveRegistreGroupe, name="ApiSaveRegistreGroupe"),
+   path('details-registre/<int:pk>/', DetailsRegistrePresence, name="DetailsRegistrePresence"),
+   path('liste_registres', liste_registres, name="liste_registres"),
 ]
