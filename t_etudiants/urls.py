@@ -21,4 +21,8 @@ urlpatterns = [
    path('ApiSaveRegistreGroupe', ApiSaveRegistreGroupe, name="ApiSaveRegistreGroupe"),
    path('details-registre/<int:pk>/', DetailsRegistrePresence, name="DetailsRegistrePresence"),
    path('liste_registres', liste_registres, name="liste_registres"),
+
+   path('details-liste-presence/<int:pk>/', DetailsListePresence, name="DetailsListePresence"),
+   path('ApiAjouterHistoriqueAbsence', ApiAjouterHistoriqueAbsence, name="ApiAjouterHistoriqueAbsence"),
+   path('ApiGetHistoriqueEtudiant/<int:pk>/', ApiGetHistoriqueEtudiant, name="ApiGetHistoriqueEtudiant"),
 ]

@@ -38,6 +38,8 @@ class Employees(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     has_contract = models.BooleanField(default=False)
+    is_teacher = models.BooleanField(default=False)
+    
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('en cours', "En cours d'activité"),('demission',"Démissionnaire")])
 
     class Meta:
