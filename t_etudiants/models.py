@@ -102,10 +102,7 @@ class HistoriqueAbsence(models.Model):
             else:
                 existing_date["data"].append(new_entry)
         else:
-            self.historique.append({
-                "date": date_str,
-                "data": [new_entry]
-            })
+            self.historique.append({"date": date_str,"data": [new_entry]})
 
         self.save()
 

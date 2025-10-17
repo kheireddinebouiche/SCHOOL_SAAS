@@ -116,12 +116,8 @@ def ApiAjouterHistoriqueAbsence(request):
             date_str = payload.get("date")
             records = payload.get("records", [])
 
-            
-
             ligne = LigneRegistrePresence.objects.get(id=ligne_id)
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-
-           
 
             for record in records:
                 student_id = record.get("student_id")
@@ -147,9 +143,9 @@ def ApiAjouterHistoriqueAbsence(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
-def ApiGetHistoriqueEtudiant(request, etudiant_id):
+def ApiGetHistoriqueEtudiant(request, pk):
     try:
-        historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=etudiant_id)
+        historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=pk)
         data = historique_obj.historique or []
         return JsonResponse({"status": "success", "historique": data})
     except Exception as e:

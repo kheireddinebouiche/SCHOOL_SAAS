@@ -405,7 +405,6 @@
             <h5 class="modal-title fw-semibold text-info mb-1" id="modalStudentName">
               Présences de l'Étudiant
             </h5>
-            <p class="text-muted small mb-0" id="modalStudentAbsences">Nombre d'absences: <span class="badge bg-danger">0</span></p>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -449,7 +448,7 @@
               <div class="col-md-4">
                 <div class="card border text-center">
                   <div class="card-body">
-                    <h5 class="card-title text-success">Taux</h5>
+                    <h5 class="card-title text-danger">Taux</h5>
                     <h3 class="mb-1" id="modalAttendanceRate">0%</h3>
                     <p class="text-muted mb-0">Moyen</p>
                   </div>
@@ -477,7 +476,6 @@
                       <tr>
                         <th class="border-0 rounded-start">Date</th>
                         <th class="border-0">Module</th>
-                        <th class="border-0">Enseignant</th>
                         <th class="border-0">Statut</th>
                         <th class="border-0">Heure</th>
                         <th class="border-0 rounded-end">Observation</th>
@@ -686,41 +684,28 @@
     // Initialize statistics
     updateStatistics();
     
-    // Handle modal opening
-    $(document).on('click', '.btn[data-bs-toggle="modal"][data-student-id]', function() {
-      const studentId = $(this).data('student-id');
-      const studentName = $(this).data('student-name');
-      const studentAbsences = $(this).data('student-absences');
-      
-      // Update modal header
-      $('#modalStudentName').text('Présences de ' + studentName);
-      $('#modalStudentAbsences').html('Nombre d\'absences: <span class="badge bg-danger">' + studentAbsences + '</span>');
-      $('#modalStudentFullName').text(studentName);
-      $('#modalStudentMatricule').text('Matricule: ETU' + studentId);
-      
-      
-      //loadStudentAttendanceData(studentId);
-      loadStudentHistory(studentId);
-    });
+    
 
     $(document).on('click', '#displayPresenceBtn', function(){
         const studentId = $(this).data('student-id');
+        loadStudentHistory(studentId);
     })
 
     function loadStudentHistory(studentId) {
         $.ajax({
-            url: '/scolarite/etudiants/ApiGetHistoriqueEtudiant/'${studentId}'/',
+            url: `/scolarite/etudiants/ApiGetHistoriqueEtudiant/${studentId}/`,
             type: 'GET',
             dataType: 'json',
             success: function(response) {
-            if (response.status === 'success') {
-                displayStudentHistory(response.historique);
-            } else {
-                alert("Erreur : " + response.message);
-            }
+              if (response.status === 'success') {
+                  displayStudentHistory(response.historique);
+                  $('#presenceModal').modal('show');
+              } else {
+                  alertify.error("Erreur : " + response.message);
+              }
             },
             error: function() {
-            alert("Erreur lors du chargement de l'historique.");
+            alertify.error("Erreur lors du chargement de l'historique.");
             }
         });
     }
@@ -734,46 +719,39 @@
             return;
         }
 
+        let nb_absence = 0;
+        let nb_present = 0;
+
         historique.forEach(entry => {
-            const dateTitle = `<h5 class="mt-3 text-primary">${entry.date}</h5>`;
-            let modulesTable = '<table class="table table-bordered"><thead><tr><th>Module</th><th>Heure</th><th>État</th></tr></thead><tbody>';
+          var modulesTable = "";
+          entry.data.forEach(item => {
+          modulesTable += `
+              <tr>
+              <td>${entry.date}</td>
+              <td>${item.module}</td>
+              <td>${item.etat === 'P' ? '<span class="badge bg-success" >Présent</span>' : item.etat === 'A' ? '<span class="badge bg-danger" >Absent</span>' : item.etat}</td>
+              <td>${item.heure}h</td>
+              </tr>`;
 
-            entry.data.forEach(item => {
-            modulesTable += `
-                <tr>
-                <td>${item.module}</td>
-                <td>${item.heure}h</td>
-                <td>${item.etat === 'P' ? 'Présent' : item.etat === 'A' ? 'Absent' : item.etat}</td>
-                </tr>`;
-            });
-
-            modulesTable += '</tbody></table>';
-            container.append(dateTitle + modulesTable);
+              if (item.etat === 'P') {
+                nb_present++;
+              } else if (item.etat === 'A') {
+                  nb_absence++;
+              }
+              
+          }); 
+                  
+          container.append( modulesTable);
         });
+        $("#modalPresentCount").html(nb_present);
+        $('#modalAbsentCount').html(nb_absence);
+
+        const total = nb_present + nb_absence;
+        const taux_absence = total > 0 ? ((nb_absence / total) * 100).toFixed(1) : 0;
+
+        $('#modalAttendanceRate').html(taux_absence);
     }
     
-    // Function to load student attendance data
-    function loadStudentAttendanceData(studentId) {
-      // Simulate loading data
-      // In real application, this would be an AJAX call to fetch attendance records
-      $('#modalPresenceTableBody').html(`
-        <tr>
-          <td>15 Oct 2024</td>
-          <td>Mathématiques</td>
-          <td>Prof. Martin</td>
-          <td><span class="badge attendance-status-present">Présent</span></td>
-          <td>09:00 - 11:00</td>
-          <td>-</td>
-        </tr>
-       
-        
-      `);
-      
-      // Update statistics in modal
-      $('#modalPresentCount').text(3);
-      $('#modalAbsentCount').text(1);
-      $('#modalAttendanceRate').text('75%');
-    }
     
     // Handle edit reason button click
     $(document).on('click', '.edit-reason-btn', function() {
