@@ -3,6 +3,8 @@
 {% block title %} Présences - Détails Ligne Présence {% endblock title %}
 
 {% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <style>
   .search-box {
     position: relative;
@@ -224,9 +226,6 @@
                   <i class="fas fa-book text-info me-2"></i>
                   <h5 class="card-title mb-0 text-info">Informations du Module</h5>
                 </div>
-                <button class="btn btn-info btn-sm px-3">
-                  <i class="ri-settings-3-line me-1"></i> Modifier
-                </button>
               </div>
             </div>
             <div class="card-body p-4">
@@ -234,11 +233,11 @@
                 <div class="col-md-6">
                   <div class="mb-3">
                     <label class="form-label text-muted">Nom du Module</label>
-                    <h6 class="mb-0">Mathématiques Avancées</h6>
+                    <h6 class="mb-0">{{ligne_presence.module.label}}</h6>
                   </div>
                   <div class="mb-3">
                     <label class="form-label text-muted">Code du Module</label>
-                    <h6 class="mb-0">MAT-201</h6>
+                    <h6 class="mb-0">{{ligne_presence.module.code}}</h6>
                   </div>
                   <div class="mb-3">
                     <label class="form-label text-muted">Type de Cours</label>
@@ -318,8 +317,6 @@
                     <tr>
                       <th class="border-0 rounded-start">Étudiant</th>
                       <th class="border-0">Matricule</th>
-                      <th class="border-0">Taux de Présence</th>
-                      <th class="border-0">Nombre d'Absences</th>
                       <th class="border-0 rounded-end">Actions</th>
                     </tr>
                   </thead>
@@ -329,9 +326,10 @@
                         <tr>
                           <td class="d-flex align-items-center">
                             <div class="avatar-xs rounded-circle bg-light border me-2">
-                              <span class="avatar-title rounded-circle text-muted fs-5">
+                              <span class="avatar-title rounded-circle text-white">
                                 {% if etudiant.student.nom %}
-                                  {{ etudiant.student.nom.0|upper }}
+                                  {{ etudiant.student.prenom.0|upper }}
+                                   {{ etudiant.student.nom.0|upper }}
                                 {% else %}
                                   {{ etudiant.student.nom.0|upper }}
                                 {% endif %}
@@ -339,25 +337,14 @@
                             </div>
                             <div>
                               <h6 class="mb-0">{{ etudiant.student.nom}} {{etudiant.student.prenom}}</h6>
-                              <small class="text-muted">{{ etudiant.specialite.nom|default:"Non spécifié" }}</small>
                             </div>
                           </td>
                           <td>{{ etudiant.student.matricule_interne|default:"N/A" }}</td>
-                         
-                          <td>
-                            <span class="badge bg-success bg-opacity-10 text-success px-2 py-1">
-                              {{ etudiant.taux_presence|default:"0%" }}
-                            </span>
-                          </td>
-                          <td>
-                            <span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1">
-                              {{ etudiant.nombre_absences|default:0 }}
-                            </span>
-                          </td>
                           <td class="text-end">
                             <button id='displayPresenceBtn' class="btn btn-info btn-sm" 
                                     data-student-id="{{etudiant.student.id}}" 
-                                    data-student-name="{{ etudiant.student.nom}}"
+                                    data-student-name="{{ etudiant.student.nom}} {{etudiant.student.prenom}}"
+                                    data-student-matricule="{{etudiant.student.matricule_interne|default:'N/A'}}"
                                     data-student-absences="0">
                               <i class="ri-eye-line align-bottom me-1"></i> Présences
                             </button>
@@ -366,7 +353,7 @@
                       {% endfor %}
                     {% else %}
                         <tr>
-                          <td colspan="6">
+                          <td colspan="3">
                              <div class="d-flex flex-column align-items-center justify-content-center py-5">
                                 <div class="avatar-sm mb-4">
                                     <div class="avatar-title bg-light text-muted rounded-circle fs-1">
@@ -478,7 +465,8 @@
                         <th class="border-0">Module</th>
                         <th class="border-0">Statut</th>
                         <th class="border-0">Heure</th>
-                        <th class="border-0 rounded-end">Observation</th>
+                        <th class="border-0">Raison</th>
+                        <th class="border-0 rounded-end">Actions</th>
                       </tr>
                     </thead>
                     <tbody id="modalPresenceTableBody">
@@ -512,6 +500,9 @@
             </button>
           </div>
           <div class="hstack gap-2">
+            <button class="btn btn-warning px-4" id="printWarningBtn">
+              <i class="ri-printer-line me-1"></i> Imprimer un avertissement
+            </button>
             <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
               <i class="ri-close-line me-1"></i> Fermer
             </button>
@@ -688,10 +679,12 @@
 
     $(document).on('click', '#displayPresenceBtn', function(){
         const studentId = $(this).data('student-id');
-        loadStudentHistory(studentId);
+        const studentName = $(this).data('student-name');
+        const studentMatricule = $(this).data('student-matricule');
+        loadStudentHistory(studentId, studentName, studentMatricule);
     })
 
-    function loadStudentHistory(studentId) {
+    function loadStudentHistory(studentId, studentName, studentMatricule) {
         $.ajax({
             url: `/scolarite/etudiants/ApiGetHistoriqueEtudiant/${studentId}/`,
             type: 'GET',
@@ -699,6 +692,16 @@
             success: function(response) {
               if (response.status === 'success') {
                   displayStudentHistory(response.historique);
+                  
+                  // Set the student ID as a data attribute on the modal for the print button
+                  $('#presenceModal').data('student-id', studentId);
+                  $('#presenceModal').data('student-name', studentName);
+                  $('#presenceModal').data('student-matricule', studentMatricule);
+                  
+                  // Set student name and matricule in the modal
+                  $('#modalStudentFullName').text(studentName);
+                  $('#modalStudentMatricule').text('Matricule: ' + (studentMatricule || '-'));
+                  
                   $('#presenceModal').modal('show');
               } else {
                   alertify.error("Erreur : " + response.message);
@@ -725,12 +728,23 @@
         historique.forEach(entry => {
           var modulesTable = "";
           entry.data.forEach(item => {
+          // Determine the reason field - using a default 'N/A' if not provided
+          const reason = item.reason || item.motif || 'N/A';
+          
           modulesTable += `
               <tr>
               <td>${entry.date}</td>
               <td>${item.module}</td>
               <td>${item.etat === 'P' ? '<span class="badge bg-success" >Présent</span>' : item.etat === 'A' ? '<span class="badge bg-danger" >Absent</span>' : item.etat}</td>
               <td>${item.heure}h</td>
+              <td>
+                <span class="reason-text">${reason}</span>
+              </td>
+              <td>
+                ${item.etat === 'A' ? `<button class="btn btn-outline-primary btn-sm edit-reason-btn" data-date="${entry.date}" data-module="${item.module}" data-reason="${reason}">
+                  <i class="ri-edit-line"></i>
+                </button>` : '<span class="text-muted">N/A</span>'}
+              </td>
               </tr>`;
 
               if (item.etat === 'P') {
@@ -748,50 +762,66 @@
 
         const total = nb_present + nb_absence;
         const taux_absence = total > 0 ? ((nb_absence / total) * 100).toFixed(1) : 0;
+        const taux_presence = total > 0 ? ((nb_present / total) * 100).toFixed(1) : 0;
 
-        $('#modalAttendanceRate').html(taux_absence);
+        $('#modalAttendanceRate').html(taux_presence);
     }
-    
     
     // Handle edit reason button click
     $(document).on('click', '.edit-reason-btn', function() {
-      const attendanceId = $(this).data('id');
       const date = $(this).data('date');
       const module = $(this).data('module');
       const currentReason = $(this).data('reason');
       
       // Create and show modal for editing reason
-      showEditReasonModal(attendanceId, date, module, currentReason);
+      showEditReasonModal(date, module, currentReason, $(this));
     });
     
     // Function to show edit reason modal
-    function showEditReasonModal(attendanceId, date, module, currentReason) {
+    function showEditReasonModal(date, module, currentReason, $button) {
       // Create modal HTML dynamically
       const modalHtml = `
         <div class="modal fade" id="editReasonModal" tabindex="-1" aria-labelledby="editReasonModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="editReasonModalLabel">Modifier le Motif d'Absence</h5>
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 shadow-lg border-0">
+              <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                  <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                    <i class="ri-edit-line text-primary fs-5"></i>
+                  </div>
+                  <div>
+                    <h5 class="modal-title fw-semibold text-primary mb-1" id="editReasonModalLabel">
+                      Modifier le Motif d'Absence
+                    </h5>
+                  </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label">Date</label>
-                  <p class="mb-0">${date}</p>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Module</label>
-                  <p class="mb-0">${module}</p>
+              <div class="modal-body p-4">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label text-muted">Date</label>
+                    <div class="p-2 bg-light rounded">${date}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-muted">Module</label>
+                    <div class="p-2 bg-light rounded">${module}</div>
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="editReasonInput" class="form-label">Motif d'Absence</label>
-                  <textarea class="form-control" id="editReasonInput" rows="3">${currentReason}</textarea>
+                  <textarea class="form-control" id="editReasonInput" rows="4">${currentReason}</textarea>
                 </div>
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-success" id="saveReasonBtn" data-id="${attendanceId}">Enregistrer</button>
+              <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                  <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Annuler
+                  </button>
+                  <button type="button" class="btn btn-success px-4" id="saveReasonBtn">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -810,13 +840,14 @@
         if (newReason.trim()) {
           // In a real application, you would save this to the server
           console.log('Updating reason:', {
-            id: attendanceId,
+            date: date,
+            module: module,
             reason: newReason
           });
           
           // Update the reason in the table
-          $(`.edit-reason-btn[data-id="${attendanceId}"]`).siblings('span').text(newReason);
-          $(`.edit-reason-btn[data-id="${attendanceId}"]`).data('reason', newReason);
+          $button.closest('tr').find('.reason-text').text(newReason);
+          $button.data('reason', newReason);
           
           // Show success message
           alert('Motif d\'absence mis à jour avec succès!');
@@ -891,6 +922,254 @@
     $(document).on('click', '#exportStudentPresenceBtn', function() {
       alert('Export PDF des présences de l\'étudiant bientôt disponible');
     });
+    
+    // Print warning functionality
+    $(document).on('click', '#printWarningBtn', function() {
+      // Get the student data from the modal's data attributes
+      const studentId = $('#presenceModal').data('student-id');
+      const studentName = $('#presenceModal').data('student-name');
+      const studentMatricule = $('#presenceModal').data('student-matricule');
+      
+      if (!studentId) {
+        alert('Impossible de récupérer l\'ID de l\'étudiant');
+        return;
+      }
+      
+      // Calculate attendance statistics based on the data in the modal
+      const totalSessions = parseInt($('#modalPresentCount').text()) + parseInt($('#modalAbsentCount').text());
+      const totalAbsences = parseInt($('#modalAbsentCount').text());
+      const attendanceRate = parseFloat($('#modalAttendanceRate').text().replace('%', ''));
+      
+      // Generate the warning PDF
+      generateWarningPDF(studentName, studentMatricule, totalAbsences, totalSessions, attendanceRate);
+    });
+    
+    // Function to generate warning PDF using jsPDF
+    function generateWarningPDF(studentName, studentMatricule, totalAbsences, totalSessions, attendanceRate) {
+      // Check if jsPDF is loaded
+      if (typeof window.jspdf === 'undefined') {
+        console.error("jsPDF n'est pas chargé");
+        return;
+      }
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      // Set up document properties
+      doc.setProperties({
+        title: 'Avertissement de régularisation',
+        subject: 'Avertissement pour absences injustifiées',
+        author: 'Système de gestion scolaire'
+      });
+      
+      // Define text styles
+      const addText = (text, x, y, fontSize = 12, style = 'normal', maxWidth = 180) => {
+        doc.setFontSize(fontSize);
+        if (style === 'bold') {
+          doc.setFont(undefined, 'bold');
+        } else {
+          doc.setFont(undefined, 'normal');
+        }
+        
+        // Split text into lines to avoid going beyond page width
+        const textLines = doc.splitTextToSize(text, maxWidth);
+        doc.text(textLines, x, y);
+        
+        // Return the number of lines added
+        return textLines.length;
+      };
+      
+      // Define text styles and layout
+      let currentY = 20;
+      const pageWidth = doc.internal.pageSize.width;
+      const marginLeft = 15;
+      const marginRight = 15;
+      const maxWidth = pageWidth - marginLeft - marginRight;
+      
+      // Institution header - Centered
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text("INSTITUTION D'ENSEIGNEMENT SUPÉRIEUR", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 8;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("Adresse: 123 Avenue de l'Université, 75000 Paris", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+      doc.text("Téléphone: +33 1 23 45 67 89", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+      doc.text("Email: contact@universite.com", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 15;
+      
+      // Title - Centered
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text("AVERTISSEMENT DE RÉGULARISATION", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 15;
+      
+      // Date
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR');
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Date: ${dateStr}`, marginLeft, currentY);
+      currentY += 12;
+      
+      // Student information
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      currentY += addText("Étudiant(e): " + studentName, marginLeft, currentY, 12, 'bold') * 6;
+      currentY += 4;
+      currentY += addText("Matricule: " + (studentMatricule || 'N/A'), marginLeft, currentY, 12, 'normal') * 6;
+      currentY += 12;
+      
+      // Warning subject
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      currentY += addText("Objet: Avertissement de régularisation pour absences injustifiées", marginLeft, currentY) * 6;
+      currentY += 10;
+      
+      // Warning content with better paragraph structure
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      
+      // Paragraph 1
+      const parag1 = `À la suite de l'analyse de votre présence, il a été constaté que vous avez accumulé ${totalAbsences} absence(s) sur un total de ${totalSessions} séances.`;
+      currentY += addText(parag1, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 6;
+      
+      // Paragraph 2
+      const parag2 = `Votre taux de présence est de ${attendanceRate.toFixed(2)}%, ce qui est inférieur au taux minimum requis de 80%.`;
+      currentY += addText(parag2, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 3
+      const parag3 = "Cet avertissement vous est adressé conformément au règlement intérieur de l'établissement, et vise à vous sensibiliser à l'importance de votre assiduité dans le cadre de votre parcours académique.";
+      currentY += addText(parag3, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 4
+      const parag4 = "En conséquence, nous vous prions de bien vouloir justifier vos absences dans les plus brefs délais auprès de la direction des études, et de vous conformer strictement au calendrier académique pour la suite de votre formation.";
+      currentY += addText(parag4, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 5
+      const parag5 = "Tout défaut de régularisation pourrait entraîner des sanctions plus sévères conformément au règlement intérieur de l'établissement.";
+      currentY += addText(parag5, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 12;
+      
+      // Closing
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text("Cordialement,", marginLeft, currentY);
+      currentY += 10;
+      
+      // Signature block
+      doc.text("La Direction des Études", marginLeft, currentY);
+      currentY += 20;
+      
+      // Add information about two copies
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text("Cet avertissement est établi en deux exemplaires:", marginLeft, currentY);
+      currentY += 6;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("1. Un pour l'étudiant", marginLeft, currentY);
+      currentY += 5;
+      doc.text("2. Un pour le dossier physique de l'étudiant", marginLeft, currentY);
+      currentY += 15;
+      
+      // Add separator line between copies
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(marginLeft, currentY, pageWidth - marginRight, currentY);
+      currentY += 15;
+      
+      // Add second copy title - Centered
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text("COPIE - AVERTISSEMENT DE RÉGULARISATION", pageWidth / 2, currentY, { align: 'center' });
+      currentY += 15;
+      
+      // Add the same information again for the second copy
+      // Date for second copy
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Date: ${dateStr}`, marginLeft, currentY);
+      currentY += 12;
+      
+      // Student information for second copy
+      currentY += addText("Étudiant(e): " + studentName, marginLeft, currentY, 12, 'bold') * 6;
+      currentY += 4;
+      currentY += addText("Matricule: " + (studentMatricule || 'N/A'), marginLeft, currentY, 12, 'normal') * 6;
+      currentY += 12;
+      
+      // Warning subject for second copy
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      currentY += addText("Objet: Avertissement de régularisation pour absences injustifiées", marginLeft, currentY) * 6;
+      currentY += 10;
+      
+      // Warning content for second copy - with better paragraph structure
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      
+      // Paragraph 1 for second copy
+      currentY += addText(parag1, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 6;
+      
+      // Paragraph 2 for second copy
+      currentY += addText(parag2, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 3 for second copy
+      currentY += addText(parag3, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 4 for second copy
+      currentY += addText(parag4, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 8;
+      
+      // Paragraph 5 for second copy
+      currentY += addText(parag5, marginLeft, currentY, 12, 'normal', maxWidth - 10) * 7;
+      currentY += 12;
+      
+      // Closing for second copy
+      doc.text("Cordialement,", marginLeft, currentY);
+      currentY += 10;
+      
+      doc.text("La Direction des Études", marginLeft, currentY);
+      currentY += 15;
+      
+      // Add information about two copies for second copy
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text("Cet avertissement est établi en deux exemplaires:", marginLeft, currentY);
+      currentY += 6;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("1. Un pour l'étudiant", marginLeft, currentY);
+      currentY += 5;
+      doc.text("2. Un pour le dossier physique de l'étudiant", marginLeft, currentY);
+      
+      // Add signature area for both copies
+      currentY += 20;
+      
+      // Line for signature
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - 30, currentY, pageWidth / 2 + 30, currentY);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text("Signature et cachet", pageWidth / 2, currentY + 5, { align: 'center' });
+      
+      // Save the PDF
+      const fileName = `avertissement_${studentName.replace(/\s+/g, '_')}_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}.pdf`;
+      doc.save(fileName);
+    }
     
     // Create new attendance button
     $(document).on('click', '#createAttendanceBtn', function() {

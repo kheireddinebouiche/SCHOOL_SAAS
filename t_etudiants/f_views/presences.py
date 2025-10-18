@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from ..models import *
 from django.contrib.auth.decorators import login_required
 from ..forms import *
@@ -102,6 +102,7 @@ def DetailsListePresence(request, pk):
 
     context =  {
         'etudiants' : student,
+        'ligne_presence' : object,
         'pk' : pk,
     }
     return render(request, 'tenant_folder/presences/details_ligne_presence.html', context)
