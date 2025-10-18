@@ -144,9 +144,9 @@ def ApiAjouterHistoriqueAbsence(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
-def ApiGetHistoriqueEtudiant(request, pk):
+def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
     try:
-        historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=pk)
+        historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=pk, ligne_presence_id=id_ligne)
         data = historique_obj.historique or []
         return JsonResponse({"status": "success", "historique": data})
     except Exception as e:

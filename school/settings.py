@@ -61,6 +61,7 @@ TENANT_APPS = [
     't_exam',
     't_conseil',
     't_remise',
+    't_timetable',
     'phonenumber_field',
     'django_countries',
     'django.contrib.auth',

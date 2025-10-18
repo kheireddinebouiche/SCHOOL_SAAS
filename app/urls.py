@@ -13,6 +13,7 @@ urlpatterns = [
     path('scolarite/groupes/',include('t_groupe.urls',namespace='t_groupe')),
     path('comptabilite/tresorerie/',include('t_tresorerie.urls',namespace='t_tresorerie')),
     path('scolarite/etudiants/', include('t_etudiants.urls', namespace='t_etudiants')),
+    path('emploie-du-temps/', include('t_timetable.urls', namespace="t_timetable")),
     path('examens/', include('t_exam.urls', namespace="t_exam")),
     path('conseil/', include('t_conseil.urls', namespace='t_conseil')),
     path('remises/', include('t_remise.urls', namespace='t_remise')),
