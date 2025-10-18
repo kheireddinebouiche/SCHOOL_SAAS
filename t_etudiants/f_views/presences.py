@@ -151,3 +151,12 @@ def ApiGetHistoriqueEtudiant(request, pk):
         return JsonResponse({"status": "success", "historique": data})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
+
+
+@login_required(login_url="institut_app:login")
+def ListeDesEtudiants(request):
+    liste = Prospets.objects.filter(statut = "convertit")
+    context = {
+        'etudiants' : liste
+    }
+    return render(request, 'tenant_folder/presences/liste_des_etudiants.html', context)
