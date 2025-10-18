@@ -91,8 +91,16 @@ def timetable_configure(request, pk):
         return render(request, 'tenant_folder/timetable/configuration_emploie.html', context)
 
 @login_required(login_url="institut_app:login")
-def ApiMakeTimetableDone(request):
+def save_session(request):
     pass
+
+@login_required(login_url="institut_app:login")
+def ApiMakeTimetableDone(request):
+    id_emploie = request.GET.get('id_emploie')
+    obj = Timetable.objects.get(id = id_emploie)
+    obj.is_configured = True
+    obj.save()
+    return JsonResponse({"status": "success"})
 
 @login_required(login_url="institut_app:login")
 def save_day(request):

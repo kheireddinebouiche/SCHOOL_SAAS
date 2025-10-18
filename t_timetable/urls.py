@@ -11,6 +11,8 @@ urlpatterns = [
     path('details/emploie/<int:pk>/',timetable_view, name="timetable_view"),
     path('modifications/emploie/<int:pk>/', timetable_edit, name="timetable_edit"),
     path('configuration/emploie/<int:pk>/', timetable_configure, name="timetable_configure"),
+    path('ApiMakeTimetableDone', ApiMakeTimetableDone, name="ApiMakeTimetableDone"),
+    path('save_session', save_session, name="save_session"),
 
     ### APIS ###
     path('save_day', save_day, name="save_day"),
