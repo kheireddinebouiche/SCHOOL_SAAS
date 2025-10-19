@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path,include
 from .views import *
+from.f_views.salles import *
+from .f_views.crenaux import *
 
 app_name="t_timetable"
 
@@ -23,6 +25,15 @@ urlpatterns = [
     path('save_horaire', save_horaire, name="save_horaire"),
     path('update_horaire', update_horaire, name="update_horaire"),
     path('delete_horaire', delete_horaire, name="delete_horaire"),
+
+
+    ### SALLES DE COURS ###
+    path('classroom/liste/',ListeDesSalles, name="ListeDesSalles"),
+
+
+    ### GESTION DES CRENAUX ###
+    path('crenaux/liste/',ListeModel, name="ListeModelCrenau"),
+    path('create_model/',create_model, name="create_model"),
 
 
 

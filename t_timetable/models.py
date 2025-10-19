@@ -64,52 +64,41 @@ class Salle(models.Model):
         verbose_name_plural = "Salles"
         ordering = ['nom']
 
-class Jour(models.Model):
-    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, null=True, blank=True)
-    nom = models.CharField(max_length=20, verbose_name="Nom du jour")
-    date_creation = models.DateTimeField(auto_now_add=True)
+class ModelCrenau(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    jour_data = models.JSONField(default=dict, blank=True, null=True)
+    horaire_data = models.JSONField(default=dict, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.nom
+        return self.label or "Créneau sans label"
 
-    class Meta:
-        verbose_name = "Jour"
-        verbose_name_plural = "Jours"
-        
-class Horaire(models.Model):
-    """
-    Represents a time slot that can be configured for a timetable
-    """
-    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, null=True, blank=True)
-    nom = models.CharField(max_length=50, verbose_name="Nom de l'horaire")
-    heure_debut = models.TimeField(verbose_name="Heure de début")
-    heure_fin = models.TimeField(verbose_name="Heure de fin")
-    est_actif = models.BooleanField(default=True, verbose_name="Est actif")
-    date_creation = models.DateTimeField(auto_now_add=True)
+    def set_jour(self, jour_obj):
+        if jour_obj:
+            self.jour_data = {
+                "id": jour_obj.id,
+                "nom": jour_obj.nom,
+                "date_creation": jour_obj.date_creation.isoformat(),
+            }
 
-    def __str__(self):
-        return f"{self.nom} ({self.heure_debut.strftime('%H:%M')}-{self.heure_fin.strftime('%H:%M')})"
-
-    @property
-    def duree(self):
-        """Returns the duration of the time slot"""
-        return self.heure_fin - self.heure_debut
-
-    class Meta:
-        verbose_name = "Horaire"
-        verbose_name_plural = "Horaires"
-        ordering = ['heure_debut']
-
+    def set_horaire(self, horaire_obj):
+        if horaire_obj:
+            self.horaire_data = {
+                "id": horaire_obj.id,
+                "nom": horaire_obj.nom,
+                "heure_debut": horaire_obj.heure_debut.strftime("%H:%M"),
+                "heure_fin": horaire_obj.heure_fin.strftime("%H:%M"),
+                "est_actif": horaire_obj.est_actif,
+            }
 
 class TimetableEntry(models.Model):
-    """
-    Represents a single entry in a timetable (a specific course at a specific time and place)
-    """
+
     timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, verbose_name="Emploi du temps")
     cours = models.ForeignKey(Modules, on_delete=models.CASCADE, verbose_name="Cours")
     salle = models.ForeignKey(Salle, on_delete=models.CASCADE, verbose_name="Salle")
-    jour = models.ForeignKey(Jour, on_delete=models.CASCADE, verbose_name="Jour")
-    horaire = models.ForeignKey(Horaire, on_delete=models.CASCADE, verbose_name="Horaire")
+    crenau = models.ForeignKey(ModelCrenau, on_delete=models.CASCADE, null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
@@ -119,4 +108,4 @@ class TimetableEntry(models.Model):
     class Meta:
         verbose_name = "Entrée d'emploi du temps"
         verbose_name_plural = "Entrées d'emploi du temps"
-        unique_together = ['timetable', 'jour', 'horaire']  # Prevents overlapping schedules
+        unique_together = ['timetable','crenau']
