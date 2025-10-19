@@ -20,16 +20,33 @@ def ListeModel(request):
 def create_model(request):
     if request.method == 'POST':
         label = request.POST.get('label')
-        jour = request.POST.get('jour')
+        # Since we're now sending multiple days as a JSON array, we need to handle that
+        import json
+        jours = request.POST.get('jours')
         heure_debut = request.POST.get('heure_debut')
         heure_fin = request.POST.get('heure_fin')
         
         try:
             # Validate required fields
-            if not label or not jour or not heure_debut or not heure_fin:
+            if not label or not jours or not heure_debut or not heure_fin:
                 return JsonResponse({
                     'status': 'error',
                     'message': 'Tous les champs sont obligatoires'
+                })
+            
+            # Parse the jours JSON
+            try:
+                jours_list = json.loads(jours)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Format de jours invalide'
+                })
+            
+            if not jours_list:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Veuillez sélectionner au moins un jour'
                 })
             
             # Validate that end time is after start time
@@ -51,21 +68,23 @@ def create_model(request):
                 label=label
             )
             
-            # Create the jour_data dictionary
+            # For now, we'll store the first day in the jour_data, but we could store all days
+            # If needed, we could change the jour_data field to store multiple days
             jour_data = {
-                "id": None,  # Since we're using a string for the day, we don't have a model instance
-                "nom": jour,
-                "date_creation": None  # Using None as we don't have a model instance for the day
+                "id": None,
+                "nom": jours_list[0],  # Store first day for backward compatibility
+                "jours": jours_list,   # Store all selected days
+                "date_creation": None
             }
             crenau.jour_data = jour_data
             
             # Create the horaire_data dictionary
             horaire_data = {
-                "id": None,  # Since we're not storing Horaire model instances, we use None
+                "id": None,
                 "nom": f"{heure_debut}-{heure_fin}",
                 "heure_debut": heure_debut,
                 "heure_fin": heure_fin,
-                "est_actif": True  # Default to True
+                "est_actif": True
             }
             crenau.horaire_data = horaire_data
             
@@ -73,7 +92,8 @@ def create_model(request):
             
             return JsonResponse({
                 'status': 'success',
-                'message': 'Modèle de créneau créé avec succès!'
+                'message': 'Modèle de créneau créé avec succès!',
+                'id': crenau.id
             })
         except Exception as e:
             return JsonResponse({
