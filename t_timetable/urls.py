@@ -15,17 +15,7 @@ urlpatterns = [
     path('configuration/emploie/<int:pk>/', timetable_configure, name="timetable_configure"),
     path('ApiMakeTimetableDone', ApiMakeTimetableDone, name="ApiMakeTimetableDone"),
     path('save_session', save_session, name="save_session"),
-
-    ### APIS ###
-    path('save_day', save_day, name="save_day"),
-    path('update_day', update_day, name="update_day"),
-    path('delete_day', delete_day, name="delete_day"),
-
-
-    path('save_horaire', save_horaire, name="save_horaire"),
-    path('update_horaire', update_horaire, name="update_horaire"),
-    path('delete_horaire', delete_horaire, name="delete_horaire"),
-
+   
 
     ### SALLES DE COURS ###
     path('classroom/liste/',ListeDesSalles, name="ListeDesSalles"),
@@ -34,6 +24,9 @@ urlpatterns = [
     ### GESTION DES CRENAUX ###
     path('crenaux/liste/',ListeModel, name="ListeModelCrenau"),
     path('create_model/',create_model, name="create_model"),
+    path('details/creneau/<int:pk>/', model_creneau_detail, name="model_creneau_detail"),
+    path('edit/creneau/<int:pk>/', model_creneau_edit, name="model_creneau_edit"),
+    path('save_model_crenau/', save_model_crenau, name="save_model_crenau"),
 
 
 

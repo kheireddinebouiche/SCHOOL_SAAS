@@ -6,9 +6,7 @@ from t_groupe.models import *
 from t_formations.models import Modules
 
 class Timetable(models.Model):
-    """
-    Main timetable model representing a schedule
-    """
+    
     label = models.CharField(max_length=200, verbose_name="Label")
     groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE, verbose_name="Groupe")
     semestre = models.CharField(
@@ -26,6 +24,7 @@ class Timetable(models.Model):
     date_modification = models.DateTimeField(auto_now=True)
     est_actif = models.BooleanField(default=True, verbose_name="Est actif")
     is_configured = models.BooleanField(default=False)
+    creneau = models.ForeignKey('ModelCrenau', on_delete=models.CASCADE, null=True, blank=True)
     cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
@@ -66,6 +65,7 @@ class Salle(models.Model):
 
 class ModelCrenau(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
+    description = models.CharField(max_length=100, null=True, blank=True)
     jour_data = models.JSONField(default=dict, blank=True, null=True)
     horaire_data = models.JSONField(default=dict, blank=True, null=True)
 

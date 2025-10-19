@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from ..forms import *
 from ..models import *
@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from t_groupe.models import *
+from django.views.decorators.http import require_http_methods
 
 @login_required(login_url="institut_app:login")
 def ListeModel(request):
@@ -19,81 +20,26 @@ def ListeModel(request):
 @login_required(login_url="institut_app:login")
 def create_model(request):
     if request.method == 'POST':
-        label = request.POST.get('label')
+        label = request.POST.get('nom')
+        description = request.POST.get('description')
         # Since we're now sending multiple days as a JSON array, we need to handle that
-        import json
-        jours = request.POST.get('jours')
-        heure_debut = request.POST.get('heure_debut')
-        heure_fin = request.POST.get('heure_fin')
-        
         try:
             # Validate required fields
-            if not label or not jours or not heure_debut or not heure_fin:
+            if not label :
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Tous les champs sont obligatoires'
+                    'message': 'Le champs label est obligatoire'
                 })
-            
-            # Parse the jours JSON
-            try:
-                jours_list = json.loads(jours)
-            except json.JSONDecodeError:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Format de jours invalide'
-                })
-            
-            if not jours_list:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Veuillez sélectionner au moins un jour'
-                })
-            
-            # Validate that end time is after start time
-            from datetime import time
-            debut_h, debut_m = map(int, heure_debut.split(':'))
-            fin_h, fin_m = map(int, heure_fin.split(':'))
-            
-            time_debut = time(debut_h, debut_m)
-            time_fin = time(fin_h, fin_m)
-            
-            if time_fin <= time_debut:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'L\'heure de fin doit être postérieure à l\'heure de début'
-                })
-            
+              
             # Create the ModelCrenau instance
-            crenau = ModelCrenau.objects.create(
-                label=label
+            ModelCrenau.objects.create(
+                label=label,
+                description = description
             )
-            
-            # For now, we'll store the first day in the jour_data, but we could store all days
-            # If needed, we could change the jour_data field to store multiple days
-            jour_data = {
-                "id": None,
-                "nom": jours_list[0],  # Store first day for backward compatibility
-                "jours": jours_list,   # Store all selected days
-                "date_creation": None
-            }
-            crenau.jour_data = jour_data
-            
-            # Create the horaire_data dictionary
-            horaire_data = {
-                "id": None,
-                "nom": f"{heure_debut}-{heure_fin}",
-                "heure_debut": heure_debut,
-                "heure_fin": heure_fin,
-                "est_actif": True
-            }
-            crenau.horaire_data = horaire_data
-            
-            crenau.save()
-            
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Modèle de créneau créé avec succès!',
-                'id': crenau.id
             })
         except Exception as e:
             return JsonResponse({
@@ -107,6 +53,57 @@ def create_model(request):
         })
 
 @login_required(login_url="institut_app:login")
+def model_creneau_detail(request, pk):
+    pass
+
+@login_required(login_url="institut_app:login")
+def model_creneau_edit(request, pk):
+    """
+    Vue pour éditer un modèle de créneau existant
+    """
+    modele = get_object_or_404(ModelCrenau, pk=pk)
+    
+    # Jours de la semaine
+    jours_semaine = [
+        {"jour_semaine": "lundi", "nom": "Lundi"},
+        {"jour_semaine": "mardi", "nom": "Mardi"},
+        {"jour_semaine": "mercredi", "nom": "Mercredi"},
+        {"jour_semaine": "jeudi", "nom": "Jeudi"},
+        {"jour_semaine": "vendredi", "nom": "Vendredi"},
+        {"jour_semaine": "samedi", "nom": "Samedi"},
+        {"jour_semaine": "dimanche", "nom": "Dimanche"},
+    ]
+    
+    # Déterminer quels jours sont sélectionnés
+    jours_selectionnes = modele.jour_data.get('jours_travail', []) if modele.jour_data else []
+    
+    # Ajouter une indication si chaque jour est sélectionné
+    for jour in jours_semaine:
+        jour['est_selectionne'] = jour['jour_semaine'] in jours_selectionnes
+    
+    # Récupérer les plages horaires stockées
+    plages_horaires = []
+    if modele.horaire_data and 'plages_horaires' in modele.horaire_data:
+        plages_horaires = modele.horaire_data['plages_horaires']
+    
+    context = {
+        'modele': modele,
+        'jours': jours_semaine,
+        'jours_selectionnes': jours_selectionnes,
+        'plages_horaires': plages_horaires,
+        # Variables pour chaque jour pour faciliter l'affichage dans le template
+        'jour_lundi_selectionne': 'lundi' in jours_selectionnes,
+        'jour_mardi_selectionne': 'mardi' in jours_selectionnes,
+        'jour_mercredi_selectionne': 'mercredi' in jours_selectionnes,
+        'jour_jeudi_selectionne': 'jeudi' in jours_selectionnes,
+        'jour_vendredi_selectionne': 'vendredi' in jours_selectionnes,
+        'jour_samedi_selectionne': 'samedi' in jours_selectionnes,
+        'jour_dimanche_selectionne': 'dimanche' in jours_selectionnes,
+    }
+    
+    return render(request, 'tenant_folder/timetable/crenaux/edit_model_crenau.html', context)
+
+@login_required(login_url="institut_app:login")
 def get_horaires(request):
     # This view could return available time slots if there's a Horaire model
     # For now, returning an empty response since horaires are user-defined
@@ -114,3 +111,49 @@ def get_horaires(request):
         'status': 'success',
         'horaires': []
     })
+
+@require_http_methods(["POST"])
+def save_model_crenau(request):
+   
+    try:
+        modele_id = request.POST.get('modele_id')
+        nom = request.POST.get('nom')
+        description = request.POST.get('description')
+        jours_travail = request.POST.getlist('jours_travail')
+        
+        # Récupérer les heures de début et de fin
+        heures_debut = request.POST.getlist('heure_debut')
+        heures_fin = request.POST.getlist('heure_fin')
+        
+        # Valider la correspondance des plages horaires
+        if len(heures_debut) != len(heures_fin):
+            return JsonResponse({ 'success': False,'message': "Les heures de début et de fin ne correspondent pas."})
+        
+        # Créer la liste des plages horaires
+        plages_horaires = []
+        for debut, fin in zip(heures_debut, heures_fin):
+            if debut and fin: 
+                plages_horaires.append({
+                    'heure_debut': debut,
+                    'heure_fin': fin
+                })
+        
+        
+        modele = get_object_or_404(ModelCrenau, pk=modele_id)
+        
+        modele.label = nom
+        modele.description = description
+        modele.jour_data = {'jours_travail': jours_travail}
+        modele.horaire_data = {'plages_horaires': plages_horaires}
+        
+        modele.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': "Le modèle de créneau a été mis à jour avec succès."
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f"Une erreur est survenue lors de la sauvegarde : {str(e)}"
+        })

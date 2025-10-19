@@ -1,0 +1,458 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Modifier le modèle de créneau{% endblock %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #dc3545;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+  
+  /* Timetable specific styles */
+  .timetable-item {
+    transition: transform 0.3s ease;
+  }
+  
+  .timetable-item:hover {
+    transform: translateY(-3px);
+  }
+  
+  /* Custom styles for edit page */
+  .plage-horaire {
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+  }
+  
+  .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .input-group {
+    position: relative;
+  }
+  
+  .input-group-text {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    background: transparent;
+    border: none;
+    color: #6c757d;
+  }
+  
+  .input-group .form-control {
+    padding-left: 45px;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-clock text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Modifier le Modèle de Créneau</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Emploi du Temps</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Créneaux</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Modèles</a>
+                  </li>
+                  <li class="breadcrumb-item active">Modification</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-edit text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Détails du modèle</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-4">
+              <form id="editModelForm">
+                {% csrf_token %}
+                
+                <input type="hidden" name="modele_id" value="{{ modele.id }}">
+                
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="nom">Label <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-0" style="padding-right:4px;"><i class="ri-file-text-line text-muted"></i></span>
+                          <input type="text" class="form-control border-0 bg-light py-2" id="nom" name="nom" value="{{ modele.label }}" required>
+                        </div>
+                      </div>
+                      
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="description">Description</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-0" style="padding-right:4px;"><i class="ri-file-text-line text-muted"></i></span>
+                          <input type="text" class="form-control border-0 bg-light py-2" id="description" name="description" value="{{ modele.description|default:'' }}">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                  <div class="card-body">
+                    <h5 class="card-title mb-4 text-info fw-semibold">Jours de travail</h5>
+                    
+                    <div class="row g-3">
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_lundi" 
+                                 name="jours_travail" value="lundi" 
+                                 {% if jour_lundi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_lundi">Lundi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_mardi" 
+                                 name="jours_travail" value="mardi" 
+                                 {% if jour_mardi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_mardi">Mardi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_mercredi" 
+                                 name="jours_travail" value="mercredi" 
+                                 {% if jour_mercredi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_mercredi">Mercredi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_jeudi" 
+                                 name="jours_travail" value="jeudi" 
+                                 {% if jour_jeudi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_jeudi">Jeudi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_vendredi" 
+                                 name="jours_travail" value="vendredi" 
+                                 {% if jour_vendredi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_vendredi">Vendredi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_samedi" 
+                                 name="jours_travail" value="samedi" 
+                                 {% if jour_samedi_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_samedi">Samedi</label>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="form-check d-flex align-items-center">
+                          <input class="form-check-input me-2" type="checkbox" id="jour_dimanche" 
+                                 name="jours_travail" value="dimanche" 
+                                 {% if jour_dimanche_selectionne %}checked{% endif %}>
+                          <label class="form-check-label fw-medium" for="jour_dimanche">Dimanche</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                      <h5 class="card-title mb-0 text-info fw-semibold">Plages horaires</h5>
+                      <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2" id="ajouter-plage">
+                        <i class="ri-add-line me-1"></i> Ajouter une plage
+                      </button>
+                    </div>
+                    
+                    <div id="plages_horaires">
+                      {% if plages_horaires %}
+                        {% for plage in plages_horaires %}
+                        <div class="plage-horaire mb-3">
+                          <div class="row g-3 align-items-center">
+                            <div class="col-md-5">
+                              <label class="form-label fw-medium">Heure de début</label>
+                              <input type="time" class="form-control border-0 bg-light py-2" name="heure_debut" value="{{ plage.heure_debut }}" required>
+                            </div>
+                            <div class="col-md-5">
+                              <label class="form-label fw-medium">Heure de fin</label>
+                              <input type="time" class="form-control border-0 bg-light py-2" name="heure_fin" value="{{ plage.heure_fin }}" required>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center">
+                              <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage w-100">
+                                <i class="ri-delete-bin-line"></i> Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        {% endfor %}
+                      {% else %}
+                        <!-- Message quand il n'y a pas de plages horaires -->
+                        <div class="text-center py-4 text-muted" id="no-plage-message">
+                          <i class="ri-time-line display-6"></i>
+                          <p>Aucune plage horaire configurée</p>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-3">
+                  <a href="{% url 't_timetable:ListeModelCrenau' %}" class="btn btn-light px-4 py-2">
+                    <i class="ri-close-line me-2"></i>Annuler
+                  </a>
+                  <button type="button" class="btn btn-primary px-4 py-2" id="saveModelBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ajouterPlageBtn = document.getElementById('ajouter-plage');
+    const plagesHorairesContainer = document.getElementById('plages_horaires');
+    
+    // Fonction pour ajouter une nouvelle plage horaire
+    ajouterPlageBtn.addEventListener('click', function() {
+        const plageHoraire = document.createElement('div');
+        plageHoraire.className = 'plage-horaire mb-3';
+        
+        plageHoraire.innerHTML = `
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                  <label class="form-label fw-medium">Heure de début</label>
+                  <input type="time" class="form-control border-0 bg-light py-2" name="heure_debut" required>
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label fw-medium">Heure de fin</label>
+                  <input type="time" class="form-control border-0 bg-light py-2" name="heure_fin" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                  <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage w-100">
+                    <i class="ri-delete-bin-line"></i> Supprimer
+                  </button>
+                </div>
+            </div>
+        `;
+        
+        // Supprimer le message "Aucune plage horaire configurée" s'il est présent
+        const noPlageMessage = document.getElementById('no-plage-message');
+        if (noPlageMessage) {
+            noPlageMessage.remove();
+        }
+        
+        plagesHorairesContainer.appendChild(plageHoraire);
+        
+        // Ajouter l'événement de suppression à la nouvelle plage
+        const supprimerBtn = plageHoraire.querySelector('.btn-supprimer-plage');
+        supprimerBtn.addEventListener('click', function() {
+            plageHoraire.remove();
+            
+            // Afficher le message s'il n'y a plus de plages horaires
+            const plageElements = plagesHorairesContainer.querySelectorAll('.plage-horaire');
+            if (plageElements.length === 0) {
+                const message = document.createElement('div');
+                message.className = 'text-center py-4 text-muted';
+                message.id = 'no-plage-message';
+                message.innerHTML = `
+                    <i class="ri-time-line display-6"></i>
+                    <p>Aucune plage horaire configurée</p>
+                `;
+                plagesHorairesContainer.appendChild(message);
+            }
+        });
+    });
+    
+    // Ajouter l'événement de suppression aux boutons existants
+    document.querySelectorAll('.btn-supprimer-plage').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const plage = this.closest('.plage-horaire');
+            if (plage) {
+                plage.remove();
+                
+                // Afficher le message s'il n'y a plus de plages horaires
+                const plageElements = plagesHorairesContainer.querySelectorAll('.plage-horaire');
+                if (plageElements.length === 0) {
+                    const message = document.createElement('div');
+                    message.className = 'text-center py-4 text-muted';
+                    message.id = 'no-plage-message';
+                    message.innerHTML = `
+                        <i class="ri-time-line display-6"></i>
+                        <p>Aucune plage horaire configurée</p>
+                    `;
+                    plagesHorairesContainer.appendChild(message);
+                }
+            }
+        });
+    });
+    
+    // Gestion de la sauvegarde via AJAX
+    document.getElementById('saveModelBtn').addEventListener('click', function() {
+        // Récupérer les données du formulaire
+        const formData = new FormData();
+        
+        // Ajouter les données de base
+        const modeleId = document.querySelector('input[name="modele_id"]').value;
+        const nom = document.getElementById('nom').value;
+        const description = document.getElementById('description').value;
+        
+        formData.append('modele_id', modeleId);
+        formData.append('nom', nom);
+        formData.append('description', description);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        // Récupérer les jours de travail sélectionnés
+        const joursSelectionnes = document.querySelectorAll('input[name="jours_travail"]:checked');
+        joursSelectionnes.forEach(function(jour) {
+            formData.append('jours_travail', jour.value);
+        });
+        
+        // Récupérer les plages horaires
+        const plages = document.querySelectorAll('#plages_horaires .plage-horaire');
+        plages.forEach(function(plage, index) {
+            const heureDebut = plage.querySelector('input[name="heure_debut"]').value;
+            const heureFin = plage.querySelector('input[name="heure_fin"]').value;
+            
+            if (heureDebut && heureFin) {
+                formData.append('heure_debut', heureDebut);
+                formData.append('heure_fin', heureFin);
+            }
+        });
+        
+        // Afficher un indicateur de chargement
+        const originalBtnText = this.innerHTML;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...';
+        this.disabled = true;
+        
+        // Envoyer la requête AJAX
+        fetch('{% url "t_timetable:save_model_crenau" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher un message de succès
+                alert('Le modèle de créneau a été mis à jour avec succès.');
+                // Rediriger vers la liste des modèles
+                window.location.href = '{% url "t_timetable:ListeModelCrenau" %}';
+            } else {
+                // Afficher un message d'erreur
+                alert('Une erreur est survenue lors de la sauvegarde : ' + (data.message || 'Erreur inconnue'));
+                // Rétablir le bouton
+                this.innerHTML = originalBtnText;
+                this.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors de la sauvegarde.');
+            // Rétablir le bouton
+            this.innerHTML = originalBtnText;
+            this.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}
