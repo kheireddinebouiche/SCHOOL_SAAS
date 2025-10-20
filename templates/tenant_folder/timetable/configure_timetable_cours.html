@@ -290,8 +290,8 @@
               <label class="form-label fw-medium" for="session_jour">Jour <span class="text-danger">*</span></label>
               <select class="form-select border-0 bg-light py-2" id="session_jour" name="jour" required>
                 <option value="">Sélectionnez un jour</option>
-                {% for jour in jours_list %}
-                  <option value="{{ jour.id }}">{{ jour.nom }}</option>
+                {% for jour in jour_data.jours_travail %}
+                  <option value="{{ jour }}">{{ jour|capfirst }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -301,8 +301,8 @@
               <label class="form-label fw-medium" for="session_horaire">Horaire <span class="text-danger">*</span></label>
               <select class="form-select border-0 bg-light py-2" id="session_horaire" name="horaire" required>
                 <option value="">Sélectionnez un horaire</option>
-                {% for horaire in horaires_list %}
-                  <option value="{{ horaire.id }}">{{ horaire.nom }} ({{ horaire.heure_debut|time:"H:i" }} - {{ horaire.heure_fin|time:"H:i" }})</option>
+                {% for horaire in horaire_data.plages_horaires %}
+                  <option value="{{ horaire.id }}">{{ horaire.nom_creneau }} ({{ horaire.heure_debut }} - {{ horaire.heure_fin }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -437,6 +437,7 @@
       });
     });
 
+    console.log("{{timetable.creneau.jour_data}}");
     // Handle clicking delete-session button - show confirmation modal
     $(document).on('click', '.delete-session', function() {
       var sessionId = $(this).data('session-id');
@@ -496,82 +497,97 @@
         }
       });
     });
+
+    // Handle print timetable button
+    $('#printTimetableBtn').on('click', function() {
+      // Create a new window with the timetable data for printing
+      var printWindow = window.open('', '_blank');
+      var printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Emploi du Temps - ${document.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .timetable-info { margin-bottom: 20px; }
+            .timetable-info div { margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .day-header { background-color: #e6f3ff; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Emploi du Temps</h1>
+            {% if timetable %}
+            <div class="timetable-info">
+              <div><strong>Label:</strong> {{ timetable.label }}</div>
+              <div><strong>Groupe:</strong> {{ timetable.groupe.nom }}</div>
+              <div><strong>Classe:</strong> {{ timetable.groupe.classe.nom }}</div>
+              <div><strong>Semestre:</strong> {{ timetable.semestre }}</div>
+              {% if timetable.description %}<div><strong>Description:</strong> {{ timetable.description }}</div>{% endif %}
+            </div>
+            {% endif %}
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>Jour</th>
+                <th>Horaire</th>
+                <th>Professeur</th>
+                <th>Salle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in timetable.timetableentry_set.all %}
+              <tr>
+                <td>{{ entry.cours.code }} - {{ entry.cours.nom }}</td>
+                <td>{{ entry.jour.nom }}</td>
+                <td>{{ entry.horaire.nom }} ({{ entry.horaire.heure_debut|time:"H:i" }} - {{ entry.horaire.heure_fin|time:"H:i" }})</td>
+                <td>{{ entry.cours.enseignant.first_name }} {{ entry.cours.enseignant.last_name }}</td>
+                <td>{{ entry.salle.nom }} ({{ entry.salle.code }})</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center">Aucune séance de cours programmée</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          
+          <div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 12px; color: #666;">
+            Impression générée le ${new Date().toLocaleString('fr-FR')}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    });
+
+
+    function loadSalle(){
+
+    }
+
+    function loadModule(){
+
+    }
+
+    
+
+
   });
   
-  // Handle print timetable button
-  $('#printTimetableBtn').on('click', function() {
-    // Create a new window with the timetable data for printing
-    var printWindow = window.open('', '_blank');
-    var printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Emploi du Temps - ${document.title}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .timetable-info { margin-bottom: 20px; }
-          .timetable-info div { margin: 5px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .day-header { background-color: #e6f3ff; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Emploi du Temps</h1>
-          {% if timetable %}
-          <div class="timetable-info">
-            <div><strong>Label:</strong> {{ timetable.label }}</div>
-            <div><strong>Groupe:</strong> {{ timetable.groupe.nom }}</div>
-            <div><strong>Classe:</strong> {{ timetable.groupe.classe.nom }}</div>
-            <div><strong>Semestre:</strong> {{ timetable.semestre }}</div>
-            {% if timetable.description %}<div><strong>Description:</strong> {{ timetable.description }}</div>{% endif %}
-          </div>
-          {% endif %}
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Module</th>
-              <th>Jour</th>
-              <th>Horaire</th>
-              <th>Professeur</th>
-              <th>Salle</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in timetable.timetableentry_set.all %}
-            <tr>
-              <td>{{ entry.cours.code }} - {{ entry.cours.nom }}</td>
-              <td>{{ entry.jour.nom }}</td>
-              <td>{{ entry.horaire.nom }} ({{ entry.horaire.heure_debut|time:"H:i" }} - {{ entry.horaire.heure_fin|time:"H:i" }})</td>
-              <td>{{ entry.cours.enseignant.first_name }} {{ entry.cours.enseignant.last_name }}</td>
-              <td>{{ entry.salle.nom }} ({{ entry.salle.code }})</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="5" class="text-center">Aucune séance de cours programmée</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        
-        <div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 12px; color: #666;">
-          Impression générée le ${new Date().toLocaleString('fr-FR')}
-        </div>
-      </body>
-      </html>
-    `;
-    
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  });
+  
 </script>
 
 {% endblock content %}

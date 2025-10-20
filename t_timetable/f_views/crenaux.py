@@ -166,7 +166,7 @@ def save_model_crenau(request):
         modele.horaire_data = {'plages_horaires': plages_horaires}
         
         modele.save()
-        
+        messages.success(request, "Le modèle de créneau a été mis à jour avec succès.")
         return JsonResponse({
             'success': True,
             'message': "Le modèle de créneau a été mis à jour avec succès."
@@ -202,7 +202,7 @@ def activate_model_crenau(request):
         # Activate the model
         modele.is_active = True
         modele.save()
-        
+        messages.success(request, "Le modèle de créneau a été activé avec succès.")
         return JsonResponse({
             'success': True,
             'message': "Le modèle de créneau a été activé avec succès."

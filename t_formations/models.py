@@ -116,7 +116,16 @@ class Modules(models.Model):
 
     def __str__(self):
         return self.label
-    
+
+class EnseignantModule(models.Model):
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.module.label}"
+
 class PlansCadre(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
     titre = models.CharField(max_length=255,null=True, blank=True)

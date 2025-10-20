@@ -36,9 +36,7 @@ class Timetable(models.Model):
         ordering = ['-date_creation']
 
 class Salle(models.Model):
-    """
-    Represents a classroom or location where courses are held
-    """
+    
     nom = models.CharField(max_length=100, verbose_name="Nom de la salle")
     code = models.CharField(max_length=20, unique=True, verbose_name="Code de la salle")
     capacite = models.IntegerField(verbose_name="Capacité")

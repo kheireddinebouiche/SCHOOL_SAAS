@@ -19,6 +19,10 @@ urlpatterns = [
 
     ### SALLES DE COURS ###
     path('classroom/liste/',ListeDesSalles, name="ListeDesSalles"),
+    path('classroom/creer/', CreerSalle, name="CreerSalle"),
+    path('classroom/modifier/<int:salle_id>/', EditerSalle, name="EditerSalle"),
+    path('classroom/supprimer/<int:salle_id>/', SupprimerSalle, name="SupprimerSalle"),
+    path('classroom/data/<int:salle_id>/', get_salle_data, name="get_salle_data"),
 
 
     ### GESTION DES CRENAUX ###
