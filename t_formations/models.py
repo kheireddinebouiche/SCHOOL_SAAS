@@ -116,9 +116,23 @@ class Modules(models.Model):
 
     def __str__(self):
         return self.label
+    
+class Formateurs(models.Model):
+    nom = models.CharField(max_length=100, null=True, blank=True)
+    prenom = models.CharField(max_length=100, null=True, blank=True)
+    telephone = models.CharField(max_length=100, null=True, blank=True)
+    email = models.CharField(max_length=100, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.nom} - {self.prenom}"
+    
 
 class EnseignantModule(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+    formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

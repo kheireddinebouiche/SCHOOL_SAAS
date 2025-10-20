@@ -107,3 +107,12 @@ class TimetableEntry(models.Model):
         verbose_name = "Entrée d'emploi du temps"
         verbose_name_plural = "Entrées d'emploi du temps"
         unique_together = ['timetable','crenau']
+
+class EditionLock(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_lock = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.username
