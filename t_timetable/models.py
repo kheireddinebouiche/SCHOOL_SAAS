@@ -109,7 +109,8 @@ class TimetableEntry(models.Model):
         unique_together = ['timetable','crenau']
 
 class EditionLock(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, null=True, blank=True)
     is_lock = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
