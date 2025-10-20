@@ -12,10 +12,27 @@ from django.views.decorators.http import require_http_methods
 @login_required(login_url="institut_app:login")
 def ListeModel(request):
     liste = ModelCrenau.objects.all()
+    modeles_actifs = ModelCrenau.objects.filter(is_active=True).count()
+    
+    # Calculate the number of unique days configured across all models
+    jours_uniques = set()
+    for modele in liste:
+        if modele.jour_data and 'jours_travail' in modele.jour_data:
+            jours_uniques.update(modele.jour_data['jours_travail'])
+    
+    # Calculate the number of different configurations (for types count)
+    # This might be based on different combinations of hours, or other attributes
+    # For now, using a simple approach - you might want to customize this based on your business logic
+    types_count = liste.count()  # or some other logic based on your requirements
+    
     context = {
-        "modeles" : liste
+        "modeles": liste,
+        "model_crenaux": liste,  # For the total count in stats
+        "days_count": len(jours_uniques),
+        "types_count": types_count,
+        "actifs_count": modeles_actifs
     }
-    return render(request, 'tenant_folder/timetable/crenaux/liste_model_crenau.html',context)
+    return render(request, 'tenant_folder/timetable/crenaux/liste_model_crenau.html', context)
 
 @login_required(login_url="institut_app:login")
 def create_model(request):
@@ -117,31 +134,33 @@ def save_model_crenau(request):
    
     try:
         modele_id = request.POST.get('modele_id')
-        nom = request.POST.get('nom')
+        nom_model = request.POST.get('nom_model')
         description = request.POST.get('description')
         jours_travail = request.POST.getlist('jours_travail')
         
-        # Récupérer les heures de début et de fin
+        # Récupérer les heures de début, de fin et les noms de créneau
         heures_debut = request.POST.getlist('heure_debut')
         heures_fin = request.POST.getlist('heure_fin')
+        noms_creneau = request.POST.getlist('nom_creneau')
         
         # Valider la correspondance des plages horaires
-        if len(heures_debut) != len(heures_fin):
-            return JsonResponse({ 'success': False,'message': "Les heures de début et de fin ne correspondent pas."})
+        if len(heures_debut) != len(heures_fin) or len(heures_debut) != len(noms_creneau):
+            return JsonResponse({ 'success': False,'message': "Les heures de début, de fin et les noms de créneau ne correspondent pas."})
         
         # Créer la liste des plages horaires
         plages_horaires = []
-        for debut, fin in zip(heures_debut, heures_fin):
+        for debut, fin, nom in zip(heures_debut, heures_fin, noms_creneau):
             if debut and fin: 
                 plages_horaires.append({
                     'heure_debut': debut,
-                    'heure_fin': fin
+                    'heure_fin': fin,
+                    'nom_creneau': nom if nom else f"{debut} - {fin}"  # Default name if empty
                 })
         
         
         modele = get_object_or_404(ModelCrenau, pk=modele_id)
         
-        modele.label = nom
+        modele.label = nom_model
         modele.description = description
         modele.jour_data = {'jours_travail': jours_travail}
         modele.horaire_data = {'plages_horaires': plages_horaires}
@@ -156,4 +175,40 @@ def save_model_crenau(request):
         return JsonResponse({
             'success': False,
             'message': f"Une erreur est survenue lors de la sauvegarde : {str(e)}"
+        })
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def activate_model_crenau(request):
+    try:
+        model_id = request.POST.get('model_id')
+        
+        if not model_id:
+            return JsonResponse({
+                'success': False,
+                'message': "ID du modèle manquant"
+            })
+        
+        # Get the model
+        modele = get_object_or_404(ModelCrenau, pk=model_id)
+        
+        # Check if the model is already activated
+        if modele.is_active:
+            return JsonResponse({
+                'success': False,
+                'message': "Le modèle est déjà activé"
+            })
+        
+        # Activate the model
+        modele.is_active = True
+        modele.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': "Le modèle de créneau a été activé avec succès."
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f"Une erreur est survenue lors de l'activation : {str(e)}"
         })

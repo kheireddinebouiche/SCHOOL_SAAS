@@ -106,6 +106,20 @@
   .input-group .form-control {
     padding-left: 45px;
   }
+  
+  .btn-supprimer-plage {
+    transition: all 0.3s ease;
+  }
+  
+  .btn-supprimer-plage:hover {
+    transform: scale(1.1);
+    background-color: #c82333;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+  }
+  
+  .btn-supprimer-plage:active {
+    transform: scale(0.95);
+  }
 </style>
 
 <div class="main-content">
@@ -164,10 +178,10 @@
                   <div class="card-body">
                     <div class="row g-3">
                       <div class="col-lg-6">
-                        <label class="form-label fw-medium" for="nom">Label <span class="text-danger">*</span></label>
+                        <label class="form-label fw-medium" for="nom_model">Label <span class="text-danger">*</span></label>
                         <div class="input-group">
                           <span class="input-group-text bg-light border-0" style="padding-right:4px;"><i class="ri-file-text-line text-muted"></i></span>
-                          <input type="text" class="form-control border-0 bg-light py-2" id="nom" name="nom" value="{{ modele.label }}" required>
+                          <input type="text" class="form-control border-0 bg-light py-2" id="nom_model" name="nom_model" value="{{ modele.label }}" required>
                         </div>
                       </div>
                       
@@ -261,17 +275,21 @@
                         {% for plage in plages_horaires %}
                         <div class="plage-horaire mb-3">
                           <div class="row g-3 align-items-center">
-                            <div class="col-md-5">
+                            <div class="col-md-4">
+                              <label class="form-label fw-medium">Nom du créneau</label>
+                              <input type="text" class="form-control border-0 bg-light py-2" name="nom_creneau" value="{{ plage.nom_creneau|default:'' }}" placeholder="Ex: Matin, Après-midi...">
+                            </div>
+                            <div class="col-md-3">
                               <label class="form-label fw-medium">Heure de début</label>
                               <input type="time" class="form-control border-0 bg-light py-2" name="heure_debut" value="{{ plage.heure_debut }}" required>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-3">
                               <label class="form-label fw-medium">Heure de fin</label>
                               <input type="time" class="form-control border-0 bg-light py-2" name="heure_fin" value="{{ plage.heure_fin }}" required>
                             </div>
-                            <div class="col-md-2 d-flex align-items-center">
-                              <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage w-100">
-                                <i class="ri-delete-bin-line"></i> Supprimer
+                            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                              <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage rounded-circle p-2" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none;">
+                                <i class="ri-delete-bin-line" style="font-size: 16px;"></i>
                               </button>
                             </div>
                           </div>
@@ -320,17 +338,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         plageHoraire.innerHTML = `
             <div class="row g-3 align-items-center">
-                <div class="col-md-5">
+                <div class="col-md-4">
+                  <label class="form-label fw-medium">Nom du créneau</label>
+                  <input type="text" class="form-control border-0 bg-light py-2" name="nom_creneau" placeholder="Ex: Matin, Après-midi...">
+                </div>
+                <div class="col-md-3">
                   <label class="form-label fw-medium">Heure de début</label>
                   <input type="time" class="form-control border-0 bg-light py-2" name="heure_debut" required>
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-3">
                   <label class="form-label fw-medium">Heure de fin</label>
                   <input type="time" class="form-control border-0 bg-light py-2" name="heure_fin" required>
                 </div>
-                <div class="col-md-2 d-flex align-items-center">
-                  <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage w-100">
-                    <i class="ri-delete-bin-line"></i> Supprimer
+                <div class="col-md-2 d-flex align-items-center justify-content-center">
+                  <button type="button" class="btn btn-danger btn-sm btn-supprimer-plage rounded-circle p-2" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none;">
+                    <i class="ri-delete-bin-line" style="font-size: 16px;"></i>
                   </button>
                 </div>
             </div>
@@ -394,11 +416,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ajouter les données de base
         const modeleId = document.querySelector('input[name="modele_id"]').value;
-        const nom = document.getElementById('nom').value;
+        const nom_model = document.getElementById('nom_model').value;
         const description = document.getElementById('description').value;
         
         formData.append('modele_id', modeleId);
-        formData.append('nom', nom);
+        formData.append('nom_model', nom_model);
         formData.append('description', description);
         formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
         
@@ -411,10 +433,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Récupérer les plages horaires
         const plages = document.querySelectorAll('#plages_horaires .plage-horaire');
         plages.forEach(function(plage, index) {
+            const nomCreneau = plage.querySelector('input[name="nom_creneau"]').value;
             const heureDebut = plage.querySelector('input[name="heure_debut"]').value;
             const heureFin = plage.querySelector('input[name="heure_fin"]').value;
             
             if (heureDebut && heureFin) {
+                formData.append('nom_creneau', nomCreneau);
                 formData.append('heure_debut', heureDebut);
                 formData.append('heure_fin', heureFin);
             }
@@ -433,13 +457,48 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Afficher un message de succès
-                alert('Le modèle de créneau a été mis à jour avec succès.');
-                // Rediriger vers la liste des modèles
-                window.location.href = '{% url "t_timetable:ListeModelCrenau" %}';
+                let spinner = document.createElement("div");
+                spinner.innerHTML = `
+                    <div id="loadingSpinner" style="
+                        position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 9999;
+                        backdrop-filter: blur(3px);">
+                        <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                        <div class="success-message" style="
+                            font-family: Arial, sans-serif;
+                            font-size: 18px;
+                            color: #3b7ddd;
+                            font-weight: 500;
+                            text-align: center;
+                            margin-bottom: 10px;">
+                            <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                        </div>
+                        
+                    </div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        .modern-spinner {
+                            width: 60px;
+                            height: 60px;
+                            border: 5px solid #e0e0e0;
+                            border-top: 5px solid #3b7ddd;
+                            border-radius: 50%;
+                            animation: spin 1s linear infinite;
+                        }
+                    </style>
+                `;
+                document.body.appendChild(spinner);
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
             } else {
                 // Afficher un message d'erreur
-                alert('Une erreur est survenue lors de la sauvegarde : ' + (data.message || 'Erreur inconnue'));
+                alertify.error('Une erreur est survenue lors de la sauvegarde : ' + (data.message || 'Erreur inconnue'));
                 // Rétablir le bouton
                 this.innerHTML = originalBtnText;
                 this.disabled = false;

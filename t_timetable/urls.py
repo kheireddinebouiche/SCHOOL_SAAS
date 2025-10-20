@@ -27,6 +27,7 @@ urlpatterns = [
     path('details/creneau/<int:pk>/', model_creneau_detail, name="model_creneau_detail"),
     path('edit/creneau/<int:pk>/', model_creneau_edit, name="model_creneau_edit"),
     path('save_model_crenau/', save_model_crenau, name="save_model_crenau"),
+    path('activate_model_crenau/', activate_model_crenau, name="activate_model_crenau"),
 
 
 

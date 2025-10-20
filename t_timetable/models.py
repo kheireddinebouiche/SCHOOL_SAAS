@@ -68,7 +68,7 @@ class ModelCrenau(models.Model):
     description = models.CharField(max_length=100, null=True, blank=True)
     jour_data = models.JSONField(default=dict, blank=True, null=True)
     horaire_data = models.JSONField(default=dict, blank=True, null=True)
-
+    is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

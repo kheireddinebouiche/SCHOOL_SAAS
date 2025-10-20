@@ -68,10 +68,53 @@
   /* Timetable specific styles */
   .timetable-item {
     transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
   }
   
   .timetable-item:hover {
     transform: translateY(-3px);
+    z-index: 10;
+  }
+  
+  /* Fix dropdown hover interference */
+  .dropdown-menu {
+    pointer-events: auto;
+    position: absolute !important;
+    z-index: 1055 !important;
+  }
+  
+  .timetable-item:hover .dropdown-menu {
+    z-index: 1055 !important;
+  }
+  
+  /* Isolate row hover effects */
+  .table-hover tbody tr {
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+  
+  .table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+  
+  /* Ensure dropdown does not affect other rows */
+  .dropdown {
+    position: static;
+  }
+  
+  .dropdown-menu {
+    margin-top: 5px;
+  }
+  
+  /* Isolate hover effects when dropdown is open */
+  .timetable-item.dropdown-open {
+    background-color: inherit !important;
+    transform: none !important;
+  }
+  
+  .timetable-item.dropdown-open:hover {
+    transform: none !important;
   }
 </style>
 
@@ -220,6 +263,7 @@
                     <tr>
                       <th class="border-0 rounded-start">Nom</th>
                       <th class="border-0">Crée le</th>
+                      <th class="border-0">État</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
                   </thead>
@@ -235,12 +279,14 @@
                               </div>
                             </div>
                           </td>
+                          <td>{{ model.created_at|date:"d/m/Y" }}</td>
                           <td>
-                            <div class="fw-medium">
-                              <span class="text-info fw-semibold">{{ model.jour.nom }}</span>
-                            </div>
+                            {% if model.is_active %}
+                              <span class="badge bg-success">Activé</span>
+                            {% else %}
+                              <span class="badge bg-warning text-dark">Non activé</span>
+                            {% endif %}
                           </td>
-                          <td> {{model.created_at}}</td>
                           <td class="text-end">
                             <div class="dropdown d-inline-block">
                               <button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -252,17 +298,27 @@
                                     <i class="ri-eye-line text-info me-2"></i>Voir
                                   </a>
                                 </li>
-                                <li>
-                                  <a href="{% url 't_timetable:model_creneau_edit' model.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
-                                    <i class="ri-edit-line text-primary me-2"></i>Configurer
-                                  </a>
-                                </li>
-                                <li><hr class="dropdown-divider my-1"></li>
+                                {% if not model.is_active %}
+                                  <li>
+                                    <a href="{% url 't_timetable:model_creneau_edit' model.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
+                                      <i class="ri-edit-line text-primary me-2"></i>Configurer
+                                    </a>
+                                  </li>
+                                  <li>
+                                    <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-success" 
+                                      data-bs-toggle="modal" data-bs-target="#activateModal"
+                                      data-model-id="{{ model.id }}"
+                                      data-model-name="{{ model.label }}">
+                                      <i class="ri-check-line me-2"></i>Activer
+                                    </a>
+                                  </li>
+                                  <li><hr class="dropdown-divider my-1"></li>
+                                {% endif %}
                                 <li>
                                   <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger" 
-                                     data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                     data-model-id="{{ model.id }}"
-                                     data-model-name="{{ model.nom }}">
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                    data-model-id="{{ model.id }}"
+                                    data-model-name="{{ model.label }}">
                                     <i class="ri-delete-bin-line me-2"></i>Supprimer
                                   </a>
                                 </li>
@@ -271,6 +327,8 @@
                           </td>
                         </tr>
                       {% endfor %}
+
+                      
                     {% else %}
                       <tr>
                         <td colspan="7" class="text-center text-muted">Aucun modèle de créneau trouvé</td>
@@ -371,6 +429,76 @@
   </div>
 </div>
 
+<!-- Activation Confirmation Modal -->
+<div class="modal fade" id="activateModal" tabindex="-1" aria-labelledby="activateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-check-double-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="activateModalLabel">
+              Confirmer l'activation
+            </h5>
+            <p class="text-muted small mb-0">Activation du modèle de créneau</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 py-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-light text-success rounded-circle h3 mb-0">
+              <i class="ri-check-double-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir activer ce modèle ?</h5>
+          <p class="text-muted mb-4">
+            Vous êtes sur le point d'activer le modèle <strong class="fw-semibold text-dark" id="modelToActivateName"></strong>
+          </p>
+        </div>
+        
+        <div class="alert alert-warning border-0 bg-warning bg-opacity-10 rounded-3 mb-4" role="alert">
+          <div class="d-flex">
+            <div class="flex-shrink-0 me-3">
+              <i class="ri-alert-line text-warning h4 mb-0"></i>
+            </div>
+            <div>
+              <h6 class="alert-heading fw-semibold text-warning">Attention Importante!</h6>
+              <p class="mb-0 text-dark">
+                Une fois le modèle activé, vous ne pourrez plus le modifier pour garantir la cohérence des données des emplois du temps.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex align-items-center p-3 bg-light rounded-3">
+          <div class="flex-shrink-0 me-3">
+            <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+              <i class="ri-information-line text-primary fs-5"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <p class="mb-0 small text-muted">
+              Cette action est irréversible. Veuillez-vous assurer que toutes les configurations sont correctes avant d'activer.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-between">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-success px-4 py-2" id="confirmActivateBtn">
+          <i class="ri-check-line me-2"></i>Activer le modèle
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Fix dropdown positioning
   $(document).ready(function () {
@@ -380,13 +508,35 @@
     // Handle dropdown show events
     $(document).on('show.bs.dropdown', function(e) {
       var dropdownMenu = $(e.target).find('.dropdown-menu');
+      var row = $(e.target).closest('.timetable-item');
       if (dropdownMenu.length) {
         dropdownMenu.css({
-          'z-index': '1050',
+          'z-index': '1055',
           'position': 'absolute'
         });
       }
+      // Add a temporary class to the row to prevent hover effects during dropdown
+      row.addClass('dropdown-open');
     });
+    
+    // Handle dropdown hidden events
+    $(document).on('hidden.bs.dropdown', function(e) {
+      var row = $(e.target).closest('.timetable-item');
+      // Remove class when dropdown is closed
+      row.removeClass('dropdown-open');
+    });
+    
+    // Prevent hover effects when dropdown is open
+    $(document).on({
+      mouseenter: function() {
+        if (!$(this).hasClass('dropdown-open')) {
+          $(this).addClass('hovered');
+        }
+      },
+      mouseleave: function() {
+        $(this).removeClass('hovered');
+      }
+    }, '.timetable-item');
     
     // Handle delete confirmation
     $(document).on('click', '[data-bs-toggle="modal"][data-bs-target="#deleteModal"]', function() {
@@ -401,6 +551,94 @@
     $(document).on('click', '#confirmDeleteBtn', function() {
       var modelId = $(this).data('model-id');
      
+    });
+    
+    // Handle activation confirmation
+    $(document).on('click', '[data-bs-toggle="modal"][data-bs-target="#activateModal"]', function() {
+      var modelId = $(this).data('model-id');
+      var modelName = $(this).data('model-name');
+      
+      $('#modelToActivateName').text(modelName);
+      $('#confirmActivateBtn').data('model-id', modelId);
+    });
+    
+    // Handle activation confirmation button click
+    $(document).on('click', '#confirmActivateBtn', function() {
+      var modelId = $(this).data('model-id');
+      
+      // Show loading state
+      var originalBtnText = $(this).html();
+      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Activation...');
+      $(this).prop('disabled', true);
+      
+      // Send activation request
+      $.ajax({
+        url: "{% url 't_timetable:activate_model_crenau' %}",
+        type: "POST",
+        dataType: "JSON",
+        data: {
+          'model_id': modelId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if (response.success) {
+            // Show success message
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #28a745;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #28a745;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Activation réussie
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #28a745;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            
+            // Close the modal and reload the page after a short delay
+            setTimeout(function() {
+              $('#activateModal').modal('hide');
+              location.reload();
+            }, 1000);
+          } else {
+            // Show error message and reset button
+            alert(response.message || 'Erreur lors de l\'activation du modèle');
+            $(this).html(originalBtnText);
+            $(this).prop('disabled', false);
+          }
+        },
+        error: function() {
+          // Reset button on error
+          alert('Erreur de connexion lors de l\'activation du modèle');
+          $(this).html(originalBtnText);
+          $(this).prop('disabled', false);
+        }
+      });
     });
     
     // Handle saving model
