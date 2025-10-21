@@ -465,7 +465,7 @@ def detailSpecialite(request, pk):
 
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
-    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree')
+    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider')
 
     specialite = Specialites.objects.get(code = id)
 
@@ -566,6 +566,11 @@ def ApiUpdateModule(request):
     module.duree = duree
     module.label = label
     module.coef = coef
+
+    # If the module was previously validated and we're making changes, we might want to unset the validation
+    # This depends on business requirements, but typically modifications would require re-validation
+    # Uncomment the next line if modifications should reset validation status
+    # module.est_valider = False
 
     module.save()
 
@@ -689,22 +694,89 @@ def PageListeModules(request):
     return render(request, 'tenant_folder/formations/modules/modules.html', {'tenant' : request.tenant})
 
 def ApiGetModules(request):
-    liste = Modules.objects.all().values('id', 'label', 'coef', 'duree', 'code')
+    liste = Modules.objects.all().values('id', 'label', 'coef', 'duree', 'code','est_valider')
     return JsonResponse(list(liste), safe=False)
 
 def ApiGetModuleDetails(request):
     id = request.GET.get('id')
     
-    details = Modules.objects.get(id = id)
-    data = {
-        'id' : details.id,
-        'label' : details.label,
-        'coef' : details.coef,
-        'duree' : details.duree,
-        'code' : details.code,
-    }
+    if not id:
+        return JsonResponse({'status': 'error', 'message': 'ID du module est requis'}, safe=False)
     
-    return JsonResponse(data, safe=False)
+    try:
+        details = Modules.objects.get(id=id)
+        # Get associated trainers for this module
+        associated_trainers = EnseignantModule.objects.filter(module=details).select_related('formateur')
+        trainers_list = []
+        
+        for association in associated_trainers:
+            trainer = association.formateur
+            trainers_list.append({
+                'id': trainer.id,
+                'nom': trainer.nom,
+                'prenom': trainer.prenom,
+                'email': trainer.email,
+                'telephone': trainer.telephone,
+                'diplome': trainer.diplome,
+            })
+        
+        data = {
+            'id': details.id,
+            'code': details.code,
+            'label': details.label,
+            'duree': details.duree,
+            'coef': details.coef,
+            'n_elimate': details.n_elimate,
+            'systeme_eval': details.systeme_eval,
+            'associated_trainers': trainers_list
+        }
+        
+        return JsonResponse(data, safe=False)
+    except Modules.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Module non trouvé'}, safe=False)
+
+
+def get_module_details_with_teachers(request):
+    module_id = request.GET.get('module_id')
+    if module_id:
+        try:
+            # Get module details
+            module = Modules.objects.get(id=module_id)
+            
+            # Get associated trainers for this module
+            teacher_modules = EnseignantModule.objects.filter(module_id=module_id).select_related('formateur')
+            teachers_data = []
+            
+            for tm in teacher_modules:
+                formateur = tm.formateur
+                teachers_data.append({
+                    'id': formateur.id,
+                    'nom': formateur.nom,
+                    'prenom': formateur.prenom,
+                    'telephone': formateur.telephone,
+                    'email': formateur.email,
+                    'diplome': formateur.diplome,
+                })
+            
+            # Prepare module data
+            module_data = {
+                'id': module.id,
+                'code': module.code or '',
+                'label': module.label or '',
+                'duree': module.duree or '',
+                'coef': module.coef or '',
+                'n_elimate': module.n_elimate or '',
+                'systeme_eval': module.systeme_eval or '',
+                'teachers': teachers_data
+            }
+            
+            return JsonResponse(module_data, safe=False)
+        except Modules.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Module non trouvé'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'ID du module requis'})
 
 @login_required(login_url='intitut_app:login')
 def ApiLoadDocuments(request):

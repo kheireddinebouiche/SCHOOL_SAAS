@@ -103,6 +103,7 @@ class Modules(models.Model):
     systeme_eval = models.CharField(max_length=100, null=True, blank=True)
 
     is_archived = models.BooleanField(default=False)
+    est_valider = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at= models.DateTimeField(auto_now=True)

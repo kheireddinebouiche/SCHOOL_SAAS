@@ -54,6 +54,7 @@ urlpatterns = [
     path('modules/liste-des-modules/', PageListeModules, name="PageListeModules"),
     path('ApiGetModules', ApiGetModules, name="ApiGetModules"),
     path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
+    path('get_module_details_with_teachers/', get_module_details_with_teachers, name="get_module_details_with_teachers"),
 
     path('liste-institut/',ListeDesInstituts, name="ListeDesInstituts"),
 
@@ -70,4 +71,12 @@ urlpatterns = [
     ### TRAITEMENT DES FORMATEURS ###
     path('formateurs/liste/',PageFormateurs, name="PageFormateurs"),
     path('create_formateur/', create_formateur, name="create_formateur"),
+    path('update_formateur/', update_formateur, name="update_formateur"),
+    path('delete_formateur/', delete_formateur, name="delete_formateur"),
+    path('ApiGetFormateurs/', ApiGetFormateurs, name="ApiGetFormateurs"),
+    path('assign_trainers_to_module/', assign_trainers_to_module, name="assign_trainers_to_module"),
+    path('load_module_teachers/', load_module_teachers, name="load_module_teachers"),
+    path('remove_trainer_from_module/', remove_trainer_from_module, name="remove_trainer_from_module"),
+    path('update_module_details/', update_module_details, name="update_module_details"),
+    path('validate_module/', validate_module, name="validate_module"),
 ]

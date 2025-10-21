@@ -49,12 +49,14 @@ def timetable_edit(request, pk):
     creneau_horaire = timetable.creneau.horaire_data
 
     modules = ProgrammeFormation.objects.filter(specialite = timetable.groupe.specialite, semestre = timetable.semestre)
+    sales = Salle.objects.all()
 
     context = {
         'timetable' : timetable,
         'jour_data' : creneau_data,
         'horaire_data' : creneau_horaire,
         'modules' : modules,
+        'salles' : sales
     }
     if timetable.is_configured:
         return render(request, 'tenant_folder/timetable/configure_timetable_cours.html', context)

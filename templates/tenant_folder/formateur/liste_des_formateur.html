@@ -135,7 +135,17 @@
                         <td>{{formateur.nom}} {{formateur.prenom}}</td>
                         <td>{{formateur.telephone}}</td>
                         <td>{{formateur.email}}</td>
-                        <td></td>
+                        <td class="text-end">
+                          <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              Actions
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              <li><a class="dropdown-item view-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-eye text-info me-2"></i>Voir le profil</a></li>
+                              <li><a class="dropdown-item edit-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-edit text-warning me-2"></i>Modifier</a></li>
+                            </ul>
+                          </div>
+                        </td>
                       </tr>
                     {% endfor %}
                   {% else %}
@@ -395,59 +405,42 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-lg-4">
+                            <div class="col-lg-6">
                                 <label class="form-label fw-medium" for="id_email">Email</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-muted"></i></span>
                                     <input type="email" class="form-control border-0 bg-light py-2" id="id_email" name="email">
                                 </div>
                             </div>
-                            <div class="col-lg-4">
+                            <div class="col-lg-6">
                                 <label class="form-label fw-medium" for="id_telephone">Téléphone</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-phone-line text-muted"></i></span>
                                     <input type="text" class="form-control border-0 bg-light py-2" id="id_telephone" name="telephone">
                                 </div>
                             </div>
-                            <div class="col-lg-4">
-                                <label class="form-label fw-medium" for="id_statut">Statut</label>
-                                <select class="form-select border-0 bg-light py-2" id="id_statut" name="statut">
-                                    <option value="">---------</option>
-                                    <option value="actif">Actif</option>
-                                    <option value="inactif">Inactif</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Spécialité et Formation -->
+                <!-- Diplôme -->
                 <div class="card border-0 shadow-sm mb-4 overflow-hidden">
                     <div class="card-header border-0 bg-white pt-3">
                         <div class="d-flex align-items-center">
                             <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
                                 <i class="ri-graduation-cap-line text-success"></i>
                             </span>
-                            <h6 class="card-title mb-0 text-success">Spécialité & Formation</h6>
+                            <h6 class="card-title mb-0 text-success">Diplôme</h6>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_specialite">Spécialité</label>
-                                <select class="form-select border-0 bg-light py-2" id="id_specialite" name="specialite">
-                                    <option value="">Sélectionner une spécialité</option>
-                                    <option value="informatique">Informatique</option>
-                                    <option value="mathematiques">Mathématiques</option>
-                                    <option value="langue">Langue</option>
-                                    <option value="gestion">Gestion</option>
-                                </select>
-                            </div>
-                            <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_formation">Formation Associée</label>
-                                <select class="form-select border-0 bg-light py-2" id="id_formation" name="formation">
-                                    <option value="">Sélectionner une formation</option>
-                                </select>
+                            <div class="col-lg-12">
+                                <label class="form-label fw-medium" for="id_diplome">Diplôme</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-graduation-cap-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="id_diplome" name="diplome">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -633,6 +626,158 @@
       });
     });
  
+    // Handle view profile action
+    $(document).on('click', '.view-profile', function(e) {
+      e.preventDefault();
+      var formateurId = $(this).data('formateur-id');
+      var formateurNom = $(this).data('formateur-nom');
+      var formateurPrenom = $(this).data('formateur-prenom');
+      var formateurEmail = $(this).data('formateur-email');
+      var formateurTelephone = $(this).data('formateur-telephone');
+      var formateurDiplome = $(this).data('formateur-diplome');
+      
+      // Populate the update modal with formateur data
+      $('#id_last_name').val(formateurNom);
+      $('#id_first_name').val(formateurPrenom);
+      $('#id_email').val(formateurEmail);
+      $('#id_telephone').val(formateurTelephone);
+      $('#id_diplome').val(formateurDiplome);
+      
+      // Disable all fields for viewing only
+      $('#updateInfoFormateur input, #updateInfoFormateur select').prop('readonly', true);
+      $('#updateInfoFormateurBtn').hide(); // Hide the save button
+      $('#updateInfoFormateurLabel').text('Profil du formateur'); // Change modal title
+      
+      // Open the update modal (the one that already exists in the template)
+      $('#updateInfoFormateur').modal('show');
+    });
+    
+    // Handle edit profile action
+    $(document).on('click', '.edit-profile', function(e) {
+      e.preventDefault();
+      var formateurId = $(this).data('formateur-id');
+      var formateurNom = $(this).data('formateur-nom');
+      var formateurPrenom = $(this).data('formateur-prenom');
+      var formateurEmail = $(this).data('formateur-email');
+      var formateurTelephone = $(this).data('formateur-telephone');
+      var formateurDiplome = $(this).data('formateur-diplome');
+      
+      // Store the formateur ID in a hidden field or data attribute for later use during update
+      $('#updateInfoFormateur').data('formateur-id', formateurId);
+      
+      // Populate the update modal with formateur data
+      $('#id_last_name').val(formateurNom);
+      $('#id_first_name').val(formateurPrenom);
+      $('#id_email').val(formateurEmail);
+      $('#id_telephone').val(formateurTelephone);
+      $('#id_diplome').val(formateurDiplome);
+      
+      // Enable all fields for editing
+      $('#updateInfoFormateur input, #updateInfoFormateur select').prop('readonly', false);
+      $('#updateInfoFormateurBtn').show(); // Show the save button
+      $('#updateInfoFormateurLabel').text('Modification des informations'); // Change modal title
+      
+      // Open the update modal (the one that already exists in the template)
+      $('#updateInfoFormateur').modal('show');
+    });
+    
+    // Handle profile update
+    $(document).on('click', '#updateInfoFormateurBtn', function() {
+      var formateurId = $('#updateInfoFormateur').data('formateur-id');
+      var nom = $('#id_last_name').val();
+      var prenom = $('#id_first_name').val();
+      var email = $('#id_email').val();
+      var telephone = $('#id_telephone').val();
+      var diplome = $('#id_diplome').val();
+      
+      // Basic validation
+      if (!nom || !prenom || !email || !telephone || !diplome) {
+        alert('Veuillez remplir tous les champs obligatoires.');
+        return;
+      }
+
+      // Show loading state
+      var originalBtnText = $(this).html();
+      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+      $(this).prop('disabled', true);
+
+      $.ajax({
+        url : "{% url 't_formations:update_formateur' %}", // Replace with actual update URL
+        type : "POST",
+        dataType : "JSON",
+        data : {
+          'id': formateurId,
+          'nom': nom,
+          'prenom': prenom,
+          'email': email,
+          'telephone': telephone,
+          'diplome': diplome,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response) {
+          if (response.status === "success") {
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Mise à jour en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          } else {
+            alert(response.message || 'Une erreur est survenue lors de la mise à jour du formateur.');
+          }
+        },
+        error: function(xhr, status, error) {
+          alert('Une erreur est survenue lors de la mise à jour du formateur.');
+        },
+        complete: function() {
+          // Reset button state
+          $('#updateInfoFormateurBtn').html(originalBtnText);
+          $('#updateInfoFormateurBtn').prop('disabled', false);
+        }
+      });
+    });
+
+    // Reset modal when it's closed
+    $('#updateInfoFormateur').on('hidden.bs.modal', function () {
+      // Re-enable all fields and show save button in case it was in view mode
+      $('#updateInfoFormateur input, #updateInfoFormateur select').prop('readonly', false);
+      $('#updateInfoFormateurBtn').show();
+      $('#updateInfoFormateurLabel').text('Modification des informations'); // Reset modal title
+    });
+
   });
     
     
