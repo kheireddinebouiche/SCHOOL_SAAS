@@ -67,5 +67,7 @@ urlpatterns = [
 
     path('ApiLoadSpecForPartenaire', ApiLoadSpecForPartenaire, name="ApiLoadSpecForPartenaire"),
 
+    ### TRAITEMENT DES FORMATEURS ###
     path('formateurs/liste/',PageFormateurs, name="PageFormateurs"),
+    path('create_formateur/', create_formateur, name="create_formateur"),
 ]

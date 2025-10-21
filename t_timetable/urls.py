@@ -33,6 +33,7 @@ urlpatterns = [
     path('save_model_crenau/', save_model_crenau, name="save_model_crenau"),
     path('activate_model_crenau/', activate_model_crenau, name="activate_model_crenau"),
 
-
+    ### FILTRAGE ###
+    path('FilterFormateur', FilterFormateur, name="FilterFormateur"),
 
 ]

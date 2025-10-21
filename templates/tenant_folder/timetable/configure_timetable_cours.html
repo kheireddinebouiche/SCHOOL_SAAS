@@ -275,18 +275,34 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
+        <!-- Notification alert -->
+        <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+          <i class="ri-information-line me-2"></i>
+          <strong>Information:</strong> Les modules affichés sont filtrés préalablement par rapport au semestre et à la répartition semestrielle déjà configurée.
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        
         <form id="addSessionForm">
           <div class="row g-3">
             <div class="col-lg-6">
               <label class="form-label fw-medium" for="session_module">Module <span class="text-danger">*</span></label>
               <select class="form-select border-0 bg-light py-2" id="session_module" name="module" required>
                 <option value="">Sélectionnez un module</option>
-                {% for cours in cours_list %}
-                  <option value="{{ cours.id }}">{{ cours.code }} - {{ cours.nom }}</option>
+                {% for cours in modules %}
+                  <option value="{{cours.module.code}}">{{ cours.module.code }} - {{ cours.module.label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-lg-6">
+              <label class="form-label fw-medium" for="session_professeur">Professeur <span class="text-danger">*</span></label>
+              <select class="form-select border-0 bg-light py-2" id="session_professeur" name="professeur" required>
+                <option value="">Sélectionnez un professeur</option>
+                
+              </select>
+            </div>
+           
+          <div class="row g-3 mt-2">
+             <div class="col-lg-6">
               <label class="form-label fw-medium" for="session_jour">Jour <span class="text-danger">*</span></label>
               <select class="form-select border-0 bg-light py-2" id="session_jour" name="jour" required>
                 <option value="">Sélectionnez un jour</option>
@@ -295,8 +311,6 @@
                 {% endfor %}
               </select>
             </div>
-          </div>
-          <div class="row g-3 mt-2">
             <div class="col-lg-6">
               <label class="form-label fw-medium" for="session_horaire">Horaire <span class="text-danger">*</span></label>
               <select class="form-select border-0 bg-light py-2" id="session_horaire" name="horaire" required>
@@ -306,15 +320,8 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-lg-6">
-              <label class="form-label fw-medium" for="session_professeur">Professeur <span class="text-danger">*</span></label>
-              <select class="form-select border-0 bg-light py-2" id="session_professeur" name="professeur" required>
-                <option value="">Sélectionnez un professeur</option>
-                {% for prof in professeurs_list %}
-                  <option value="{{ prof.id }}">{{ prof.first_name }} {{ prof.last_name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+          </div>
+            
           </div>
           <div class="row g-3 mt-2">
             <div class="col-lg-12">
@@ -390,12 +397,14 @@
 
 <script>
   $(document).ready(function () {
+
+    
     // Handle adding session
     $('#saveSessionBtn').on('click', function() {
       var formData = $('#addSessionForm').serialize();
       formData += '&csrfmiddlewaretoken=' + '{{ csrf_token }}';
       {% if timetable %}
-      formData += '&timetable_id=' + {{ timetable.id }};
+        formData += '&timetable_id=' + {{ timetable.id }};
       {% endif %}
 
       // Show loading state
@@ -581,6 +590,26 @@
     function loadModule(){
 
     }
+
+    $(document).on('change','#session_module', function(){
+      var id_module = $(this).val();
+      
+      $.ajax({
+        url : "{% url 't_timetable:FilterFormateur' %}",
+        dataType : "JSON",
+        type : "GET",
+        data : {
+          'code_module' : id_module,
+        },
+        success : function(data){
+          var option="<option value=''>Sélectionnez un module</option>";
+          $.each(data, function(index, p){
+            option += "<option value="+p.id+">"+p.nom+'-'+p.prenom+"</option>";
+          });
+          $('#session_professeur').html(option);
+        },
+      })
+    });
 
     
 

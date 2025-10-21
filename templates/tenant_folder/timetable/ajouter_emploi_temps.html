@@ -1,0 +1,269 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Ajouter un Emploi du Temps{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  
+  /* Prospect type cards */
+  .prospect-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .prospect-type-card:hover {
+    transform: translateY(-5px);
+    border-color: #dc3545;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+  
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+  
+  /* Timetable specific styles */
+  .timetable-item {
+    transition: transform 0.3s ease;
+  }
+  
+  .timetable-item:hover {
+    transform: translateY(-3px);
+  }
+  
+  /* Custom styles for the form page */
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-calendar-alt text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Ajouter un Emploi du Temps</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Emploi du Temps</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="{% url 't_timetable:ListeDesEmploie' %}">Liste des emplois</a>
+                  </li>
+                  <li class="breadcrumb-item active">Ajouter un emploi du temps</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-calendar-plus text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Formulaire d'ajout d'emploi du temps</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-4">
+              <form id="createTimetableForm">
+                <!-- Emploi du temps information -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                  <div class="card-header border-0 bg-white pt-3">
+                    <div class="d-flex align-items-center">
+                      <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
+                        <i class="ri-file-text-line text-primary"></i>
+                      </span>
+                      <h6 class="card-title mb-0 text-primary">Informations de l'emploi du temps</h6>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="timetable_label">Label <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-0"><i class="ri-file-text-line text-muted"></i></span>
+                          <input type="text" class="form-control border-0 bg-light py-2" id="timetable_label" name="label" placeholder="Ex: Emploi du temps Groupe A" required>
+                        </div>
+                      </div>
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="timetable_groupe">Groupe <span class="text-danger">*</span></label>
+                        <select class="form-select border-0 bg-light py-2" id="timetable_groupe" name="groupe" required>
+                          <option value="">Sélectionnez un groupe</option>
+                          <!-- Options will be loaded dynamically -->
+                          {% for groupe in groupes %}
+                            <option value="{{groupe.id}}">{{groupe.nom}}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row g-3 mt-3">
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="timetable_semestre">Semestre <span class="text-danger">*</span></label>
+                        <select class="form-select border-0 bg-light py-2" id="timetable_semestre" name="semestre" required>
+                          <option value="">Sélectionnez le semestre</option>
+                          <option value="1">Semestre 1</option>
+                          <option value="2">Semestre 2</option>
+                          <option value="3">Semestre 3</option>
+                          <option value="4">Semestre 4</option>
+                        </select>
+                      </div>
+                      <div class="col-lg-6">
+                        <label class="form-label fw-medium" for="timetable_description">Description</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-0"><i class="ri-file-text-line text-muted"></i></span>
+                          <input type="text" class="form-control border-0 bg-light py-2" id="timetable_description" name="description" placeholder="Description (facultatif)">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Error message container -->
+                <div id="createTimetableError" class="alert alert-danger d-none" role="alert">
+                  <!-- Error messages will appear here -->
+                </div>
+                
+                <div class="d-flex justify-content-end gap-3">
+                  <a href="{% url 't_timetable:ListeDesEmploie' %}" class="btn btn-light px-4 py-2">
+                    <i class="ri-close-line me-2"></i>Annuler
+                  </a>
+                  <button type="button" class="btn btn-primary px-4 py-2" id="saveTimetableBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer l'emploi du temps
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<script>
+  // Handle saving timetable
+  $(document).ready(function () {
+    $(document).on('click', '#saveTimetableBtn', function() {
+      // Get form data
+      var label = $('#timetable_label').val();
+      var groupe = $('#timetable_groupe').val();
+      var semestre = $('#timetable_semestre').val();
+      var description = $('#timetable_description').val();
+      
+      // Basic validation
+      if (!label || !groupe || !semestre) {
+        $('#createTimetableError').removeClass('d-none').text('Veuillez remplir tous les champs obligatoires.');
+        return;
+      }
+      
+      var formData = {
+        'label': label,
+        'groupe': groupe,
+        'semestre': semestre,
+        'description': description,
+        'csrfmiddlewaretoken': '{{ csrf_token }}'
+      };
+
+      // Show loading state
+      var originalBtnText = $(this).html();
+      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+      $(this).prop('disabled', true);
+
+      // Hide any previous error messages
+      $('#createTimetableError').addClass('d-none');
+
+      $.ajax({
+        url : "{% url 't_timetable:CreateTimeTable' %}",
+        type : "POST",
+        data : formData,
+        success : function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            // Redirect to the timetable list page
+            window.location.href = "{% url 't_timetable:ListeDesEmploie' %}";
+          } else {
+            // Show error message
+            $('#createTimetableError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de la création de l\'emploi du temps.');
+          }
+        },
+        error: function(xhr, status, error) {
+          // Show error message
+          var errorMessage = 'Une erreur est survenue lors de la création de l\'emploi du temps.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+          }
+          $('#createTimetableError').removeClass('d-none').text(errorMessage);
+        },
+        complete: function() {
+          // Reset button state
+          $('#saveTimetableBtn').html(originalBtnText);
+          $('#saveTimetableBtn').prop('disabled', false);
+        }
+      });
+    });
+  });
+</script>
+
+{% endblock content %}

@@ -17,3 +17,7 @@ def PageFormateurs(request):
         "formateurs" : liste
     }
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
+
+@login_required(login_url="institut_app:login")
+def create_formateur(request):
+    pass
