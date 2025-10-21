@@ -19,5 +19,23 @@ def PageFormateurs(request):
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def create_formateur(request):
-    pass
+    if request.method == "POST":
+        nom = request.POST.get('nom')
+        prenom = request.POST.get('prenom')
+        telephone = request.POST.get('telephone')
+        email = request.POST.get('email')
+        diplome = request.POST.get('diplome')
+
+        Formateurs.objects.create(
+            nom = nom,
+            prenom = prenom,
+            telephone = telephone,
+            email = email,
+            diplome = diplome,
+        )
+        messages.success(request,'Les données du formateur ont été sauvegarder avec succès.')
+        return JsonResponse({'status': 'success'})
+    else:
+        return JsonResponse({"status" : "error","message":"Method non autoriser"})
