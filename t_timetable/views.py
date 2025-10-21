@@ -107,5 +107,12 @@ def ApiMakeTimetableDone(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def save_session(request):
+    session_module = request.POST.get('session_module')
+    session_professeur = request.POST.get('session_professeur')
+    session_jour = request.POST.get('session_jour')
+    session_horaire = request.POST.get('session_horaire')
+    session_salle = request.POST.get('session_salle')
+
     pass
