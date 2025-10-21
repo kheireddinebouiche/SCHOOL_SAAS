@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from .views import *
+from .f_views.formateurs import *
 
 app_name="t_formations"
 
@@ -65,4 +66,6 @@ urlpatterns = [
     path('ApiDeleteDoc', ApiDeleteDoc, name="ApiDeleteDoc"),
 
     path('ApiLoadSpecForPartenaire', ApiLoadSpecForPartenaire, name="ApiLoadSpecForPartenaire"),
+
+    path('formateurs/liste/',PageFormateurs, name="PageFormateurs"),
 ]
