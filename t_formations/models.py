@@ -87,7 +87,7 @@ class Specialites(models.Model):
         verbose_name_plural="Spécialités"
 
     def __str__(self):
-        return f"{self.code} - {self.label}"
+        return self.label
     
 class Modules(models.Model):
    
@@ -133,7 +133,7 @@ class Formateurs(models.Model):
     
 
 class EnseignantModule(models.Model):
-    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="affect_module")
     formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

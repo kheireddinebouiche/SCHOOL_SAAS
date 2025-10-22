@@ -100,6 +100,64 @@
         </div>
       </div>
       <!-- end page title -->
+      <div class="row mb-4">
+        <!-- KPIs Section -->
+        <div class="col-12 mb-4">
+          <div class="row g-3">
+            <!-- Total Modules -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-book-line text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Total Modules</h5>
+                      <h3 class="mb-0 fw-bold" id="totalModules">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Modules sans affectation -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-exchange-line text-warning fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Modules sans affectation</h5>
+                      <h3 class="mb-0 fw-bold" id="modulesSansAffectation">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Modules avec affectation -->
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-user-follow-line text-success fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Modules avec affectation</h5>
+                      <h3 class="mb-0 fw-bold" id="modulesAvecAffectation">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div class="row">
         <div class="col-lg-12">
           <div class="card shadow border-0 rounded-3">
@@ -107,21 +165,20 @@
               <div class="d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                   <i class="fas fa-search text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Recherche de formateur</h5>
+                  <h5 class="card-title mb-0 text-info">Recherche de module</h5>
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
                   <div class="search-box">
-                    <input type="text" placeholder="Rechercher un formateur..." id="table-filter" class="form-control rounded-pill" style="width: 220px;" autocomplete="off"/>
+                    <input type="text" placeholder="Rechercher un module..." id="table-filter" class="form-control rounded-pill" style="width: 220px;" autocomplete="off"/>
                     <i class="fas fa-search text-muted search-icon"></i>
                   </div>
                   
-                  <select id="filter-formateur" class="form-select rounded-pill" style="width: 220px;">
+                  <select id="filter-specialite" class="form-select rounded-pill" style="width: 220px;">
                     <option value="0">Filtrer par spécialité</option>
-                    <option value="informatique">Informatique</option>
-                    <option value="mathematiques">Mathématiques</option>
-                    <option value="langue">Langue</option>
-                    <option value="gestion">Gestion</option>
+                    {% for specialite in specialites %}
+                      <option value="{{specialite.label}}">{{specialite.label}}</option>
+                    {% endfor %}
                   </select>
                 </div>
               </div>
@@ -131,29 +188,31 @@
                 <table id="example" class="table table-hover align-middle mb-0">
                   <thead class="bg-light">
                     <tr>
-                      <th class="border-0 rounded-start">Nom & Prénom</th>
-                      <th class="border-0">Téléphone</th>
-                      <th class="border-0">Email</th>
-                      <th class="border-0">Diplôme</th>
+                      <th class="border-0 rounded-start">Modules</th>
+                      <th class="border-0 rounded-start">Spécialité</th>
+                      <th class="border-0">Enseignants</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="listeItem" class="border-top-0">
-                  {% if formateurs %}
-                    {% for formateur in formateurs %}
+                  {% if modules %}
+                    {% for module in modules %}
                       <tr>
-                        <td>{{formateur.nom}} {{formateur.prenom}}</td>
-                        <td>{{formateur.telephone}}</td>
-                        <td>{{formateur.email}}</td>
-                        <td>{{formateur.diplome}}</td>
+                        <td><strong>#{{module.code}}</strong> - {{module.label}}</td>
+                        <td>{{module.specialite.label}}</td>
+                        <td>{{module.nombre_formateur}}</td>
                         <td class="text-end">
                           <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                              Actions
+                            <button class="btn btn-light btn-sm rounded-pill shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              <i class="ri-more-2-line"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item view-modules" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}"><i class="fas fa-eye text-info me-2"></i>Voir les modules</a></li>
-                              <li><a class="dropdown-item assign-modules" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}"><i class="fas fa-exchange-alt text-warning me-2"></i>Affecter des modules</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-none">
+                              <li><a class="dropdown-item d-flex align-items-center px-3 py-2 view-modules" href="#" data-module-id="{{ module.id }}" data-module-code="{{ module.code }}" data-module-label="{{ module.label }}">
+                                <i class="ri-eye-line text-info me-2"></i> Voir les détails
+                              </a></li>
+                              <li><a class="dropdown-item d-flex align-items-center px-3 py-2 assign-modules" href="#" data-module-id="{{ module.id }}" data-module-code="{{ module.code }}" data-module-label="{{ module.label }}">
+                                <i class="ri-user-add-line text-primary me-2"></i> Affecter des formateurs
+                              </a></li>
                             </ul>
                           </div>
                         </td>
@@ -161,15 +220,15 @@
                     {% endfor %}
                   {% else %}
                      <tr>
-                      <td colspan="5">
+                      <td colspan="4">
                         <div class="d-flex flex-column align-items-center justify-content-center py-5">
                             <div class="avatar-sm mb-4">
                                 <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                    <i class="ri-user-unfollow-line"></i>
+                                    <i class="ri-book-unfolded-line"></i>
                                 </div>
                             </div>
-                            <h5 class="mb-2">Aucun formateur trouvé</h5>
-                            <p class="text-muted mb-0">Il n'y a aucun formateur enregistré pour le moment</p>
+                            <h5 class="mb-2">Aucun module trouvé</h5>
+                            <p class="text-muted mb-0">Il n'y a aucun module enregistré pour le moment</p>
                         </div>
                       </td>
                      </tr>
@@ -198,9 +257,9 @@
           </div>
           <div>
             <h5 class="modal-title fw-semibold text-primary mb-1" id="viewModulesModalLabel">
-              Modules affectés à <span id="viewFormateurName"></span>
+              Formateurs affectés au module <span id="viewModuleName">[Module]</span>
             </h5>
-            <p class="text-muted small mb-0">Liste des modules assignés à ce formateur</p>
+            <p class="text-muted small mb-0">Liste des formateurs assignés à ce module</p>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -210,10 +269,10 @@
           <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
             <thead class="bg-light">
               <tr>
-                <th class="border-0 rounded-start">Code</th>
-                <th class="border-0">Label</th>
+                <th class="border-0 rounded-start">Nom</th>
+                <th class="border-0">Prénom</th>
                 <th class="border-0">Spécialité</th>
-                <th class="border-0 rounded-end">Formation</th>
+                <th class="border-0 rounded-end">Email</th>
               </tr>
             </thead>
             <tbody id="assignedModulesList">
@@ -242,9 +301,9 @@
           </div>
           <div>
             <h5 class="modal-title fw-semibold text-primary mb-1" id="assignModulesModalLabel">
-              Affectation des modules à <span id="assignFormateurName"></span>
+              Affectation des formateurs au module <span id="assignModuleName">[Module]</span>
             </h5>
-            <p class="text-muted small mb-0">Sélectionnez les modules à affecter à ce formateur</p>
+            <p class="text-muted small mb-0">Sélectionnez les formateurs à affecter à ce module</p>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -253,12 +312,12 @@
         <div class="row mb-4">
           <div class="col-lg-4">
             <div class="search-box">
-              <input type="text" placeholder="Rechercher un module..." id="searchModule" class="form-control rounded-pill" />
+              <input type="text" placeholder="Rechercher un formateur..." id="searchTrainer" class="form-control rounded-pill" />
               <i class="fas fa-search text-muted search-icon"></i>
             </div>
           </div>
           <div class="col-lg-4">
-            <select id="filterSpecialite" class="form-select rounded-pill">
+            <select id="filterTrainerSpecialite" class="form-select rounded-pill">
               <option value="0">Filtrer par spécialité</option>
               <option value="informatique">Informatique</option>
               <option value="mathematiques">Mathématiques</option>
@@ -286,10 +345,9 @@
                             <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                           </div>
                         </th>
-                        <th class="border-0">Code</th>
-                        <th class="border-0">Label</th>
-                        <th class="border-0">Spécialité</th>
-                        <th class="border-0 rounded-end">Formation</th>
+                        <th class="border-0">Nom</th>
+                        <th class="border-0">Prénom</th>
+                        <th class="border-0 rounded-end">Email</th>
                       </tr>
                     </thead>
                     <tbody id="modulesList">
@@ -358,7 +416,7 @@
                       </div>
                     </div>
                     <h5 class="mb-1">Aucun résultat trouvé</h5>
-                    <p class="text-muted mb-0">Aucun formateur ne correspond à votre recherche</p>
+                    <p class="text-muted mb-0">Aucun module ne correspond à votre recherche</p>
                   </div>
                 </td>
               </tr>
@@ -381,18 +439,88 @@
       $(this).prop('disabled', false);
     });
 
+    // Handle specialty filter
+    $('#filter-specialite').on('change', function() {
+      applyFilters();
+    });
+
+    // Handle table search
+    $('#table-filter').on('keyup', function() {
+      applyFilters();
+    });
+
+    // Function to apply both search and specialty filters
+    function applyFilters() {
+      var searchValue = $('#table-filter').val().toLowerCase();
+      var selectedSpecialite = $('#filter-specialite').val().toLowerCase();
+      
+      var visibleCount = 0;
+      
+      $('#listeItem tr').each(function() {
+        var rowText = $(this).text().toLowerCase();
+        var rowSpecialite = $(this).find('td:eq(1)').text().toLowerCase(); // Specialty is in the 2nd column (index 1)
+        
+        var showRow = true;
+        
+        // Apply search filter
+        if (searchValue !== '') {
+          if (rowText.indexOf(searchValue) === -1) {
+            showRow = false;
+          }
+        }
+        
+        // Apply specialty filter
+        if (selectedSpecialite !== '0') {
+          if (rowSpecialite.indexOf(selectedSpecialite) === -1) {
+            showRow = false;
+          }
+        }
+        
+        if (showRow) {
+          visibleCount++;
+        }
+        
+        $(this).toggle(showRow);
+      });
+      
+      // Show/hide the "no results" message
+      if (visibleCount === 0) {
+        if ($('#noResultsMessage').length === 0) {
+          $('#listeItem').append(`
+            <tr id="noResultsMessage">
+              <td colspan="4" class="text-center text-muted py-4">
+                <div class="d-flex flex-column align-items-center justify-content-center">
+                  <div class="avatar-sm mb-3">
+                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                      <i class="ri-search-line"></i>
+                    </div>
+                  </div>
+                  <h5 class="mb-1">Aucun résultat trouvé</h5>
+                  <p class="text-muted mb-0">Aucun module ne correspond à vos critères de recherche</p>
+                </div>
+              </td>
+            </tr>
+          `);
+        } else {
+          $('#noResultsMessage').show();
+        }
+      } else {
+        $('#noResultsMessage').hide();
+      }
+    }
+
     // Handle view modules action
     $(document).on('click', '.view-modules', function(e) {
       e.preventDefault();
-      var formateurId = $(this).data('formateur-id');
-      var formateurNom = $(this).data('formateur-nom');
-      var formateurPrenom = $(this).data('formateur-prenom');
+      var moduleId = $(this).data('module-id');
+      var moduleCode = $(this).data('module-code');
+      var moduleLabel = $(this).data('module-label');
       
-      // Set formateur name in modal title
-      $('#viewFormateurName').text(formateurNom + ' ' + formateurPrenom);
+      // Set module info in modal title
+      $('#viewModuleName').text(moduleCode + ' - ' + moduleLabel);
       
-      // Load assigned modules (mock data for now)
-      loadAssignedModules(formateurId);
+      // Load assigned trainers (mock data for now)
+      loadAssignedTrainers(moduleId);
       
       // Show the modal
       $('#viewModulesModal').modal('show');
@@ -401,18 +529,18 @@
     // Handle assign modules action
     $(document).on('click', '.assign-modules', function(e) {
       e.preventDefault();
-      var formateurId = $(this).data('formateur-id');
-      var formateurNom = $(this).data('formateur-nom');
-      var formateurPrenom = $(this).data('formateur-prenom');
+      var moduleId = $(this).data('module-id');
+      var moduleCode = $(this).data('module-code');
+      var moduleLabel = $(this).data('module-label');
       
-      // Store formateur ID for later use
-      $('#assignModulesModal').data('formateur-id', formateurId);
+      // Store module ID for later use
+      $('#assignModulesModal').data('module-id', moduleId);
       
-      // Set formateur name in modal title
-      $('#assignFormateurName').text(formateurNom + ' ' + formateurPrenom);
+      // Set module info in modal title
+      $('#assignModuleName').text(moduleCode + ' - ' + moduleLabel);
       
-      // Load available modules (mock data for now)
-      loadAvailableModules();
+      // Load available trainers (mock data for now)
+      loadAvailableTrainers();
       
       // Show the modal
       $('#assignModulesModal').modal('show');
@@ -432,80 +560,187 @@
     
     // Handle save assignments
     $(document).on('click', '#saveAssignmentsBtn', function() {
-      var formateurId = $('#assignModulesModal').data('formateur-id');
-      var selectedModuleIds = [];
+      var moduleId = $('#assignModulesModal').data('module-id');
+      var selectedTrainerIds = [];
       
       $('.module-checkbox:checked').each(function() {
-        selectedModuleIds.push($(this).val());
+        selectedTrainerIds.push($(this).val());
       });
       
-      if (selectedModuleIds.length === 0) {
-        alert('Veuillez sélectionner au moins un module à affecter.');
+      if (selectedTrainerIds.length === 0) {
+        alert('Veuillez sélectionner au moins un formateur à affecter.');
         return;
       }
       
       // Mock AJAX call to save assignments
-      console.log('Assigning modules:', selectedModuleIds, 'to formateur:', formateurId);
+      console.log('Assigning trainers:', selectedTrainerIds, 'to module:', moduleId);
       
       // Show success message
-      alertify.success('Modules affectés avec succès');
+      alertify.success('Formateurs affectés avec succès');
       
       // Close the modal
       $('#assignModulesModal').modal('hide');
     });
     
-    // Mock function to load assigned modules
-    function loadAssignedModules(formateurId) {
-      // Clear current list
+    // Mock function to load assigned trainers
+    function loadAssignedTrainers(moduleId) {
+      
       $('#assignedModulesList').empty();
       
-      // Mock data - in a real implementation, this would come from an AJAX call
-      var mockModules = [
-        {code: 'MATH101', label: 'Mathématiques de base', specialite: 'Mathématiques', formation: 'Licence Mathématiques'},
-        {code: 'INFO201', label: 'Programmation Python', specialite: 'Informatique', formation: 'Licence Informatique'},
-        {code: 'LANG150', label: 'Anglais Technique', specialite: 'Langues', formation: 'Licence Langues'}
-      ];
-      
-      var html = '';
-      $.each(mockModules, function(index, module) {
-        html += '<tr>';
-        html += '<td><span class="fw-semibold">' + module.code + '</span></td>';
-        html += '<td>' + module.label + '</td>';
-        html += '<td>' + module.specialite + '</td>';
-        html += '<td>' + module.formation + '</td>';
-        html += '</tr>';
+      $.ajax({
+        url : "{% url 't_timetable:LoadAssignedProf' %}",
+        dataType: "JSON",
+        type : "GET",
+        data : {
+          'moduleId' : moduleId,
+        },
+        success : function(data){
+          var html = '';
+          if (data.length > 0){
+            $.each(data, function(index, trainer) {
+              html += '<tr>';
+              html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
+              html += '<td>' + trainer.prenom + '</td>';
+              html += '<td>' + trainer.specialite + '</td>';
+              html += '<td>' + trainer.email + '</td>';
+              html += '</tr>';
+            });
+          }else{
+            html += '<tr>';
+              html += '<td colspan="4">';
+                html +='<div class="d-flex flex-column align-items-center justify-content-center py-5"> ';
+                    html +='<div class="avatar-sm mb-4"> ';
+                        html +='<div class="avatar-title bg-light text-muted rounded-circle fs-1"> ';
+                            html +='<i class="ri-user-unfollow-line"></i> ';
+                        html +='</div> ';
+                    html +='</div>';
+                    html +='<h5 class="mb-2">Aucun formateur trouvé</h5> ';
+                  html += '<p class="text-muted mb-0">Il n\'y a aucun formateur enregistré pour le moment</p> ';
+                html +='</div>';
+              html += '</td>';
+            html += '</tr>';
+          }
+          
+          $('#assignedModulesList').html(html);
+        }
       });
       
-      $('#assignedModulesList').html(html);
     }
     
-    // Mock function to load available modules
-    function loadAvailableModules() {
+    // Mock function to load available trainers
+    function loadAvailableTrainers() {
       // Clear current list
-      $('#modulesList').empty();
-      
-      // Mock data - in a real implementation, this would come from an AJAX call
-      var mockModules = [
-        {id: 1, code: 'MATH101', label: 'Mathématiques de base', specialite: 'Mathématiques', formation: 'Licence Mathématiques'},
-        {id: 2, code: 'INFO201', label: 'Programmation Python', specialite: 'Informatique', formation: 'Licence Informatique'},
-        {id: 3, code: 'LANG150', label: 'Anglais Technique', specialite: 'Langues', formation: 'Licence Langues'},
-        {id: 4, code: 'GEST300', label: 'Gestion des Entreprises', specialite: 'Gestion', formation: 'Licence Gestion'},
-        {id: 5, code: 'INFO305', label: 'Base de Données Avancées', specialite: 'Informatique', formation: 'Licence Informatique'}
-      ];
+      $('#modulesList').empty(); 
+
+      var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');;
       
       var html = '';
-      $.each(mockModules, function(index, module) {
+      $.each(mockTrainers, function(index, trainer) {
         html += '<tr>';
-        html += '<td><div class="form-check"><input class="form-check-input module-checkbox" type="checkbox" value="' + module.id + '" id="module_' + module.id + '"></div></td>';
-        html += '<td><span class="fw-semibold">' + module.code + '</span></td>';
-        html += '<td>' + module.label + '</td>';
-        html += '<td>' + module.specialite + '</td>';
-        html += '<td>' + module.formation + '</td>';
+        html += '<td><div class="form-check"><input class="form-check-input module-checkbox" type="checkbox" value="' + trainer.id + '" id="trainer_' + trainer.id + '"></div></td>';
+        html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
+        html += '<td>' + trainer.prenom + '</td>';
+        html += '<td>' + trainer.email + '</td>';
         html += '</tr>';
       });
+      
+      // Store the original data for filtering
+      $('#assignModulesModal').data('all-trainers', mockTrainers);
+      
+      $('#modulesList').html(html);
+      
+      // Initialize search and filter after data is loaded
+      setTimeout(initializeTrainerFilters, 100);
+    }
+    
+    // Initialize trainer filters after data is loaded
+    function initializeTrainerFilters() {
+      // Set up event listeners for search and filter
+      $('#searchTrainer').off('keyup').on('keyup', function() {
+        filterTrainers();
+      });
+      
+      $('#filterTrainerSpecialite').off('change').on('change', function() {
+        filterTrainers();
+      });
+    }
+    
+    // Function to filter trainers based on search and specialty
+    function filterTrainers() {
+      var searchValue = $('#searchTrainer').val().toLowerCase();
+      var selectedSpecialite = $('#filterTrainerSpecialite').val().toLowerCase();
+      var allTrainers = $('#assignModulesModal').data('all-trainers') || [];
+      
+      var filteredTrainers = allTrainers.filter(function(trainer) {
+        var matchesSearch = true;
+        var matchesSpecialite = true;
+        
+        // Apply search filter (search in name and email)
+        if (searchValue !== '') {
+          var trainerText = (trainer.nom + ' ' + trainer.prenom + ' ' + (trainer.email || '')).toLowerCase();
+          matchesSearch = trainerText.indexOf(searchValue) !== -1;
+        }
+        
+        // Apply specialty filter
+        if (selectedSpecialite !== '0') {
+          var trainerSpecialite = (trainer.specialite || '').toLowerCase();
+          matchesSpecialite = trainerSpecialite.indexOf(selectedSpecialite) !== -1;
+        }
+        
+        return matchesSearch && matchesSpecialite;
+      });
+      
+      // Update the table with filtered results
+      var html = '';
+      if (filteredTrainers.length === 0) {
+        html = '<tr><td colspan="5" class="text-center text-muted py-4">Aucun formateur trouvé</td></tr>';
+      } else {
+        $.each(filteredTrainers, function(index, trainer) {
+          html += '<tr>';
+          html += '<td><div class=\"form-check\"><input class=\"form-check-input module-checkbox\" type=\"checkbox\" value=\"' + trainer.id + '\" id=\"trainer_' + trainer.id + '\"></div></td>';
+          html += '<td><span class=\"fw-semibold\">' + trainer.nom + '</span></td>';
+          html += '<td>' + trainer.prenom + '</td>';
+          html += '<td>' + (trainer.specialite || 'N/A') + '</td>';
+          html += '<td>' + trainer.email + '</td>';
+          html += '</tr>';
+        });
+      }
       
       $('#modulesList').html(html);
     }
+    
+    // Function to update statistics
+    function updateStatistics() {
+      var totalModules = $('#listeItem tr').length - ($('#noResultsMessage').length > 0 ? 1 : 0); // Exclude the "no results" row if present
+      var modulesSansAffectation = 0;
+      var modulesAvecAffectation = 0;
+      
+      // Count modules based on the number of assignments
+      $('#listeItem tr').each(function() {
+        if (!$(this).is('#noResultsMessage')) { // Don't count the "no results" row
+          var assignmentCount = parseInt($(this).find('td:eq(2)').text()); // Assignment count is in the 3rd column (index 2)
+          if (assignmentCount === 0 || isNaN(assignmentCount)) {
+            modulesSansAffectation++;
+          } else {
+            modulesAvecAffectation++;
+          }
+        }
+      });
+      
+      $('#totalModules').text(totalModules);
+      $('#modulesSansAffectation').text(modulesSansAffectation);
+      $('#modulesAvecAffectation').text(modulesAvecAffectation);
+    }
+    
+    // Update statistics after page loads
+    setTimeout(updateStatistics, 100);
+    
+    // Update statistics when filters change
+    $('#filter-specialite').on('change', updateStatistics);
+    $('#table-filter').on('keyup', function() {
+      // Add a small delay to allow the filter to process first
+      setTimeout(updateStatistics, 50);
+    });
 
   });
     

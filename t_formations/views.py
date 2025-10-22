@@ -548,7 +548,7 @@ def archiveModule(request):
 @login_required(login_url="institut_app:login")
 def ApiGetModuleDetails(request):
     id = request.GET.get('id')
-    obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef')
+    obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef', 'n_elimate', 'systeme_eval')
     return JsonResponse(list(obj), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -560,12 +560,16 @@ def ApiUpdateModule(request):
     duree = request.POST.get('duree')
     label = request.POST.get('label')
     code = request.POST.get('code')
+    n_elimate = request.POST.get('n_elimate')
+    systeme_eval = request.POST.get('systeme_eval')
 
     module = Modules.objects.get(id= id)
     module.code = code
     module.duree = duree
     module.label = label
     module.coef = coef
+    module.n_elimate = n_elimate if n_elimate != '' else None
+    module.systeme_eval = systeme_eval
 
     # If the module was previously validated and we're making changes, we might want to unset the validation
     # This depends on business requirements, but typically modifications would require re-validation

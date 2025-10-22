@@ -374,7 +374,15 @@
                                 <label class="form-label fw-medium" for="evaluation">Mode d'évaluation</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-equalizer-line text-muted"></i></span>
-                                    <input type="text" class="form-control border-0 bg-light py-2" id="evaluation" name="evaluation" disabled>
+                                    <select class="form-select border-0 bg-light py-2" id="evaluation" name="evaluation" disabled>
+                                        <option value="">Sélectionnez le mode d'évaluation</option>
+                                        <option value="examen">Examen</option>
+                                        <option value="cc">Contrôle Continu</option>
+                                        <option value="examen_cc">Examen + Contrôle Continu</option>
+                                        <option value="tp">Travaux Pratiques</option>
+                                        <option value="projet">Projet</option>
+                                        <option value="oral">Exposé/Oral</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -384,7 +392,7 @@
                 <hr class="my-4">
 
                 <!-- Teachers list -->
-                <h6 class="text-muted fw-semibold mb-3">Liste des enseignants</h6>
+                <h6 class="text-muted fw-semibold mb-3">Liste des enseignants affectés</h6>
                 <div class="card border-0 shadow-sm">
                     <div class="card-body p-3">
                         <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
@@ -392,8 +400,7 @@
                                 <tr>
                                     <th>Nom & Prénom</th>
                                     <th>Spécialité</th>
-                                    <th>Formation Associée</th>
-                                    <th>Actions</th>
+                                    <th>Email</th>
                                 </tr>
                             </thead>
                             <tbody id="ListeEnseignants">
@@ -402,17 +409,12 @@
                         </table>
                     </div>
                 </div>
+
             </div>
 
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
                     <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-success px-4 py-2 me-2" id="assignTeachersBtn">
-                    <i class="ri-user-add-line me-2"></i>Affecter des enseignants
-                </button>
-                <button type="button" class="btn btn-primary px-4 py-2" id="saveModuleDetailsBtn">
-                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
                 </button>
             </div>
         </div>
@@ -506,7 +508,15 @@
                                 <label for="edit_evaluation" class="form-label fw-medium">Mode d'évaluation</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-equalizer-line text-muted"></i></span>
-                                    <input type="text" class="form-control border-0 bg-light py-2" id="edit_evaluation" placeholder="Entrez le mode d'évaluation" />
+                                    <select class="form-select border-0 bg-light py-2" id="edit_evaluation">
+                                        <option value="">Sélectionnez le mode d'évaluation</option>
+                                        <option value="examen">Examen</option>
+                                        <option value="cc">Contrôle Continu</option>
+                                        <option value="examen_cc">Examen + Contrôle Continu</option>
+                                        <option value="tp">Travaux Pratiques</option>
+                                        <option value="projet">Projet</option>
+                                        <option value="oral">Exposé/Oral</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -771,9 +781,6 @@
       // Load module details
       loadModuleDetails(id_module);
       
-      // Load associated teachers
-      loadModuleTeachers(id_module);
-      
       $('#detailsModule').modal('show');
     });
 
@@ -916,16 +923,11 @@
             $('#eliminatoire').val(data.n_elimate);
             $('#evaluation').val(data.systeme_eval);
             
-            // Enable/disable fields based on validation status
-            if (data.est_valider) {
-              // Module is validated - disable all fields
-              $('#code, #label, #dure, #coef, #eliminatoire, #evaluation').prop('disabled', true);
-              $('#saveModuleDetailsBtn').prop('disabled', true).addClass('btn-secondary').removeClass('btn-primary');
-            } else {
-              // Module is not validated - enable all fields
-              $('#code, #label, #dure, #coef, #eliminatoire, #evaluation').prop('disabled', false);
-              $('#saveModuleDetailsBtn').prop('disabled', false).addClass('btn-primary').removeClass('btn-secondary');
-            }
+            // All fields should be disabled in the details modal - this is read-only
+            $('#code, #label, #dure, #coef, #eliminatoire, #evaluation').prop('disabled', true);
+            
+            // Load associated teachers
+            loadModuleTeachers(moduleId);
           } else {
             console.error('Error loading module details:', data.message);
           }
@@ -955,12 +957,11 @@
                 teachersHtml += '<td>' + trainer.nom + ' ' + trainer.prenom + '</td>';
                 teachersHtml += '<td>' + (trainer.diplome || 'N/A') + '</td>';
                 teachersHtml += '<td>' + (trainer.email || 'N/A') + '</td>';
-                teachersHtml += '<td><button type="button" class="btn btn-sm btn-danger remove-trainer-btn" data-trainer-id="' + trainer.id + '" data-module-id="' + moduleId + '"><i class="ri-delete-bin-line"></i></button></td>';
                 teachersHtml += '</tr>';
               });
               $('#ListeEnseignants').html(teachersHtml);
             } else {
-              $('#ListeEnseignants').html('<tr><td colspan="4" class="text-center text-muted py-3">Aucun enseignant affecté</td></tr>');
+              $('#ListeEnseignants').html('<tr><td colspan="3" class="text-center text-muted py-3">Aucun enseignant affecté</td></tr>');
             }
           } else {
             console.error('Error loading module teachers:', data.message);
@@ -968,145 +969,61 @@
         },
         error: function(xhr, status, error) {
           console.error('AJAX error when loading teachers:', error);
-          $('#ListeEnseignants').html('<tr><td colspan="4" class="text-center text-danger py-3">Erreur lors du chargement des enseignants</td></tr>');
+          $('#ListeEnseignants').html('<tr><td colspan="3" class="text-center text-danger py-3">Erreur lors du chargement des enseignants</td></tr>');
         }
       });
     }
     
-    // Handle remove trainer button click
-    $(document).on('click', '.remove-trainer-btn', function(e) {
-      e.preventDefault();
-      var trainerId = $(this).data('trainer-id');
-      var moduleId = $(this).data('module-id');
-      
-      // Store trainer and module IDs for use in the confirmation
-      $('#removeTrainerModal').data('trainer-id', trainerId);
-      $('#removeTrainerModal').data('module-id', moduleId);
-      
-      // Show the confirmation modal
-      $('#removeTrainerModal').modal('show');
-    });
-    
-    // Confirm removal of trainer
-    $(document).on('click', '#confirmRemoveTrainerBtn', function() {
-      var trainerId = $('#removeTrainerModal').data('trainer-id');
-      var moduleId = $('#removeTrainerModal').data('module-id');
-      
-      // Make AJAX call to remove the trainer
-      $.ajax({
-        url: '{% url "t_formations:remove_trainer_from_module" %}',
-        type: 'POST',
-        data: {
-          'trainer_id': trainerId,
-          'module_id': moduleId,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success: function(response) {
-          if (response.status === 'success') {
-            alertify.success(response.message);
-            $('#removeTrainerModal').modal('hide');
-            // Refresh the teachers list
-            loadModuleTeachers(moduleId);
-          } else {
-            alertify.error(response.message);
-          }
-        },
-        error: function(xhr, status, error) {
-          console.error('Error removing trainer:', error);
-          alert('Une erreur est survenue lors du retrait de l\'enseignant.');
-          $('#removeTrainerModal').modal('hide');
-        }
-      });
-    });
-    
-    // Handle save module details in the details modal
-    $(document).on('click', '#saveModuleDetailsBtn', function() {
-      var moduleId = $('#detailsModule').data('module-id');
-      
-      // Get all the updated values from the form fields
-      var updatedData = {
-        'id': moduleId,
-        'code': $('#code').val(),
-        'label': $('#label').val(),
-        'duree': $('#dure').val(), // Note: the field ID is 'dure' not 'duree'
-        'coef': $('#coef').val(),
-        'n_elimate': $('#eliminatoire').val(),
-        'systeme_eval': $('#evaluation').val(),
-        'csrfmiddlewaretoken': '{{ csrf_token }}'
-      };
-      
-      // Validate required fields
-      if (!updatedData.code || !updatedData.label) {
-        alert('Veuillez remplir les champs obligatoires (Code et Label).');
-        return;
-      }
-      
-      // Make AJAX call to update the module details
-      $.ajax({
-        url: '{% url "t_formations:update_module_details" %}',
-        type: 'POST',
-        data: updatedData,
-        success: function(response) {
-          if (response.status === 'success') {
-            alertify.success(response.message);
-            // Optionally, you could reload the table to reflect the changes
-            // For now, just close the modal and reload the page
-            $('#detailsModule').modal('hide');
-            location.reload(); // This will refresh the page to show updated data in the table
-          } else {
-            alertify.error(response.message);
-          }
-        },
-        error: function(xhr, status, error) {
-          console.error('Error updating module details:', error);
-          alert('Une erreur est survenue lors de la mise à jour des détails du module.');
-        }
-      });
-    });
-    
-    // Handle save module details in the edit modal
+    // Handle save in edit modal
     $(document).on('click', '#saveModuleEditBtn', function() {
       var moduleId = $('#editModule').data('module-id');
-      
-      // Get all the updated values from the edit form fields
-      var updatedData = {
-        'id': moduleId,
-        'code': $('#edit_code').val(),
-        'label': $('#edit_label').val(),
-        'duree': $('#edit_duree').val(),
-        'coef': $('#edit_coef').val(),
-        'n_elimate': $('#edit_eliminatoire').val(),
-        'systeme_eval': $('#edit_evaluation').val(),
-        'csrfmiddlewaretoken': '{{ csrf_token }}'
-      };
-      
-      // Validate required fields
-      if (!updatedData.code || !updatedData.label) {
-        alert('Veuillez remplir les champs obligatoires (Code et Label).');
-        return;
-      }
-      
-      // Make AJAX call to update the module details
+      var code = $('#edit_code').val();
+      var label = $('#edit_label').val();
+      var duree = $('#edit_duree').val();
+      var coef = $('#edit_coef').val();
+      var eliminatoire = $('#edit_eliminatoire').val();
+      var evaluation = $('#edit_evaluation').val();
+
       $.ajax({
-        url: '{% url "t_formations:update_module_details" %}',
+        url: '{% url "t_formations:ApiUpdateModule" %}',
         type: 'POST',
-        data: updatedData,
+        data: {
+          'id': moduleId,
+          'code': code,
+          'label': label,
+          'duree': duree,
+          'coef': coef,
+          'n_elimate': eliminatoire,
+          'systeme_eval': evaluation,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        dataType: 'JSON',
         success: function(response) {
-          if (response.status === 'success') {
+          if (response.success) {
             alertify.success(response.message);
-            // Close the modal and reload the page to update the table
             $('#editModule').modal('hide');
-            location.reload(); // This will refresh the page to show updated data in the table
+            loadItems(); // Reload the modules list
           } else {
             alertify.error(response.message);
           }
         },
         error: function(xhr, status, error) {
-          console.error('Error updating module details:', error);
-          alert('Une erreur est survenue lors de la mise à jour des détails du module.');
+          console.error('Error updating module:', error);
+          alertify.error('Erreur lors de la mise à jour du module');
         }
       });
     });
+    
+
+    
+
+    
+
+
+
+    
+
+        
 
     $(document).on('change','#filter-module', function(){
       var filter_option = "statut";
@@ -1138,135 +1055,9 @@
       alert('Fonctionnalité de création de module bientôt disponible');
     });
 
-    // Handle the "Affecter des enseignants" button click
-    $(document).on('click', '#assignTeachersBtn', function(){
-      // Load available trainers
-      loadAvailableTrainers();
-      
-      // Store the currently selected module ID in the modal
-      var currentModuleId = $('#detailsModule').data('module-id');
-      $('#selectTrainersModal').data('module-id', currentModuleId);
-      
-      // For now, just show the modal
-      $('#selectTrainersModal').modal('show');
-    });
+
     
-    // Load available trainers
-    function loadAvailableTrainers() {
-      $.ajax({
-        url: '{% url "t_formations:ApiGetFormateurs" %}', // Update with actual URL to get formateurs
-        type: 'GET',
-        dataType: 'JSON',
-        success: function(data) {
-          var row = '';
-          if (data.length === 0) {
-            row += '<tr><td colspan="6" class="text-center text-muted py-4">Aucun enseignant disponible</td></tr>';
-          } else {
-            $.each(data, function(index, trainer) {
-              row += '<tr>';
-              row += '<td><div class="form-check"><input class="form-check-input trainer-checkbox" type="checkbox" value="' + trainer.id + '" id="trainer_' + trainer.id + '"></div></td>';
-              row += '<td><div class="fw-medium">' + trainer.nom + ' ' + trainer.prenom + '</div></td>';
-              row += '<td>' + trainer.email + '</td>';
-              row += '<td>' + trainer.telephone + '</td>';
-              row += '<td>' + trainer.diplome + '</td>';
-              row += '<td><button type="button" class="btn btn-outline-primary btn-sm select-trainer-btn" data-trainer-id="' + trainer.id + '">Sélectionner</button></td>';
-              row += '</tr>';
-            });
-          }
-          $('#availableTrainersList').html(row);
-        },
-        error: function(xhr, status, error) {
-          console.error('Error loading trainers:', error);
-          var row = '<tr><td colspan="6" class="text-center text-danger py-4">Erreur lors du chargement des enseignants</td></tr>';
-          $('#availableTrainersList').html(row);
-        }
-      });
-    }
-    
-    // Handle trainer selection via checkbox
-    $(document).on('change', '.trainer-checkbox', function() {
-      var trainerId = $(this).val();
-      if ($(this).is(':checked')) {
-        // Trainer selected
-        console.log('Trainer selected:', trainerId);
-      } else {
-        // Trainer deselected
-        console.log('Trainer deselected:', trainerId);
-      }
-    });
-    
-    // Handle "Select All" checkbox
-    $(document).on('change', '#selectAllCheckbox', function() {
-      var isChecked = $(this).is(':checked');
-      $('.trainer-checkbox').prop('checked', isChecked);
-    });
-    
-    // Handle "Select All" button
-    $(document).on('click', '#selectAllTrainers', function() {
-      $('.trainer-checkbox').prop('checked', true);
-    });
-    
-    // Handle individual trainer selection button
-    $(document).on('click', '.select-trainer-btn', function() {
-      var trainerId = $(this).data('trainer-id');
-      var checkbox = $('#trainer_' + trainerId);
-      checkbox.prop('checked', true);
-      
-      // Scroll to the selected trainer if needed
-      checkbox.closest('tr').addClass('table-success');
-      setTimeout(function() {
-        checkbox.closest('tr').removeClass('table-success');
-      }, 1000);
-    });
-    
-    // Handle save assigned trainers
-    $(document).on('click', '#saveAssignedTrainers', function() {
-      var selectedTrainerIds = [];
-      $('.trainer-checkbox:checked').each(function() {
-        selectedTrainerIds.push($(this).val());
-      });
-      
-      if (selectedTrainerIds.length === 0) {
-        alert('Veuillez sélectionner au moins un enseignant à affecter.');
-        return;
-      }
-      
-      var moduleId = $('#selectTrainersModal').data('module-id');
-      
-      // You would typically get the module ID from the context
-      // For now, we'll just show an alert with the selected IDs
-      console.log('Selected trainer IDs:', selectedTrainerIds, 'for module ID:', moduleId);
-      
-      // Using FormData to properly send the array of trainer IDs
-      var form_data = new FormData();
-      form_data.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-      form_data.append('module_id', moduleId);
-      $.each(selectedTrainerIds, function(index, trainerId) {
-        form_data.append('trainer_ids[]', trainerId);
-      });
-      
-      $.ajax({
-        url: '{% url "t_formations:assign_trainers_to_module" %}',
-        type: 'POST',
-        data: form_data,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-          if (response.status === 'success') {
-            alertify.success(response.message);
-            $('#selectTrainersModal').modal('hide');
-            // Refresh the trainers list in the details modal
-            loadModuleTeachers(moduleId); // Refresh the teacher list after assignment
-          } else {
-            alertify.error(response.message);
-          }
-        },
-        error: function(xhr, status, error) {
-          console.error('Error assigning trainers:', error);
-          alert('Une erreur est survenue lors de l\'affectation des enseignants.');
-        }
-      });
-    });
+
 
   });
     

@@ -3,6 +3,7 @@ from django.urls import path,include
 from .views import *
 from.f_views.salles import *
 from .f_views.crenaux import *
+from .f_views.affectation_modules import *
 
 app_name="t_timetable"
 
@@ -35,5 +36,7 @@ urlpatterns = [
 
     ### FILTRAGE ###
     path('FilterFormateur', FilterFormateur, name="FilterFormateur"),
+    path('modules/affectations/', PageAffectation, name="PageAffectation"),
+    path('LoadAssignedProf', LoadAssignedProf, name="LoadAssignedProf"),
 
 ]
