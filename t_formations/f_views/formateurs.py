@@ -146,7 +146,7 @@ def assign_trainers_to_module(request):
             # Get module ID and trainer IDs from the request
             module_id = request.POST.get('module_id')
             trainer_ids = request.POST.getlist('trainer_ids[]')  # For multiple trainer IDs
-            
+        
             if not module_id:
                 return JsonResponse({'status': 'error', 'message': 'ID du module est requis'})
             

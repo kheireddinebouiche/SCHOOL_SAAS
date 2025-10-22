@@ -532,7 +532,7 @@
       var moduleId = $(this).data('module-id');
       var moduleCode = $(this).data('module-code');
       var moduleLabel = $(this).data('module-label');
-      
+     
       // Store module ID for later use
       $('#assignModulesModal').data('module-id', moduleId);
       
@@ -560,6 +560,17 @@
     
     // Handle save assignments
     $(document).on('click', '#saveAssignmentsBtn', function() {
+
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+
       var moduleId = $('#assignModulesModal').data('module-id');
       var selectedTrainerIds = [];
       
@@ -572,11 +583,29 @@
         return;
       }
       
-      // Mock AJAX call to save assignments
-      console.log('Assigning trainers:', selectedTrainerIds, 'to module:', moduleId);
-      
-      // Show success message
-      alertify.success('Formateurs affectés avec succès');
+      $.ajax({
+        url : "{% url 't_formations:assign_trainers_to_module' %}",
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module_id' : moduleId,
+          'trainer_ids' : selectedTrainerIds,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            alertify.success(response.message);
+            loadAssignedTrainers(moduleId);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
       
       // Close the modal
       $('#assignModulesModal').modal('hide');
