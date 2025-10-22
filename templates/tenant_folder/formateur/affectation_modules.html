@@ -195,44 +195,9 @@
                     </tr>
                   </thead>
                   <tbody id="listeItem" class="border-top-0">
-                  {% if modules %}
-                    {% for module in modules %}
-                      <tr>
-                        <td><strong>#{{module.code}}</strong> - {{module.label}}</td>
-                        <td>{{module.specialite.label}}</td>
-                        <td>{{module.nombre_formateur}}</td>
-                        <td class="text-end">
-                          <div class="dropdown">
-                            <button class="btn btn-light btn-sm rounded-pill shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                              <i class="ri-more-2-line"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-none">
-                              <li><a class="dropdown-item d-flex align-items-center px-3 py-2 view-modules" href="#" data-module-id="{{ module.id }}" data-module-code="{{ module.code }}" data-module-label="{{ module.label }}">
-                                <i class="ri-eye-line text-info me-2"></i> Voir les détails
-                              </a></li>
-                              <li><a class="dropdown-item d-flex align-items-center px-3 py-2 assign-modules" href="#" data-module-id="{{ module.id }}" data-module-code="{{ module.code }}" data-module-label="{{ module.label }}">
-                                <i class="ri-user-add-line text-primary me-2"></i> Affecter des formateurs
-                              </a></li>
-                            </ul>
-                          </div>
-                        </td>
-                      </tr>
-                    {% endfor %}
-                  {% else %}
-                     <tr>
-                      <td colspan="4">
-                        <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                            <div class="avatar-sm mb-4">
-                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                    <i class="ri-book-unfolded-line"></i>
-                                </div>
-                            </div>
-                            <h5 class="mb-2">Aucun module trouvé</h5>
-                            <p class="text-muted mb-0">Il n'y a aucun module enregistré pour le moment</p>
-                        </div>
-                      </td>
-                     </tr>
-                  {% endif %}
+                 
+                   
+                
                   </tbody>
                 </table>
               </div>
@@ -271,7 +236,6 @@
               <tr>
                 <th class="border-0 rounded-start">Nom</th>
                 <th class="border-0">Prénom</th>
-                <th class="border-0">Spécialité</th>
                 <th class="border-0 rounded-end">Email</th>
               </tr>
             </thead>
@@ -378,6 +342,61 @@
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
     
+    function loadItems(){
+      $.ajax({
+        url : "{% url 't_timetable:ApiLoadModules' %}",
+        dataType : "JSON",
+        type : "GET",
+        success : function(data){
+            var row = "";
+            if (data.length >0){
+              $.each(data, function(index, p){
+                  row += '<tr>';
+                    row += '<td><strong>'+p.code+'-'+p.label+'</td>';
+                    row += '<td>'+p.specialite__label+'</td>';
+                    row += '<td>'+p.nombre_formateur+'</td>';
+                    row += '<td class="text-end">';
+                      row += '<div class="dropdown">';
+                        row += '<button class="btn btn-light btn-sm rounded-pill shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                          row += '<i class="ri-more-2-line"></i>';
+                        row += '</button>';
+                        row += '<ul class="dropdown-menu dropdown-menu-end shadow-none">';
+                          row += '<li><a class="dropdown-item d-flex align-items-center px-3 py-2 view-modules" href="#" data-module-id="'+p.id+'" data-module-code="'+p.code+'" data-module-label="'+p.label+'">';
+                            row += '<i class="ri-eye-line text-info me-2"></i> Voir les détails';
+                          row += '</a></li>';
+                          row += '<li><a class="dropdown-item d-flex align-items-center px-3 py-2 assign-modules" href="#" data-module-id="'+p.id+'" data-module-code="'+p.code+'" data-module-label="'+p.label+'">';
+                            row += '<i class="ri-user-add-line text-primary me-2"></i> Affecter des formateurs';
+                          row += '</a></li>';
+                        row += '</ul>';
+                      row += '</div>';
+                    row += '</td>';
+                  row += '</tr>';
+              });
+              
+            }else{
+              row += '<tr>';
+                row += '<td colspan="4">';
+                  row += '<div class="d-flex flex-column align-items-center justify-content-center py-5">';
+                      row += '<div class="avatar-sm mb-4">';
+                          row += '<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
+                              row += '<i class="ri-book-unfolded-line"></i>';
+                          row += '</div>';
+                      row += '</div>';
+                      row += '<h5 class="mb-2">Aucun module trouvé</h5>';
+                      row += '<p class="text-muted mb-0">Il n\'y a aucun module enregistré pour le moment</p>';
+                  row += '</div>';
+                row += '</td>';
+              row += '</tr>';
+            }
+            $('#listeItem').html(row);
+        }
+      }); 
+
+
+    }
+    
+    loadItems();
+
     // Handle dropdown show events
     $(document).on('show.bs.dropdown', function(e) {
       var dropdownMenu = $(e.target).find('.dropdown-menu');
@@ -628,10 +647,10 @@
           if (data.length > 0){
             $.each(data, function(index, trainer) {
               html += '<tr>';
-              html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
-              html += '<td>' + trainer.prenom + '</td>';
-              html += '<td>' + trainer.specialite + '</td>';
-              html += '<td>' + trainer.email + '</td>';
+              html += '<td><span class="fw-semibold">' + trainer.formateur__nom + '</span></td>';
+              html += '<td>' + trainer.formateur__prenom + '</td>';
+             
+              html += '<td>' + trainer.formateur__email + '</td>';
               html += '</tr>';
             });
           }else{

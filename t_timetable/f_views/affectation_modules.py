@@ -26,13 +26,20 @@ def PageAffectation(request):
     return render(request, 'tenant_folder/formateur/affectation_modules.html', context)
 
 @login_required(login_url="institut_app:login")
+def ApiLoadModules(request):
+    modules = Modules.objects.annotate(nombre_formateur = Count('affect_module')).values('id','label','code','specialite__label', 'nombre_formateur')
+
+    return JsonResponse(list(modules), safe=False)
+
+
+@login_required(login_url="institut_app:login")
 def LoadAssignedProf(request):
     if request.method == "GET":
         moduleId = request.GET.get('moduleId')
         if not moduleId:
             return JsonResponse({"status" : "error" , "messages" : "Erreur ! ID module indisponible"})
         
-        liste = EnseignantModule.objects.filter(module_id = moduleId).values('id','formateur__nom','formateur__prenom')
+        liste = EnseignantModule.objects.filter(module_id = moduleId).values('id','formateur__nom','formateur__prenom','formateur__email')
 
         return JsonResponse(list(liste), safe=False)
     else:

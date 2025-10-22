@@ -135,9 +135,6 @@ def load_module_teachers(request):
         return JsonResponse({'status': 'error', 'message': 'ID du module requis'})
 
 
-
-
-
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def assign_trainers_to_module(request):

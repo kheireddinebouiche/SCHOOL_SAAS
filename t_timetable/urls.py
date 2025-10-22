@@ -38,5 +38,6 @@ urlpatterns = [
     path('FilterFormateur', FilterFormateur, name="FilterFormateur"),
     path('modules/affectations/', PageAffectation, name="PageAffectation"),
     path('LoadAssignedProf', LoadAssignedProf, name="LoadAssignedProf"),
+    path('ApiLoadModules', ApiLoadModules, name="ApiLoadModules"),
 
 ]
