@@ -594,42 +594,79 @@
       
     }
     
-    // Mock function to load available trainers
+    // // Mock function to load available trainers
+    // function loadAvailableTrainers(currentModuleId) {
+    //   // Clear current list
+    //   $('#modulesList').empty(); 
+
+    //   var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');;
+    //   var affectations = JSON.parse('{{ affectations_json|escapejs }}');
+
+    //   var html = '';
+    //   $.each(mockTrainers, function(index, trainer) {
+
+    //     var isAssigned = affectations.some(function(a) {
+    //       return a.formateur_id === trainer.id && a.module_id === currentModuleId;
+    //     });
+
+    //     html += '<tr>';
+    //     html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
+    //     html += '<td>' + trainer.prenom + '</td>';
+    //     html += '<td>' + trainer.email + '</td>';
+    //     html += '<td class="text-center">';
+    //     html += '<div class="btn-group" role="group">';
+    //     if (isAssigned) {
+    //       html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
+    //       html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
+    //     } else {
+    //       html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
+    //       html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
+    //     }
+    //     html += '</div>';
+    //     html += '</td>';
+    //     html += '</tr>';
+    //   });
+      
+    //   $('#modulesList').html(html);
+    // }
+    
     function loadAvailableTrainers(currentModuleId) {
-      // Clear current list
-      $('#modulesList').empty(); 
+      $('#modulesList').empty();
 
-      var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');;
-      var affectations = JSON.parse('{{ affectations_json|escapejs }}');
+      // Les formateurs sont statiques (pas besoin de recharger à chaque fois)
+      var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');
 
-      var html = '';
-      $.each(mockTrainers, function(index, trainer) {
+      // Requête AJAX pour récupérer les affectations à jour
+      $.getJSON("{% url 't_timetable:ApiGetAffectations' %}", function(data) {
+        var affectations = data.affectations;
+        var html = '';
 
-        var isAssigned = affectations.some(function(a) {
-          return a.formateur_id === trainer.id && a.module_id === currentModuleId;
+        $.each(mockTrainers, function(index, trainer) {
+          var isAssigned = affectations.some(function(a) {
+            return a.formateur_id === trainer.id && a.module_id === currentModuleId;
+          });
+
+          html += '<tr>';
+          html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
+          html += '<td>' + trainer.prenom + '</td>';
+          html += '<td>' + trainer.email + '</td>';
+          html += '<td class="text-center">';
+          html += '<div class="btn-group" role="group">';
+          if (isAssigned) {
+            html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
+            html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
+          } else {
+            html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
+            html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
+          }
+          html += '</div></td></tr>';
         });
 
-        html += '<tr>';
-        html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
-        html += '<td>' + trainer.prenom + '</td>';
-        html += '<td>' + trainer.email + '</td>';
-        html += '<td class="text-center">';
-        html += '<div class="btn-group" role="group">';
-        if (isAssigned) {
-          html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
-          html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
-        } else {
-          html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
-          html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
-        }
-        html += '</div>';
-        html += '</td>';
-        html += '</tr>';
+        $('#modulesList').html(html);
       });
-      
-      $('#modulesList').html(html);
     }
-    
+
+
     // Function to update statistics
     function updateStatistics() {
       var totalModules = $('#listeItem tr').length - ($('#noResultsMessage').length > 0 ? 1 : 0); // Exclude the "no results" row if present
@@ -679,7 +716,8 @@
         success : function(response){
           if(response.status === "success"){
             alertify.success(response.message);
-            
+            loadItems();
+            loadAvailableTrainers(moduleId);
           }else{
             alertify.error(response.message);
           }
@@ -691,7 +729,6 @@
             // Réactiver le bouton et restaurer son texte après la requête
             btn.prop('disabled', false);
             btn.html(originalText);
-            loadAvailableTrainers(moduleId);
         }
       })
       
@@ -699,16 +736,45 @@
  
     // Gestionnaire pour le bouton Supprimer
     $(document).on('click', '.remove-trainer', function() {
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
       var trainerId = $(this).data('trainer-id');
-      var row = $(this).closest('tr');
+      var moduleId = $('#assignModulesModal').data('module-id');
       
-      // Changer le bouton Supprimer en Affecter
-      $(this).hide();
-      row.find('.assign-trainer').show();
-      
-      // Retirer le formateur de la liste des affectations
-      // (logique à implémenter selon vos besoins)
-      console.log('Formateur ID ' + trainerId + ' supprimé');
+      $.ajax({
+        url : "{% url 't_timetable:ApiDeaffectTrainer' %}",
+        dataType: "JSON",
+        type: 'POST',
+        data : {
+          'trainerId' : trainerId,
+          'moduleId'  : moduleId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if(response.status === "success"){
+            alertify.success(response.message);
+            loadItems();
+            loadAvailableTrainers(moduleId);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        error : function(xhr){
+          alert("Erreur : " + xhr.responseText);
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      })
     });
 
   });

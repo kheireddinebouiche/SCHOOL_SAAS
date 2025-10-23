@@ -40,5 +40,7 @@ urlpatterns = [
     path('LoadAssignedProf', LoadAssignedProf, name="LoadAssignedProf"),
     path('ApiLoadModules', ApiLoadModules, name="ApiLoadModules"),
     path('ApiAffectTrainer', ApiAffectTrainer, name="ApiAffectTrainer"),
+    path('ApiGetAffectations', ApiGetAffectations, name="ApiGetAffectations"),
+    path('ApiDeaffectTrainer',ApiDeaffectTrainer, name="ApiDeaffectTrainer"),
 
 ]

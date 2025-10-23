@@ -30,6 +30,11 @@ def PageAffectation(request):
     return render(request, 'tenant_folder/formateur/affectation_modules.html', context)
 
 @login_required(login_url="institut_app:login")
+def ApiGetAffectations(request):
+    affectations = list(EnseignantModule.objects.values('id', 'formateur_id', 'module_id'))
+    return JsonResponse({'affectations': affectations})
+
+@login_required(login_url="institut_app:login")
 def ApiLoadModules(request):
     modules = Modules.objects.annotate(nombre_formateur = Count('affect_module')).values('id','label','code','specialite__label', 'nombre_formateur')
 
@@ -64,5 +69,21 @@ def ApiAffectTrainer(request):
             formateur_id = trainerId
         )
         return JsonResponse({"status" : "success", "message" : "L'enseignant à été affecter avec succès"})
+    else:
+        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+    
+@login_required(login_url="institut_app:login")
+def ApiDeaffectTrainer(request):
+    if request.method == "POST":
+        trainerId = request.POST.get('trainerId')
+        moduleId = request.POST.get('moduleId')
+
+        if not trainerId and not moduleId:
+            return JsonResponse({"status" : "error", "message" : "Des données sont manquante lors du traitement de la requete"})
+        
+        object = EnseignantModule.objects.get(module_id=moduleId, formateur_id=trainerId)
+        object.delete()
+
+        return JsonResponse({"status" : "success", "message" : "L'affectation a été supprimer avec succès"})
     else:
         return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
