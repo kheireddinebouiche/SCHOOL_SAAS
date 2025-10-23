@@ -60,7 +60,8 @@ def timetable_edit(request, pk):
         'jour_data' : creneau_data,
         'horaire_data' : creneau_horaire,
         'modules' : modules,
-        'salles' : sales
+        'salles' : sales,
+        'pk' : pk,
     }
     if timetable.is_configured:
         return render(request, 'tenant_folder/timetable/configure_timetable_cours.html', context)
@@ -112,13 +113,55 @@ def ApiMakeTimetableDone(request):
         return JsonResponse({"status" : "error"})
 
 
+def checkFormateurDispo(formateur_id, jour, heure_debut, heure_fin):
+    """
+    Vérifie si le formateur est déjà occupé pendant cette plage horaire.
+    Retourne True si occupé, False si disponible.
+    """
+    return TimetableEntry.objects.filter(
+        formateur_id=formateur_id,
+        jour=jour,
+        heure_debut__lt=heure_fin, 
+        heure_fin__gt=heure_debut
+    ).exists()
+
+def checkSalleDispo(salle , jour, heure_debut, heure_fin):
+    """
+    Vérifie si la est déjà occupé pendant cette plage horaire.
+    Retourne True si occupé, False si disponible.
+    """
+    return TimetableEntry.objects.filter(
+        salle_id=salle,
+        jour=jour,
+        heure_debut__lt=heure_fin, 
+        heure_fin__gt=heure_debut
+    ).exists()
+
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def save_session(request):
+
     session_module = request.POST.get('session_module')
     session_professeur = request.POST.get('session_professeur')
     session_jour = request.POST.get('session_jour')
-    session_horaire = request.POST.get('session_horaire')
+    heure_debut = request.POST.get('heure_debut')
+    heure_fin = request.POST.get('heure_fin')
     session_salle = request.POST.get('session_salle')
+    timetable = request.POST.get('pk')
 
-    pass
+    # Vérifie disponibilité du formateur
+    if checkFormateurDispo(session_professeur, session_jour, heure_debut, heure_fin):
+        return JsonResponse({"status": "error", "message": "Le formateur est déjà pris sur cette plage horaire."})
+
+    TimetableEntry.objects.create(
+        timetable_id = timetable,
+        cours= Modules.objects.get(code=session_module),
+        salle_id= session_salle,
+        formateur_id= session_professeur,
+        jour = session_jour,
+        heure_debut = heure_debut,
+        heure_fin = heure_fin
+    )
+    
+    return JsonResponse({"status" : "success", "message" : "Cours plannifier avec succès"})

@@ -316,7 +316,7 @@
               <select class="form-select border-0 bg-light py-2" id="session_horaire" name="horaire" required>
                 <option value="">Sélectionnez un horaire</option>
                 {% for horaire in horaire_data.plages_horaires %}
-                  <option value="{{ horaire.id }}">{{ horaire.nom_creneau }} ({{ horaire.heure_debut }} - {{ horaire.heure_fin }})</option>
+                  <option data-heure-debut="{{horaire.heure_debut}}" data-heure-fin="{{horaire.heure_fin}}" value="{{ horaire.id }}">{{ horaire.nom_creneau }} ({{ horaire.heure_debut }} - {{ horaire.heure_fin }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -398,19 +398,21 @@
 <script>
   $(document).ready(function () {
 
-    
+    var timetable="{{pk}}";
+
     // Handle adding session
     $('#saveSessionBtn').on('click', function() {
-      var session_module = document.getElementById('session_module').val;
-      var session_professeur = document.getElementById('session_professeur').val;
-      var session_jour = document.getElementById('session_jour').val;
-      var session_horaire = document.getElementById('session_horaire').val;
-      var session_salle = document.getElementById('session_salle').val;
 
-      // Show loading state
-      var originalBtnText = $(this).html();
-      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
-      $(this).prop('disabled', true);
+      var session_module = document.getElementById('session_module').value;
+      var session_professeur = document.getElementById('session_professeur').value;
+      var session_jour = document.getElementById('session_jour').value;
+
+      var selectedOption = $('#session_horaire option:selected');
+
+      var heure_debut = selectedOption.data('heure-debut');
+      var heure_fin = selectedOption.data('heure-fin');
+
+      var session_salle = document.getElementById('session_salle').value;
 
       // Hide any previous error messages
       $('#addSessionError').addClass('d-none');
@@ -422,54 +424,16 @@
           'session_module' : session_module,
           'session_professeur' : session_professeur,
           'session_jour' : session_jour,
-          'session_horaire' : session_horaire,
+          'heure_debut' : heure_debut,
+          'heure_fin' : heure_fin,
           'session_salle' : session_salle,
+          'pk' : timetable,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         success: function(response) {
           if (response.status === 'success') {
-            let spinner = document.createElement("div");
-            spinner.innerHTML = `
-                <div id="loadingSpinner" style="
-                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                    backdrop-filter: blur(3px);">
-                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
-                    <div class="success-message" style="
-                        font-family: Arial, sans-serif;
-                        font-size: 18px;
-                        color: #3b7ddd;
-                        font-weight: 500;
-                        text-align: center;
-                        margin-bottom: 10px;">
-                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
-                    </div>
-                    
-                </div>
-                <style>
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    .modern-spinner {
-                        width: 60px;
-                        height: 60px;
-                        border: 5px solid #e0e0e0;
-                        border-top: 5px solid #3b7ddd;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                    }
-                </style>
-            `;
-            document.body.appendChild(spinner);
-            setTimeout(function() {
-                location.reload();
-            }, 1000);
-            
+            alertify.success(response.message);
           } else {
-            // Show error message
             $('#addSessionError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de l\'ajout de la séance.');
           }
         },
@@ -481,15 +445,10 @@
           }
           $('#addSessionError').removeClass('d-none').text(errorMessage);
         },
-        complete: function() {
-          // Reset button state
-          $('#saveSessionBtn').html(originalBtnText);
-          $('#saveSessionBtn').prop('disabled', false);
-        }
+        
       });
     });
 
-    console.log("{{timetable.creneau.jour_data}}");
     // Handle clicking delete-session button - show confirmation modal
     $(document).on('click', '.delete-session', function() {
       var sessionId = $(this).data('session-id');
@@ -647,7 +606,7 @@
         success : function(data){
           var option="<option value=''>Sélectionnez un professeur</option>";
           $.each(data, function(index, p){
-            option += "<option value="+p.id+">"+p.nom+'-'+p.prenom+"</option>";
+            option += "<option value="+p.formateur__id+">"+p.formateur__nom+' '+p.formateur__prenom+"</option>";
           });
           $('#session_professeur').html(option);
         },

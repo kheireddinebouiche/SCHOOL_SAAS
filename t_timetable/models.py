@@ -96,17 +96,21 @@ class TimetableEntry(models.Model):
     timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, verbose_name="Emploi du temps")
     cours = models.ForeignKey(Modules, on_delete=models.CASCADE, verbose_name="Cours")
     salle = models.ForeignKey(Salle, on_delete=models.CASCADE, verbose_name="Salle")
-    crenau = models.ForeignKey(ModelCrenau, on_delete=models.CASCADE, null=True, blank=True)
+    formateur = models.ForeignKey(Formateurs, on_delete=models.DO_NOTHING, null=True, blank=True)
+
+    jour = models.CharField(max_length=100, null=True, blank=True)
+    heure_debut = models.TimeField(null=True, blank=True)
+    heure_fin = models.TimeField(null=True, blank=True)
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.cours.code} - {self.jour.nom} {self.horaire.nom} - {self.salle.code}"
+        return f"{self.cours.code} - {self.heure_debut} - {self.heure_fin} -- {self.jour}"
 
     class Meta:
         verbose_name = "Entrée d'emploi du temps"
         verbose_name_plural = "Entrées d'emploi du temps"
-        unique_together = ['timetable','crenau']
 
 class EditionLock(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
