@@ -16,6 +16,7 @@ urlpatterns = [
     path('configuration/emploie/<int:pk>/', timetable_configure, name="timetable_configure"),
     path('ApiMakeTimetableDone', ApiMakeTimetableDone, name="ApiMakeTimetableDone"),
     path('save_session', save_session, name="save_session"),
+    path('ApiCreateTimeTable', ApiCreateTimeTable, name="ApiCreateTimeTable"),
    
 
     ### SALLES DE COURS ###

@@ -23,6 +23,7 @@ def ListeDesSalles(request):
 @login_required(login_url="institut_app:login")
 def ListeDesEmploie(request):
     liste = Timetable.objects.all()
+    
     context = {
         'timetables' : liste
     }
@@ -35,6 +36,25 @@ def CreateTimeTable(request):
         "groupes" : groupes,
     }
     return render(request, 'tenant_folder/timetable/ajouter_emploi_temps.html', context)
+
+@login_required(login_url="insitut_app:login")
+@transaction.atomic
+def ApiCreateTimeTable(request):
+    if request.method == "POST":
+        label = request.POST.get('label')
+        groupe = request.POST.get('groupe')
+        semestre = request.POST.get('semestre')
+        description = request.POST.get('description')
+        print(label, groupe, semestre, description)
+        Timetable.objects.create(
+            label = label,
+            groupe_id = groupe,
+            semestre = semestre,
+            description = description
+        )
+        return JsonResponse({"status" : "success",'message' : "L'emploie du temps à été crée avec succès"})
+    else:
+        return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
 
 @login_required(login_url="institut_app:login")
@@ -55,6 +75,8 @@ def timetable_edit(request, pk):
     modules = ProgrammeFormation.objects.filter(specialite = timetable.groupe.specialite, semestre = timetable.semestre)
     sales = Salle.objects.all()
 
+    historique = TimetableEntry.objects.filter(timetable = timetable)
+
     context = {
         'timetable' : timetable,
         'jour_data' : creneau_data,
@@ -62,6 +84,7 @@ def timetable_edit(request, pk):
         'modules' : modules,
         'salles' : sales,
         'pk' : pk,
+        'historique' : historique,
     }
     if timetable.is_configured:
         return render(request, 'tenant_folder/timetable/configure_timetable_cours.html', context)
@@ -154,6 +177,9 @@ def save_session(request):
     if checkFormateurDispo(session_professeur, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "Le formateur est déjà pris sur cette plage horaire."})
 
+    if checkSalleDispo(session_salle, session_jour, heure_debut, heure_fin):
+        return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})
+    
     TimetableEntry.objects.create(
         timetable_id = timetable,
         cours= Modules.objects.get(code=session_module),

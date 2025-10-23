@@ -124,6 +124,8 @@ class Formateurs(models.Model):
     telephone = models.CharField(max_length=100, null=True, blank=True)
     email = models.CharField(max_length=100, null=True, blank=True)
     diplome = models.CharField(max_length=100, null=True, blank=True)
+    dispo = models.JSONField(default=dict, blank=True, null=True)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -141,6 +143,7 @@ class EnseignantModule(models.Model):
 
     def __str__(self):
         return f"{self.module.label}"
+        
 
 class PlansCadre(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)

@@ -125,7 +125,7 @@
               </div>
             </div>
             <div class="card-body p-4">
-              <form id="createTimetableForm">
+              
                 <!-- Emploi du temps information -->
                 <div class="card border-0 shadow-sm mb-4 overflow-hidden">
                   <div class="card-header border-0 bg-white pt-3">
@@ -191,7 +191,7 @@
                     <i class="ri-save-line me-2"></i>Enregistrer l'emploi du temps
                   </button>
                 </div>
-              </form>
+              
             </div>
           </div>
         </div>
@@ -218,14 +218,6 @@
         return;
       }
       
-      var formData = {
-        'label': label,
-        'groupe': groupe,
-        'semestre': semestre,
-        'description': description,
-        'csrfmiddlewaretoken': '{{ csrf_token }}'
-      };
-
       // Show loading state
       var originalBtnText = $(this).html();
       $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
@@ -235,13 +227,18 @@
       $('#createTimetableError').addClass('d-none');
 
       $.ajax({
-        url : "{% url 't_timetable:CreateTimeTable' %}",
+        url : "{% url 't_timetable:ApiCreateTimeTable' %}",
         type : "POST",
-        data : formData,
+        data : {
+          'label': label,
+          'groupe': groupe,
+          'semestre': semestre,
+          'description': description,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
         success : function(response) {
           if (response.status === "success") {
             alertify.success(response.message);
-            // Redirect to the timetable list page
             window.location.href = "{% url 't_timetable:ListeDesEmploie' %}";
           } else {
             // Show error message

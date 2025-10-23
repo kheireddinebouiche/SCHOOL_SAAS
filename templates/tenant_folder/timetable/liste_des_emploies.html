@@ -204,9 +204,9 @@
                     <option value="periode">Période</option>
                   </select>
                   
-                  <button id="newTimetableBtn" type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#newTimetableModal">
+                  <a href="{% url 't_timetable:CreateTimeTable' %}" id="newTimetableBtn" type="button" class="btn btn-primary rounded-pill">
                     <i class="ri-add-line me-1"></i> Nouvel emploi du temps
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -319,95 +319,6 @@
   <!-- End Page-content -->
 </div>
 
-<!-- Modal for new timetable creation -->
-<div class="modal fade" id="newTimetableModal" tabindex="-1" aria-labelledby="newTimetableModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content rounded-4 shadow-lg border-0">
-      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-        <div class="d-flex align-items-center">
-          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-            <i class="ri-calendar-2-line text-primary fs-4"></i>
-          </div>
-          <div>
-            <h5 class="modal-title fw-semibold text-primary mb-1" id="newTimetableModalLabel">
-              Créer un nouvel emploi du temps
-            </h5>
-            <p class="text-muted small mb-0">Remplissez les informations pour le nouvel emploi du temps</p>
-          </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4">
-        <form id="createTimetableForm">
-          <!-- Emploi du temps information -->
-          <div class="card border-0 shadow-sm mb-4 overflow-hidden">
-            <div class="card-header border-0 bg-white pt-3">
-              <div class="d-flex align-items-center">
-                <span class="icon-circle bg-primary bg-opacity-10 rounded me-2">
-                  <i class="ri-file-text-line text-primary"></i>
-                </span>
-                <h6 class="card-title mb-0 text-primary">Informations de l'emploi du temps</h6>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-lg-6">
-                  <label class="form-label fw-medium" for="timetable_label">Label <span class="text-danger">*</span></label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light border-0"><i class="ri-file-text-line text-muted"></i></span>
-                    <input type="text" class="form-control border-0 bg-light py-2" id="timetable_label" name="label" placeholder="Ex: Emploi du temps Groupe A" required>
-                  </div>
-                </div>
-                <div class="col-lg-6">
-                  <label class="form-label fw-medium" for="timetable_groupe">Groupe <span class="text-danger">*</span></label>
-                  <select class="form-select border-0 bg-light py-2" id="timetable_groupe" name="groupe" required>
-                    <option value="">Sélectionnez un groupe</option>
-                    <!-- Options will be loaded dynamically -->
-                     {% for groupe in groupes %}
-                        <option value="{{groupe.id}}">{{groupe.nom}}</option>
-                     {% endfor %}
-                  </select>
-                </div>
-              </div>
-              <div class="row g-3 mt-1">
-                <div class="col-lg-6">
-                  <label class="form-label fw-medium" for="timetable_semestre">Semestre <span class="text-danger">*</span></label>
-                  <select class="form-select border-0 bg-light py-2" id="timetable_semestre" name="semestre" required>
-                    <option value="">Sélectionnez le semestre</option>
-                    <option value="1">Semestre 1</option>
-                    <option value="2">Semestre 2</option>
-                    <option value="3">Semestre 3</option>
-                    <option value="4">Semestre 4</option>
-                  </select>
-                </div>
-                <div class="col-lg-6">
-                  <label class="form-label fw-medium" for="timetable_description">Description</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light border-0"><i class="ri-file-text-line text-muted"></i></span>
-                    <input type="text" class="form-control border-0 bg-light py-2" id="timetable_description" name="description" placeholder="Description (facultatif)">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Error message container -->
-          <div id="createTimetableError" class="alert alert-danger d-none" role="alert">
-            <!-- Error messages will appear here -->
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer border-0 bg-light px-4 py-3">
-        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-          <i class="ri-close-line me-2"></i>Annuler
-        </button>
-        <button type="button" class="btn btn-primary px-4 py-2" id="saveTimetableBtn">
-          <i class="ri-save-line me-2"></i>Enregistrer l'emploi du temps
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script>
   // Fix dropdown positioning
@@ -427,67 +338,7 @@
     });
     
     
-    // Handle saving timetable
-    $(document).on('click', '#saveTimetableBtn', function() {
-      // Get form data
-      var label = $('#timetable_label').val();
-      var groupe = $('#timetable_groupe').val();
-      var semestre = $('#timetable_semestre').val();
-      var description = $('#timetable_description').val();
-      
-      // Basic validation
-      if (!label || !groupe || !semestre) {
-        $('#createTimetableError').removeClass('d-none').text('Veuillez remplir tous les champs obligatoires.');
-        return;
-      }
-      
-      var formData = {
-        'label': label,
-        'groupe': groupe,
-        'semestre': semestre,
-        'description': description,
-        'csrfmiddlewaretoken': '{{ csrf_token }}'
-      };
-
-      // Show loading state
-      var originalBtnText = $(this).html();
-      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
-      $(this).prop('disabled', true);
-
-      // Hide any previous error messages
-      $('#createTimetableError').addClass('d-none');
-
-      $.ajax({
-        url : "{% url 't_timetable:CreateTimeTable' %}", // This URL might need to be adjusted based on your actual endpoint
-        type : "POST",
-        data : formData,
-        success : function(response) {
-          if (response.status === "success") {
-            alertify.success(response.message);
-            // Close modal and reload the page to reflect the new timetable
-            $('#newTimetableModal').modal('hide');
-            $('#createTimetableForm')[0].reset(); // Reset form
-            location.reload(); // Reload to update the list
-          } else {
-            // Show error message
-            $('#createTimetableError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de la création de l\'emploi du temps.');
-          }
-        },
-        error: function(xhr, status, error) {
-          // Show error message
-          var errorMessage = 'Une erreur est survenue lors de la création de l\'emploi du temps.';
-          if (xhr.responseJSON && xhr.responseJSON.message) {
-            errorMessage = xhr.responseJSON.message;
-          }
-          $('#createTimetableError').removeClass('d-none').text(errorMessage);
-        },
-        complete: function() {
-          // Reset button state
-          $('#saveTimetableBtn').html(originalBtnText);
-          $('#saveTimetableBtn').prop('disabled', false);
-        }
-      });
-    });
+    
   });
 </script>
 
