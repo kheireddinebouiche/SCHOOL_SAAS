@@ -140,7 +140,6 @@ def load_module_teachers(request):
 def assign_trainers_to_module(request):
     if request.method == "POST":
         try:
-            # Get module ID and trainer IDs from the request
             module_id = request.POST.get('module_id')
             trainer_ids = request.POST.getlist('trainer_ids[]')  # For multiple trainer IDs
         
@@ -149,25 +148,22 @@ def assign_trainers_to_module(request):
             
             if not trainer_ids:
                 return JsonResponse({'status': 'error', 'message': 'Au moins un ID d\'enseignant est requis'})
-            
-            # Convert string IDs to integers and filter out invalid IDs
+               
             valid_trainer_ids = []
             for id_str in trainer_ids:
                 try:
                     valid_trainer_ids.append(int(id_str))
                 except ValueError:
-                    continue  # Skip invalid IDs
+                    continue 
             
             if not valid_trainer_ids:
                 return JsonResponse({'status': 'error', 'message': 'Aucun ID d\'enseignant valide'})
             
-            # Validate module exists
             try:
                 module = Modules.objects.get(id=module_id)
             except Modules.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Le module spécifié n\'existe pas'})
             
-            # Validate all trainer IDs exist
             formateurs = Formateurs.objects.filter(id__in=valid_trainer_ids)
             found_ids = [f.id for f in formateurs]
             missing_ids = set(valid_trainer_ids) - set(found_ids)
@@ -175,10 +171,8 @@ def assign_trainers_to_module(request):
             if missing_ids:
                 return JsonResponse({'status': 'error', 'message': f'Les formateurs avec les IDs {list(missing_ids)} n\'existent pas'})
             
-            # Remove existing associations for this module
             EnseignantModule.objects.filter(module=module).delete()
             
-            # Create new associations
             assigned_count = 0
             for formateur in formateurs:
                 EnseignantModule.objects.create(

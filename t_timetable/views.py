@@ -38,8 +38,12 @@ def CreateTimeTable(request):
 
 
 @login_required(login_url="institut_app:login")
-def timetable_view(request):
-    pass
+def timetable_view(request, pk):
+    timetable = Timetable.objects.get(id = pk)
+    context = {
+        'timetable' : timetable
+    }
+    return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 
 ### FONCTION PERMETANT DE CONFIGURER LES LIGNES DE LEMPLOIE DU TEMPS ###
 @login_required(login_url="institut_app:login")

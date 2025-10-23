@@ -274,11 +274,25 @@
       </div>
       <div class="modal-body p-4">
         <div class="row mb-4">
-          <div class="col-lg-12">
+          <div class="col-lg-4">
             <div class="search-box">
               <input type="text" placeholder="Rechercher un formateur..." id="searchTrainer" class="form-control rounded-pill" />
               <i class="fas fa-search text-muted search-icon"></i>
             </div>
+          </div>
+          <div class="col-lg-4">
+            <select id="filterTrainerSpecialite" class="form-select rounded-pill">
+              <option value="0">Filtrer par spécialité</option>
+              <option value="informatique">Informatique</option>
+              <option value="mathematiques">Mathématiques</option>
+              <option value="langue">Langue</option>
+              <option value="gestion">Gestion</option>
+            </select>
+          </div>
+          <div class="col-lg-4">
+            <button type="button" class="btn btn-outline-primary w-100 rounded-pill" id="selectAllModules">
+              <i class="ri-checkbox-line me-2"></i>Sélectionner tout
+            </button>
           </div>
         </div>
         
@@ -290,10 +304,14 @@
                   <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
                     <thead class="bg-light">
                       <tr>
-                        <th class="border-0 rounded-start">Nom</th>
+                        <th class="border-0 rounded-start" style="width: 50px;">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                          </div>
+                        </th>
+                        <th class="border-0">Nom</th>
                         <th class="border-0">Prénom</th>
-                        <th class="border-0">Email</th>
-                        <th class="border-0 rounded-end text-center">Actions</th>
+                        <th class="border-0 rounded-end">Email</th>
                       </tr>
                     </thead>
                     <tbody id="modulesList">
@@ -308,7 +326,10 @@
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3">
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-          <i class="ri-close-line me-2"></i>Terminer
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-primary px-4 py-2" id="saveAssignmentsBtn">
+          <i class="ri-save-line me-2"></i>Enregistrer les affectations
         </button>
       </div>
     </div>
@@ -538,7 +559,7 @@
       $('#assignModuleName').text(moduleCode + ' - ' + moduleLabel);
       
       // Load available trainers (mock data for now)
-      loadAvailableTrainers(moduleId);
+      loadAvailableTrainers();
       
       // Show the modal
       $('#assignModulesModal').modal('show');
@@ -548,6 +569,66 @@
     $(document).on('change', '#selectAllCheckbox', function() {
       var isChecked = $(this).is(':checked');
       $('.module-checkbox').prop('checked', isChecked);
+    });
+    
+    // Handle select all button
+    $(document).on('click', '#selectAllModules', function() {
+      $('.module-checkbox').prop('checked', true);
+      $('#selectAllCheckbox').prop('checked', true);
+    });
+    
+    // Handle save assignments
+    $(document).on('click', '#saveAssignmentsBtn', function() {
+
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+
+      var moduleId = $('#assignModulesModal').data('module-id');
+      var selectedTrainerIds = [];
+      
+      $('.module-checkbox:checked').each(function() {
+        selectedTrainerIds.push($(this).val());
+      });
+      
+      if (selectedTrainerIds.length === 0) {
+        alert('Veuillez sélectionner au moins un formateur à affecter.');
+        return;
+      }
+      
+      $.ajax({
+        url : "{% url 't_formations:assign_trainers_to_module' %}",
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module_id' : moduleId,
+          'trainer_ids' : selectedTrainerIds,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status === "success"){
+            alertify.success(response.message);
+            loadItems();
+            loadAssignedTrainers(moduleId);
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
+      
+      // Close the modal
+      $('#assignModulesModal').modal('hide');
     });
     
     // Mock function to load assigned trainers
@@ -569,6 +650,7 @@
               html += '<tr>';
               html += '<td><span class="fw-semibold">' + trainer.formateur__nom + '</span></td>';
               html += '<td>' + trainer.formateur__prenom + '</td>';
+             
               html += '<td>' + trainer.formateur__email + '</td>';
               html += '</tr>';
             });
@@ -595,37 +677,83 @@
     }
     
     // Mock function to load available trainers
-    function loadAvailableTrainers(currentModuleId) {
+    function loadAvailableTrainers() {
       // Clear current list
       $('#modulesList').empty(); 
 
       var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');;
-      var affectations = JSON.parse('{{ affectations_json|escapejs }}');
-
+      
       var html = '';
       $.each(mockTrainers, function(index, trainer) {
-
-        var isAssigned = affectations.some(function(a) {
-          return a.formateur_id === trainer.id && a.module_id === currentModuleId;
-        });
-
         html += '<tr>';
+        html += '<td><div class="form-check"><input class="form-check-input module-checkbox" type="checkbox" value="' + trainer.id + '" id="trainer_' + trainer.id + '"></div></td>';
         html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
         html += '<td>' + trainer.prenom + '</td>';
         html += '<td>' + trainer.email + '</td>';
-        html += '<td class="text-center">';
-        html += '<div class="btn-group" role="group">';
-        if (isAssigned) {
-          html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
-          html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
-        } else {
-          html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
-          html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
-        }
-        html += '</div>';
-        html += '</td>';
         html += '</tr>';
       });
+      
+      // Store the original data for filtering
+      $('#assignModulesModal').data('all-trainers', mockTrainers);
+      
+      $('#modulesList').html(html);
+      
+      // Initialize search and filter after data is loaded
+      setTimeout(initializeTrainerFilters, 100);
+    }
+    
+    // Initialize trainer filters after data is loaded
+    function initializeTrainerFilters() {
+      // Set up event listeners for search and filter
+      $('#searchTrainer').off('keyup').on('keyup', function() {
+        filterTrainers();
+      });
+      
+      $('#filterTrainerSpecialite').off('change').on('change', function() {
+        filterTrainers();
+      });
+    }
+    
+    // Function to filter trainers based on search and specialty
+    function filterTrainers() {
+      var searchValue = $('#searchTrainer').val().toLowerCase();
+      var selectedSpecialite = $('#filterTrainerSpecialite').val().toLowerCase();
+      var allTrainers = $('#assignModulesModal').data('all-trainers') || [];
+      
+      var filteredTrainers = allTrainers.filter(function(trainer) {
+        var matchesSearch = true;
+        var matchesSpecialite = true;
+        
+        // Apply search filter (search in name and email)
+        if (searchValue !== '') {
+          var trainerText = (trainer.nom + ' ' + trainer.prenom + ' ' + (trainer.email || '')).toLowerCase();
+          matchesSearch = trainerText.indexOf(searchValue) !== -1;
+        }
+        
+        // Apply specialty filter
+        if (selectedSpecialite !== '0') {
+          var trainerSpecialite = (trainer.specialite || '').toLowerCase();
+          matchesSpecialite = trainerSpecialite.indexOf(selectedSpecialite) !== -1;
+        }
+        
+        return matchesSearch && matchesSpecialite;
+      });
+      
+      // Update the table with filtered results
+      var html = '';
+      if (filteredTrainers.length === 0) {
+        html = '<tr><td colspan="5" class="text-center text-muted py-4">Aucun formateur trouvé</td></tr>';
+      } else {
+        $.each(filteredTrainers, function(index, trainer) {
+          html += '<tr>';
+          html += '<td><div class=\"form-check\"><input class=\"form-check-input module-checkbox\" type=\"checkbox\" value=\"' + trainer.id + '\" id=\"trainer_' + trainer.id + '\"></div></td>';
+          html += '<td><span class=\"fw-semibold\">' + trainer.nom + '</span></td>';
+          html += '<td>' + trainer.prenom + '</td>';
+          html += '<td>' + (trainer.specialite || 'N/A') + '</td>';
+          html += '<td>' + trainer.email + '</td>';
+          html += '</tr>';
+        });
+      }
       
       $('#modulesList').html(html);
     }
@@ -652,63 +780,15 @@
       $('#modulesSansAffectation').text(modulesSansAffectation);
       $('#modulesAvecAffectation').text(modulesAvecAffectation);
     }
-       
-    // Gestionnaire pour le bouton Affecter
-    $(document).on('click', '.assign-trainer', function() {
-      var btn = $(this); // référence du bouton
-      btn.prop('disabled', true); // désactive le bouton
-
-      // Optionnel : afficher un spinner pour indiquer le chargement
-      var originalText = btn.html();
-      btn.html(`
-          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-          Envoi en cours...
-      `);
-      var trainerId = $(this).data('trainer-id');
-      var moduleId = $('#assignModulesModal').data('module-id');
-      
-      $.ajax({
-        url : "{% url 't_timetable:ApiAffectTrainer' %}",
-        dataType: "JSON",
-        type: 'POST',
-        data : {
-          'trainerId' : trainerId,
-          'moduleId'  : moduleId,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success : function(response){
-          if(response.status === "success"){
-            alertify.success(response.message);
-            
-          }else{
-            alertify.error(response.message);
-          }
-        },
-        error : function(xhr){
-          alert("Erreur : " + xhr.responseText);
-        },
-        complete: function() {
-            // Réactiver le bouton et restaurer son texte après la requête
-            btn.prop('disabled', false);
-            btn.html(originalText);
-            loadAvailableTrainers(moduleId);
-        }
-      })
-      
-    });
- 
-    // Gestionnaire pour le bouton Supprimer
-    $(document).on('click', '.remove-trainer', function() {
-      var trainerId = $(this).data('trainer-id');
-      var row = $(this).closest('tr');
-      
-      // Changer le bouton Supprimer en Affecter
-      $(this).hide();
-      row.find('.assign-trainer').show();
-      
-      // Retirer le formateur de la liste des affectations
-      // (logique à implémenter selon vos besoins)
-      console.log('Formateur ID ' + trainerId + ' supprimé');
+    
+    // Update statistics after page loads
+    setTimeout(updateStatistics, 100);
+    
+    // Update statistics when filters change
+    $('#filter-specialite').on('change', updateStatistics);
+    $('#table-filter').on('keyup', function() {
+      // Add a small delay to allow the filter to process first
+      setTimeout(updateStatistics, 50);
     });
 
   });
