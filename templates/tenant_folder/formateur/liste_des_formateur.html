@@ -139,10 +139,10 @@
                           <div class="dropdown">
                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                               Actions
-                            </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                               <li><a class="dropdown-item view-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-eye text-info me-2"></i>Voir le profil</a></li>
                               <li><a class="dropdown-item edit-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-edit text-warning me-2"></i>Modifier</a></li>
+                              <li><a class="dropdown-item dispo-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-edit text-warning me-2"></i>Disponiblité</a></li>
                             </ul>
                           </div>
                         </td>
@@ -458,6 +458,125 @@
         </div>
     </div>
 </div><!-- /.modal -->
+
+<!-- Modal for availability creation -->
+<div class="modal fade" id="availabilityModal" tabindex="-1" aria-labelledby="availabilityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-calendar-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="availabilityModalLabel">
+              Définir la disponibilité du formateur
+            </h5>
+            <p class="text-muted small mb-0">Sélectionnez les jours et les plages horaires de disponibilité</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="createAvailabilityForm">
+          <input type="hidden" id="formateur_id" name="formateur_id" value="">
+          
+          <!-- Display existing availability -->
+          <div id="existingAvailabilityContainer" class="mb-4">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header border-0 bg-light pt-3">
+                <div class="d-flex align-items-center">
+                  <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
+                    <i class="ri-calendar-check-line text-success"></i>
+                  </span>
+                  <h6 class="card-title mb-0 text-success">Disponibilités actuelles</h6>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="existingAvailabilityList">
+                  <!-- Existing availability will be loaded here -->
+                  <p class="text-center text-muted">Chargement des disponibilités...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Divider -->
+          <div class="border-top my-4"></div>
+          
+          <!-- Button to add new availability entry -->
+          <div class="mb-3">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addAvailabilityEntry">
+              <i class="ri-add-line me-1"></i>Ajouter une disponibilité
+            </button>
+          </div>
+          
+          <!-- Container for multiple availability entries -->
+          <div id="availabilityEntriesContainer">
+            <!-- First availability entry will be added here dynamically -->
+          </div>
+          
+          <!-- Error message container -->
+          <div id="createAvailabilityError" class="alert alert-danger d-none" role="alert">
+            <!-- Error messages will appear here -->
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-success px-4 py-2" id="saveAvailabilityBtn">
+          <i class="ri-save-line me-2"></i>Enregistrer les disponibilités
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation pour suppression de disponibilité -->
+<div class="modal fade" id="confirmDeleteAvailabilityModal" tabindex="-1" aria-labelledby="confirmDeleteAvailabilityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="confirmDeleteAvailabilityModalLabel">
+              Confirmation de suppression
+            </h5>
+            <p class="text-muted small mb-0">Cette action ne peut pas être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-delete-bin-line text-danger" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-danger mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0">
+            Vous êtes sur le point de supprimer cette disponibilité. Cette action est irréversible.
+          </p>
+          <div id="availabilityToDeleteInfo" class="mt-3 fw-semibold">
+            <!-- Information about the availability to delete will be shown here -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-danger px-4 py-2" id="confirmDeleteAvailabilityBtn">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 <script>
@@ -778,11 +897,455 @@
       $('#updateInfoFormateurLabel').text('Modification des informations'); // Reset modal title
     });
 
+    // Handle availability profile action
+    $(document).on('click', '.dispo-profile', function(e) {
+      e.preventDefault();
+      var formateurId = $(this).data('formateur-id');
+      var formateurNom = $(this).data('formateur-nom');
+      var formateurPrenom = $(this).data('formateur-prenom');
+      var formateurEmail = $(this).data('formateur-email');
+      var formateurTelephone = $(this).data('formateur-telephone');
+      var formateurDiplome = $(this).data('formateur-diplome');
+      
+      // Store the formateur ID in the availability modal
+      $('#formateur_id').val(formateurId);
+      
+      // Set the modal title with formateur name
+      $('#availabilityModalLabel').html('Définir la disponibilité de <strong>' + formateurNom + ' ' + formateurPrenom + '</strong>');
+      
+      // Reset the form
+      $('#createAvailabilityForm')[0].reset();
+      $('#createAvailabilityError').addClass('d-none');
+      
+      // Load existing availability
+      loadExistingAvailability(formateurId);
+      
+      // Open the availability modal
+      $('#availabilityModal').modal('show');
+    });
+    
+    // Function to load existing availability
+    function loadExistingAvailability(formateurId) {
+      // Show loading message
+      $('#existingAvailabilityList').html('<p class="text-center text-muted">Chargement des disponibilités...</p>');
+      
+      $.ajax({
+        url: "{% url 't_formations:get_availability' %}",
+        type: "GET",
+        dataType: "JSON",
+        data: {
+          'formateur_id': formateurId
+        },
+        success: function(response) {
+          if (response.status === 'success') {
+            displayAvailabilityList(response.disponibilites);
+          } else {
+            $('#existingAvailabilityList').html('<p class="text-center text-danger">' + (response.message || 'Erreur lors du chargement des disponibilités') + '</p>');
+          }
+        },
+        error: function(xhr, status, error) {
+          $('#existingAvailabilityList').html('<p class="text-center text-danger">Erreur lors du chargement des disponibilités</p>');
+        }
+      });
+    }
+    
+    // Function to display availability list
+    function displayAvailabilityList(disponibilites) {
+      if (!disponibilites || disponibilites.length === 0) {
+        $('#existingAvailabilityList').html('<p class="text-center text-muted">Aucune disponibilité enregistrée</p>');
+        return;
+      }
+      
+      let html = '<div class="table-responsive">';
+      html += '<table class="table table-sm table-bordered">';
+      html += '<thead class="table-light">';
+      html += '<tr><th>Jour</th><th>Heure de début</th><th>Heure de fin</th><th>Actions</th></tr>';
+      html += '</thead><tbody>';
+      
+      disponibilites.forEach(function(dispo, index) {
+        html += '<tr>';
+        html += '<td>' + capitalizeFirstLetter(dispo.jour) + '</td>';
+        html += '<td>' + dispo.heure_debut + '</td>';
+        html += '<td>' + dispo.heure_fin + '</td>';
+        html += '<td class="text-center">';
+        html += '<button type="button" class="btn btn-outline-danger btn-sm delete-availability" data-index="' + index + '" data-jour="' + dispo.jour + '" data-heure-debut="' + dispo.heure_debut + '" data-heure-fin="' + dispo.heure_fin + '">';
+        html += '<i class="ri-delete-bin-line"></i>';
+        html += '</button>';
+        html += '</td>';
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table></div>';
+      $('#existingAvailabilityList').html(html);
+    }
+    
+    // Helper function to capitalize first letter
+    function capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    
+    // Handle saving availability
+    $(document).on('click', '#saveAvailabilityBtn', function() {
+      // Get form data
+      var formateurId = $('#formateur_id').val();
+      var jour = $('#jour_disponibilite').val();
+      var heureDebut = $('#heure_debut').val();
+      var heureFin = $('#heure_fin').val();
+      
+      // Basic validation
+      if (!formateurId || !jour || !heureDebut || !heureFin) {
+        $('#createAvailabilityError').removeClass('d-none').text('Veuillez remplir tous les champs obligatoires.');
+        return;
+      }
+
+      // Validate that end time is after start time
+      if (heureDebut >= heureFin) {
+        $('#createAvailabilityError').removeClass('d-none').text('L\'heure de fin doit être supérieure à l\'heure de début.');
+        return;
+      }
+
+      // Show loading state
+      var originalBtnText = $(this).html();
+      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+      $(this).prop('disabled', true);
+
+      // Hide any previous error messages
+      $('#createAvailabilityError').addClass('d-none');
+
+      $.ajax({
+        url : "{% url 't_formations:create_availability' %}", // You'll need to adjust this URL to match your actual endpoint
+        type : "POST",
+        dataType : "JSON",
+        data : {
+          'formateur_id': formateurId,
+          'jour': jour,
+          'heure_debut': heureDebut,
+          'heure_fin': heureFin,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response) {
+          if (response.status === "success") {
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Disponibilité enregistrée ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          } else {
+            // Show error message
+            $('#createAvailabilityError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de la création de la disponibilité.');
+          }
+        },
+        error: function(xhr, status, error) {
+          // Show error message
+          var errorMessage = 'Une erreur est survenue lors de la création de la disponibilité.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+          } else if (xhr.responseJSON && xhr.responseJSON.error) {
+            errorMessage = xhr.responseJSON.error;
+          }
+          $('#createAvailabilityError').removeClass('d-none').text(errorMessage);
+        },
+        complete: function() {
+          // Reset button state
+          $('#saveAvailabilityBtn').html(originalBtnText);
+          $('#saveAvailabilityBtn').prop('disabled', false);
+        }
+      });
+    });
+
+    // Add availability entry functionality
+    function addAvailabilityEntry() {
+      const entryId = Date.now(); // Unique ID for this entry
+      const entryHtml = `
+        <div class="availability-entry card border-0 shadow-sm mb-3 overflow-hidden" data-entry-id="${entryId}">
+          <div class="card-header border-0 bg-white pt-2 pb-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center">
+                <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
+                  <i class="ri-calendar-line text-success"></i>
+                </span>
+                <h6 class="card-title mb-0 text-success">Disponibilité #${$('#availabilityEntriesContainer .availability-entry').length + 1}</h6>
+              </div>
+              <button type="button" class="btn btn-outline-danger btn-sm remove-entry" data-entry-id="${entryId}">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body pt-2">
+            <div class="row g-3">
+              <div class="col-lg-4">
+                <label class="form-label fw-medium">Jour de la semaine <span class="text-danger">*</span></label>
+                <select class="form-select border-0 bg-light py-2 jour_disponibilite" required>
+                  <option value="">Sélectionnez un jour</option>
+                  <option value="lundi">Lundi</option>
+                  <option value="mardi">Mardi</option>
+                  <option value="mercredi">Mercredi</option>
+                  <option value="jeudi">Jeudi</option>
+                  <option value="vendredi">Vendredi</option>
+                  <option value="samedi">Samedi</option>
+                  <option value="dimanche">Dimanche</option>
+                </select>
+              </div>
+              <div class="col-lg-4">
+                <label class="form-label fw-medium heure_debut_label">Heure de début <span class="text-danger">*</span></label>
+                <input type="time" class="form-control border-0 bg-light py-2 heure_debut" required>
+              </div>
+              <div class="col-lg-4">
+                <label class="form-label fw-medium heure_fin_label">Heure de fin <span class="text-danger">*</span></label>
+                <input type="time" class="form-control border-0 bg-light py-2 heure_fin" required>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      $('#availabilityEntriesContainer').append(entryHtml);
+    }
+
+    // Add first availability entry when modal is shown
+    $('#availabilityModal').on('shown.bs.modal', function () {
+      // Clear existing entries
+      $('#availabilityEntriesContainer').empty();
+      // Add first entry
+      addAvailabilityEntry();
+    });
+    
+    // Add new availability entry
+    $(document).on('click', '#addAvailabilityEntry', function() {
+      addAvailabilityEntry();
+    });
+    
+    // Remove availability entry
+    $(document).on('click', '.remove-entry', function() {
+      const entryId = $(this).data('entry-id');
+      $(`.availability-entry[data-entry-id="${entryId}"]`).remove();
+      
+      // Renumber the entries
+      $('#availabilityEntriesContainer .availability-entry').each(function(index) {
+        $(this).find('h6').text(`Disponibilité #${index + 1}`);
+      });
+    });
+    
+    // Handle saving multiple availabilities
+    $(document).on('click', '#saveAvailabilityBtn', function() {
+      const formateurId = $('#formateur_id').val();
+      const entries = $('.availability-entry');
+      let hasErrors = false;
+      let errorMessage = '';
+      
+      // Validate each entry
+      entries.each(function() {
+        const $entry = $(this);
+        const jour = $entry.find('.jour_disponibilite').val();
+        const heureDebut = $entry.find('.heure_debut').val();
+        const heureFin = $entry.find('.heure_fin').val();
+        
+        // Check if any field is empty
+        if (!jour || !heureDebut || !heureFin) {
+          hasErrors = true;
+          $entry.addClass('border border-danger');
+        } else {
+          $entry.removeClass('border border-danger');
+        }
+        
+        // Validate that end time is after start time
+        if (heureDebut && heureFin && heureDebut >= heureFin) {
+          hasErrors = true;
+          errorMessage = 'L\'heure de fin doit être supérieure à l\'heure de début.';
+          $entry.addClass('border border-danger');
+        }
+      });
+      
+      // Show error if validation failed
+      if (hasErrors) {
+        $('#createAvailabilityError').removeClass('d-none').text(errorMessage || 'Veuillez remplir tous les champs obligatoires.');
+        return;
+      }
+      
+      // Show loading state
+      var originalBtnText = $(this).html();
+      $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+      $(this).prop('disabled', true);
+
+      // Hide any previous error messages
+      $('#createAvailabilityError').addClass('d-none');
+
+      // Prepare data for all entries
+      const availabilityData = [];
+      entries.each(function() {
+        const $entry = $(this);
+        const entryData = {
+          formateur_id: formateurId,
+          jour: $entry.find('.jour_disponibilite').val(),
+          heure_debut: $entry.find('.heure_debut').val(),
+          heure_fin: $entry.find('.heure_fin').val(),
+        };
+        availabilityData.push(entryData);
+      });
+
+      // Send all availability entries to the server in a single request
+      $.ajax({
+        url : "{% url 't_formations:create_availability' %}",
+        type : "POST",
+        dataType : "JSON",
+        data : {
+          'formateur_id': formateurId,
+          'availabilities': JSON.stringify(availabilityData),
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response) {
+          if (response.status === "success") {
+            // Clear the form entries
+            $('#availabilityEntriesContainer').empty();
+            
+            // Show success message temporarily
+            let successDiv = $('<div class="alert alert-success" id="saveSuccessMessage">Disponibilités enregistrées avec succès!</div>');
+            $('#createAvailabilityForm').prepend(successDiv);
+            setTimeout(function() {
+              successDiv.fadeOut(function() {
+                successDiv.remove();
+              });
+            }, 3000);
+            
+            // Refresh the availability list
+            loadExistingAvailability(formateurId);
+            
+            // Add a new empty entry for continued input if desired
+            addAvailabilityEntry();
+          } else {
+            // Show error message
+            $('#createAvailabilityError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de la création des disponibilités.');
+          }
+        },
+        error: function(xhr, status, error) {
+          // Show error message
+          var errorMessage = 'Une erreur est survenue lors de la création des disponibilités.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+          } else if (xhr.responseJSON && xhr.responseJSON.error) {
+            errorMessage = xhr.responseJSON.error;
+          }
+          $('#createAvailabilityError').removeClass('d-none').text(errorMessage);
+        },
+        complete: function() {
+          // Reset button state
+          $('#saveAvailabilityBtn').html(originalBtnText);
+          $('#saveAvailabilityBtn').prop('disabled', false);
+        }
+      });
+    });
+
+    // Reset availability form when modal is closed
+    $('#availabilityModal').on('hidden.bs.modal', function () {
+      // Reset the form
+      $('#createAvailabilityForm')[0].reset();
+      $('#createAvailabilityError').addClass('d-none');
+      // Reset the formateur ID
+      $('#formateur_id').val('');
+      // Clear all availability entries
+      $('#availabilityEntriesContainer').empty();
+    });
+
+    // Handle click on delete availability button
+  $(document).on('click', '.delete-availability', function() {
+    var jour = $(this).data('jour');
+    var heureDebut = $(this).data('heure-debut');
+    var heureFin = $(this).data('heure-fin');
+    var index = $(this).data('index');
+    
+    // Set the availability information in the modal
+    $('#availabilityToDeleteInfo').html(
+      '<p>Jour: <strong>' + capitalizeFirstLetter(jour) + '</strong></p>' +
+      '<p>Heure de début: <strong>' + heureDebut + '</strong></p>' +
+      '<p>Heure de fin: <strong>' + heureFin + '</strong></p>'
+    );
+    
+    // Store the index of the availability to delete
+    $('#confirmDeleteAvailabilityBtn').data('index', index);
+    
+    // Show the confirmation modal
+    $('#confirmDeleteAvailabilityModal').modal('show');
+  });
+  
+  // Handle confirmation of delete availability
+  $(document).on('click', '#confirmDeleteAvailabilityBtn', function() {
+    var index = $(this).data('index');
+    var formateurId = $('#formateur_id').val();
+    
+    // Show loading state
+    var originalBtnText = $(this).html();
+    $(this).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Suppression...');
+    $(this).prop('disabled', true);
+    
+    $.ajax({
+      url: "{% url 't_formations:delete_availability' %}",
+      type: "POST",
+      dataType: "JSON",
+      data: {
+        'formateur_id': formateurId,
+        'availability_index': index,
+        'csrfmiddlewaretoken': '{{ csrf_token }}'
+      },
+      success: function(response) {
+        if (response.status === 'success') {
+          // Close the modal
+          $('#confirmDeleteAvailabilityModal').modal('hide');
+          
+          // Reload the availability list
+          loadExistingAvailability(formateurId);
+        } else {
+          alert(response.message || 'Erreur lors de la suppression de la disponibilité');
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('Erreur lors de la suppression de la disponibilité');
+      },
+      complete: function() {
+        // Reset button state
+        $('#confirmDeleteAvailabilityBtn').html(originalBtnText);
+        $('#confirmDeleteAvailabilityBtn').prop('disabled', false);
+      }
+    });
+  });
+
   });
     
-    
 
-
+  
 </script>
 
 {% endblock content %}

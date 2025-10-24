@@ -79,4 +79,7 @@ urlpatterns = [
     path('remove_trainer_from_module/', remove_trainer_from_module, name="remove_trainer_from_module"),
     path('update_module_details/', update_module_details, name="update_module_details"),
     path('validate_module/', validate_module, name="validate_module"),
+    path('create_availability', create_availability, name="create_availability"),
+    path('get_availability', get_availability, name="get_availability"),
+    path('delete_availability', delete_availability, name="delete_availability"),
 ]

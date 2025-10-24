@@ -191,6 +191,76 @@ def assign_trainers_to_module(request):
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
+@login_required(login_url="institut_app:login")
+def create_availability(request):
+    if request.method == "POST":
+        try:
+            formateur_id = request.POST.get('formateur_id')
+            availabilities_json = request.POST.get('availabilities')
+
+            if not formateur_id or not availabilities_json:
+                return JsonResponse({'status': 'error', 'message': 'Tous les champs sont obligatoires'})
+
+            import json
+            try:
+                availabilities = json.loads(availabilities_json)
+            except json.JSONDecodeError:
+                return JsonResponse({'status': 'error', 'message': 'Données de disponibilité invalides'})
+
+            # Validate formateur exists
+            try:
+                formateur = Formateurs.objects.get(id=formateur_id)
+            except Formateurs.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Le formateur spécifié n\'existe pas'})
+
+            # Initialize disponibilites if empty
+            if not formateur.dispo:
+                formateur.dispo = {}
+
+            # Initialize the disponibilites list if not present
+            if 'disponibilites' not in formateur.dispo:
+                formateur.dispo['disponibilites'] = []
+
+            # Process each availability
+            for availability in availabilities:
+                jour = availability.get('jour')
+                heure_debut = availability.get('heure_debut')
+                heure_fin = availability.get('heure_fin')
+
+                # Validate availability data
+                if not all([jour, heure_debut, heure_fin]):
+                    return JsonResponse({'status': 'error', 'message': 'Tous les champs de disponibilité sont obligatoires'})
+
+                # Check if this availability already exists
+                existing = False
+                for existing_dispo in formateur.dispo['disponibilites']:
+                    if (existing_dispo['jour'] == jour and 
+                        existing_dispo['heure_debut'] == heure_debut and 
+                        existing_dispo['heure_fin'] == heure_fin):
+                        existing = True
+                        break
+
+                if not existing:
+                    # Create new availability entry
+                    new_availability = {
+                        'jour': jour,
+                        'heure_debut': heure_debut,
+                        'heure_fin': heure_fin
+                    }
+
+                    # Add the new availability to the list
+                    formateur.dispo['disponibilites'].append(new_availability)
+
+            # Save the formateur with updated dispo
+            formateur.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Disponibilités enregistrées avec succès'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -318,6 +388,88 @@ def validate_module(request):
                 'status': 'success',
                 'message': 'Module validé avec succès'
             })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+def get_availability(request):
+    if request.method == "GET":
+        try:
+            formateur_id = request.GET.get('formateur_id')
+            
+            # Validate required field
+            if not formateur_id:
+                return JsonResponse({'status': 'error', 'message': 'ID du formateur est requis'})
+
+            # Validate formateur exists
+            try:
+                formateur = Formateurs.objects.get(id=formateur_id)
+            except Formateurs.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Le formateur spécifié n\'existe pas'})
+
+            # Get availability data
+            disponibilites = formateur.dispo.get('disponibilites', []) if formateur.dispo else []
+            
+            return JsonResponse({
+                'status': 'success', 
+                'disponibilites': disponibilites,
+                'formateur_nom': formateur.nom,
+                'formateur_prenom': formateur.prenom
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+def delete_availability(request):
+    if request.method == "POST":
+        try:
+            formateur_id = request.POST.get('formateur_id')
+            availability_index = request.POST.get('availability_index')
+            
+            # Validate required fields
+            if not formateur_id or availability_index is None:
+                return JsonResponse({'status': 'error', 'message': 'ID du formateur et index de disponibilité sont requis'})
+
+            # Validate formateur exists
+            try:
+                formateur = Formateurs.objects.get(id=formateur_id)
+            except Formateurs.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Le formateur spécifié n\'existe pas'})
+
+            # Validate index is a number
+            try:
+                availability_index = int(availability_index)
+            except ValueError:
+                return JsonResponse({'status': 'error', 'message': 'Index de disponibilité invalide'})
+
+            # Get availability data
+            if not formateur.dispo:
+                formateur.dispo = {}
+            
+            disponibilites = formateur.dispo.get('disponibilites', [])
+            
+            # Check if index is valid
+            if availability_index < 0 or availability_index >= len(disponibilites):
+                return JsonResponse({'status': 'error', 'message': 'Index de disponibilité invalide'})
+
+            # Remove the availability at the specified index
+            disponibilites.pop(availability_index)
+            
+            # Update the formateur's dispo with the modified list
+            formateur.dispo['disponibilites'] = disponibilites
+            
+            # Save the formateur with updated dispo
+            formateur.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Disponibilité supprimée avec succès'})
             
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})

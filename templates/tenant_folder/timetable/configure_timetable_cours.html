@@ -205,46 +205,7 @@
                     </tr>
                   </thead>
                   <tbody id="sessionsTableBody">
-                    {% if timetable %}
-                      {% for entry in historique %}
-                        <tr id="session-row-{{ entry.id }}">
-                          <td>
-                            <div class="d-flex align-items-center">
-                              <div class="flex-grow-1">
-                                <h6 class="mb-0 fw-semibold">{{ entry.cours.code }} - {{ entry.cours.label }}</h6>
-                              </div>
-                            </div>
-                          </td>
-                          <td><div class="fw-medium">{{ entry.jour }}</div></td>
-                          <td><div class="text-body">{{ entry.heure_debut }} - {{entry.heure_fin}}</div></td>
-                          <td><div class="text-body">{{ entry.formateur.nom }} {{ entry.formateur.prenom }}</div></td>
-                          <td><div class="text-body">{{ entry.salle.nom }} ({{ entry.salle.code }})</div></td>
-                          <td class="text-end">
-                            <button type="button" class="btn btn-danger btn-sm delete-session" data-session-id="{{ entry.id }}" data-session-name="{{ entry.cours.code }}">
-                              <i class="ri-delete-bin-line"></i>
-                            </button>
-                          </td>
-                        </tr>
-                      {% empty %}
-                        <tr>
-                          <td colspan="6" class="text-center text-muted">
-                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                                <div class="avatar-sm mb-4">
-                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                        <i class="ri-book-line"></i>
-                                    </div>
-                                </div>
-                                <h5 class="mb-2">Aucune séance de cours trouvée</h5>
-                                <p class="text-muted mb-0">Il n'y a aucune séance de cours programmée pour le moment</p>
-                            </div>
-                          </td>
-                        </tr>
-                      {% endfor %}
-                    {% else %}
-                      <tr>
-                        <td colspan="6" class="text-center text-muted">Aucune séance de cours trouvée</td>
-                      </tr>
-                    {% endif %}
+                    
                   </tbody>
                 </table>
               </div>
@@ -400,6 +361,55 @@
 
     var timetable="{{pk}}";
 
+    function loadTimeTableEntry(){
+      $.ajax({
+        url : "{% url 't_timetable:ApiLoadTableEntry' %}",
+        dataType : "JSON",
+        type: "GET",
+        data:{
+          'timetable' : timetable,
+        },
+        success : function(data){
+          var row = "";
+          if(data.length > 0){
+              $.each(data, function(index, p){
+                row +='<tr><td><div class="d-flex align-items-center">';
+                row +=' <div class="flex-grow-1"><h6 class="mb-0 fw-semibold">{{ entry.cours.code }} - {{ entry.cours.label }}</h6></div></div></td>';
+                row +=' <td><div class="fw-medium">{{ entry.jour }}</div></td>';
+                row +='<td><div class="text-body">{{ entry.heure_debut }} - {{entry.heure_fin}}</div></td>';
+                row +='<td><div class="text-body">{{ entry.formateur.nom }} {{ entry.formateur.prenom }}</div></td>';
+                row +='<td><div class="text-body">{{ entry.salle.nom }} ({{ entry.salle.code }})</div></td>';
+                row +='<td class="text-end">';
+                row +=' <button type="button" class="btn btn-danger btn-sm delete-session" data-session-id="{{ entry.id }}" data-session-name="{{ entry.cours.code }}">';
+                row +=' <i class="ri-delete-bin-line"></i>';
+                row +='</button>';
+                row +='</td>';
+                row +=' </tr>';
+            });
+          }else{
+            row+='<tr>';
+              row+='<td colspan="6" class="text-center text-muted">';
+                row+='<div class="d-flex flex-column align-items-center justify-content-center py-5">';
+                    row+='<div class="avatar-sm mb-4">';
+                        row+='<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
+                            row+='<i class="ri-book-line"></i>';
+                        row+='</div>';
+                    row+='</div>';
+                    row+='<h5 class="mb-2">Aucune séance de cours trouvée</h5>';
+                    row+='<p class="text-muted mb-0">Il n\'y a aucune séance de cours programmée pour le moment</p>';
+                row+='</div>';
+              row+='</td>';
+            row+='</tr>';
+          }
+
+          $('#sessionsTableBody').html(row);
+          
+        },
+      });
+    }
+
+    loadTimeTableEntry();
+
     // Handle adding session
     $('#saveSessionBtn').on('click', function() {
 
@@ -433,6 +443,7 @@
         success: function(response) {
           if (response.status === 'success') {
             alertify.success(response.message);
+            $('#addSessionModal').modal('hide');
           } else {
             $('#addSessionError').removeClass('d-none').text(response.message || 'Une erreur est survenue lors de l\'ajout de la séance.');
           }
@@ -585,13 +596,6 @@
     });
 
 
-    function loadSalle(){
-
-    }
-
-    function loadModule(){
-
-    }
 
     $(document).on('change','#session_module', function(){
       var id_module = $(this).val();

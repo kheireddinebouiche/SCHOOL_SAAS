@@ -190,36 +190,39 @@ def logout_view(request):
 
 
 def login_view(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+    if not request.user.is_authenticated:
+        if request.method == 'POST':
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            # Vérifier UserSession
-            session_info, _ = UserSession.objects.get_or_create(user=user)
+            if user is not None:
+                # Vérifier UserSession
+                session_info, _ = UserSession.objects.get_or_create(user=user)
 
-            if session_info.last_session_key:
-                try:
-                    session = Session.objects.get(session_key=session_info.last_session_key)
-                    if session.expire_date > timezone.now():
-                        request.session["allow_blocked_page"] = True
-                        return redirect('institut_app:ShowBlockedConnexion')
-                except Session.DoesNotExist:
-                    pass
+                if session_info.last_session_key:
+                    try:
+                        session = Session.objects.get(session_key=session_info.last_session_key)
+                        if session.expire_date > timezone.now():
+                            request.session["allow_blocked_page"] = True
+                            return redirect('institut_app:ShowBlockedConnexion')
+                    except Session.DoesNotExist:
+                        pass
 
-            # Nouvelle connexion
-            login(request, user)
-            session_info.last_session_key = request.session.session_key
-            session_info.save(update_fields=["last_session_key"])
+                # Nouvelle connexion
+                login(request, user)
+                session_info.last_session_key = request.session.session_key
+                session_info.save(update_fields=["last_session_key"])
 
-            messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
-            return redirect('institut_app:index')
+                messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
+                return redirect('institut_app:index')
 
-        else:
-            messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
+            else:
+                messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
 
-    return render(request, 'registration/login.html')
+        return render(request, 'registration/login.html')
+    else:
+        return redirect('institut_app:index')
 
 def register(request):
     if request.method == 'POST':
