@@ -2,7 +2,6 @@ from django.db import models
 from t_crm.models import Prospets
 from t_groupe.models import Groupe
 from t_formations.models import *
-from t_rh.models import Employees
 from django.utils import timezone
 
 class Etudiant(models.Model):
@@ -50,7 +49,7 @@ class RegistrePresence(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
-
+    context = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -59,8 +58,7 @@ class RegistrePresence(models.Model):
     
 class LigneRegistrePresence(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
-    teacher = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
-    hours = models.TimeField(null=True,blank=True)
+    teacher = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
     type = models.CharField(max_length=100, null=True, blank=True)
     room = models.CharField(max_length=100, null=True, blank=True)
     registre = models.ForeignKey(RegistrePresence, on_delete=models.CASCADE, null=True, blank=True)

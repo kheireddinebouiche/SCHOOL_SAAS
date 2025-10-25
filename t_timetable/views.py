@@ -10,6 +10,7 @@ from t_groupe.models import *
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 import json
+from t_etudiants.models import *
 
 @login_required(login_url="institut_app:login")
 def ListeDesSalles(request):
@@ -68,8 +69,52 @@ def ApiCreateTimeTable(request):
 @login_required(login_url="institut_app:login")
 def timetable_view(request, pk):
     timetable = Timetable.objects.get(id = pk)
+    sessions = timetable.entries.all()  # Using the related name
+    
+    # Get unique days from sessions and sort them
+    days_set = set()
+    for session in sessions:
+        if session.jour:
+            days_set.add(session.jour.lower())
+    
+    # Define day names mapping
+    day_names = {
+        'lundi': 'Lundi', 
+        'mardi': 'Mardi', 
+        'mercredi': 'Mercredi', 
+        'jeudi': 'Jeudi', 
+        'vendredi': 'Vendredi', 
+        'samedi': 'Samedi', 
+        'dimanche': 'Dimanche',
+        'monday': 'Lundi',
+        'tuesday': 'Mardi', 
+        'wednesday': 'Mercredi', 
+        'thursday': 'Jeudi', 
+        'friday': 'Vendredi', 
+        'saturday': 'Samedi', 
+        'sunday': 'Dimanche',
+    }
+    
+    # Define time slots based on actual sessions
+    time_slots_set = set()
+    for session in sessions:
+        if session.heure_debut and session.heure_fin:
+            time_slot = f"{session.heure_debut.strftime('%H:%M')} - {session.heure_fin.strftime('%H:%M')}"
+            time_slots_set.add(time_slot)
+    
+    # Sort the time slots chronologically
+    sorted_time_slots = sorted(list(time_slots_set))
+    
+    # Sort the days in a logical order (Monday to Sunday or based on first occurrence)
+    # For this simple case, we'll sort alphabetically but could improve to order by week days
+    sorted_days = sorted(list(days_set))
+    
     context = {
-        'timetable' : timetable
+        'timetable': timetable,
+        'sessions': sessions,
+        'day_names': day_names,
+        'unique_days': sorted_days,
+        'time_slots': sorted_time_slots,
     }
     return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 
@@ -102,9 +147,8 @@ def timetable_edit(request, pk):
 @login_required(login_url="institut_app:login")
 def ApiLoadTableEntry(request):
     timetable=request.GET.get('timetable')
-    historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code')
+    historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code','timetable__is_validated')
     return JsonResponse(list(historique), safe=False)
-
 
 ### FONCTION PERMETANT DE CONFIGURER LE MODELE DE CRENEAU ###
 @login_required(login_url="institut_app:login")
@@ -119,7 +163,6 @@ def timetable_configure(request, pk):
         return render(request, 'tenant_folder/timetable/configure_timetable_cours.html', context)
     else:
         return render(request, 'tenant_folder/timetable/configuration_emploie.html', context)
-
 
 @login_required(login_url="institut_app:login")
 def FilterFormateur(request):
@@ -139,16 +182,69 @@ def FilterFormateur(request):
 def ApiMakeTimetableDone(request):
     if request.method == "GET":
         id_emploie =  request.GET.get('id_emploie')
-        crenau_model_id= request.GET.get('crenau_model_id')
-        
         timetable = Timetable.objects.get(id = id_emploie)
-        timetable.creneau_id = crenau_model_id
         timetable.is_configured=True
         timetable.save()
         return JsonResponse({"status" : "success","message" : "L'emploi du temps est desormais configurer"})
     else:
         messages.error(request, "Methode non autoriser")
         return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiValidateTimetable(request):
+    id_emploie = request.GET.get('id_emploie')
+    obj = Timetable.objects.get(id = id_emploie)
+    entries = TimetableEntry.objects.filter(timetable = obj)
+    obj.is_validated = True
+    obj.save()
+
+    registre = CreateRegistre(obj.groupe.id,obj.semestre)
+
+    for i in entries:
+        CreateRegisterLine(i.cours.id, i.formateur.id,i.salle.nom,registre.id)
+
+    messages.success(request, "Opération effectuer avec succès")
+    return JsonResponse({"status" : "success"})
+
+@transaction.atomic
+def CreateRegistre(groupe,semestre):
+    registre, created = RegistrePresence.objects.update_or_create(
+        label=Groupe.objects.get(id=groupe),
+        context="Génération automatique",
+        defaults={
+            'groupe_id': groupe,
+            'semestre': semestre
+        }
+    )
+    return registre  # <-- retourne seulement l’objet, pas le tuple
+
+@transaction.atomic
+def CreateRegisterLine(module, teacher, heure_debut, heure_fin, salle, registre):
+    ligne, created = LigneRegistrePresence.objects.update_or_create(
+        module_id=module,
+        teacher_id=teacher,
+        room = salle,
+        defaults={
+            'type': "",
+            'registre_id': registre
+        }
+    )
+    return ligne
+    
+
+@login_required(login_url="insitut_app:login")
+@transaction.atomic
+def ApiMakeTimetableDraft(request):
+    if request.method == "GET":
+        id_emploie = request.GET.get('id_emploie')
+        obj = Timetable.objects.get(id = id_emploie)
+        obj.is_validated = False
+        obj.save()
+        messages.success(request,"L'emploie du temps est prêt pour etre modifier")
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
 def checkFormateurDispo(formateur_id, jour, heure_debut, heure_fin):
     """

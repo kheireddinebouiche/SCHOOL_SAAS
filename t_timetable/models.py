@@ -94,7 +94,7 @@ class ModelCrenau(models.Model):
 
 class TimetableEntry(models.Model):
 
-    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, verbose_name="Emploi du temps")
+    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, verbose_name="Emploi du temps", related_name='entries')
     cours = models.ForeignKey(Modules, on_delete=models.CASCADE, verbose_name="Cours")
     salle = models.ForeignKey(Salle, on_delete=models.CASCADE, verbose_name="Salle")
     formateur = models.ForeignKey(Formateurs, on_delete=models.DO_NOTHING, null=True, blank=True)

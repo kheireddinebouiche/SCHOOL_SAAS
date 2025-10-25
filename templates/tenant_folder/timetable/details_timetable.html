@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -85,7 +86,7 @@
                 Emploi du Temps
             </h1>
             <p class="lead mb-0" style="font-size: 0.9rem;">
-                {{ timetable.class_name|default:"Classe A" }} - Semaine du {{ timetable.week_start|date:"d/m/Y"|default:"01/01/2024" }}
+                {{ timetable.label|default:"Classe A" }} - Semaine du {{ timetable.week_start|date:"d/m/Y"|default:"01/01/2024" }}
             </p>
         </div>
 
@@ -113,341 +114,54 @@
         <div class="timetable-card">
             <!-- Header Row with Times -->
             <div class="row g-0 bg-light">
-                <div class="col text-center p-0">
+                <div class="col-2 text-center p-0">
                     <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">Jours</h6>
                 </div>
+                {% for time_slot in time_slots %}
                 <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">08:00 - 09:00</h6>
+                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">{{ time_slot }}</h6>
                 </div>
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">09:00 - 10:00</h6>
-                </div>
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">10:00 - 11:00</h6>
-                </div>
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">11:00 - 12:00</h6>
-                </div>
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">12:00 - 13:00</h6>
-                </div>
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">13:00 - 14:00</h6>
-                </div>
+                {% endfor %}
             </div>
 
-            <!-- Lundi Row -->
+            <!-- Dynamic content based on actual sessions -->
+            {% for day in unique_days %}
             <div class="row g-0">
-                <div class="col bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">Lundi</div>
+                <div class="col-2 bg-light text-center p-0">
+                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">{{ day_names|get_item:day|default:day|title }}</div>
                 </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
+                {% for time_slot in time_slots %}
+                    <div class="col time-slot text-left">
+                        {% for session in sessions %}
+                            <!-- Check if session day matches and time slot matches -->
+                            {% if session.jour|lower == day %}
+                                <!-- Extract hour:minute from session start time -->
+                                {% with session_start=session.heure_debut|time:"H:i" %}
+                                    {% if session_start == time_slot|slice:":5" %}
+                                        <div class="course-item" style="background: #e3f2fd; border-left: 3px solid #2196f3;">
+                                            <strong>{{ session.cours.label }}</strong>
+                                            <div class="small mt-0">
+                                                <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> 
+                                                {% if session.formateur %}
+                                                    {{ session.formateur.nom}}
+                                                    {{ session.formateur.prenom}}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                            <div class="small mt-0">
+                                                <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> 
+                                                {{session.salle.nom}}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
                     </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item physics">
-                        <strong>Phys</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Martin
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> P
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item chemistry">
-                        <strong>Chim</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Bernard
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> C
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item history">
-                        <strong>His</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Laurent
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> B2
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <!-- Pause -->
-                    <div class="text-center text-muted fst-italic" style="font-size: 0.6rem; padding: 0.2rem 0;">
-                        Pause
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
-
-            <!-- Mardi Row -->
-            <div class="row g-0">
-                <div class="col bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">Mardi</div>
-                </div>
-                <div class="col time-slot text-center">
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item physics">
-                        <strong>Phys</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Martin
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> P
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item chemistry">
-                        <strong>Chim</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Bernard
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> C
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <!-- Pause -->
-                    <div class="text-center text-muted fst-italic" style="font-size: 0.6rem; padding: 0.2rem 0;">
-                        Pause
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item history">
-                        <strong>His</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Laurent
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> B2
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mercredi Row -->
-            <div class="row g-0">
-                <div class="col bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">Mercredi</div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item physics">
-                        <strong>Phys</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Martin
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> P
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item chemistry">
-                        <strong>Chim</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Bernard
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> C
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item history">
-                        <strong>His</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Laurent
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> B2
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <!-- Pause -->
-                    <div class="text-center text-muted fst-italic" style="font-size: 0.6rem; padding: 0.2rem 0;">
-                        Pause
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                </div>
-            </div>
-
-            <!-- Jeudi Row -->
-            <div class="row g-0">
-                <div class="col bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">Jeudi</div>
-                </div>
-                <div class="col time-slot text-center">
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item history">
-                        <strong>His</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Laurent
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> B2
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item physics">
-                        <strong>Phys</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Martin
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> P
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <!-- Pause -->
-                    <div class="text-center text-muted fst-italic" style="font-size: 0.6rem; padding: 0.2rem 0;">
-                        Pause
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item chemistry">
-                        <strong>Chim</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Bernard
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> C
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Vendredi Row -->
-            <div class="row g-0">
-                <div class="col bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">Vendredi</div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item chemistry">
-                        <strong>Chim</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Bernard
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> C
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item physics">
-                        <strong>Phys</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Martin
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> P
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item math">
-                        <strong>Maths</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Dupont
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> A1
-                        </div>
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <!-- Pause -->
-                    <div class="text-center text-muted fst-italic" style="font-size: 0.6rem; padding: 0.2rem 0;">
-                        Pause
-                    </div>
-                </div>
-                <div class="col time-slot text-center">
-                    <div class="course-item history">
-                        <strong>His</strong>
-                        <div class="small mt-0">
-                            <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> Laurent
-                        </div>
-                        <div class="small mt-0">
-                            <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> B2
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
 
         <!-- Additional Information -->
@@ -461,19 +175,21 @@
                         <ul class="list-unstyled">
                             <li class="mb-1">
                                 <i class="fas fa-calendar-check text-success me-2"></i>
-                                <strong>Période:</strong> {{ timetable.period|default:"Année Scolaire 2024-2025" }}
+                                <strong>Groupe:</strong> {{ timetable.groupe.nom }}
                             </li>
                             <li class="mb-1">
-                                <i class="fas fa-users text-primary me-2"></i>
-                                <strong>Classe:</strong> {{ timetable.class_name|default:"Classe A" }}
+                                <i class="fas fa-calendar-day text-info me-2"></i>
+                                <strong>Semestre:</strong> {{ timetable.get_semestre_display }}
                             </li>
                             <li class="mb-1">
                                 <i class="fas fa-chalkboard-teacher text-info me-2"></i>
-                                <strong>Enseignants:</strong> {{ timetable.teachers_count|default:"5" }} professeurs
+                                <strong>Nombre d'enseignants:</strong> 
+                                {% regroup sessions by formateur as formateur_groups %}
+                                {{ formateur_groups|length|default:0 }}
                             </li>
                             <li class="mb-1">
                                 <i class="fas fa-book text-warning me-2"></i>
-                                <strong>Matières:</strong> {{ timetable.subjects_count|default:"8" }} matières
+                                <strong>Nombre de cours:</strong> {{ sessions|length }}
                             </li>
                         </ul>
                     </div>
@@ -488,22 +204,8 @@
                         <div class="row">
                             <div class="col-6">
                                 <div class="d-flex align-items-center mb-1">
-                                    <div class="course-item math me-2" style="width: 15px; height: 15px; font-size: 0.5rem;"></div>
-                                    <span style="font-size: 0.8rem;">Mathématiques</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-1">
-                                    <div class="course-item physics me-2" style="width: 15px; height: 15px; font-size: 0.5rem;"></div>
-                                    <span style="font-size: 0.8rem;">Physique</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center mb-1">
-                                    <div class="course-item chemistry me-2" style="width: 15px; height: 15px; font-size: 0.5rem;"></div>
-                                    <span style="font-size: 0.8rem;">Chimie</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-1">
-                                    <div class="course-item history me-2" style="width: 15px; height: 15px; font-size: 0.5rem;"></div>
-                                    <span style="font-size: 0.8rem;">Historique</span>
+                                    <div class="course-item me-2" style="width: 15px; height: 15px; background: #e3f2fd; border-left: 3px solid #2196f3; font-size: 0.5rem;"></div>
+                                    <span style="font-size: 0.8rem;">Cours Général</span>
                                 </div>
                             </div>
                         </div>
@@ -515,7 +217,7 @@
         <div class="mt-3 text-center">
             <small class="text-muted">
                 <i class="fas fa-info-circle me-1"></i>
-                Dernière mise à jour: {{ timetable.last_updated|date:"d/m/Y H:i"|default:"01/01/2024 00:00" }}
+                Dernière mise à jour: {{ timetable.date_modification|date:"d/m/Y H:i"|default:"01/01/2024 00:00" }}
             </small>
         </div>
     </div>
