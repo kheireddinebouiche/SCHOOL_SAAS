@@ -45,14 +45,22 @@ def ApiCreateTimeTable(request):
         groupe = request.POST.get('groupe')
         semestre = request.POST.get('semestre')
         description = request.POST.get('description')
-        print(label, groupe, semestre, description)
+        
+        try:
+            obj = Timetable.objects.get(groupe_id=groupe, semestre=semestre)
+            if obj:
+                return JsonResponse({"status":"error",'message' : "Emploie du temps déja crée pour le groupe pour le meme semestre"})
+        except:
+            pass
+
         Timetable.objects.create(
             label = label,
             groupe_id = groupe,
             semestre = semestre,
             description = description
         )
-        return JsonResponse({"status" : "success",'message' : "L'emploie du temps à été crée avec succès"})
+        messages.success(request,"L'emploie du temps à été crée avec succès")
+        return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
@@ -96,7 +104,6 @@ def ApiLoadTableEntry(request):
     timetable=request.GET.get('timetable')
     historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code')
     return JsonResponse(list(historique), safe=False)
-
 
 
 ### FONCTION PERMETANT DE CONFIGURER LE MODELE DE CRENEAU ###
@@ -234,10 +241,10 @@ def save_session(request):
     if checkFormateurDispo(session_professeur, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "Le formateur est déjà pris sur cette plage horaire."})
 
-    # # Vérifie si le formateur est disponible selon ses disponibilités enregistrées
-    # is_available, availability_message = checkFormateurDispoByStoredAvailability(session_professeur, session_jour, heure_debut, heure_fin)
-    # if not is_available:
-    #     return JsonResponse({"status": "error", "message": availability_message})
+    # Vérifie si le formateur est disponible selon ses disponibilités enregistrées
+    is_available, availability_message = checkFormateurDispoByStoredAvailability(session_professeur, session_jour, heure_debut, heure_fin)
+    if not is_available:
+        return JsonResponse({"status": "error", "message": availability_message})
 
     if checkSalleDispo(session_salle, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})

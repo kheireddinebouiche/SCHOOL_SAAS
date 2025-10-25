@@ -1,12 +1,54 @@
 <script>
     alertify.set('notifier','position','top-right');
+    alertify.set('notifier','delay', 5); // durée d’affichage en secondes
+
+    // Fonction personnalisée avec barre de progression
+    function showAlert(type, message) {
+        // Créer la notification Alertify
+        var notification = alertify[type](message);
+
+        // Attendre que la notif soit rendue dans le DOM
+        setTimeout(function() {
+            var el = document.querySelector('.alertify-notifier .ajs-message:last-child');
+            if (el) {
+                // Ajouter la barre de progression
+                var progressBar = document.createElement('div');
+                progressBar.className = 'alertify-progress-bar';
+                el.appendChild(progressBar);
+
+                // Lancer l'animation
+                progressBar.style.animation = 'progressbar 5s linear forwards';
+            }
+        }, 10);
+    }
+
     {% for flashmeg in messages %}
         {% if 'success' in flashmeg.tags %}
-            alertify.success('{{flashmeg.message|escapejs}}');
+            showAlert('success', '{{ flashmeg.message|escapejs }}');
         {% elif 'error' in flashmeg.tags %}
-            alertify.error('{{flashmeg.message|escapejs}}');
+            showAlert('error', '{{ flashmeg.message|escapejs }}');
         {% elif 'warning' in flashmeg.tags %}
-            alertify.warnign('{{flashmeg.message|escapejs}}');
+            showAlert('warning', '{{ flashmeg.message|escapejs }}');
         {% endif %}
     {% endfor %}
 </script>
+
+<style>
+/* === STYLE BARRE DE PROGRESSION === */
+.alertify-notifier .ajs-message {
+    position: relative;
+    overflow: hidden;
+}
+.alertify-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: #d40047; /* couleur de la barre */
+    width: 100%;
+}
+@keyframes progressbar {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+</style>
