@@ -24,6 +24,7 @@ class Timetable(models.Model):
     date_modification = models.DateTimeField(auto_now=True)
     est_actif = models.BooleanField(default=True, verbose_name="Est actif")
     is_configured = models.BooleanField(default=False)
+    is_validated = models.BooleanField(default=False)
     creneau = models.ForeignKey('ModelCrenau', on_delete=models.CASCADE, null=True, blank=True)
     cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
