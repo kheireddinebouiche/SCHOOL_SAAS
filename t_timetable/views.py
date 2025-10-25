@@ -143,7 +143,6 @@ def ApiMakeTimetableDone(request):
         messages.error(request, "Methode non autoriser")
         return JsonResponse({"status" : "error"})
 
-
 def checkFormateurDispo(formateur_id, jour, heure_debut, heure_fin):
     """
     Vérifie si le formateur est déjà occupé pendant cette plage horaire.
@@ -167,7 +166,6 @@ def checkSalleDispo(salle , jour, heure_debut, heure_fin):
         heure_debut__lt=heure_fin, 
         heure_fin__gt=heure_debut
     ).exists()
-
 
 def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heure_fin):
     """
@@ -219,7 +217,6 @@ def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heu
     except Exception as e:
         # En cas d'erreur, on considère que le formateur n'est pas disponible
         return False, f"Erreur lors de la vérification de la disponibilité: {str(e)}"
-
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
