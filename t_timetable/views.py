@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 import json
 from t_etudiants.models import *
+from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
 def ListeDesSalles(request):
@@ -274,12 +275,6 @@ def checkSalleDispo(salle , jour, heure_debut, heure_fin):
     ).exists()
 
 def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heure_fin):
-    """
-    Vérifie si le formateur est disponible selon ses disponibilités enregistrées dans le modèle Formateurs.
-    Retourne (is_available, message) où is_available est True si disponible, False sinon.
-    Le message contient des informations sur la disponibilité du formateur.
-    """
-    from t_formations.models import Formateurs
     try:
         formateur = Formateurs.objects.get(id=formateur_id)
         if not formateur.dispo or 'disponibilites' not in formateur.dispo:
