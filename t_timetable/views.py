@@ -182,7 +182,10 @@ def FilterFormateur(request):
 def ApiMakeTimetableDone(request):
     if request.method == "GET":
         id_emploie =  request.GET.get('id_emploie')
+        crenau_model_id = request.GET.get('crenau_model_id')
+
         timetable = Timetable.objects.get(id = id_emploie)
+        timetable.creneau_id = crenau_model_id
         timetable.is_configured=True
         timetable.save()
         return JsonResponse({"status" : "success","message" : "L'emploi du temps est desormais configurer"})
