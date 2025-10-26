@@ -47,7 +47,8 @@ def ApiCreateTimeTable(request):
         groupe = request.POST.get('groupe')
         semestre = request.POST.get('semestre')
         description = request.POST.get('description')
-        
+        extraordinary_timetable = request.POST.get('extraordinary_timetable')
+
         try:
             obj = Timetable.objects.get(groupe_id=groupe, semestre=semestre)
             if obj:
