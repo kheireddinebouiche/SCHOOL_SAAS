@@ -220,7 +220,7 @@ def CreateRegistre(groupe,semestre):
     return registre  # <-- retourne seulement l’objet, pas le tuple
 
 @transaction.atomic
-def CreateRegisterLine(module, teacher, heure_debut, heure_fin, salle, registre):
+def CreateRegisterLine(module, teacher, salle, registre):
     ligne, created = LigneRegistrePresence.objects.update_or_create(
         module_id=module,
         teacher_id=teacher,
@@ -321,6 +321,13 @@ def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heu
         # En cas d'erreur, on considère que le formateur n'est pas disponible
         return False, f"Erreur lors de la vérification de la disponibilité: {str(e)}"
 
+def CheckAssignedCours(timetable, teacher, cours):
+    return TimetableEntry.objects.filter(
+        timetable_id = timetable,
+        formateur_id = teacher,
+        cours_id = cours
+    ).exists()
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def save_session(request):
@@ -344,6 +351,9 @@ def save_session(request):
 
     if checkSalleDispo(session_salle, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})
+    
+    if CheckAssignedCours(timetable, session_professeur, session_module):
+        return JsonResponse({"status": "error", "message": "Le module a été déja affecter a un autre formateur"})
     
     TimetableEntry.objects.create(
         timetable_id = timetable,
