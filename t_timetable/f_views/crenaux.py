@@ -71,7 +71,7 @@ def create_model(request):
 
 @login_required(login_url="institut_app:login")
 def model_creneau_detail(request, pk):
-    pass
+    return render(request, 'tenant_folder/timetable/crenaux/details_creneau.html')
 
 @login_required(login_url="institut_app:login")
 def model_creneau_edit(request, pk):
