@@ -20,6 +20,7 @@ urlpatterns = [
     path('ApiLoadTableEntry', ApiLoadTableEntry, name="ApiLoadTableEntry"),
     path('ApiMakeTimetableDraft', ApiMakeTimetableDraft, name="ApiMakeTimetableDraft"),
     path('ApiValidateTimetable', ApiValidateTimetable, name="ApiValidateTimetable"),
+    path('ApiPausetimeTable', ApiPausetimeTable, name="ApiPausetimeTable"),
    
 
     ### SALLES DE COURS ###

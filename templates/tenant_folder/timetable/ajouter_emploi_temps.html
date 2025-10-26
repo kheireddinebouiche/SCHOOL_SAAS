@@ -178,6 +178,32 @@
                   </div>
                 </div>
                 
+                <!-- Extraordinary timetable checkbox -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                  <div class="card-body p-3">
+                    <div class="form-check form-switch d-flex align-items-center">
+                      <input class="form-check-input me-3" type="checkbox" id="extraordinaryTimetable" name="extraordinary_timetable" style="width: 2.5em; height: 1.5em;">
+                      <label class="form-check-label fw-medium" for="extraordinaryTimetable">
+                        <i class="ri-file-add-line text-info me-1"></i>Crée un emploi du temps extraordinaire
+                      </label>
+                    </div>
+                    
+                    <div id="extraordinaryInfo" class="alert alert-info mt-3 d-none" role="alert">
+                      <div class="d-flex align-items-start">
+                        <i class="ri-information-line text-info fs-4 me-2 mt-1"></i>
+                        <div>
+                          <h6 class="alert-heading fw-bold">Important :</h6>
+                          <p class="mb-0">
+                            Si l'emploi du temps que vous souhaitez créer est un remplacement temporaire 
+                            pour un emploi déjà programmé pour le même groupe et le même semestre, 
+                            vous devez d'abord mettre l'emploi existant en pause avant de créer celui-ci.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
                 <!-- Error message container -->
                 <div id="createTimetableError" class="alert alert-danger d-none" role="alert">
                   <!-- Error messages will appear here -->
@@ -203,14 +229,24 @@
 </div>
 
 <script>
-  // Handle saving timetable
+  // Handle showing/hiding the extraordinary timetable info
   $(document).ready(function () {
+    $('#extraordinaryTimetable').change(function() {
+      if ($(this).is(':checked')) {
+        $('#extraordinaryInfo').removeClass('d-none');
+      } else {
+        $('#extraordinaryInfo').addClass('d-none');
+      }
+    });
+    
+    // Handle saving timetable
     $(document).on('click', '#saveTimetableBtn', function() {
       // Get form data
       var label = $('#timetable_label').val();
       var groupe = $('#timetable_groupe').val();
       var semestre = $('#timetable_semestre').val();
       var description = $('#timetable_description').val();
+      var extraordinary = $('#extraordinaryTimetable').is(':checked');
       
       // Basic validation
       if (!label || !groupe || !semestre) {
@@ -234,6 +270,7 @@
           'groupe': groupe,
           'semestre': semestre,
           'description': description,
+          'extraordinary_timetable': extraordinary,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         success : function(response) {

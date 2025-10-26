@@ -254,9 +254,21 @@
                             <div class="text-body"><span class='badge bg-primary'>{{ timetable.get_semestre_display }}</span></div>
                           </td>
                           <td>
+                            {% if timetable.is_validated == "enc" %}
                             <span class="badge bg-success-subtle text-success px-2 py-1">
-                              <i class="ri-check-line me-1"></i>Actif
+                              <i class="ri-check-line me-1"></i>En cours
                             </span>
+                            {% endif %}
+                            {% if timetable.is_validated == "pau" %}
+                            <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                              <i class="ri-rest-time-line me-1"></i>En pause
+                            </span>
+                            {% endif %}
+                            {% if timetable.is_validated == "ter" %}
+                            <span class="badge bg-danger-subtle text-danger px-2 py-1">
+                              <i class="ri-check-line me-1"></i>Cloturer
+                            </span>
+                            {% endif %}
                           </td>
                           <td>
                             {% if timetable.is_configured %}
@@ -297,6 +309,26 @@
                                   </a>
                                 </li>
                                 <li><hr class="dropdown-divider my-1"></li>
+                                {% if timetable.is_validated == "enc" %}
+                                <li>
+                                  <a id="PauseBtn" data-id='{{timetable.id}}' href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-warning">
+                                    <i class="ri-pause-circle-line me-2"></i>Pause
+                                  </a>
+                                </li>
+                                {% endif %}
+                                <li>
+                                  <a id="ClotureBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">
+                                    <i class="ri-lock-line me-2"></i>Cloturer
+                                  </a>
+                                </li>
+                                {% if timetable.is_validated == "pau" %}
+                                <li>
+                                  <a id="ActiveBtn"  data-id='{{timetable.id}}' href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-success">
+                                    <i class="ri-check-line me-2"></i>Activer
+                                  </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider my-1"></li>
                                 <li>
                                   <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">
                                     <i class="ri-delete-bin-line me-2"></i>Supprimer
@@ -336,6 +368,109 @@
 </div>
 
 
+<!-- Pause Modal -->
+<div class="modal fade" id="pauseModal" tabindex="-1" aria-labelledby="pauseModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0 d-flex align-items-center">
+        <h5 class="modal-title fw-bold text-warning flex-grow-1" id="pauseModalLabel">
+          <i class="ri-pause-circle-line me-2"></i>Mettre en pause l'emploi du temps
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 pt-0 pb-4">
+        <div class="text-center py-3">
+          <i class="ri-pause-circle-line text-warning" style="font-size: 48px;"></i>
+          <h4 class="mt-3 fw-bold text-warning">Mise en pause</h4>
+          <p class="text-muted mt-3">L'emploi du temps sera mis en pause. Les cours planifiés ne seront pas accessibles jusqu'à la réactivation.</p>
+          <div class="alert alert-warning bg-warning bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+              <i class="ri-error-warning-line text-warning fs-5 me-2"></i>
+              <div>
+                <strong>Attention</strong><br>
+                La mise en pause ne supprime pas les données. L'emploi du temps pourra être réactivé ultérieurement.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
+        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-warning text-white px-4" id="ConfirmPauseBtn">Confirmer la pause</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cloturer Modal -->
+<div class="modal fade" id="cloturerModal" tabindex="-1" aria-labelledby="cloturerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0 d-flex align-items-center">
+        <h5 class="modal-title fw-bold text-danger flex-grow-1" id="cloturerModalLabel">
+          <i class="ri-lock-line me-2"></i>Clôturer l'emploi du temps
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 pt-0 pb-4">
+        <div class="text-center py-3">
+          <i class="ri-lock-line text-danger" style="font-size: 48px;"></i>
+          <h4 class="mt-3 fw-bold text-danger">Clôture de l'emploi du temps</h4>
+          <p class="text-muted mt-3">L'emploi du temps sera clôturé définitivement. Les cours planifiés ne seront plus accessibles.</p>
+          <div class="alert alert-danger bg-danger bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+              <i class="ri-error-warning-line text-danger fs-5 me-2"></i>
+              <div>
+                <strong>Action irréversible</strong><br>
+                La clôture est permanente et ne peut pas être annulée. Toutes les données liées seront archivées.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
+        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger px-4">Confirmer la clôture</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Activer Modal -->
+<div class="modal fade" id="activerModal" tabindex="-1" aria-labelledby="activerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-success bg-opacity-10 border-0 pb-0 d-flex align-items-center">
+        <h5 class="modal-title fw-bold text-success flex-grow-1" id="activerModalLabel">
+          <i class="ri-check-line me-2"></i>Activer l'emploi du temps
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 pt-0 pb-4">
+        <div class="text-center py-3">
+          <i class="ri-check-line text-success" style="font-size: 48px;"></i>
+          <h4 class="mt-3 fw-bold text-success">Activation de l'emploi du temps</h4>
+          <p class="text-muted mt-3">L'emploi du temps sera activé. Les cours planifiés seront à nouveau accessibles.</p>
+          <div class="alert alert-success bg-success bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+              <i class="ri-checkbox-circle-line text-success fs-5 me-2"></i>
+              <div>
+                <strong>Prêt à l'emploi</strong><br>
+                L'emploi du temps sera mis à jour avec le statut actif et accessible par tous les utilisateurs concernés.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
+        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-success px-4">Confirmer l'activation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <script>
   // Fix dropdown positioning
   $(document).ready(function () {
@@ -352,10 +487,101 @@
         });
       }
     });
-    
+
+
+    $(document).on('click','#PauseBtn', function(){
+      $('#pauseModal').modal('show');
+      var id = $(this).data('id');
+      $('#ConfirmPauseBtn').data('id', id)
+
+      
+    });
+
+    $(document).on('click','#ConfirmPauseBtn',function(){
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+      var id = $(this).data('id');
+      $.ajax({
+        url : "{% url 't_timetable:ApiPausetimeTable' %}",
+        dataType: "JSON",
+        type: 'GET',
+        data : {
+          'id' : id,
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error("Une erreur c'est produite lors du traitement de la requete")
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+
+      });
+    });
+
+    $(document).on('click','#ClotureBtn', function(){
+      $('#cloturerModal').modal('show');
+    });
+
+    $(document).on('click','#ActiveBtn', function(){
+      $('#activerModal').modal('show');
+    });
+
     
     
   });
 </script>
+
+
 
 {% endblock content %}

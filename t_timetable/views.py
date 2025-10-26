@@ -119,6 +119,25 @@ def timetable_view(request, pk):
     }
     return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 
+@login_required(login_url="institut_app:login")
+def ApiPausetimeTable(request):
+    if request.method == "GET":
+        id = request.GET.get('id')
+
+        if not id:
+            return JsonResponse({"status" : "error"})
+        
+        obj = Timetable.objects.get(id = id)
+        obj.is_validated = "pau"
+        obj.save()
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+def ApiClotureTimeTable(request):
+    pass
+
 ### FONCTION PERMETANT DE CONFIGURER LES LIGNES DE LEMPLOIE DU TEMPS ###
 @login_required(login_url="institut_app:login")
 def timetable_edit(request, pk):
