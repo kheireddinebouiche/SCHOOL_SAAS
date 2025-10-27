@@ -130,7 +130,7 @@ def ApiPausetimeTable(request):
             return JsonResponse({"status" : "error"})
         
         obj = Timetable.objects.get(id = id)
-        obj.is_validated = "pau"
+        obj.status = "pau"
         obj.save()
         return JsonResponse({"status":"success"})
     else:
@@ -146,7 +146,7 @@ def ApiClotureTimeTable(request):
             return JsonResponse({"status" : "error"})
         
         obj = Timetable.objects.get(id = id)
-        obj.is_validated = "ter"
+        obj.status = "ter"
         obj.save()
         return JsonResponse({"status":"success"})
     else:

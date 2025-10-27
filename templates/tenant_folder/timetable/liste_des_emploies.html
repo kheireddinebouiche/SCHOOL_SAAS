@@ -360,7 +360,7 @@
                                   </a>
                                 </li>
                                 {% endif %}
-                                {% if timetable.status == "bro" %}
+                                {% if timetable.status == "bro" or timetable.status == "pau" %}
                                 <li>
                                   <a id="ActiveBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
                                     <i class="ri-lock-line me-3"></i>
@@ -368,15 +368,7 @@
                                   </a>
                                 </li>
                                 {% endif %}
-                                {% if timetable.status == "pau" %}
-                                <li>
-                                  <a id="ActiveBtn"  data-id='{{timetable.id}}' href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
-                                    <i class="ri-check-line me-3"></i>
-                                    <span>Activer</span>
-                                  </a>
-                                </li>
-                                <li><hr class="dropdown-divider my-1 mx-3"></li>
-                                 {% endif %}
+                                
                                 <li>
                                   <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}">
                                     <i class="ri-delete-bin-line me-3"></i>
@@ -513,7 +505,7 @@
       </div>
       <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-success px-4">Confirmer l'activation</button>
+        <button type="button" class="btn btn-success px-4" id="ConfirmeActivateBtn">Confirmer l'activation</button>
       </div>
     </div>
   </div>
@@ -702,7 +694,82 @@
     });
 
     $(document).on('click','#ActiveBtn', function(){
+      var id = $(this).data('id');
+      $('#ConfirmeActivateBtn').data('id', id);
       $('#activerModal').modal('show');
+    });
+
+    $(document).on('click','#ConfirmeActivateBtn', function(){
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+      var id = $(this).data('id');
+      $.ajax({
+        url : "{% url 't_timetable:ApiActivateTimeTable' %}",
+        dataType: "JSON",
+        type : "GET",
+        data: {
+          'id' : id,
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                    </div>
+                    
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error("Une erreur c'est produite lors du traitement de la requete");
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+
+      });
+      
     });
 
     // Delete functionality
