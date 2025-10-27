@@ -121,6 +121,7 @@ def timetable_view(request, pk):
     return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiPausetimeTable(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -136,8 +137,35 @@ def ApiPausetimeTable(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiClotureTimeTable(request):
-    pass
+    if request.method == "GET":
+        id = request.GET.get('id')
+
+        if not id:
+            return JsonResponse({"status" : "error"})
+        
+        obj = Timetable.objects.get(id = id)
+        obj.is_validated = "ter"
+        obj.save()
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiActivateTimeTable(request):
+    if request.method == "GET":
+        id = request.GET.get('id')
+        if not id:
+            return JsonResponse({"status" : "error"})
+        obj = Timetable.objects.get(id = id)
+        obj.status = "enc"
+        obj.save()
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status" : "error"})
+
 
 ### FONCTION PERMETANT DE CONFIGURER LES LIGNES DE LEMPLOIE DU TEMPS ###
 @login_required(login_url="institut_app:login")
@@ -279,7 +307,8 @@ def checkFormateurDispo(formateur_id, jour, heure_debut, heure_fin):
         formateur_id=formateur_id,
         jour=jour,
         heure_debut__lt=heure_fin, 
-        heure_fin__gt=heure_debut
+        heure_fin__gt=heure_debut,
+        timetable__is_validated = "enc",
     ).exists()
 
 def checkSalleDispo(salle , jour, heure_debut, heure_fin):

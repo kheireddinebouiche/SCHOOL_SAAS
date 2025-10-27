@@ -65,6 +65,21 @@
     position: absolute;
   }
   
+  /* Specific fix for timetable dropdown */
+  .timetable-item {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .timetable-item:hover {
+    z-index: 2;
+    position: relative;
+  }
+  
+  .timetable-item .dropdown-menu {
+    z-index: 1060 !important;
+  }
+  
   /* Timetable specific styles */
   .timetable-item {
     transition: transform 0.3s ease;
@@ -72,6 +87,15 @@
   
   .timetable-item:hover {
     transform: translateY(-3px);
+  }
+  
+  /* Custom dropdown button without caret */
+  .dropdown-toggle-no-caret {
+    position: relative;
+  }
+  
+  .dropdown-toggle-no-caret::after {
+    display: none !important;
   }
 </style>
 
@@ -254,17 +278,22 @@
                             <div class="text-body"><span class='badge bg-primary'>{{ timetable.get_semestre_display }}</span></div>
                           </td>
                           <td>
-                            {% if timetable.is_validated == "enc" %}
+                            {% if timetable.status == "bro" %}
+                              <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                                <i class="ri-check-line me-1"></i>Brouillon
+                              </span>
+                            {% endif %}
+                            {% if timetable.status == "enc" %}
                             <span class="badge bg-success-subtle text-success px-2 py-1">
                               <i class="ri-check-line me-1"></i>En cours
                             </span>
                             {% endif %}
-                            {% if timetable.is_validated == "pau" %}
+                            {% if timetable.status == "pau" %}
                             <span class="badge bg-warning-subtle text-warning px-2 py-1">
                               <i class="ri-rest-time-line me-1"></i>En pause
                             </span>
                             {% endif %}
-                            {% if timetable.is_validated == "ter" %}
+                            {% if timetable.status == "ter" %}
                             <span class="badge bg-danger-subtle text-danger px-2 py-1">
                               <i class="ri-check-line me-1"></i>Cloturer
                             </span>
@@ -287,51 +316,71 @@
                           </td>
                           <td class="text-end">
                             <div class="dropdown d-inline-block">
-                              <button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="ri-more-2-fill"></i>
+                              <button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-{{timetable.id}}" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri-more-2-fill align-middle"></i>
                               </button>
-                              <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                              <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-{{timetable.id}}" style="z-index: 1060 !important;">
                                 <li>
-                                  <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
-                                    <i class="ri-eye-line text-primary me-2"></i>Voir
+                                  <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
+                                    <i class="ri-eye-line text-primary me-3"></i>
+                                    <span>Voir</span>
                                   </a>
                                 </li>
                                 {% if not timetable.is_configured %}
                                 <li>
-                                  <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
-                                    <i class="ri-settings-line text-warning me-2"></i>Configurer
+                                  <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
+                                    <i class="ri-settings-line text-warning me-3"></i>
+                                    <span>Configurer</span>
                                   </a>
                                 </li>
                                 {% endif %}
+                                {% if not timetable.status == "ter" %}
                                 <li>
-                                  <a href="{% url 't_timetable:timetable_edit' timetable.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
-                                    <i class="ri-calendar-schedule-line text-primary me-2"></i>Plannification
-                                  </a>
-                                </li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                {% if timetable.is_validated == "enc" %}
-                                <li>
-                                  <a id="PauseBtn" data-id='{{timetable.id}}' href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-warning">
-                                    <i class="ri-pause-circle-line me-2"></i>Pause
+                                  <a href="{% url 't_timetable:timetable_edit' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
+                                    <i class="ri-calendar-schedule-line text-info me-3"></i>
+                                    <span>Plannification</span>
                                   </a>
                                 </li>
                                 {% endif %}
+                                <li><hr class="dropdown-divider my-1 mx-3"></li>
+
+                                {% if timetable.status == "enc" %}
                                 <li>
-                                  <a id="ClotureBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">
-                                    <i class="ri-lock-line me-2"></i>Cloturer
-                                  </a>
-                                </li>
-                                {% if timetable.is_validated == "pau" %}
-                                <li>
-                                  <a id="ActiveBtn"  data-id='{{timetable.id}}' href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-success">
-                                    <i class="ri-check-line me-2"></i>Activer
+                                  <a id="PauseBtn" data-id='{{timetable.id}}' href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-warning">
+                                    <i class="ri-pause-circle-line me-3"></i>
+                                    <span>Pause</span>
                                   </a>
                                 </li>
                                 {% endif %}
-                                <li><hr class="dropdown-divider my-1"></li>
+                                {% if not timetable.status == "ter" and not timetable.status == "bro" %}
                                 <li>
-                                  <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">
-                                    <i class="ri-delete-bin-line me-2"></i>Supprimer
+                                  <a id="ClotureBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger">
+                                    <i class="ri-lock-line me-3"></i>
+                                    <span>Cloturer</span>
+                                  </a>
+                                </li>
+                                {% endif %}
+                                {% if timetable.status == "bro" %}
+                                <li>
+                                  <a id="ActiveBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
+                                    <i class="ri-lock-line me-3"></i>
+                                    <span>Activer</span>
+                                  </a>
+                                </li>
+                                {% endif %}
+                                {% if timetable.status == "pau" %}
+                                <li>
+                                  <a id="ActiveBtn"  data-id='{{timetable.id}}' href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
+                                    <i class="ri-check-line me-3"></i>
+                                    <span>Activer</span>
+                                  </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1 mx-3"></li>
+                                 {% endif %}
+                                <li>
+                                  <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}">
+                                    <i class="ri-delete-bin-line me-3"></i>
+                                    <span>Supprimer</span>
                                   </a>
                                 </li>
                               </ul>
@@ -341,15 +390,15 @@
                       {% endfor %}
                     {% else %}
                       <tr>
-                        <td colspan="7" class="text-center text-muted">
+                        <td colspan="8" class="text-center text-muted">
                           <div class="d-flex flex-column align-items-center justify-content-center py-5">
                               <div class="avatar-sm mb-4">
                                   <div class="avatar-title bg-light text-muted rounded-circle fs-1">
                                       <i class="ri-calendar-todo-line"></i>
                                   </div>
                               </div>
-                              <h5 class="mb-2">Aucun emploie du temps trouvé</h5>
-                              <p class="text-muted mb-0">Il n'y a aucun emploie du temps enregistré pour le moment</p>
+                              <h5 class="mb-2">Aucun emploi du temps trouvé</h5>
+                              <p class="text-muted mb-0">Il n'y a aucun emploi du temps enregistré pour le moment</p>
                           </div>
                         </td>
                       </tr>
@@ -430,7 +479,7 @@
       </div>
       <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-danger px-4">Confirmer la clôture</button>
+        <button type="button" class="btn btn-danger px-4" id="ConfirmeClotureBtn">Confirmer la clôture</button>
       </div>
     </div>
   </div>
@@ -477,24 +526,30 @@
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
     
-    // Handle dropdown show events
+    // Handle dropdown show events to ensure proper z-index
     $(document).on('show.bs.dropdown', function(e) {
       var dropdownMenu = $(e.target).find('.dropdown-menu');
       if (dropdownMenu.length) {
         dropdownMenu.css({
-          'z-index': '1050',
+          'z-index': '1060',
           'position': 'absolute'
         });
       }
     });
-
-
+    
+    // Handle timetable item dropdown to ensure it appears above other rows
+    $(document).on('show.bs.dropdown', '.timetable-item .dropdown', function() {
+      $(this).closest('.timetable-item').css('z-index', '3');
+    });
+    
+    $(document).on('hidden.bs.dropdown', '.timetable-item .dropdown', function() {
+      $(this).closest('.timetable-item').css('z-index', '1');
+    });
+    
     $(document).on('click','#PauseBtn', function(){
       $('#pauseModal').modal('show');
       var id = $(this).data('id');
-      $('#ConfirmPauseBtn').data('id', id)
-
-      
+      $('#ConfirmPauseBtn').data('id', id);
     });
 
     $(document).on('click','#ConfirmPauseBtn',function(){
@@ -513,6 +568,83 @@
         dataType: "JSON",
         type: 'GET',
         data : {
+          'id' : id,
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #3b7ddd;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #3b7ddd;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error("Une erreur c'est produite lors du traitement de la requete")
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
+    });
+
+    $(document).on('click','#ClotureBtn', function(){
+      var id = $(this).data('id');
+      $('#ConfirmeClotureBtn').data('id', id);
+      $('#cloturerModal').modal('show');
+    });
+
+    $(document).on('click','#ConfirmeClotureBtn', function(){
+      
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
+      var id = $(this).data('id');
+      $.ajax({
+        url : "{% url 't_timetable:ApiClotureTimeTable' %}",
+        dataType: "JSON",
+        type : "GET",
+        data: {
           'id' : id,
         },
         success : function(response){
@@ -557,7 +689,7 @@
                 location.reload();
             }, 1000);
           }else{
-            alertify.error("Une erreur c'est produite lors du traitement de la requete")
+            alertify.error("Une erreur c'est produite lors du traitement de la requete");
           }
         },
         complete: function() {
@@ -569,14 +701,16 @@
       });
     });
 
-    $(document).on('click','#ClotureBtn', function(){
-      $('#cloturerModal').modal('show');
-    });
-
     $(document).on('click','#ActiveBtn', function(){
       $('#activerModal').modal('show');
     });
 
+    // Delete functionality
+    $(document).on('click', '.delete-timetable', function(e) {
+      e.preventDefault();
+      const timetableId = $(this).data('id');
+      alert('Suppression de l\'emploi du temps avec ID: ' + timetableId + ' - Fonctionnalité de suppression à implémenter.');
+    });
     
     
   });

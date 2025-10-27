@@ -21,6 +21,8 @@ urlpatterns = [
     path('ApiMakeTimetableDraft', ApiMakeTimetableDraft, name="ApiMakeTimetableDraft"),
     path('ApiValidateTimetable', ApiValidateTimetable, name="ApiValidateTimetable"),
     path('ApiPausetimeTable', ApiPausetimeTable, name="ApiPausetimeTable"),
+    path('ApiClotureTimeTable', ApiClotureTimeTable, name="ApiClotureTimeTable"),
+    path('ApiActivateTimeTable', ApiActivateTimeTable, name="ApiActivateTimeTable"),
    
 
     ### SALLES DE COURS ###
