@@ -49,12 +49,13 @@ def ApiCreateTimeTable(request):
         description = request.POST.get('description')
         extraordinary_timetable = request.POST.get('extraordinary_timetable')
 
-        try:
-            obj = Timetable.objects.get(groupe_id=groupe, semestre=semestre)
-            if obj:
-                return JsonResponse({"status":"error",'message' : "Emploie du temps déja crée pour le groupe pour le meme semestre"})
-        except:
-            pass
+        if extraordinary_timetable == False:
+            try:
+                obj = Timetable.objects.get(groupe_id=groupe, semestre=semestre)
+                if obj:
+                    return JsonResponse({"status":"error",'message' : "Emploie du temps déja crée pour le groupe pour le meme semestre"})
+            except:
+                pass
 
         Timetable.objects.create(
             label = label,
@@ -152,6 +153,14 @@ def ApiClotureTimeTable(request):
     else:
         return JsonResponse({"status" : "error"})
 
+
+def CheckIfExistsEncTimetable(groupe,semestre):
+    return Timetable.objects.filter(
+        status = "enc",
+        groupe_id = groupe,
+        semestre = semestre
+    ).exists()
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiActivateTimeTable(request):
@@ -160,8 +169,13 @@ def ApiActivateTimeTable(request):
         if not id:
             return JsonResponse({"status" : "error"})
         obj = Timetable.objects.get(id = id)
+
+        if CheckIfExistsEncTimetable(obj.groupe.id, obj.semestre):
+            return JsonResponse({"status" : "error",'message' : "Une emploie du temps en cours est déja présente"})
+
         obj.status = "enc"
         obj.save()
+
         return JsonResponse({"status":"success"})
     else:
         return JsonResponse({"status" : "error"})
