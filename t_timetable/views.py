@@ -56,6 +56,14 @@ def ApiCreateTimeTable(request):
                     return JsonResponse({"status":"error",'message' : "Emploie du temps déja crée pour le groupe pour le meme semestre"})
             except:
                 pass
+        else:
+            find = Timetable.objects.filter(groupe_id=groupe, semestre = semestre, status="enc")
+            timetable_list = ", ".join([str(f.label) for f in find])
+            if find.exists():
+                return JsonResponse({"status" : "error",'message' : f"Veuillez d'abord mettre en pause l'emploi du temps : {timetable_list}"})
+
+        if Timetable.objects.filter(groupe_id = groupe, status="enc").exists():
+            return JsonResponse({"status":"error","message":"Veuillez d'abord cloturer l'ancienne emploie du temps"})
 
         Timetable.objects.create(
             label = label,
@@ -185,6 +193,7 @@ def ApiActivateTimeTable(request):
 @login_required(login_url="institut_app:login")
 def timetable_edit(request, pk):
     timetable = Timetable.objects.get(id = pk)
+
     creneau_data = timetable.creneau.jour_data
     creneau_horaire = timetable.creneau.horaire_data
 
@@ -322,7 +331,7 @@ def checkFormateurDispo(formateur_id, jour, heure_debut, heure_fin):
         jour=jour,
         heure_debut__lt=heure_fin, 
         heure_fin__gt=heure_debut,
-        timetable__is_validated = "enc",
+        timetable__status = "enc",
     ).exists()
 
 def checkSalleDispo(salle , jour, heure_debut, heure_fin):
@@ -334,7 +343,8 @@ def checkSalleDispo(salle , jour, heure_debut, heure_fin):
         salle_id=salle,
         jour=jour,
         heure_debut__lt=heure_fin, 
-        heure_fin__gt=heure_debut
+        heure_fin__gt=heure_debut,
+        timetable__status = "enc"
     ).exists()
 
 def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heure_fin):
@@ -386,7 +396,7 @@ def CheckAssignedCours(timetable, teacher, cours):
     return TimetableEntry.objects.filter(
         timetable_id = timetable,
         formateur_id = teacher,
-        cours_id = cours
+        cours__code = cours
     ).exists()
 
 @login_required(login_url="institut_app:login")
