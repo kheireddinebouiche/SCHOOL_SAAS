@@ -76,6 +76,17 @@ def ApiCreateTimeTable(request):
     else:
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
+@login_required(login_url="institut_app:login")
+def ApiDeleteTimeTable(request):
+    if request.method == 'GET':
+        id = request.GET.get('id')
+
+        if not id:
+            return JsonResponse({"status": "error","message":"Informations manquantes"})
+        
+        obj = Timetable.objects.get(id = id)
+        obj.delete()
+        return JsonResponse({"status": "error","message":"Informations manquantes"})
 
 @login_required(login_url="institut_app:login")
 def timetable_view(request, pk):

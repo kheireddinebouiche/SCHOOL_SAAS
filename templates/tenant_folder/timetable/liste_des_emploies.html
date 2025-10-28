@@ -370,7 +370,7 @@
                                 {% endif %}
                                 
                                 <li>
-                                  <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}">
+                                  <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}">
                                     <i class="ri-delete-bin-line me-3"></i>
                                     <span>Supprimer</span>
                                   </a>
@@ -539,6 +539,73 @@
       </div>
       <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timetable in Use Warning Modal -->
+<div class="modal fade" id="timetableInUseWarningModal" tabindex="-1" aria-labelledby="timetableInUseWarningModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0 d-flex align-items-center">
+        <h5 class="modal-title fw-bold text-warning flex-grow-1" id="timetableInUseWarningModalLabel">
+          <i class="ri-alert-line me-2"></i>Emploi du temps en cours d'utilisation
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 pt-0 pb-4">
+        <div class="text-center py-3">
+          <i class="ri-alert-line text-warning" style="font-size: 48px;"></i>
+          <h4 class="mt-3 fw-bold text-warning">Avertissement important</h4>
+          <p class="text-muted mt-3">Cet emploi du temps est actuellement en cours d'utilisation.</p>
+          <div class="alert alert-warning bg-warning bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+              <i class="ri-error-warning-line text-warning fs-5 me-2"></i>
+              <div>
+                <strong>Attention</strong><br>
+                La suppression de cet emploi du temps pourrait causer une incohérence dans les données. Les cours planifiés et les horaires associés seront affectés.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center gap-2">
+        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Timetable Modal -->
+<div class="modal fade" id="deleteTimetableModal" tabindex="-1" aria-labelledby="deleteTimetableModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0 d-flex align-items-center">
+        <h5 class="modal-title fw-bold text-danger flex-grow-1" id="deleteTimetableModalLabel">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer l'emploi du temps
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 pt-0 pb-4">
+        <div class="text-center py-3">
+          <i class="ri-delete-bin-line text-danger" style="font-size: 48px;"></i>
+          <h4 class="mt-3 fw-bold text-danger">Suppression de l'emploi du temps</h4>
+          <p class="text-muted mt-3">Êtes-vous sûr de vouloir supprimer cet emploi du temps ? Cette action est irréversible.</p>
+          <div class="alert alert-danger bg-danger bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+              <i class="ri-error-warning-line text-danger fs-5 me-2"></i>
+              <div>
+                <strong>Action irréversible</strong><br>
+                La suppression est permanente et ne peut pas être annulée. Toutes les données liées seront supprimées définitivement.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
+        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger px-4" id="confirmDeleteTimetableBtn">Confirmer la suppression</button>
       </div>
     </div>
   </div>
@@ -818,10 +885,88 @@
     });
 
     // Delete functionality
-    $(document).on('click', '.delete-timetable', function(e) {
-      e.preventDefault();
+    $(document).on('click', '.delete-timetable', function() {
       const timetableId = $(this).data('id');
-      alert('Suppression de l\'emploi du temps avec ID: ' + timetableId + ' - Fonctionnalité de suppression à implémenter.');
+      const status = $(this).data('status');
+      if(status === "enc"){
+        $('#timetableInUseWarningModal').modal('show');
+      }else{
+        $("#confirmDeleteTimetableBtn").data('id', timetableId);
+        $('#deleteTimetableModal').modal('show');
+      }   
+      
+    });
+    
+  
+    $(document).on('click', '#confirmDeleteTimetableBtn', function() {
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Suppression en cours...
+      `);
+      
+      var id = $(this).data('id');
+      $.ajax({
+        url : "{% url 't_timetable:ApiDeleteTimeTable' %}", // Assuming there's an API endpoint for deleting timetables
+        dataType: "JSON",
+        type: 'GET',
+        data : {
+          'id' : id,
+        },
+        success : function(response){
+          if (response.status === "success"){
+            let spinner = document.createElement("div");
+            spinner.innerHTML = `
+                <div id="loadingSpinner" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(3px);">
+                    <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #dc3545;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                    <div class="success-message" style="
+                        font-family: Arial, sans-serif;
+                        font-size: 18px;
+                        color: #dc3545;
+                        font-weight: 500;
+                        text-align: center;
+                        margin-bottom: 10px;">
+                        <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Suppression en cours ...
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .modern-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 5px solid #e0e0e0;
+                        border-top: 5px solid #dc3545;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+          }else{
+            alertify.error("Une erreur s'est produite lors du traitement de la requête");
+          }
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
+        }
+      });
     });
     
     

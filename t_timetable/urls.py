@@ -23,6 +23,7 @@ urlpatterns = [
     path('ApiPausetimeTable', ApiPausetimeTable, name="ApiPausetimeTable"),
     path('ApiClotureTimeTable', ApiClotureTimeTable, name="ApiClotureTimeTable"),
     path('ApiActivateTimeTable', ApiActivateTimeTable, name="ApiActivateTimeTable"),
+    path('ApiDeleteTimeTable', ApiDeleteTimeTable, name="ApiDeleteTimeTable"),
    
 
     ### SALLES DE COURS ###
