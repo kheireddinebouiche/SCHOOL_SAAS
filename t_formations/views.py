@@ -476,11 +476,26 @@ def ApiGetSpecialiteModule(request):
 
     return JsonResponse(data, safe=False)
 
+@login_required(login_url="institut_app:login")
 def ApiGetRepartitionModule(request):
     id_specialite = request.GET.get('id_specialite')
-    object = ProgrammeFormation.objects.filter(specialite = id_specialite).values('id', 'module__label', 'semestre')
+    object = ProgrammeFormation.objects.filter(specialite = id_specialite).values('id', 'module__label','module__code','semestre')
 
     return JsonResponse(list(object), safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteCoursRepartition(request):
+    if request.method == 'GET':
+        id=request.GET.get('id')
+        if not id:
+            return JsonResponse({"status" : "error",'message':"Informations manquante"})
+        
+        obj = ProgrammeFormation.objects.get(id = id)
+        obj.delete()
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status":"error"})
 
 def ApiAffectModuleSemestre(request):
     id_module = request.POST.get('id_module')

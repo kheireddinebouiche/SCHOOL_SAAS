@@ -35,6 +35,7 @@ urlpatterns = [
     path('apigetmodules',ApiGetSpecialiteModule, name="ApiGeSpecialitetModules"),
     path('ApiGetRepartitionModule', ApiGetRepartitionModule, name="ApiGetRepartitionModule"),
     path('ApiAffectModuleSemestre', ApiAffectModuleSemestre, name="ApiAffectModuleSemestre"),
+    path('ApiDeleteCoursRepartition',ApiDeleteCoursRepartition, name="ApiDeleteCoursRepartition"),
     path('deleteModule',deleteModule,name="deletemodule"),
     path('ApiAddModule', ApiAddModule, name="ApiAddModule"),
     path('ApiUpdateModule', ApiUpdateModule, name="ApiUpdateModule"),
