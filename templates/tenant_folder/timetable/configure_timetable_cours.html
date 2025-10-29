@@ -2,6 +2,9 @@
 {% load static %}
 {% block title %}Configuration des Cours - Emploi du Temps{% endblock title %}
 
+{% block extra_head %}
+{% endblock extra_head %}
+
 {% block content %}
 <style>
   .search-box {
@@ -504,6 +507,30 @@
 </div>
 
 <script>
+  // Function to dynamically load jsPDF if not already loaded
+  function loadPDFLibraries() {
+    return new Promise((resolve, reject) => {
+      // Check if library is already loaded
+      if (typeof window.jspdf !== 'undefined') {
+        resolve();
+        return;
+      }
+
+      // Create script element for jsPDF
+      const jsPDFScript = document.createElement('script');
+      jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      
+      jsPDFScript.onload = () => {
+        // Small delay to ensure library is fully initialized
+        setTimeout(resolve, 100);
+      };
+      
+      jsPDFScript.onerror = () => reject(new Error('Failed to load jsPDF'));
+      
+      document.head.appendChild(jsPDFScript);
+    });
+  }
+
   $(document).ready(function () {
 
     var timetable="{{pk}}";
@@ -655,79 +682,313 @@
       });
     });
 
-    // Handle print timetable button
+    // Handle print timetable button - Generate PDF instead of opening new window
     $('#printTimetableBtn').on('click', function() {
-      // Create a new window with the timetable data for printing
-      var printWindow = window.open('', '_blank');
-      var printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Emploi du Temps - ${document.title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .timetable-info { margin-bottom: 20px; }
-            .timetable-info div { margin: 5px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .day-header { background-color: #e6f3ff; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Emploi du Temps</h1>
-            {% if timetable %}
-            <div class="timetable-info">
-              <div><strong>Label:</strong> {{ timetable.label }}</div>
-              <div><strong>Groupe:</strong> {{ timetable.groupe.nom }}</div>
-              <div><strong>Classe:</strong> {{ timetable.groupe.classe.nom }}</div>
-              <div><strong>Semestre:</strong> {{ timetable.semestre }}</div>
-              {% if timetable.description %}<div><strong>Description:</strong> {{ timetable.description }}</div>{% endif %}
-            </div>
-            {% endif %}
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Module</th>
-                <th>Jour</th>
-                <th>Horaire</th>
-                <th>Professeur</th>
-                <th>Salle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for entry in timetable.timetableentry_set.all %}
-              <tr>
-                <td>{{ entry.cours.code }} - {{ entry.cours.nom }}</td>
-                <td>{{ entry.jour.nom }}</td>
-                <td>{{ entry.horaire.nom }} ({{ entry.horaire.heure_debut|time:"H:i" }} - {{ entry.horaire.heure_fin|time:"H:i" }})</td>
-                <td>{{ entry.cours.enseignant.first_name }} {{ entry.cours.enseignant.last_name }}</td>
-                <td>{{ entry.salle.nom }} ({{ entry.salle.code }})</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5" class="text-center">Aucune séance de cours programmée</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          
-          <div style="position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 12px; color: #666;">
-            Impression générée le ${new Date().toLocaleString('fr-FR')}
-          </div>
-        </body>
-        </html>
-      `;
+      // Show loading message while libraries load
+      const originalBtnText = $('#printTimetableBtn').html();
+      $('#printTimetableBtn').html('<i class="ri-loader-4-line ri-spin me-1"></i>Chargement...');
+      $('#printTimetableBtn').prop('disabled', true);
       
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+      loadPDFLibraries()
+        .then(() => {
+          // Use ApiLoadTableEntry to get the actual data for PDF generation
+          $.ajax({
+            url : "{% url 't_timetable:ApiLoadTableEntry' %}",
+            dataType : "JSON",
+            type: "GET",
+            data:{
+              'timetable' : timetable,
+            },
+            success : function(data){
+              // Process the data directly in the PDF without creating HTML
+              
+              // Create a structured timetable with hours as rows and days as columns
+              // First, we need to organize the data by hours and days
+              // Get all unique days from the data and normalize them
+              const allDaysSet = new Set();
+              data.forEach(p => {
+                if (p.jour && p.heure_debut && p.heure_fin) {  // Only add days that have complete time information
+                  // Normalize day names (capitalize first letter)
+                  const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+                  allDaysSet.add(normalizedDay);
+                }
+              });
+              const allDays = Array.from(allDaysSet);
+              
+              // Define standard day order
+              const dayOrder = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+              
+              // Sort the days according to our preferred order, only including days that have sessions
+              const orderedDays = dayOrder.filter(day => allDays.includes(day));
+              
+              // Get unique time slots and sort them
+              const timeSlots = [...new Set(data.filter(p => p.heure_debut && p.heure_fin)
+                .map(p => p.heure_debut + '-' + p.heure_fin))].sort();
+              
+              // Create a mapping of the data by time and day
+              const scheduleMap = {};
+              data.forEach(p => {
+                if (p.jour && p.heure_debut && p.heure_fin) {
+                  const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+                  const timeSlot = p.heure_debut + '-' + p.heure_fin;
+                  const key = normalizedDay + '_' + timeSlot;
+                  scheduleMap[key] = p;
+                }
+              });
+              
+              // Generate PDF using jsPDF with native drawing
+              const doc = new window.jspdf.jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+              });
+              
+              // Set up initial position and margins for landscape
+              let yPosition = 20; // Start 20mm from top
+              const pageHeight = 210; // A4 page height in landscape mm
+              const pageWidth = 297; // A4 page width in landscape mm
+              const leftMargin = 15;
+              const rightMargin = 15;
+              const contentWidth = pageWidth - leftMargin - rightMargin; // A4 width minus margins
+              
+              // Add title
+              doc.setFontSize(20);
+              doc.text('Emploi du Temps', pageWidth/2, yPosition, { align: 'center' });
+              yPosition += 15;
+              
+              // Add timetable details
+              doc.setFontSize(12);
+              doc.setFont(undefined, 'bold');
+              doc.text(`Label:`, leftMargin, yPosition);
+              doc.setFont(undefined, 'normal');
+              doc.text(`{{ timetable.label }}`, leftMargin + 25, yPosition);
+              yPosition += 7;
+              
+              doc.setFont(undefined, 'bold');
+              doc.text(`Groupe:`, leftMargin, yPosition);
+              doc.setFont(undefined, 'normal');
+              doc.text(`{{ timetable.groupe.nom }}`, leftMargin + 25, yPosition);
+              yPosition += 7;
+              
+              doc.setFont(undefined, 'bold');
+              doc.text(`Classe:`, leftMargin, yPosition);
+              doc.setFont(undefined, 'normal');
+              doc.text(`{{ timetable.groupe.classe.nom }}`, leftMargin + 25, yPosition);
+              yPosition += 7;
+              
+              doc.setFont(undefined, 'bold');
+              doc.text(`Semestre:`, leftMargin, yPosition);
+              doc.setFont(undefined, 'normal');
+              doc.text(`{{ timetable.semestre }}`, leftMargin + 25, yPosition);
+              yPosition += 7;
+              
+              {% if timetable.description %}
+              doc.setFont(undefined, 'bold');
+              doc.text(`Description:`, leftMargin, yPosition);
+              doc.setFont(undefined, 'normal');
+              doc.text(`{{ timetable.description }}`, leftMargin + 25, yPosition);
+              yPosition += 7;
+              {% endif %}
+              
+              yPosition += 10; // Add some space before the table
+              
+              // Define table headers (time slots) and row headers (days)
+              const days = orderedDays;
+              if (data.length === 0 || days.length === 0) {
+                // No sessions
+                doc.setFontSize(12);
+                doc.text('Aucune séance de cours programmée', pageWidth/2, yPosition, { align: 'center' });
+                yPosition += 10;
+                
+                // Add footer
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Impression générée le ${new Date().toLocaleString('fr-FR')}`, pageWidth/2, pageHeight - 10, { align: 'center' });
+                
+                // Save the PDF with a smaller file size
+                doc.save(`Emploi_du_temps-${document.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                
+                // Restore button
+                $('#printTimetableBtn').html(originalBtnText);
+                $('#printTimetableBtn').prop('disabled', false);
+                return; // Exit early
+              }
+              
+              // Calculate column widths based on number of time slots
+              const headerCols = 1; // One column for days
+              const numCols = timeSlots.length + headerCols; // Additional columns for each time slot
+              const colWidth = contentWidth / numCols;
+              
+              // Draw table header with time slots
+              doc.setFillColor(242, 242, 242); // Light gray background for header
+              doc.rect(leftMargin, yPosition, colWidth, 10, 'F'); // Day header column
+              doc.setFont(undefined, 'bold');
+              doc.setFontSize(10);
+              doc.text('Jours', leftMargin + colWidth/2, yPosition + 6, { align: 'center' });
+              
+              // Draw time slot headers
+              for (let i = 0; i < timeSlots.length; i++) {
+                const x = leftMargin + (i + 1) * colWidth;
+                doc.rect(x, yPosition, colWidth, 10, 'F');
+                doc.text(timeSlots[i], x + colWidth/2, yPosition + 6, { align: 'center' });
+              }
+              
+              // Draw borders
+              for (let i = 0; i <= numCols; i++) {
+                const x = leftMargin + i * colWidth;
+                doc.line(x, yPosition, x, yPosition + 10); // Vertical lines
+              }
+              doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
+              doc.line(leftMargin, yPosition + 10, leftMargin + contentWidth, yPosition + 10); // Bottom horizontal line
+              
+              yPosition += 10;
+              
+              // Add table rows for each day
+              doc.setFont(undefined, 'normal');
+              doc.setFontSize(9);
+              
+              // Process each day as a row
+              if(days.length > 0){
+                $.each(days, function(index, day){
+                  // Check if we need a new page
+                  if(yPosition > 180) { // Leave margin at bottom of landscape page
+                    doc.addPage('landscape', 'a4'); // Ensure new pages are also landscape
+                    yPosition = 20; // Reset position on new page
+                    
+                    // Add title and basic info again on new page if needed
+                    doc.setFontSize(20);
+                    doc.text('Emploi du Temps (suite)', pageWidth/2, yPosition, { align: 'center' });
+                    yPosition += 10;
+                    
+                    // Draw table header again on new page
+                    doc.setFillColor(242, 242, 242); // Light gray background for header
+                    doc.rect(leftMargin, yPosition, colWidth, 10, 'F'); // Day header column
+                    doc.setFont(undefined, 'bold');
+                    doc.setFontSize(10);
+                    doc.text('Jours', leftMargin + colWidth/2, yPosition + 6, { align: 'center' });
+                    
+                    // Draw time slot headers
+                    for (let i = 0; i < timeSlots.length; i++) {
+                      const x = leftMargin + (i + 1) * colWidth;
+                      doc.rect(x, yPosition, colWidth, 10, 'F');
+                      doc.text(timeSlots[i], x + colWidth/2, yPosition + 6, { align: 'center' });
+                    }
+                    
+                    // Draw borders
+                    for (let i = 0; i <= numCols; i++) {
+                      const x = leftMargin + i * colWidth;
+                      doc.line(x, yPosition, x, yPosition + 10); // Vertical lines
+                    }
+                    doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
+                    doc.line(leftMargin, yPosition + 10, leftMargin + contentWidth, yPosition + 10); // Bottom horizontal line
+                    
+                    yPosition += 10;
+                    doc.setFont(undefined, 'normal');
+                    doc.setFontSize(9);
+                  }
+                  
+                  // Set row height based on content
+                  const rowHeight = 15;
+                  
+                  // Draw row background (alternating)
+                  if(index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255); // White background
+                  } else {
+                    doc.setFillColor(249, 249, 249); // Light gray for alternating rows
+                  }
+                  doc.rect(leftMargin, yPosition, contentWidth, rowHeight, 'F');
+                  
+                  // Draw vertical lines for columns
+                  for (let i = 0; i <= numCols; i++) {
+                    const x = leftMargin + i * colWidth;
+                    doc.line(x, yPosition, x, yPosition + rowHeight);
+                  }
+                  
+                  // Draw horizontal line
+                  doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition);
+                  doc.line(leftMargin, yPosition + rowHeight, leftMargin + contentWidth, yPosition + rowHeight);
+                  
+                  // Add day name in the first column
+                  doc.text(day, leftMargin + 2, yPosition + 9);
+                  
+                  // Add course info for each time slot in this day
+                  for (let j = 0; j < timeSlots.length; j++) {
+                    const timeSlot = timeSlots[j];
+                    const key = day + '_' + timeSlot;
+                    const x = leftMargin + (j + 1) * colWidth + 2;
+                    
+                    if (scheduleMap[key]) {
+                      const course = scheduleMap[key];
+                      // Limit text length to fit in cell
+                      const courseCode = course.cours__code ? course.cours__code.substring(0, 10) : '';
+                      const courseLabel = course.cours__label ? course.cours__label.substring(0, 15) : '';
+                      const teacher = course.formateur__nom ? 
+                        (course.formateur__prenom ? 
+                          `${course.formateur__nom} ${course.formateur__prenom.substring(0, 1)}.` : 
+                          course.formateur__nom) 
+                        : '';
+                      const room = course.salle__nom ? course.salle__nom.substring(0, 8) : '';
+                      
+                      const cellText = `${courseCode}-${courseLabel}\n${teacher}\n${room}`;
+                      doc.text(cellText, x, yPosition + 4);
+                    }
+                  }
+                  
+                  // Move to next row
+                  yPosition += rowHeight;
+                });
+              } else {
+                // No sessions row
+                const rowHeight = 15;
+                
+                // Draw empty row background
+                doc.setFillColor(255, 255, 255);
+                doc.rect(leftMargin, yPosition, contentWidth, rowHeight, 'F');
+                
+                // Draw borders
+                for (let i = 0; i <= numCols; i++) {
+                  const x = leftMargin + i * colWidth;
+                  doc.line(x, yPosition, x, yPosition + rowHeight); // Vertical lines
+                }
+                doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
+                doc.line(leftMargin, yPosition + rowHeight, leftMargin + contentWidth, yPosition + rowHeight); // Bottom horizontal line
+                
+                // Add "No sessions" text centered in the first cell
+                doc.text('Aucune séance', leftMargin + colWidth/2, yPosition + 7, { align: 'center' });
+                
+                yPosition += rowHeight;
+              }
+              
+              // Add footer
+              doc.setFontSize(8);
+              doc.setFont(undefined, 'normal');
+              doc.text(`Impression générée le ${new Date().toLocaleString('fr-FR')}`, pageWidth/2, pageHeight - 10, { align: 'center' });
+              
+              // Save the PDF with a smaller file size
+              doc.save(`Emploi_du_temps-${document.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+              
+              // Restore button
+              $('#printTimetableBtn').html(originalBtnText);
+              $('#printTimetableBtn').prop('disabled', false);
+            },
+            error: function(xhr, status, error) {
+              console.error('Error loading timetable data:', error);
+              alert('Une erreur est survenue lors du chargement des données de l\'emploi du temps.');
+              
+              // Restore button
+              $('#printTimetableBtn').html(originalBtnText);
+              $('#printTimetableBtn').prop('disabled', false);
+            }
+          });
+        })
+        .catch(error => {
+          console.error('Error loading PDF libraries:', error);
+          alert('Une erreur est survenue lors du chargement des bibliothèques nécessaires. Veuillez réessayer.');
+          
+          // Restore button
+          $('#printTimetableBtn').html(originalBtnText);
+          $('#printTimetableBtn').prop('disabled', false);
+        });
     });
 
 
