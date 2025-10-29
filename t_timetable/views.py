@@ -233,6 +233,21 @@ def ApiLoadTableEntry(request):
     historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code','timetable__is_validated')
     return JsonResponse(list(historique), safe=False)
 
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteCoursSession(request):
+    if request.method == "POST":
+        cours = request.POST.get('id')
+        if not cours:
+            return JsonResponse({"status":"error",'message':"Informations manquantes"})
+
+        obj = TimetableEntry.objects.get(id = cours)
+        obj.delete()
+        return JsonResponse({'status':"success",'message':"suppréssion effectuer avec succès"})
+    else:
+        return JsonResponse({"status":"error","message":"Méthode non autoriser."})
+
 ### FONCTION PERMETANT DE CONFIGURER LE MODELE DE CRENEAU ###
 @login_required(login_url="institut_app:login")
 def timetable_configure(request, pk):
@@ -410,6 +425,37 @@ def CheckAssignedCours(timetable, teacher, cours):
         cours__code = cours
     ).exists()
 
+def checkAssignedSameHoraire(jour,heure_debut,heure_fin,timetable):
+    return TimetableEntry.objects.filter(
+        heure_debut = heure_debut,
+        heure_fin = heure_fin,
+        jour = jour,
+        timetable_id = timetable,
+    ).exists()
+
+@login_required(login_url="insitut_app:login")
+def get_formateur_dispo_status(request):
+    formateur_id = request.GET.get('teacherId')
+    formateur = Formateurs.objects.get(id=formateur_id)
+    disponibilites = formateur.dispo.get("disponibilites", [])
+
+    result = []
+    for dispo in disponibilites:
+        jour = dispo.get("jour")
+        heure_debut = dispo.get("heure_debut")
+        heure_fin = dispo.get("heure_fin")
+ 
+        is_taken = TimetableEntry.objects.filter(
+            formateur_id=formateur_id,
+            jour=jour,
+            heure_debut__lt=heure_fin,
+            heure_fin__gt=heure_debut
+        ).exists()
+
+        result.append({"jour": jour, "heure_debut": heure_debut,"heure_fin": heure_fin,"status": "prise" if is_taken else "libre"})
+
+    return JsonResponse({'result' : result})
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def save_session(request):
@@ -422,11 +468,10 @@ def save_session(request):
     session_salle = request.POST.get('session_salle')
     timetable = request.POST.get('pk')
 
-    # Vérifie disponibilité du formateur selon les emplois du temps existants
+
     if checkFormateurDispo(session_professeur, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "Le formateur est déjà pris sur cette plage horaire."})
 
-    # Vérifie si le formateur est disponible selon ses disponibilités enregistrées
     is_available, availability_message = checkFormateurDispoByStoredAvailability(session_professeur, session_jour, heure_debut, heure_fin)
     if not is_available:
         return JsonResponse({"status": "error", "message": availability_message})
@@ -436,6 +481,9 @@ def save_session(request):
     
     if CheckAssignedCours(timetable, session_professeur, session_module):
         return JsonResponse({"status": "error", "message": "Le module a été déja affecter a un autre formateur"})
+    
+    if checkAssignedSameHoraire(session_jour,heure_debut,heure_fin,timetable):
+        return JsonResponse({"status":"error","message": "Une séance est déjà programmée pour le même créneau horaire"})
     
     TimetableEntry.objects.create(
         timetable_id = timetable,

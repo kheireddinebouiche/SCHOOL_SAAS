@@ -24,7 +24,7 @@ urlpatterns = [
     path('ApiClotureTimeTable', ApiClotureTimeTable, name="ApiClotureTimeTable"),
     path('ApiActivateTimeTable', ApiActivateTimeTable, name="ApiActivateTimeTable"),
     path('ApiDeleteTimeTable', ApiDeleteTimeTable, name="ApiDeleteTimeTable"),
-   
+    path('ApiDeleteCoursSession',ApiDeleteCoursSession, name="ApiDeleteCoursSession"),
 
     ### SALLES DE COURS ###
     path('classroom/liste/',ListeDesSalles, name="ListeDesSalles"),
@@ -44,6 +44,7 @@ urlpatterns = [
 
     ### FILTRAGE ###
     path('FilterFormateur', FilterFormateur, name="FilterFormateur"),
+    path('get_formateur_dispo_status', get_formateur_dispo_status, name="get_formateur_dispo_status"),
     path('modules/affectations/', PageAffectation, name="PageAffectation"),
     path('LoadAssignedProf', LoadAssignedProf, name="LoadAssignedProf"),
     path('ApiLoadModules', ApiLoadModules, name="ApiLoadModules"),
