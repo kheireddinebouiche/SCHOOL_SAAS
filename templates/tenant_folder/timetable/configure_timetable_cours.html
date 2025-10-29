@@ -159,8 +159,8 @@
                 </div>
                 <div class="col-md-3">
                   <div class="info-item">
-                    <label class="form-label fw-bold text-muted">Classe:</label>
-                    <p class="mb-0">{{ timetable.groupe.classe.nom }}</p>
+                    <label class="form-label fw-bold text-muted">Spécialité:</label>
+                    <p class="mb-0">{{ timetable.groupe.specialite.label }}</p>
                   </div>
                 </div>
                 <div class="col-md-3">
@@ -293,7 +293,7 @@
                               <tr>
                                 <th class="text-center" style="width: 30%;">Jour</th>
                                 <th class="text-center" style="width: 40%;">Disponibilité</th>
-                                <th class="text-center" style="width: 30%;">Créneaux libres</th>
+                                <th class="text-center" style="width: 30%;">Affectation</th>
                               </tr>
                             </thead>
                             <tbody id="teacherWorkload">
@@ -302,6 +302,12 @@
                               </tr>
                             </tbody>
                           </table>
+                          <div id="teacherAvailabilityLoader" class="d-none text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                              <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <small class="text-muted ms-2">Chargement des disponibilités...</small>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -813,7 +819,11 @@
     });
 
     // Function to load teacher availability information
-    function loadTeacherAvailability(teacherId) {  
+    function loadTeacherAvailability(teacherId) {
+      // Show loading indicator
+      $('#teacherAvailabilityLoader').removeClass('d-none');
+      $('#teacherWorkload').addClass('d-none');
+      
       $.ajax({
         url : "{% url 't_timetable:get_formateur_dispo_status' %}",
         dataType:"JSON",
@@ -827,15 +837,25 @@
               html += '<tr>';
                 html += '<td class="text-left"><i class="ri-calendar-2-line me-1"></i>'+p.jour+'</td>';
                 html += '<td class="text-left"><i class="ri-timer-line me-1"></i>'+p.heure_debut+' - '+p.heure_fin+'</td>';
-                html += '<td class="text-left" style="color:green;"><i class="ri-timer-line me-1"></i>';
+                html += '<td class="text-left" style="color:green;"><i class="ri-timer-line me-1"></i>'; 
                   $.each(p.libre, function(index, t){
-                    html +=''+t.heure_debut+'-'+t.heure_fin+'';
+                    html += t.heure_debut+'-'+t.heure_fin;
+                    if(index < p.libre.length - 1) html += ', '; // Add comma between time slots
                   });
                 html+= '</td>';
               html += '</tr>';
             });
             $('#teacherWorkload').html(html || '<tr><td colspan="3" class="text-center text-muted">Aucun</td></tr>');
         },
+        error: function(xhr, status, error) {
+          // Display error if needed
+          $('#teacherWorkload').html('<tr><td colspan="3" class="text-center text-danger">Erreur de chargement</td></tr>');
+        },
+        complete: function() {
+          // Hide loading indicator and show table
+          $('#teacherAvailabilityLoader').addClass('d-none');
+          $('#teacherWorkload').removeClass('d-none');
+        }
       });
       
       $('#teacherScheduledSessions').text('3 séances cette semaine');

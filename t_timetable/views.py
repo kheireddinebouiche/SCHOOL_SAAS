@@ -454,7 +454,8 @@ def get_formateur_dispo_status(request):
             formateur_id=formateur_id,
             jour=jour,
             heure_fin__gt=h_debut,
-            heure_debut__lt=h_fin
+            heure_debut__lt=h_fin,
+            timetable__status = "enc",
         ).order_by("heure_debut")
 
        
