@@ -438,23 +438,52 @@ def get_formateur_dispo_status(request):
     formateur_id = request.GET.get('teacherId')
     formateur = Formateurs.objects.get(id=formateur_id)
     disponibilites = formateur.dispo.get("disponibilites", [])
-
     result = []
+
     for dispo in disponibilites:
         jour = dispo.get("jour")
         heure_debut = dispo.get("heure_debut")
         heure_fin = dispo.get("heure_fin")
- 
-        is_taken = TimetableEntry.objects.filter(
+
+        ## dispo du formateur
+        h_debut = datetime.strptime(heure_debut, "%H:%M").time()
+        h_fin = datetime.strptime(heure_fin, "%H:%M").time()
+
+        ## calcule des heures non dispo
+        taken_entries = TimetableEntry.objects.filter(
             formateur_id=formateur_id,
             jour=jour,
-            heure_debut__lt=heure_fin,
-            heure_fin__gt=heure_debut
-        ).exists()
+            heure_fin__gt=h_debut,
+            heure_debut__lt=h_fin
+        ).order_by("heure_debut")
 
-        result.append({"jour": jour, "heure_debut": heure_debut,"heure_fin": heure_fin,"status": "prise" if is_taken else "libre"})
+       
+        libres = []
+        current_start = h_debut
 
-    return JsonResponse({'result' : result})
+        for entry in taken_entries:
+            if entry.heure_debut > current_start:
+                libres.append({
+                    "heure_debut": current_start.strftime("%H:%M"),
+                    "heure_fin": entry.heure_debut.strftime("%H:%M")
+                })
+            current_start = max(current_start, entry.heure_fin)
+
+        
+        if current_start < h_fin:
+            libres.append({
+                "heure_debut": current_start.strftime("%H:%M"),
+                "heure_fin": h_fin.strftime("%H:%M")
+            })
+
+        result.append({
+            "jour": jour,
+            "heure_debut": heure_debut,
+            "heure_fin": heure_fin,
+            "libre": libres
+        })
+
+    return JsonResponse({"result":result})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
