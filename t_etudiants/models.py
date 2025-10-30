@@ -50,6 +50,7 @@ class RegistrePresence(models.Model):
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
     context = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')])
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -104,4 +105,15 @@ class HistoriqueAbsence(models.Model):
 
         self.save()
 
+class SuiviCours(models.Model):
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_suivie_cours")
+    date_seance = models.DateField(null=True, blank=True)
+    is_done = models.BooleanField(null=True, blank=True)
 
+    ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.module.code

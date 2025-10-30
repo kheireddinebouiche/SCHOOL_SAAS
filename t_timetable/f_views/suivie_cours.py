@@ -7,12 +7,13 @@ from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from t_groupe.models import *
+from t_etudiants.models import *
 
 
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
-    seances = TimetableEntry.objects.filter(timetable__status = "enc")
+    seances = LigneRegistrePresence.objects.filter()
     groupes = Groupe.objects.all()
 
     context = {
