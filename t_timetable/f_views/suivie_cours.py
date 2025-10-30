@@ -12,8 +12,9 @@ from t_groupe.models import *
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
-    seances = TimetableEntry.objects.all()
+    seances = TimetableEntry.objects.filter(timetable__status = "enc")
     groupes = Groupe.objects.all()
+
     context = {
         'seances' : seances,
         'groupes' : groupes,

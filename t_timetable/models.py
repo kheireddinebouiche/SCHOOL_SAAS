@@ -4,6 +4,7 @@ from django.urls import reverse
 from datetime import datetime
 from t_groupe.models import *
 from t_formations.models import Modules
+from t_etudiants.models import RegistrePresence
 
 class Timetable(models.Model):
     
@@ -132,8 +133,8 @@ class SuiviCours(models.Model):
     date_seance = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(null=True, blank=True)
 
-    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, null=True, blank=True)
-
+    registre = models.ForeignKey(RegistrePresence, on_delete=models.CASCADE, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

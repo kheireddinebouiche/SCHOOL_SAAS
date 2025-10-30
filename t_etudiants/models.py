@@ -50,6 +50,7 @@ class RegistrePresence(models.Model):
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
     context = models.CharField(max_length=100, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -66,7 +67,6 @@ class LigneRegistrePresence(models.Model):
     def __str__(self):
         return f"{self.module.label} - {self.teacher.nom}"
     
-
 class HistoriqueAbsence(models.Model):
     ligne_presence = models.ForeignKey("LigneRegistrePresence", on_delete=models.CASCADE, null=True, blank=True)
     etudiant = models.ForeignKey(Prospets, null=True, blank=True, on_delete=models.CASCADE)
