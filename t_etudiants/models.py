@@ -57,7 +57,7 @@ class RegistrePresence(models.Model):
         return self.label
     
 class LigneRegistrePresence(models.Model):
-    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_presence")
     teacher = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
     type = models.CharField(max_length=100, null=True, blank=True)
     room = models.CharField(max_length=100, null=True, blank=True)
@@ -103,4 +103,5 @@ class HistoriqueAbsence(models.Model):
             self.historique.append({"date": date_str,"data": [new_entry]})
 
         self.save()
+
 

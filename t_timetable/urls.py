@@ -4,6 +4,7 @@ from .views import *
 from.f_views.salles import *
 from .f_views.crenaux import *
 from .f_views.affectation_modules import *
+from .f_views.suivie_cours import *
 
 app_name="t_timetable"
 
@@ -51,5 +52,7 @@ urlpatterns = [
     path('ApiAffectTrainer', ApiAffectTrainer, name="ApiAffectTrainer"),
     path('ApiGetAffectations', ApiGetAffectations, name="ApiGetAffectations"),
     path('ApiDeaffectTrainer',ApiDeaffectTrainer, name="ApiDeaffectTrainer"),
+
+    path('suivie-cours/', PageSuivieCours, name="PageSuivieCours"),
 
 ]

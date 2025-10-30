@@ -126,3 +126,16 @@ class EditionLock(models.Model):
 
     def __str__(self):
         return self.user.username
+    
+class SuiviCours(models.Model):
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_suivie_cours")
+    date_seance = models.DateField(null=True, blank=True)
+    is_done = models.BooleanField(null=True, blank=True)
+
+    timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.module.code
