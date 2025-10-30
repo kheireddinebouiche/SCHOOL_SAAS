@@ -69,7 +69,7 @@ class LigneRegistrePresence(models.Model):
         return f"{self.module.label} - {self.teacher.nom}"
     
 class HistoriqueAbsence(models.Model):
-    ligne_presence = models.ForeignKey("LigneRegistrePresence", on_delete=models.CASCADE, null=True, blank=True)
+    ligne_presence = models.ForeignKey("LigneRegistrePresence", on_delete=models.CASCADE, null=True, blank=True, related_name="historique_absence")
     etudiant = models.ForeignKey(Prospets, null=True, blank=True, on_delete=models.CASCADE)
     historique = models.JSONField(default=list, blank=True, null=True)
     
@@ -110,7 +110,7 @@ class SuiviCours(models.Model):
     date_seance = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(null=True, blank=True)
 
-    ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True)
+    ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True, related_name="seance_module")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
