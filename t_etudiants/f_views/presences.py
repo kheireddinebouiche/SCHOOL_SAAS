@@ -120,6 +120,15 @@ def ApiAjouterHistoriqueAbsence(request):
             ligne = LigneRegistrePresence.objects.get(id=ligne_id)
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
 
+            SuiviCours.objects.update_or_create(
+                is_done = True,
+                ligne_presence_id = ligne_id,
+                defaults={
+                    'module' : ligne.module,
+                    'date_seance' : date_obj,
+                }
+            )
+
             for record in records:
                 student_id = record.get("student_id")
                 status = record.get("status", "P")
@@ -131,10 +140,10 @@ def ApiAjouterHistoriqueAbsence(request):
                 )
 
                 module_label = ligne.module.label if ligne.module else "N/A"
-                heure = ligne.hours.strftime("%H") if ligne.hours else "00"
+               
 
                 # Appel de la méthode du modèle
-                historique.ajouter_entree(date_obj, module_label, heure, status)
+                historique.ajouter_entree(date_obj, module_label, status)
 
             return JsonResponse({"status": "success", "message": "Historique mis à jour avec succès"})
         

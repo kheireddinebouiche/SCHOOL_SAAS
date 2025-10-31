@@ -239,25 +239,15 @@
                     <label class="form-label text-muted">Code du Module</label>
                     <h6 class="mb-0">{{ligne_presence.module.code}}</h6>
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Type de Cours</label>
-                    <h6 class="mb-0">
-                      <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">Cours</span>
-                    </h6>
-                  </div>
                 </div>
                 <div class="col-md-6">
                   <div class="mb-3">
                     <label class="form-label text-muted">Enseignant</label>
-                    <h6 class="mb-0">Prof. Martin Dubois</h6>
+                    <h6 class="mb-0">{{ligne_presence.teacher.nom}} {{ligne_presence.teacher.prenom}}</h6>
                   </div>
                   <div class="mb-3">
                     <label class="form-label text-muted">Groupe</label>
-                    <h6 class="mb-0">Groupe A - L3 Informatique</h6>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Crédits</label>
-                    <h6 class="mb-0">6 ECTS</h6>
+                    <h6 class="mb-0">{{ligne_presence.registre.groupe.nom}}</h6>
                   </div>
                 </div>
               </div>
@@ -465,7 +455,6 @@
                         <th class="border-0 rounded-start">Date</th>
                         <th class="border-0">Module</th>
                         <th class="border-0">Statut</th>
-                        <th class="border-0">Heure</th>
                         <th class="border-0">Raison</th>
                         <th class="border-0 rounded-end">Actions</th>
                       </tr>
@@ -539,14 +528,37 @@
               <label for="attendanceDateInput" class="form-label">Date de la Séance</label>
               <input type="date" class="form-control" id="attendanceDateInput" value="{{ now|date:"Y-m-d" }}">
             </div>
+            
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="sessionCompleted" role="switch" checked>
+              <label class="form-check-label fw-semibold text-muted" for="sessionCompleted">
+                Séance effectuée
+              </label>
+            </div>
+            
+            <div id="reasonSection" style="display: none;">
+              <div class="mb-3">
+                <label for="reasonInput" class="form-label">Raison</label>
+                <textarea class="form-control" id="reasonInput" rows="3" placeholder="Entrez la raison de l'annulation ou du report de la séance"></textarea>
+              </div>
+              
+              <div class="text-end">
+                <button type="button" class="btn btn-success px-4" id="validateSessionBtn">
+                  <i class="ri-check-line me-1"></i> Valider
+                </button>
+              </div>
+            </div>
+            
           </div>
         </div>
         
-        <div class="row mb-3">
-          <div class="col-12">
-            <div class="alert alert-info" role="alert">
-              <i class="ri-information-line me-2"></i>
-              <strong>Mode Absence:</strong> Cochez uniquement les étudiants absents. Les étudiants non cochés seront considérés comme présents.
+        <div id="attendanceContent">
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="alert alert-info" role="alert">
+                <i class="ri-information-line me-2"></i>
+                <strong>Mode Absence:</strong> Cochez uniquement les étudiants absents. Les étudiants non cochés seront considérés comme présents.
+              </div>
             </div>
           </div>
         </div>
@@ -738,7 +750,7 @@
               <td>${entry.date}</td>
               <td>${item.module}</td>
               <td>${item.etat === 'P' ? '<span class="badge bg-success" >Présent</span>' : item.etat === 'A' ? '<span class="badge bg-danger" >Absent</span>' : item.etat}</td>
-              <td>${item.heure}h</td>
+             
               <td>
                 <span class="reason-text">${reason}</span>
               </td>
@@ -1328,6 +1340,40 @@
    
     $(document).on('click', '#exportAttendanceBtn', function() {
       alert('Export Excel des présences bientôt disponible');
+    });
+    
+    // Handle session completed checkbox
+    $(document).on('change', '#sessionCompleted', function() {
+      if ($(this).is(':checked')) {
+        // If session is marked as completed, show attendance content and hide reason section
+        $('#reasonSection').hide();
+        $('#attendanceContent').show();
+        $('#saveAttendanceBtnModal').show(); // Show the save button
+      } else {
+        // If session is not completed, hide attendance content and show reason section
+        $('#attendanceContent').hide();
+        $('#reasonSection').show();
+        $('#saveAttendanceBtnModal').hide(); // Hide the save button since session isn't happening
+      }
+    });
+    
+    // Initialize the checkbox state on modal show
+    $('#takeAttendanceModal').on('shown.bs.modal', function() {
+      // Check the initial state of the checkbox and update UI accordingly
+      if ($('#sessionCompleted').is(':checked')) {
+        $('#reasonSection').hide();
+        $('#attendanceContent').show();
+        $('#saveAttendanceBtnModal').show();
+      } else {
+        $('#attendanceContent').hide();
+        $('#reasonSection').show();
+        $('#saveAttendanceBtnModal').hide();
+      }
+    });
+
+    $(document).on('click','#validateSessionBtn', function(){
+       var is_complete = $('#sessionCompleted').is(':checked');
+      console.log(is_complete);
     });
   });
 </script>

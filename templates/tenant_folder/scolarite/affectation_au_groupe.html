@@ -483,6 +483,37 @@
     </div>
 </div>
 
+<!-- Modal for confirmation of cancellation of assignment -->
+<div class="modal fade" id="confirmCancelAssignmentModal" tabindex="-1" aria-labelledby="confirmCancelAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rounded-3 shadow-lg border-0">
+            <div class="modal-header bg-danger bg-opacity-10 px-4 py-3 border-0">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-2 p-2 me-3">
+                        <i class="ri-alert-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-0" id="confirmCancelAssignmentModalLabel">Confirmer l'annulation</h5>
+                        <p class="text-muted small mb-0 fs-6">Êtes-vous sûr de vouloir annuler l'affectation ?</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-0">Cette action annulera l'affectation du groupe pour l'étudiant sélectionné. Voulez-vous continuer ?</p>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-center">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-danger px-4 py-2" id="confirmCancelAssignmentBtn">
+                    <i class="ri-check-line me-1"></i>Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
         // Load initial data
@@ -670,7 +701,7 @@
                                 '<li><a class="dropdown-item" href="#" onclick="openGroupAssignmentModal(\'' + student.id + '\', \'' + student.nom + ' ' + student.prenom + '\')"><i class="ri-group-line align-bottom me-2 text-muted"></i> Affecter au groupe</a></li>'+
                                 '<li><a class="dropdown-item" href="#"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Voir détails</a></li>'+
                                 '<li><hr class="dropdown-divider"></li>'+
-                                '<li><a class="dropdown-item text-danger" href="#"><i class="ri-delete-bin-line align-bottom me-2 text-muted"></i> Désaffecter</a></li>'+
+                                '<li><a data-id='+student.id+' id="annulerAffectationBtn" class="dropdown-item text-danger" href="#"><i class="ri-delete-bin-line align-bottom me-2 text-muted"></i> Annuler l\'affecation</a></li>'+
                                 '</ul>'+
                                 '</div>';
                             html += '<td class="text-center">' + actions + '</td>';
@@ -690,7 +721,49 @@
 
         loadStudents();
         
-        
+        $(document).on('click','#annulerAffectationBtn',function(){
+            var studentId = $(this).data('id');
+            $('#confirmCancelAssignmentBtn').data('id', studentId);
+            $('#confirmCancelAssignmentModal').modal('show');
+        });
+
+        $(document).on('click','#confirmCancelAssignmentBtn', function(){
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+            var studentId = $(this).data('id');
+            $.ajax({
+                url : "{% url 't_groupe:ApiCancelStudentAffectation' %}",
+                dataType : "JSON",
+                type : "GET",
+                data : {
+                    'studentId':studentId,
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success(response.message);
+                        loadStudents();
+                        loadGroups();
+                        $('#confirmCancelAssignmentModal').modal('hide');
+                    }else{ 
+                        alertify.error(response.message);
+                    }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
+
+            });
+        });
+
         // Apply table filter
         function applyTableFilter() {
             var searchTerm = $('#student-table-filter').val().toLowerCase();
@@ -831,8 +904,6 @@
             var studentId = $('#studentId').val();
             var groupId = $('#groupSelect').val();
             
-           
-
             if (groupId) {
                 var btn = $(this); // référence du bouton
                 btn.prop('disabled', true); // désactive le bouton
@@ -854,20 +925,20 @@
                     },
                     success : function(response){
                         if(response.status === "success"){
-                            // Refresh the table to show the changes
-                            applyTableFilter();
                             
                             // Close modal
                             $('#groupAssignmentModal').modal('hide');
                             
                             // Show success message
                             alertify.success('Étudiant affecté au groupe avec succès!');
+                            loadStudents();
+                            loadGroups();
                         }else{
                             alertify.error("Une erreur c'est produite lors du traitement de la requete");
 
                         }
                     },
-                     complete: function() {
+                    complete: function() {
                         // Réactiver le bouton et restaurer son texte après la requête
                         btn.prop('disabled', false);
                         btn.html(originalText);

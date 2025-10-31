@@ -79,7 +79,7 @@ class HistoriqueAbsence(models.Model):
     def __str__(self):
         return f"{self.etudiant.nom} - {self.ligne_presence.module.label}" if self.etudiant and self.ligne_presence else "Historique Absence"
 
-    def ajouter_entree(self, date, module, heure, etat):
+    def ajouter_entree(self, date, module, etat):
         """Ajoute ou met à jour une entrée dans le champ JSON"""
         if not date:
             date = timezone.now().date()
@@ -89,7 +89,7 @@ class HistoriqueAbsence(models.Model):
         if self.historique is None:
             self.historique = []
 
-        new_entry = {"module": module, "heure": heure, "etat": etat}
+        new_entry = {"module": module, "etat": etat}
 
         # Cherche si cette date existe déjà
         existing_date = next((item for item in self.historique if item["date"] == date_str), None)
@@ -109,7 +109,7 @@ class SuiviCours(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_suivie_cours")
     date_seance = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(null=True, blank=True)
-
+    observation = models.CharField(max_length=100, null=True, blank=True)
     ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True, related_name="seance_module")
     
     created_at = models.DateTimeField(auto_now_add=True)

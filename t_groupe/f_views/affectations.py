@@ -110,19 +110,45 @@ def ApiGetSpecialiteDatas(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiAffectStudentToGroupe(request):
-    studentId = request.POST.get('studentId')
-    groupId = request.POST.get('groupId')
+    if request.method == "POST":
+        studentId = request.POST.get('studentId')
+        groupId = request.POST.get('groupId')
 
+        if not studentId and not groupId:
+            return JsonResponse({"status":"error",'message':'Informations manquantes'})
 
-    GroupeLine.objects.create(
-        student_id = studentId,
-        groupe_id = groupId,
+        GroupeLine.objects.update_or_create(
+            student_id = studentId,
+            defaults={
+                'groupe_id' : groupId
+            }
+            )
 
-    )
+        prospect = Prospets.objects.get(id = studentId)
+        prospect.is_affected = True
+        prospect.save()
 
-    prospect = Prospets.objects.get(id = studentId)
-    prospect.is_affected = True
-    prospect.save()
+        return JsonResponse({"status":  "success"})
+    else:
+        return JsonResponse({"status" : "error", 'message':"Méthode non autoriser"})
+    
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiCancelStudentAffectation(request):
+    if request.method == "GET":
+        studentId = request.GET.get('studentId')
 
-    return JsonResponse({"status":  "success"})
+        if not studentId:
+            return JsonResponse({"status":"error","message":"Informations manquante"})
+        
+        obj = GroupeLine.objects.get(student_id = studentId)
+        obj.delete()
+
+        pros = Prospets.objects.get(id = studentId)
+        pros.is_affected = False
+        pros.save()
+
+        return JsonResponse({"status":"success","message":"L'affectation à été annuler avec succès"})
+    else:
+        return JsonResponse({"status":"error","message":"Methode non autoriser"})
