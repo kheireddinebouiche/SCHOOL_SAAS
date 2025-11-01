@@ -1372,8 +1372,30 @@
     });
 
     $(document).on('click','#validateSessionBtn', function(){
-       var is_complete = $('#sessionCompleted').is(':checked');
-      console.log(is_complete);
+      var is_complete = $('#sessionCompleted').is(':checked');
+      var reason = $('#reasonInput').val();
+      var date = $('#attendanceDateInput').val();
+      const lignePresenceId = "{{pk}}";
+       $.ajax({
+        url : '{% url "t_timetable:ApiAddSeance" %}',
+        dataType: "JSON",
+        type: "POST",
+        data : {
+          'is_complete' : is_complete,
+          'reason': reason,
+          'lignePresenceId' : lignePresenceId,
+          'date':date,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if(response.status === "success"){
+            alertify.success(response.message);
+            $('#takeAttendanceModal').modal('hide');
+          }else{
+            alertify.error(response.message);
+          }
+        }
+       })
     });
   });
 </script>

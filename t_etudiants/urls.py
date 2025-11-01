@@ -25,6 +25,6 @@ urlpatterns = [
    path('details-liste-presence/<int:pk>/', DetailsListePresence, name="DetailsListePresence"),
    path('ApiAjouterHistoriqueAbsence', ApiAjouterHistoriqueAbsence, name="ApiAjouterHistoriqueAbsence"),
    path('ApiGetHistoriqueEtudiant/<int:pk>/<int:id_ligne>/', ApiGetHistoriqueEtudiant, name="ApiGetHistoriqueEtudiant"),
-
+   
    path('presences-des-etudiants/',ListeDesEtudiants, name="ListeDesEtudiants"),
 ]

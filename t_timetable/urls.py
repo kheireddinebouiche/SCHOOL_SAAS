@@ -54,5 +54,7 @@ urlpatterns = [
     path('ApiDeaffectTrainer',ApiDeaffectTrainer, name="ApiDeaffectTrainer"),
 
     path('suivie-cours/', PageSuivieCours, name="PageSuivieCours"),
+    path('ApiAddSeance',ApiAddSeance, name="ApiAddSeance"),
+    path('ApiHistoriqueCours', ApiHistoriqueCours, name="ApiHistoriqueCours"),
 
 ]

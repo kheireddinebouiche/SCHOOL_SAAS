@@ -29,4 +29,61 @@ def PageSuivieCours(request):
 
     return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html', context)
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAddSeance(request):
+    if request.method == "POST":
 
+        is_complete = request.POST.get('is_complete')
+        reason = request.POST.get('reason')
+        lignePresenceId = request.POST.get('lignePresenceId')
+        date = request.POST.get('date')
+
+        if not is_complete and not reason and not lignePresenceId and not date:
+            return JsonResponse({"status":"error",'message':"Informations manquantes"})
+        
+        obj = LigneRegistrePresence.objects.get(id = lignePresenceId)
+
+        SuiviCours.objects.update_or_create(
+            
+             module = obj.module,
+                date_seance = date,
+                ligne_presence_id = lignePresenceId,
+            defaults={
+               'is_done' : False,
+            'observation' : reason,
+            }
+        )
+        return JsonResponse({"status":"success", "message":"Informations enregistrer avec succès"})
+
+    else:
+        return JsonResponse({"status":"error",'message':"Methode non autoriser"})
+
+@login_required(login_url="institut_app:login")
+def ApiHistoriqueCours(request):
+    if request.method =="GET":
+        moduleId = request.GET.get('moduleId')
+        seanceLigne = request.GET.get('seanceLigne')
+
+        if not moduleId and not seanceLigne:
+            return JsonResponse({"status":"error",'message':"Informations manquantes"})
+        
+        liste = SuiviCours.objects.filter(
+            module_id=moduleId,
+            ligne_presence_id=seanceLigne
+        )
+
+        resultats = []
+        for item in liste:
+            resultats.append({
+                "id": item.id,
+                "date_seance": item.date_seance.strftime("%d/%m/%Y") if item.date_seance else None,
+                "is_done": item.is_done,
+                "observation": item.observation,
+                "nb_absents": item.nombre_absents(), 
+                "ligne_presence" : item.ligne_presence.id,
+            })
+
+        return JsonResponse(resultats, safe=False)
+    else:
+        return JsonResponse({"status":"error",'message':"Methode non autoriser"})
