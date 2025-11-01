@@ -68,10 +68,7 @@ def ApiHistoriqueCours(request):
         if not moduleId and not seanceLigne:
             return JsonResponse({"status":"error",'message':"Informations manquantes"})
         
-        liste = SuiviCours.objects.filter(
-            module_id=moduleId,
-            ligne_presence_id=seanceLigne
-        )
+        liste = SuiviCours.objects.filter(module_id=moduleId,ligne_presence_id=seanceLigne)
 
         resultats = []
         for item in liste:
@@ -84,6 +81,10 @@ def ApiHistoriqueCours(request):
                 "ligne_presence" : item.ligne_presence.id,
             })
 
-        return JsonResponse(resultats, safe=False)
+        data = {
+            'resultats' : resultats
+        }
+
+        return JsonResponse({"data" : data}, safe=False)
     else:
         return JsonResponse({"status":"error",'message':"Methode non autoriser"})
