@@ -59,46 +59,60 @@ def ApiAddSeance(request):
 
 @login_required(login_url="institut_app:login")
 def ApiHistoriqueCours(request):
-    if request.method =="GET":
+    if request.method == "GET":
         moduleId = request.GET.get('moduleId')
         seanceLigne = request.GET.get('seanceLigne')
 
-        if not moduleId and not seanceLigne:
-            return JsonResponse({"status":"error",'message':"Informations manquantes"})
-        
-        liste = SuiviCours.objects.filter(module_id=moduleId,ligne_presence_id=seanceLigne)
-        
-        module = LigneRegistrePresence.objects.filter(id=seanceLigne, module_id=moduleId).values('id','teacher__nom','teacher__prenom','registre__groupe__nom','registre__semestre','module__duree','module__label').first()
+        if not moduleId or not seanceLigne:
+            return JsonResponse({"status": "error", "message": "Informations manquantes"})
 
-        suivis_faits = SuiviCours.objects.filter(module_id=moduleId, is_done=True,ligne_presence_id=seanceLigne)
-        cours_total = SuiviCours.objects.filter(module_id=moduleId,ligne_presence_id=seanceLigne)
+        # Liste des suivis du module pour cette ligne
+        liste = SuiviCours.objects.filter(module_id=moduleId, ligne_presence_id=seanceLigne)
+
+        # Informations du module
+        module = LigneRegistrePresence.objects.filter(
+            id=seanceLigne,
+            module_id=moduleId
+        ).values(
+            'id',
+            'teacher__nom',
+            'teacher__prenom',
+            'registre__groupe__nom',
+            'registre__semestre',
+            'module__duree',
+            'module__label'
+        ).first()
+
+        # Suivis marqués comme effectués
+        suivis_faits = SuiviCours.objects.filter(module_id=moduleId, is_done=True, ligne_presence_id=seanceLigne)
+        cours_total = SuiviCours.objects.filter(module_id=moduleId, ligne_presence_id=seanceLigne)
+
+        # ✅ Récupération de toutes les entrées d’emploi du temps uniques pour ce module
+        entries = TimetableEntry.objects.filter(
+            cours_id=moduleId,
+            timetable__groupe__in=suivis_faits.values_list('ligne_presence__registre__groupe', flat=True)
+        ).distinct()
+
         total_duree = timedelta()
+        for entry in entries:
+            if entry.heure_debut and entry.heure_fin:
+                debut = datetime.combine(datetime.today(), entry.heure_debut)
+                fin = datetime.combine(datetime.today(), entry.heure_fin)
+                total_duree += (fin - debut)
 
-        for suivi in suivis_faits:
-            registre = getattr(suivi.ligne_presence, "registre", None)
-            if not registre or not registre.groupe:
-                continue
-
-            # Trouve les entrées du module dans le bon emploi du temps
-            entries = TimetableEntry.objects.filter(
-                timetable__groupe=registre.groupe,
-                cours_id=moduleId
-            )
-
-            for entry in entries:
-                if entry.heure_debut and entry.heure_fin:
-                    debut = datetime.combine(datetime.today(), entry.heure_debut)
-                    fin = datetime.combine(datetime.today(), entry.heure_fin)
-                    total_duree += (fin - debut)
-
-        heures_effectuees = round(total_duree.total_seconds() / 3600, 2)
+        
+        if entries.exists():
+            duree_seance = total_duree / entries.count()
+            heures_effectuees = round((duree_seance.total_seconds() / 3600) * suivis_faits.count(), 2)
+        else:
+            heures_effectuees = 0.0
 
         duree_totale_module = module.get('module__duree', 0) if module else 0
         if duree_totale_module and duree_totale_module > 0:
             taux_progression = round((heures_effectuees / duree_totale_module) * 100, 2)
         else:
             taux_progression = 0.0
-        
+
         resultats = []
         for item in liste:
             resultats.append({
@@ -107,11 +121,11 @@ def ApiHistoriqueCours(request):
                 "is_done": item.is_done,
                 "observation": item.observation,
                 "cours": getattr(item, 'cours', ''),
-                "nb_absents": item.nombre_absents(), 
-                "ligne_presence" : item.ligne_presence.id,
+                "nb_absents": item.nombre_absents(),
+                "ligne_presence": item.ligne_presence.id,
             })
 
-        absence = HistoriqueAbsence.objects.filter(ligne_presence_id = seanceLigne )
+        absence = HistoriqueAbsence.objects.filter(ligne_presence_id=seanceLigne)
         total_absences = 0
 
         for i in absence:
@@ -121,21 +135,22 @@ def ApiHistoriqueCours(request):
                     if d.get('etat') == 'A':
                         total_absences += 1
 
-        
-        
         data = {
-            'resultats' : resultats,
-            'module' : module,
+            'resultats': resultats,
+            'module': module,
             'heures_effectuees': heures_effectuees,
-            'cours_effectuer' : suivis_faits.count(),
-            'cours_total' : cours_total.count(),
+            'cours_effectuer': suivis_faits.count(),
+            'cours_total': cours_total.count(),
             'taux_progression': taux_progression,
-            'total_absences' : total_absences,
+            'total_absences': total_absences,
         }
 
         return JsonResponse(data, safe=False)
+
     else:
-        return JsonResponse({"status":"error",'message':"Methode non autoriser"})
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
