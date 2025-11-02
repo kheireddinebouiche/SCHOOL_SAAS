@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from t_groupe.models import *
 from t_etudiants.models import *
 from django.db.models import Count, Q
-
+from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
@@ -56,8 +56,6 @@ def ApiAddSeance(request):
 
     else:
         return JsonResponse({"status":"error",'message':"Methode non autoriser"})
-
-from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def ApiHistoriqueCours(request):
@@ -138,7 +136,6 @@ def ApiHistoriqueCours(request):
         return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status":"error",'message':"Methode non autoriser"})
-
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

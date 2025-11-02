@@ -425,6 +425,27 @@ def CheckAssignedCours(timetable, teacher, cours):
         cours__code = cours
     ).exists()
 
+def PreventAffectModuleForOtherTeache(timetable, teacher, cours):
+    """
+    Vérifie si un module est déjà affecté à un autre formateur dans le même emploi du temps.
+    Retourne True si le module est déjà attribué à un autre enseignant.
+    """
+    obj = TimetableEntry.objects.filter(
+        timetable_id=timetable,
+        cours__code=cours
+    ).first()
+
+    if not obj:
+        return False  # Aucun cours trouvé → pas de conflit
+
+    teacher_id = int(teacher)  # convertir le paramètre POST en entier
+
+    # Si le module est déjà attribué à un autre formateur
+    if obj.formateur and obj.formateur.id != teacher_id:
+        return True
+
+    return False
+
 def checkAssignedSameHoraire(jour,heure_debut,heure_fin,timetable):
     return TimetableEntry.objects.filter(
         heure_debut = heure_debut,
@@ -509,6 +530,8 @@ def save_session(request):
     if checkSalleDispo(session_salle, session_jour, heure_debut, heure_fin):
         return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})
     
+    if PreventAffectModuleForOtherTeache(timetable, session_professeur, session_module):
+        return JsonResponse({"status": "error", "message": "Le module a été déja affecter a un autre formateur"})
     
     if checkAssignedSameHoraire(session_jour,heure_debut,heure_fin,timetable):
         return JsonResponse({"status":"error","message": "Une séance est déjà programmée pour le même créneau horaire"})
