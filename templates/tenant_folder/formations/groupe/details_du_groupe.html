@@ -133,6 +133,7 @@
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li><a class="dropdown-item" href="#" ><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
                                             <li><button type="button" class="dropdown-item"  id="PrintAttendenceSheet"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</button></li>
+                                            <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#certificatScolariteModal"><i class="ri-file-paper-2-line me-2"></i> Certificat de scolarité</button></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -150,6 +151,7 @@
                             </div>
                         </div>
                         <div class="card-body p-4">
+                           
                             
                             <div class="row mb-4">
                                 <div class="col-lg-12 informations-generales">
@@ -230,13 +232,13 @@
                                         <div class="col-lg-6">
                                             <div class="mb-3">
                                                 <label class="form-label text-muted">Date de début</label>
-                                                <div class="form-control bg-light border-0" style="min-height: auto;">{{groupe.start_date}}</div>
+                                                <div class="form-control bg-light border-0" id='date_start' style="min-height: auto;">{{groupe.start_date}}</div>
                                             </div>
                                         </div>
                                         <div class="col-lg-6">
                                             <div class="mb-3">
                                                 <label class="form-label text-muted">Date de fin</label>
-                                                <div class="form-control bg-light border-0" style="min-height: auto;">{{groupe.end_date}}</div>
+                                                <div class="form-control bg-light border-0" id='date_end' style="min-height: auto;">{{groupe.end_date}}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -545,6 +547,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script>
     $(document).ready(function(){
+
+
         // Handle button events
         $(document).on('click','#btnConfirmeBeginInscription', function(){
             window.location = "{% url 't_groupe:validateGroupe' pk=groupe.id %}";
@@ -723,6 +727,94 @@
     
 </script>
 
+<!-- Modal for certificat de scolarité -->
+<div class="modal fade" id="certificatScolariteModal" tabindex="-1" aria-labelledby="certificatScolariteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-paper-2-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="certificatScolariteModalLabel">
+                            Sélection des étudiants pour le certificat de scolarité
+                        </h5>
+                        <p class="text-muted small mb-0">Sélectionnez les étudiants pour lesquels vous souhaitez imprimer le certificat</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-information-line text-info fs-5 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Information importante</h6>
+                            <p class="mb-0">Sélectionnez les étudiants pour lesquels vous souhaitez générer le certificat de scolarité.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search bar for filtering students -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ri-search-line"></i></span>
+                        <input type="text" class="form-control" id="studentSearch" placeholder="Rechercher un étudiant...">
+                    </div>
+                </div>
+                
+                <!-- Select all checkbox -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllStudents">
+                        <label class="form-check-label" for="selectAllStudents">Tout sélectionner</label>
+                    </div>
+                    <span class="text-muted"><span id="selectedCount">0</span> sur {{students.count}} étudiants sélectionnés</span>
+                </div>
+                
+                <!-- Students list with checkboxes -->
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="sticky-top bg-white top-0 shadow-sm">
+                            <tr>
+                                <th>Nom & Prénom</th>
+                                <th>Email</th>
+                                <th>Date / lieu de naissance</th>
+                                <th>Sélectionner</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            {% for student_line in students %}
+                            <tr>
+                                <td>{{student_line.student.nom}} {{student_line.student.prenom}}</td>
+                                <td>{{student_line.student.email}}</td>
+                                <td>{{student_line.student.date_naissance}} {{student_line.student.lieu_naissance}}</td>
+                                <td class="text-center">
+                                    <div class="form-check d-flex justify-content-center">
+                                        <input class="form-check-input" type="checkbox" value="{{student_line.student.id}}" name="selectedStudents" id="student_{{student_line.student.id}}">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">Aucun étudiant inscrit dans ce groupe</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success px-4" id="generateCertificatBtn">Générer les certificats</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal for editing partner code -->
 <div class="modal fade" id="editPartnerCodeModal" tabindex="-1" aria-labelledby="editPartnerCodeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -769,6 +861,164 @@
         </div>
     </div>
 </div>
+
+<!-- Script for certificat selection functionality -->
+<script>
+    $(document).ready(function(){
+        // Update selected count
+        function updateSelectedCount() {
+            var selectedCount = $('input[name="selectedStudents"]:checked').length;
+            $('#selectedCount').text(selectedCount);
+        }
+
+        // Handle select all checkbox
+        $('#selectAllStudents').on('change', function() {
+            $('input[name="selectedStudents"]').prop('checked', this.checked);
+            updateSelectedCount();
+        });
+
+        // Handle individual checkbox changes
+        $(document).on('change', 'input[name="selectedStudents"]', function() {
+            updateSelectedCount();
+            
+            // Update select all checkbox state
+            var totalCheckboxes = $('input[name="selectedStudents"]').length;
+            var checkedCheckboxes = $('input[name="selectedStudents"]:checked').length;
+            $('#selectAllStudents').prop('checked', totalCheckboxes === checkedCheckboxes);
+        });
+
+        // Handle student search
+        $('#studentSearch').on('input', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#studentsTableBody tr').each(function() {
+                var rowText = $(this).text().toLowerCase();
+                if (rowText.indexOf(searchTerm) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Handle certificat generation
+        $('#generateCertificatBtn').on('click', function() {
+            var selectedStudents = [];
+            $('input[name="selectedStudents"]:checked').each(function() {
+                selectedStudents.push($(this).val());
+            });
+
+            if (selectedStudents.length === 0) {
+                alert('Veuillez sélectionner au moins un étudiant.');
+                return;
+            }
+
+            // Generate certificates for selected students
+            generateCertificates(selectedStudents);
+        });
+
+        // Function to generate certificates in PDF
+        function generateCertificates(studentIds) {
+            const { jsPDF } = window.jspdf;
+            
+            // Create a new PDF document - it starts with one page by default
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Remove the default first page since we'll add pages as needed
+            doc.deletePage(1);
+            
+            // Iterate through each selected student and add their certificate
+            {% for student_line in students %}
+            if (studentIds.includes('{{student_line.student.id}}')) {
+                addCertificatePage(doc, '{{student_line.student.nom|escapejs}}', '{{student_line.student.prenom|escapejs}}', '{{student_line.student.date_naissance|date:"d/m/Y"|escapejs}}', '{{student_line.student.lieu_naissance|escapejs}}', '{{groupe.nom|escapejs}}', '{{groupe.specialite|escapejs}}', '{{groupe.annee_scolaire|escapejs}}', '{{tenant.name|default:"Nom de l\'institution"|escapejs}}');
+            }
+            {% endfor %}
+            
+            // Save the PDF if there are pages
+            if (doc.getNumberOfPages() > 0) {
+                doc.save("certificats_scolarite_{{groupe.nom}}.pdf");
+            } else {
+                alert("Aucun certificat à générer.");
+            }
+        }
+
+        // Function to add a certificate page for a student
+        function addCertificatePage(doc, studentNom, studentPrenom, studentDateNaissance, studentLieuNaissance, groupeNom, specialite, anneeScolaire, institutionName) {
+            // Add a new page for each certificate
+            doc.addPage();
+            
+            // Set margins and font
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width;
+            
+            doc.setFontSize(12);
+            
+            // Add centered title
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text("Certificat de scolarité", pageWidth / 2, 40, { align: 'center' });
+            doc.setFontSize(12);
+            
+            // Add certificate content aligned to the left
+            let currentY = 55;
+            doc.setFont(undefined, 'normal');
+            
+            // Split the long text to fit within page margins
+            const headerText = "Je soussigné, Directeur général de l'Ecole de Formation Professionnelle " + institutionName + ", certifie que l'apprenant (e) :";
+            const maxWidth = pageWidth - 2 * margin;
+            
+            // Use splitTextToSize to automatically wrap the text
+            const wrappedText = doc.splitTextToSize(headerText, maxWidth);
+            doc.text(wrappedText, margin, currentY);
+            
+            // Update currentY based on the number of lines
+            currentY += wrappedText.length * 7; // Approximate line height
+            
+            // Add student name
+            doc.setFont(undefined, 'bold');
+            doc.text(studentNom.toUpperCase() + " " + studentPrenom.toUpperCase(), margin, currentY);
+            doc.setFont(undefined, 'normal');
+            currentY += 15;
+            
+            // Add birth information
+            doc.text("Né (e) le " + studentDateNaissance + " à " + studentLieuNaissance , margin, currentY);
+            currentY += 15;
+            
+            // Add formation information
+            doc.text("Suit la formation résidentielle de {{groupe.specialite.formation}}", margin, currentY);
+            currentY += 8;
+            
+            doc.text("Branche : {{groupe.specialite.formation}}", margin, currentY);
+            currentY += 8;
+            
+            doc.text("Spécialité : " + specialite, margin, currentY);
+            currentY += 8;
+            
+            doc.text("Niveau de qualification : {{groupe.specialite.formation.qualification}}", margin, currentY);
+            currentY += 15;
+            
+            // Add formation dates using groupe dates
+            doc.text("Début de formation : {{groupe.start_date|date:'d/m/Y'}}", margin, currentY);
+            currentY += 8;
+            
+            doc.text("Fin de formation : {{groupe.end_date|date:'d/m/Y'}}", margin, currentY);
+            currentY += 15;
+            
+            // Add school year
+            doc.text("Année professionnelle : " + anneeScolaire, margin, currentY);
+            
+            // Add signature area at the bottom
+            const footerY = 240;
+            doc.text("Fait le : _____/_____/_____", margin, footerY);
+            doc.text("Le Directeur", pageWidth - margin - 30, footerY);
+            
+            // Add signature line
+            const signatureY = footerY - 5;
+            doc.line(margin + 50, footerY + 8, margin + 120, footerY + 8);
+            doc.line(pageWidth - margin - 70, footerY + 8, pageWidth - margin - 10, footerY + 8);
+        }
+    });
+</script>
+
 {% endblock content %}
            
 

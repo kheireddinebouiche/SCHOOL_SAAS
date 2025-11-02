@@ -5,6 +5,7 @@ from.f_views.salles import *
 from .f_views.crenaux import *
 from .f_views.affectation_modules import *
 from .f_views.suivie_cours import *
+from .f_views.rapport_avancement import *
 
 app_name="t_timetable"
 
@@ -58,5 +59,7 @@ urlpatterns = [
     path('ApiHistoriqueCours', ApiHistoriqueCours, name="ApiHistoriqueCours"),
     
     path('ApiUpdateSeanceNotes', ApiUpdateSeanceNotes, name="ApiUpdateSeanceNotes"),
+
+    path('ApiGetCours',ApiGetCours, name="ApiGetCours"),
 
 ]

@@ -110,7 +110,7 @@ class SuiviCours(models.Model):
     date_seance = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
-    cours = models.CharField(max_length=300, null=True, blank=True)
+    cours = models.TextField(max_length=3000, null=True, blank=True)
     ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True, related_name="seance_module")
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -141,3 +141,12 @@ class SuiviCours(models.Model):
                         ):
                             absents += 1
         return absents
+
+
+class ModelContrat(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    pass
+
+class ClauseContrat(models.Model):
+    modele = models.ForeignKey(ModelContrat, on_delete=models.CASCADE, null=True, blank=True)
+    pass

@@ -13,21 +13,30 @@ from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
+    
+
+    return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html')
+
+@login_required(login_url="institut_app:login")
+def ApiGetCours(request):
     seances = (LigneRegistrePresence.objects
                .filter()
                .annotate(
                     total=Count('seance_module'),
                     faites=Count('seance_module', filter=Q(seance_module__is_done=True))
                 )
-            )
-    groupes = Groupe.objects.all()
+            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__annee_scolaire','registre__semestre','total','faites')
+    
+    groupes = Groupe.objects.all().values('id','nom')
 
     context = {
-        'seances' : seances,
-        'groupes' : groupes,
+        'seances' : list(seances),
+        'groupes' : list(groupes),
     }
 
-    return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html', context)
+    return JsonResponse(context, safe=False)
+
+
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

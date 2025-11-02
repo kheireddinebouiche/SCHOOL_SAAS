@@ -34,7 +34,7 @@ class NewFormationForm(forms.ModelForm):
 class NewFormationFormMaster(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','prix_formation']
+        fields = ['qualification','entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','prix_formation']
         widgets = {
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
@@ -44,7 +44,8 @@ class NewFormationFormMaster(forms.ModelForm):
             'partenaire' : forms.Select(attrs={'class':'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"})
+            'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"}),
+            'qualification' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'qualificationId'}),
         }
 
         labels = {
@@ -56,6 +57,7 @@ class NewFormationFormMaster(forms.ModelForm):
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
             'prix_formation' : "Prix de la formation",
+            'qualification' : "Qualification :"
         }
     def __init__(self, *args, **kwargs):
         current_tenant = kwargs.pop('current_tenant', None)
