@@ -7,7 +7,8 @@ from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
 from django.http import JsonResponse
 from django.db.models import Q
-
+from datetime import datetime
+import json
 
 
 login_required(login_url="institut_app:login")
@@ -201,66 +202,75 @@ def create_availability(request):
             if not formateur_id or not availabilities_json:
                 return JsonResponse({'status': 'error', 'message': 'Tous les champs sont obligatoires'})
 
-            import json
+            # Convertir le JSON en Python
             try:
                 availabilities = json.loads(availabilities_json)
             except json.JSONDecodeError:
                 return JsonResponse({'status': 'error', 'message': 'Données de disponibilité invalides'})
 
-            # Validate formateur exists
             try:
                 formateur = Formateurs.objects.get(id=formateur_id)
             except Formateurs.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Le formateur spécifié n\'existe pas'})
 
-            # Initialize disponibilites if empty
+            # Initialiser la structure JSON si elle est vide
             if not formateur.dispo:
                 formateur.dispo = {}
 
-            # Initialize the disponibilites list if not present
             if 'disponibilites' not in formateur.dispo:
                 formateur.dispo['disponibilites'] = []
 
-            # Process each availability
+            # Ajouter les nouvelles disponibilités sans doublons
             for availability in availabilities:
                 jour = availability.get('jour')
                 heure_debut = availability.get('heure_debut')
                 heure_fin = availability.get('heure_fin')
 
-                # Validate availability data
                 if not all([jour, heure_debut, heure_fin]):
                     return JsonResponse({'status': 'error', 'message': 'Tous les champs de disponibilité sont obligatoires'})
 
-                # Check if this availability already exists
-                existing = False
-                for existing_dispo in formateur.dispo['disponibilites']:
-                    if (existing_dispo['jour'] == jour and 
-                        existing_dispo['heure_debut'] == heure_debut and 
-                        existing_dispo['heure_fin'] == heure_fin):
-                        existing = True
-                        break
+                # Normaliser le jour (ex: "Lundi" -> "lundi")
+                jour = jour.strip().lower()
 
-                if not existing:
-                    # Create new availability entry
-                    new_availability = {
+                # Vérifier si ce créneau existe déjà
+                exists = any(
+                    d['jour'].lower() == jour and
+                    d['heure_debut'] == heure_debut and
+                    d['heure_fin'] == heure_fin
+                    for d in formateur.dispo['disponibilites']
+                )
+
+                if not exists:
+                    formateur.dispo['disponibilites'].append({
                         'jour': jour,
                         'heure_debut': heure_debut,
                         'heure_fin': heure_fin
-                    }
+                    })
 
-                    # Add the new availability to the list
-                    formateur.dispo['disponibilites'].append(new_availability)
+            # 🔹 Ordre logique des jours
+            ordre_jours = [
+                "dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"
+            ]
 
-            # Save the formateur with updated dispo
+            # 🔹 Tri par jour puis par heure_debut
+            def sort_key(d):
+                jour_index = ordre_jours.index(d['jour']) if d['jour'] in ordre_jours else 999
+                try:
+                    heure_obj = datetime.strptime(d['heure_debut'], "%H:%M")
+                except ValueError:
+                    heure_obj = datetime.strptime("00:00", "%H:%M")
+                return (jour_index, heure_obj)
+
+            formateur.dispo['disponibilites'].sort(key=sort_key)
+
             formateur.save()
 
             return JsonResponse({'status': 'success', 'message': 'Disponibilités enregistrées avec succès'})
-            
+
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
-    else:
-        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

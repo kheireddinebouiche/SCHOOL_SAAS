@@ -44,14 +44,13 @@ def ApiAddSeance(request):
         
         obj = LigneRegistrePresence.objects.get(id = lignePresenceId)
 
-        SuiviCours.objects.update_or_create(
+        SuiviCours.objects.create(
             module = obj.module,
             date_seance = date,
             ligne_presence_id = lignePresenceId,
-            defaults={
-                'is_done' : False,
-                'observation' : reason,
-            }
+            is_done=False,
+            observation = reason,
+           
         )
         return JsonResponse({"status":"success", "message":"Informations enregistrer avec succès"})
 
@@ -124,7 +123,7 @@ def ApiHistoriqueCours(request):
                     if d.get('etat') == 'A':
                         total_absences += 1
 
-        print("Nombre total d'absences :", total_absences)
+        
         
         data = {
             'resultats' : resultats,
@@ -133,6 +132,7 @@ def ApiHistoriqueCours(request):
             'cours_effectuer' : suivis_faits.count(),
             'cours_total' : cours_total.count(),
             'taux_progression': taux_progression,
+            'total_absences' : total_absences,
         }
 
         return JsonResponse(data, safe=False)
