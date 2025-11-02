@@ -45,19 +45,20 @@ def ApiAddSeance(request):
         obj = LigneRegistrePresence.objects.get(id = lignePresenceId)
 
         SuiviCours.objects.update_or_create(
-            
-             module = obj.module,
-                date_seance = date,
-                ligne_presence_id = lignePresenceId,
+            module = obj.module,
+            date_seance = date,
+            ligne_presence_id = lignePresenceId,
             defaults={
-               'is_done' : False,
-            'observation' : reason,
+                'is_done' : False,
+                'observation' : reason,
             }
         )
         return JsonResponse({"status":"success", "message":"Informations enregistrer avec succès"})
 
     else:
         return JsonResponse({"status":"error",'message':"Methode non autoriser"})
+
+from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def ApiHistoriqueCours(request):
@@ -69,7 +70,38 @@ def ApiHistoriqueCours(request):
             return JsonResponse({"status":"error",'message':"Informations manquantes"})
         
         liste = SuiviCours.objects.filter(module_id=moduleId,ligne_presence_id=seanceLigne)
+        
+        module = LigneRegistrePresence.objects.filter(id=seanceLigne, module_id=moduleId).values('id','teacher__nom','teacher__prenom','registre__groupe__nom','registre__semestre','module__duree','module__label').first()
 
+        suivis_faits = SuiviCours.objects.filter(module_id=moduleId, is_done=True,ligne_presence_id=seanceLigne)
+        cours_total = SuiviCours.objects.filter(module_id=moduleId,ligne_presence_id=seanceLigne)
+        total_duree = timedelta()
+
+        for suivi in suivis_faits:
+            registre = getattr(suivi.ligne_presence, "registre", None)
+            if not registre or not registre.groupe:
+                continue
+
+            # Trouve les entrées du module dans le bon emploi du temps
+            entries = TimetableEntry.objects.filter(
+                timetable__groupe=registre.groupe,
+                cours_id=moduleId
+            )
+
+            for entry in entries:
+                if entry.heure_debut and entry.heure_fin:
+                    debut = datetime.combine(datetime.today(), entry.heure_debut)
+                    fin = datetime.combine(datetime.today(), entry.heure_fin)
+                    total_duree += (fin - debut)
+
+        heures_effectuees = round(total_duree.total_seconds() / 3600, 2)
+
+        duree_totale_module = module.get('module__duree', 0) if module else 0
+        if duree_totale_module and duree_totale_module > 0:
+            taux_progression = round((heures_effectuees / duree_totale_module) * 100, 2)
+        else:
+            taux_progression = 0.0
+        
         resultats = []
         for item in liste:
             resultats.append({
@@ -77,14 +109,53 @@ def ApiHistoriqueCours(request):
                 "date_seance": item.date_seance.strftime("%d/%m/%Y") if item.date_seance else None,
                 "is_done": item.is_done,
                 "observation": item.observation,
+                "cours": getattr(item, 'cours', ''),
                 "nb_absents": item.nombre_absents(), 
                 "ligne_presence" : item.ligne_presence.id,
             })
 
+        absence = HistoriqueAbsence.objects.filter(ligne_presence_id = seanceLigne )
+        total_absences = 0
+
+        for i in absence:
+            historique = i.historique or []
+            for entry in historique:
+                for d in entry.get('data', []):
+                    if d.get('etat') == 'A':
+                        total_absences += 1
+
+        print("Nombre total d'absences :", total_absences)
+        
         data = {
-            'resultats' : resultats
+            'resultats' : resultats,
+            'module' : module,
+            'heures_effectuees': heures_effectuees,
+            'cours_effectuer' : suivis_faits.count(),
+            'cours_total' : cours_total.count(),
+            'taux_progression': taux_progression,
         }
 
-        return JsonResponse({"data" : data}, safe=False)
+        return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status":"error",'message':"Methode non autoriser"})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateSeanceNotes(request):
+    if request.method == "POST":
+        seance_id = request.POST.get('seance_id')
+        notes = request.POST.get('notes')
+        
+        if not seance_id or not notes:
+            return JsonResponse({"status": "error", "message": "Informations manquantes"})
+        
+        try:
+            seance = SuiviCours.objects.get(id=seance_id)
+            seance.cours = notes
+            seance.save()
+            return JsonResponse({"status": "success", "message": "Notes mises à jour avec succès"})
+        except SuiviCours.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Séance non trouvée"})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

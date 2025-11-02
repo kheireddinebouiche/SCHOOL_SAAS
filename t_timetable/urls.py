@@ -56,5 +56,7 @@ urlpatterns = [
     path('suivie-cours/', PageSuivieCours, name="PageSuivieCours"),
     path('ApiAddSeance',ApiAddSeance, name="ApiAddSeance"),
     path('ApiHistoriqueCours', ApiHistoriqueCours, name="ApiHistoriqueCours"),
+    
+    path('ApiUpdateSeanceNotes', ApiUpdateSeanceNotes, name="ApiUpdateSeanceNotes"),
 
 ]

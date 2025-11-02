@@ -110,6 +110,7 @@ class SuiviCours(models.Model):
     date_seance = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(null=True, blank=True)
     observation = models.CharField(max_length=100, null=True, blank=True)
+    cours = models.CharField(max_length=300, null=True, blank=True)
     ligne_presence = models.ForeignKey(LigneRegistrePresence, on_delete=models.CASCADE, null=True, blank=True, related_name="seance_module")
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -120,17 +121,12 @@ class SuiviCours(models.Model):
     
     def nombre_absents(self):
        
-        from django.utils import timezone
-
         if not self.date_seance or not self.module or not self.ligne_presence:
             return 0
 
         date_str = self.date_seance.strftime("%d/%m/%Y")
         absents = 0
-
-        # On récupère tous les historiques liés à la même ligne de présence
         historiques = HistoriqueAbsence.objects.filter(ligne_presence=self.ligne_presence)
-
         for h in historiques:
             if not h.historique:
                 continue

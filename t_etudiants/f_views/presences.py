@@ -120,13 +120,11 @@ def ApiAjouterHistoriqueAbsence(request):
             ligne = LigneRegistrePresence.objects.get(id=ligne_id)
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
 
-            SuiviCours.objects.update_or_create(
+            SuiviCours.objects.create(
                 is_done = True,
                 ligne_presence_id = ligne_id,
-                defaults={
-                    'module' : ligne.module,
-                    'date_seance' : date_obj,
-                }
+                module =ligne.module,
+                date_seance = date_obj,
             )
 
             for record in records:
