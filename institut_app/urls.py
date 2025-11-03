@@ -16,8 +16,8 @@ urlpatterns = [
     path('register/', register, name="register"),
     path('logout/',logout_view, name="logout"),
     path('blocked/', ShowBlockedConnexion, name="ShowBlockedConnexion"),
-   
-    
+    path('ApiLoadEntrepriseLogos',ApiLoadEntrepriseLogos, name="ApiLoadEntrepriseLogos"),
+    path('ApiUpdateEntrepriseLogos', ApiUpdateEntrepriseLogos,name="ApiUpdateEntrepriseLogos"),
 
     path('nouvelle-entreprise/', NewEntreprise, name="new_entreprise"),
     path('details-entreprise/<int:pk>/', detailsEntreprise, name="details_entreprise"),

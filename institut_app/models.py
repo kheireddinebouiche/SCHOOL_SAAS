@@ -57,6 +57,7 @@ class Entreprise(models.Model):
     designation = models.CharField(max_length=255, null=True, blank=True)
     logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
     entete_logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
+    pied_page_logo = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
     rc = models.CharField(max_length=255, null=True, blank=True)
     nif = models.CharField(max_length=255, null=True, blank=True)
     art = models.CharField(max_length=255, blank=True, null=True)
@@ -64,13 +65,14 @@ class Entreprise(models.Model):
 
     adresse = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(max_length=255, null=True, blank=True)
+    ville = models.CharField(max_length = 222 ,null=True, blank=True)
     wilaya = models.CharField(max_length=255, null=True, blank=True)
-    pays = CountryField(null=True, blank=True)
+    pays = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     site_web = models.URLField(null=True, blank=True)
     entete = models.TextField(null=True, blank=True)
-
-
+    code_postal = models.CharField(max_length=100, null=True, blank=True)
+    observations = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -65,7 +65,8 @@ class EntrepriseForm(forms.ModelForm):
             'email' : "Email :",
             'site_web' : "Site WEB :",
             'entete' : "Entête :",
-            'logo' : "Logo :"
+            'logo' : "Logo :",
+            'ville' : "Ville :"
         }
 
         widgets = {
@@ -78,10 +79,11 @@ class EntrepriseForm(forms.ModelForm):
             'adresse' : forms.TextInput(attrs={'class':'form-control'}),
             'telephone' : forms.TextInput(attrs={'class':'form-control'}),
             'wilaya' : forms.TextInput(attrs={'class':'form-control'}),
-            'pays' : forms.Select(attrs={'class':'form-control'}),
+            'pays' : forms.TextInput(attrs={'class':'form-control'}),
             'email' : forms.EmailInput(attrs={'class':'form-control'}),
             'site_web' : forms.URLInput(attrs={'class':'form-control'}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'ville' : forms.TextInput({'class':'form-control'}),
         }
 
 class CustomGroupForm(forms.ModelForm):
