@@ -158,7 +158,6 @@ class ModelContrat(models.Model):
 class ClauseContrat(models.Model):
     modele = models.ForeignKey(ModelContrat, on_delete=models.CASCADE, null=True, blank=True)
     article = models.TextField(max_length=1000, null=True, blank=True)
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
