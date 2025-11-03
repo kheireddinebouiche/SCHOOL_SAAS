@@ -437,7 +437,26 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-lg-12">
-                                <label class="form-label fw-medium" for="new_article">Nouvel article</label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-medium" for="new_article">Nouvel article</label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Tags disponibles
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" id="availableTags">
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[nom_etudiant]">Nom étudiant</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[prenom_etudiant]">Prénom étudiant</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[duree_formation]">Durée formation</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[formations]">Formations</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[qualification]">Qualification</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[frais_inscription]">Frais d'inscription</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[prix_formation]">Prix de la formation</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[date_naissance_etudiant]">Date naissance étudiant</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[lieu_naissance_etudiant]">Lieu naissance étudiant</a></li>
+                                            <li><a class="dropdown-item tag-option" href="#" data-tag="[adresse_etudiant]">Adresse étudiant</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <textarea class="form-control border-0 bg-light" id="new_article" name="article" rows="3" placeholder="Saisissez le texte de l'article..."></textarea>
                                 <div id="article_error" class="text-danger mt-1" style="display: none;"></div>
                             </div>
@@ -1168,9 +1187,31 @@
       var current_row = $(this).closest('tr');
       var current_article = current_row.find('td:first').text();
       
-      // Créer un champ d'édition temporaire
+      // Créer un champ d'édition temporaire avec les tags
       var edit_row = '<tr id="edit_row_' + article_id + '" class="align-middle">';
-      edit_row += '<td colspan="3"><textarea class="form-control" id="edit_article_' + article_id + '">' + current_article + '</textarea></td>';
+      edit_row += '<td colspan="3">';
+      edit_row += '<div class="d-flex justify-content-between align-items-center mb-1">';
+      edit_row += '<small class="text-muted">Tags disponibles:</small>';
+      edit_row += '<div class="dropdown">';
+      edit_row += '<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-article-id="' + article_id + '">';
+      edit_row += 'Tags';
+      edit_row += '</button>';
+      edit_row += '<ul class="dropdown-menu dropdown-menu-end available-tags-dropdown" data-article-id="' + article_id + '">';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[nom_etudiant]" data-article-id="' + article_id + '">Nom étudiant</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[prenom_etudiant]" data-article-id="' + article_id + '">Prénom étudiant</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[duree_formation]" data-article-id="' + article_id + '">Durée formation</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[formations]" data-article-id="' + article_id + '">Formations</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[qualification]" data-article-id="' + article_id + '">Qualification</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[frais_inscription]" data-article-id="' + article_id + '">Frais d\'inscription</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[prix_formation]" data-article-id="' + article_id + '">Prix de la formation</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[date_naissance_etudiant]" data-article-id="' + article_id + '">Date naissance étudiant</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[lieu_naissance_etudiant]" data-article-id="' + article_id + '">Lieu naissance étudiant</a></li>';
+      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[adresse_etudiant]" data-article-id="' + article_id + '">Adresse étudiant</a></li>';
+      edit_row += '</ul>';
+      edit_row += '</div>';
+      edit_row += '</div>';
+      edit_row += '<textarea class="form-control" id="edit_article_' + article_id + '">' + current_article + '</textarea>';
+      edit_row += '</td>';
       edit_row += '<td class="text-end">';
       edit_row += '<button class="btn btn-success btn-sm save-edit-article me-2" data-id="' + article_id + '">';
       edit_row += '<i class="ri-check-line"></i></button>';
@@ -1266,6 +1307,25 @@
           alertify.error('Erreur lors de la suppression de l\'article');
         }
       });
+    });
+    
+    // Gestion des tags pour le nouvel article
+    $(document).on('click', '.tag-option', function(e) {
+      e.preventDefault();
+      var tag = $(this).data('tag');
+      var currentText = $('#new_article').val();
+      $('#new_article').val(currentText + tag);
+      $('#new_article').focus(); // Mettre le focus sur le champ
+    });
+    
+    // Gestion des tags pour l'article en modification
+    $(document).on('click', '.tag-option-edit', function(e) {
+      e.preventDefault();
+      var tag = $(this).data('tag');
+      var articleId = $(this).data('article');
+      var currentText = $('#edit_article_' + articleId).val();
+      $('#edit_article_' + articleId).val(currentText + tag);
+      $('#edit_article_' + articleId).focus(); // Mettre le focus sur le champ
     });
   });
 </script>
