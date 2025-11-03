@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 from .f_views.presences import *
+from .f_views.contrat import *
 
 app_name="t_etudiants"
 
@@ -27,4 +28,14 @@ urlpatterns = [
    path('ApiGetHistoriqueEtudiant/<int:pk>/<int:id_ligne>/', ApiGetHistoriqueEtudiant, name="ApiGetHistoriqueEtudiant"),
    
    path('presences-des-etudiants/',ListeDesEtudiants, name="ListeDesEtudiants"),
+
+   path('contrat/modele/',PageModeleContrat, name="PageModeleContrat"),
+   path('contrat/modele/load/', ApiLoadModelesContrat, name="ApiLoadModelesContrat"),
+   path('contrat/modele/delete/', ApiDeleteModeleContrat, name="ApiDeleteModeleContrat"),
+   path('contrat/modele/update/', ApiUpdateModeleContrat, name="ApiUpdateModeleContrat"),
+   path('ApiCreateModeleContrat',ApiCreateModeleContrat, name="ApiCreateModeleContrat"),
+   path('contrat/modele/articles/load/', ApiLoadArticlesContrat, name="ApiLoadArticlesContrat"),
+   path('contrat/modele/articles/create/', ApiCreateArticleContrat, name="ApiCreateArticleContrat"),
+   path('contrat/modele/articles/update/', ApiUpdateArticleContrat, name="ApiUpdateArticleContrat"),
+   path('contrat/modele/articles/delete/', ApiDeleteArticleContrat, name="ApiDeleteArticleContrat"),
 ]

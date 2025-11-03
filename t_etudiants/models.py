@@ -145,8 +145,22 @@ class SuiviCours(models.Model):
 
 class ModelContrat(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
-    pass
+    formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
+    annee_scolaire = models.CharField(max_length=100,null=True, blank=True)
+    status = models.CharField(max_length=10, null=True, blank=True, choices=[('act','Actif'),('att','En attente'),('ina','Inactif')])
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label
 
 class ClauseContrat(models.Model):
     modele = models.ForeignKey(ModelContrat, on_delete=models.CASCADE, null=True, blank=True)
-    pass
+    article = models.TextField(max_length=1000, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.modele.label

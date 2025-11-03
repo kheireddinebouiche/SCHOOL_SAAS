@@ -96,7 +96,7 @@ def ApiHistoriqueCours(request):
         suivis_faits = SuiviCours.objects.filter(module_id=moduleId, is_done=True, ligne_presence_id=seanceLigne)
         cours_total = SuiviCours.objects.filter(module_id=moduleId, ligne_presence_id=seanceLigne)
 
-        # ✅ Récupération de toutes les entrées d’emploi du temps uniques pour ce module
+
         entries = TimetableEntry.objects.filter(
             cours_id=moduleId,
             timetable__groupe__in=suivis_faits.values_list('ligne_presence__registre__groupe', flat=True)
