@@ -134,6 +134,7 @@
                                             <li><a class="dropdown-item" href="#" ><i class="ri-file-text-line me-2"></i> PV D'examen</a></li>
                                             <li><button type="button" class="dropdown-item"  id="PrintAttendenceSheet"><i class="ri-file-chart-line me-2"></i> Fiche suivie des cours</button></li>
                                             <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#certificatScolariteModal"><i class="ri-file-paper-2-line me-2"></i> Certificat de scolarité</button></li>
+                                            <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#contratsModal"><i class="ri-file-3-line me-2"></i> Contrats</button></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -862,6 +863,107 @@
     </div>
 </div>
 
+<!-- Modal for contrats -->
+<div class="modal fade" id="contratsModal" tabindex="-1" aria-labelledby="contratsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-3-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="contratsModalLabel">
+                            Sélection des contrats à imprimer
+                        </h5>
+                        <p class="text-muted small mb-0">Sélectionnez le modèle de contrat et les étudiants pour lesquels vous souhaitez imprimer les contrats</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Alert for automatic contract loading -->
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-information-line text-info fs-5 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Contrat automatique</h6>
+                            <p class="mb-0">Le modèle de contrat sera automatiquement sélectionné en fonction de la formation du groupe.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden field to store the contract model ID -->
+                <input type="hidden" id="contratModelId">
+                
+                <!-- Display for the automatically selected contract -->
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Modèle de contrat sélectionné</label>
+                    <div class="form-control bg-light border-0" id="selectedContractDisplay">
+                        Chargement en cours...
+                    </div>
+                    <div id="contratModelError" class="text-danger mt-1" style="display: none;"></div>
+                </div>
+                
+                <!-- Search bar for filtering students -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ri-search-line"></i></span>
+                        <input type="text" class="form-control" id="contratStudentSearch" placeholder="Rechercher un étudiant...">
+                    </div>
+                </div>
+                
+                <!-- Select all checkbox and counter -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllContratStudents">
+                        <label class="form-check-label" for="selectAllContratStudents">Tout sélectionner</label>
+                    </div>
+                    <span class="text-muted"><span id="contratSelectedCount">0</span> sur {{students.count}} étudiants sélectionnés</span>
+                </div>
+                
+                <!-- Students list with checkboxes -->
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="sticky-top bg-white top-0 shadow-sm">
+                            <tr>
+                                <th>Nom & Prénom</th>
+                                <th>Email</th>
+                                <th>Date / lieu de naissance</th>
+                                <th>Sélectionner</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contratsStudentsTableBody">
+                            {% for student_line in students %}
+                            <tr>
+                                <td>{{student_line.student.nom}} {{student_line.student.prenom}}</td>
+                                <td>{{student_line.student.email}}</td>
+                                <td>{{student_line.student.date_naissance}} {{student_line.student.lieu_naissance}}</td>
+                                <td class="text-center">
+                                    <div class="form-check d-flex justify-content-center">
+                                        <input class="form-check-input" type="checkbox" value="{{student_line.student.id}}" name="selectedContratStudents" id="contrat_student_{{student_line.student.id}}">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Aucun étudiant inscrit dans ce groupe</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary px-4" id="generateContratsBtn">Générer les contrats</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Script for certificat selection functionality -->
 <script>
     $(document).ready(function(){
@@ -1015,6 +1117,343 @@
             const signatureY = footerY - 5;
             doc.line(margin + 50, footerY + 8, margin + 120, footerY + 8);
             doc.line(pageWidth - margin - 70, footerY + 8, pageWidth - margin - 10, footerY + 8);
+        }
+    });
+</script>
+
+<!-- Script for contrats selection functionality -->
+<script>
+    $(document).ready(function(){
+
+        var formationId = "{{groupe.specialite.formation.id}}";
+        var anneescolaire = "{{groupe.annee_scolaire}}";
+
+        // Load the contract model for the group's formation automatically
+        function loadContractModel() {
+            // Clear any previous error
+            $('#contratModelError').hide();
+            
+            // Load models via AJAX that match the group's formation and school year
+            $.ajax({
+                url: '{% url "t_etudiants:ApiGetModeleContratByFormation" %}',
+                type: 'GET',
+                data: { 
+                    'formation_id': '{{groupe.specialite.formation.id}}',
+                    'annee_scolaire': '{{groupe.annee_scolaire}}'  // Pass the group's school year for additional filtering
+                },
+                dataType: 'JSON',
+                success: function(response) {
+                    if (response.status === 'success' && response.data && response.data.length > 0) {
+                        var matchingModels = response.data;
+                        
+                        // Use the first matching model (or the first active one if available)
+                        var selectedModel = matchingModels[0];
+                        
+                        // If there are multiple models, try to select an active one
+                        var activeModels = matchingModels.filter(function(model) {
+                            return model.statut === 'act';  // Assuming 'act' means active
+                        });
+                        
+                        if (activeModels.length > 0) {
+                            selectedModel = activeModels[0];
+                        }
+                        
+                        // Update the display and hidden field
+                        $('#selectedContractDisplay').text(selectedModel.nom + ' (' + (selectedModel.annee_scolaire || 'N/A') + ')');
+                        $('#contratModelId').val(selectedModel.id);
+                        $('#contratModelError').hide();
+                    } else {
+                        $('#selectedContractDisplay').html('<span class="text-danger">Aucun modèle de contrat disponible pour cette formation et année scolaire</span>');
+                        $('#contratModelId').val('');
+                        $('#contratModelError').text('Aucun modèle de contrat disponible pour cette formation et année scolaire.').show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract models:', error);
+                    $('#selectedContractDisplay').html('<span class="text-danger">Erreur de chargement des modèles de contrat</span>');
+                    $('#contratModelId').val('');
+                    $('#contratModelError').text('Erreur lors du chargement des modèles de contrat.').show();
+                }
+            });
+        }
+        
+        // Load contract model when modal is shown
+        $('#contratsModal').on('shown.bs.modal', function() {
+            loadContractModel();
+            updateContratSelectedCount();
+        });
+        
+        // Update selected count for contracts
+        function updateContratSelectedCount() {
+            var selectedCount = $('input[name="selectedContratStudents"]:checked').length;
+            $('#contratSelectedCount').text(selectedCount);
+        }
+
+        // Handle select all checkbox for contracts
+        $('#selectAllContratStudents').on('change', function() {
+            $('input[name="selectedContratStudents"]').prop('checked', this.checked);
+            updateContratSelectedCount();
+        });
+
+        // Handle individual checkbox changes for contracts
+        $(document).on('change', 'input[name="selectedContratStudents"]', function() {
+            updateContratSelectedCount();
+            
+            // Update select all checkbox state
+            var totalCheckboxes = $('input[name="selectedContratStudents"]').length;
+            var checkedCheckboxes = $('input[name="selectedContratStudents"]:checked').length;
+            $('#selectAllContratStudents').prop('checked', totalCheckboxes === checkedCheckboxes);
+        });
+
+        // Handle student search for contracts
+        $('#contratStudentSearch').on('input', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#contratsStudentsTableBody tr').each(function() {
+                var rowText = $(this).text().toLowerCase();
+                if (rowText.indexOf(searchTerm) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Handle contract generation
+        $('#generateContratsBtn').on('click', function() {
+            var selectedStudents = [];
+            $('input[name="selectedContratStudents"]:checked').each(function() {
+                selectedStudents.push($(this).val());
+            });
+
+            var selectedModel = $('#contratModelId').val();
+            
+            if (!selectedModel) {
+                alert('Aucun modèle de contrat disponible pour cette formation.');
+                return;
+            }
+            
+            if (selectedStudents.length === 0) {
+                alert('Veuillez sélectionner au moins un étudiant.');
+                return;
+            }
+
+            // Generate contracts for selected students and model
+            generateContracts(selectedModel, selectedStudents);
+        });
+
+        // Function to generate contracts in PDF
+        function generateContracts(modelId, studentIds) {
+            // First, let's get the clauses for the selected model
+            $.ajax({
+                url: '{% url "t_etudiants:ApiLoadArticlesContrat" %}',
+                data: { modele_id: modelId },
+                type: 'GET',
+                success: function(clauses) {
+                    if (clauses.length === 0) {
+                        alert('Aucune clause trouvée pour ce modèle de contrat.');
+                        return;
+                    }
+                    
+                    // Get student details for each selected student
+                    getStudentDetails(studentIds, function(studentsDetails) {
+                        // Generate PDF for each student's contract
+                        generateContractPDFs(studentsDetails, clauses);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract clauses:', error);
+                    alert('Erreur lors du chargement des clauses du contrat.');
+                }
+            });
+        }
+        
+        // Function to get student details
+        function getStudentDetails(studentIds, callback) {
+            // Since we don't have a specific API to get student details, 
+            // we'll extract them from the current page's student table
+            var studentsDetails = [];
+            
+            studentIds.forEach(function(studentId) {
+                // Find the student in the displayed table
+                var studentRow = $('input[name="selectedContratStudents"][value="' + studentId + '"]').closest('tr');
+                
+                if (studentRow.length > 0) {
+                    // Extract student information from the row
+                    var studentName = studentRow.find('td:eq(0)').text().trim();
+                    var studentEmail = studentRow.find('td:eq(1)').text().trim();
+                    var birthInfo = studentRow.find('td:eq(2)').text().trim();
+                    
+                    // Extract birth date and place
+                    var birthDate = '';
+                    var birthPlace = '';
+                    if (birthInfo) {
+                        var parts = birthInfo.split(' ');
+                        birthDate = parts[0] || '';
+                        birthPlace = parts.slice(1).join(' ') || '';
+                    }
+                    
+                    // Split name into first and last name
+                    var names = studentName.split(' ');
+                    var lastName = names[0] || '';
+                    var firstName = names.slice(1).join(' ') || '';
+                    
+                    studentsDetails.push({
+                        id: studentId,
+                        fullName: studentName,
+                        lastName: lastName,
+                        firstName: firstName,
+                        email: studentEmail,
+                        birthDate: birthDate,
+                        birthPlace: birthPlace
+                    });
+                }
+            });
+            
+            callback(studentsDetails);
+        }
+        
+        // Function to generate contract PDFs
+        function generateContractPDFs(students, clauses) {
+            const { jsPDF } = window.jspdf;
+            
+            // Create a new PDF document - it starts with one page by default
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Remove the default first page since we'll add pages as needed
+            doc.deletePage(1);
+            
+            // For each student, add their contract
+            students.forEach(function(student) {
+                addContractPage(doc, student, clauses);
+            });
+            
+            // Save the PDF if there are pages
+            if (doc.getNumberOfPages() > 0) {
+                doc.save("contrats_{{groupe.nom}}.pdf");
+                
+                // Close the modal
+                $('#contratsModal').modal('hide');
+            } else {
+                alert("Aucun contrat à générer.");
+            }
+        }
+        
+        // Function to add a contract page for a student
+        function addContractPage(doc, student, clauses) {
+            // Add a new page for each contract
+            doc.addPage();
+            
+            // Set margins and font
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width;
+            
+            doc.setFontSize(12);
+            
+            // Add centered title
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text("CONTRAT DE FORMATION", pageWidth / 2, 30, { align: 'center' });
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            
+            // Add "Entre les soussignés" section
+            let currentY = 40;
+            doc.setFont(undefined, 'bold');
+            doc.text("Entre les soussignés :", margin, currentY);
+            doc.setFont(undefined, 'normal');
+            currentY += 10;
+            
+            // Institution details
+            doc.text("L’établissement privé de formation professionnelle INSIM", margin, currentY);
+            currentY += 6;
+            doc.text("Sis, 19, boulevard Mohamed BOUDIAF, Chéraga, Alger", margin, currentY);
+            currentY += 6;
+            doc.text("Représenté par M. Said KESSAL en sa qualité de Directeur,", margin, currentY);
+            currentY += 10;
+            
+            // Separator
+            doc.text("Et", margin, currentY);
+            currentY += 10;
+            
+            // Student details
+            // Format: "Le stagiaire (Nom et prénom)"
+            doc.text("Le stagiaire " + student.fullName.trim(), margin, currentY);
+            currentY += 6;
+            
+            // Format: "Né(e) le :     A :"
+            var birthText = "Né(e) le : " + student.birthDate + "    A : " + student.birthPlace;
+            doc.text(birthText, margin, currentY);
+            currentY += 6;
+            
+            // Format: "Demeurant à (adresse complète du stagiaire) :"
+            // For now, we don't have address details, but if we had them, they would be used here
+            doc.text("Demeurant à : ________________", margin, currentY);
+            currentY += 10;
+            
+            // Add clauses
+            doc.setFont(undefined, 'bold');
+            doc.text("Clauses du contrat :", margin, currentY);
+            doc.setFont(undefined, 'normal');
+            currentY += 8;
+            
+            // Add each clause to the document
+            clauses.forEach(function(clause, index) {
+                // Add clause title if available
+                if (clause.titre && clause.titre.trim() !== '') {
+                    doc.setFont(undefined, 'bold');
+                    doc.text(clause.titre, margin, currentY);
+                    currentY += 6;
+                    doc.setFont(undefined, 'normal');
+                }
+                
+                // Add clause content
+                if (clause.article && clause.article.trim() !== '') {
+                    // Process tags in the clause content and replace them with student-specific information
+                    var processedContent = processContractTags(clause.article, student);
+                    
+                    // Split text to fit within page margins
+                    var wrappedText = doc.splitTextToSize(processedContent, pageWidth - 2 * margin);
+                    
+                    // Check if we need a new page
+                    if (currentY + (wrappedText.length * 6) > 270) { // 270 is close to bottom margin
+                        doc.addPage();
+                        currentY = 30;
+                    }
+                    
+                    // Add the wrapped text
+                    doc.text(wrappedText, margin, currentY);
+                    
+                    // Update currentY based on the number of lines
+                    currentY += wrappedText.length * 6;
+                    
+                    // Add some space after each clause
+                    currentY += 4;
+                    
+                    // Check if we need a new page after adding content
+                    if (currentY > 270) {
+                        doc.addPage();
+                        currentY = 30;
+                    }
+                }
+            });
+        }
+        
+        // Function to process tags in contract content and replace with student data
+        function processContractTags(content, student) {
+            // Replace tags with actual student information
+            if (!content) return content;
+            
+            return content
+                .replace(/\[nom_etudiant\]/g, student.lastName || '')
+                .replace(/\[prenom_etudiant\]/g, student.firstName || '')
+                .replace(/\[duree_formation\]/g, '{{groupe.specialite.formation.duree|default:"N/A"}}')
+                .replace(/\[formations\]/g, '{{groupe.specialite.formation.nom}}')
+                .replace(/\[qualification\]/g, '{{groupe.specialite.formation.qualification|default:"N/A"}}')
+                .replace(/\[frais_inscription\]/g, '{{groupe.specialite.formation.frais_inscription|default:"N/A"}}')
+                .replace(/\[prix_formation\]/g, '{{groupe.specialite.formation.prix|default:"N/A"}}')
+                .replace(/\[date_naissance_etudiant\]/g, student.birthDate || '')
+                .replace(/\[lieu_naissance_etudiant\]/g, student.birthPlace || '')
+                .replace(/\[adresse_etudiant\]/g, "______________"); // Address not available in this context
         }
     });
 </script>

@@ -38,4 +38,6 @@ urlpatterns = [
    path('contrat/modele/articles/create/', ApiCreateArticleContrat, name="ApiCreateArticleContrat"),
    path('contrat/modele/articles/update/', ApiUpdateArticleContrat, name="ApiUpdateArticleContrat"),
    path('contrat/modele/articles/delete/', ApiDeleteArticleContrat, name="ApiDeleteArticleContrat"),
+
+   path('ApiGetModeleContratByFormation', ApiGetModeleContratByFormation, name="ApiGetModeleContratByFormation"),
 ]

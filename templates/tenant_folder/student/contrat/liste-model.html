@@ -79,6 +79,28 @@
     justify-content: center;
     border-radius: 0.5rem;
   }
+  
+  #new_article_container[contenteditable="true"]:empty:before,
+  #edit_article_container[contenteditable="true"]:empty:before {
+    content: attr(placeholder);
+    color: #6c757d;
+  }
+  
+  /* Contenteditable styles */
+  [contenteditable="true"] {
+    outline: none;
+    border: 1px solid #e2e5e8;
+  }
+  
+  [contenteditable="true"]:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+  
+  /* Modal specific styles */
+  .modal .form-control[contenteditable="true"] {
+    min-height: 120px;
+  }
 </style>
 
 <div class="main-content">
@@ -437,8 +459,14 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-lg-12">
+                                <label class="form-label fw-medium" for="new_titre">Titre de l'article</label>
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-title-line text-muted"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light py-2" id="new_titre" name="titre" placeholder="Titre de l'article">
+                                </div>
+                                
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="form-label fw-medium" for="new_article">Nouvel article</label>
+                                    <label class="form-label fw-medium" for="new_article">Contenu de l'article</label>
                                     <div class="dropdown">
                                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             Tags disponibles
@@ -457,7 +485,8 @@
                                         </ul>
                                     </div>
                                 </div>
-                                <textarea class="form-control border-0 bg-light" id="new_article" name="article" rows="3" placeholder="Saisissez le texte de l'article..."></textarea>
+                                <div class="form-control border-0 bg-light p-3" id="new_article_container" contenteditable="true" style="min-height: 100px; max-height: 200px; overflow-y: auto;" placeholder="Saisissez le contenu de l'article..."></div>
+                                <textarea id="new_article" name="article" style="display: none;"></textarea>
                                 <div id="article_error" class="text-danger mt-1" style="display: none;"></div>
                             </div>
                         </div>
@@ -482,6 +511,7 @@
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
+                                        <th>Titre</th>
                                         <th>Article</th>
                                         <th>Date de création</th>
                                         <th>Dernière modification</th>
@@ -542,6 +572,75 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Modal de modification d'article -->
+<div id="editArticleModal" class="modal fade" tabindex="-1" aria-labelledby="editArticleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-edit-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="editArticleModalLabel">
+                            Modification de l'article
+                        </h5>
+                        <p class="text-muted small mb-0">Mise à jour du titre et contenu de l'article</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="edit_article_id">
+                <input type="hidden" id="edit_article_modele_id">
+                
+                <div class="row g-3">
+                    <div class="col-lg-12">
+                        <label class="form-label fw-medium" for="edit_titre">Titre de l'article</label>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-light border-0"><i class="ri-title-line text-muted"></i></span>
+                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_titre" name="titre" placeholder="Titre de l'article">
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-medium" for="edit_article_content">Contenu de l'article</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Tags disponibles
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" id="edit_availableTags">
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[nom_etudiant]">Nom étudiant</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[prenom_etudiant]">Prénom étudiant</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[duree_formation]">Durée formation</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[formations]">Formations</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[qualification]">Qualification</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[frais_inscription]">Frais d'inscription</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[prix_formation]">Prix de la formation</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[date_naissance_etudiant]">Date naissance étudiant</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[lieu_naissance_etudiant]">Lieu naissance étudiant</a></li>
+                                    <li><a class="dropdown-item edit-tag-option" href="#" data-tag="[adresse_etudiant]">Adresse étudiant</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-control border-0 bg-light p-3" id="edit_article_container" contenteditable="true" style="min-height: 150px; max-height: 300px; overflow-y: auto;" placeholder="Saisissez le contenu de l'article..."></div>
+                        <textarea id="edit_article_content" name="article" style="display: none;"></textarea>
+                        <div id="edit_article_error" class="text-danger mt-1" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary px-4 py-2" id="saveEditArticleBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -624,12 +723,12 @@
           }
 
           row += "<tr class='align-middle'>";
-          row += "<td><a href='#'><div class='d-flex align-items-center'><div class='flex-grow-1'><strong>" + item.nom + "</strong></div></div></a></td>";
-          row += "<td><div class='fw-medium'>" + item.type_contrat + "</div></td>";
+          row += "<td><a href='#'><div class='d-flex align-items-center'><div class='flex-grow-1'><strong>" + (item.nom || '') + "</strong></div></div></a></td>";
+          row += "<td><div class='fw-medium'>" + (item.type_contrat || 'N/A') + "</div></td>";
           row += "<td><div class='fw-medium'>" + (item.annee_scolaire || 'N/A') + "</div></td>";
           row += "<td>" + statusBadge + "</td>";
-          row += "<td><div class='text-body'><i class='ri-calendar-line text-muted me-2'></i>" + item.date_creation + "</div></td>";
-          row += "<td><div class='text-body'><i class='ri-calendar-2-line text-muted me-2'></i>" + item.date_modification + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-calendar-line text-muted me-2'></i>" + (item.date_creation || '') + "</div></td>";
+          row += "<td><div class='text-body'><i class='ri-calendar-2-line text-muted me-2'></i>" + (item.date_modification || '') + "</div></td>";
           row += '<td class="text-end">';
           row += '<div class="dropdown d-inline-block">';
           row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
@@ -640,7 +739,7 @@
           row += '<i class="ri-eye-line text-info me-2"></i>Voir</a></li>';
           row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 update-modele" data-id="' + item.id + '">';
           row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 articles-modele" data-id="' + item.id + '" data-name="' + item.nom + '">';
+          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 articles-modele" data-id="' + item.id + '" data-name="' + (item.nom || '') + '">';
           row += '<i class="ri-file-list-line text-info me-2"></i>Articles</button></li>';
           row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2">';
           row += '<i class="ri-download-line text-info me-2"></i>Télécharger</button></li>';
@@ -660,7 +759,7 @@
             row += '</button></li>';
           }
           
-          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-modele" data-id="' + item.id + '" data-name="' + item.nom + '">';
+          row += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-modele" data-id="' + item.id + '" data-name="' + (item.nom || '') + '">';
           row += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
           row += '</button></li>';
           
@@ -690,7 +789,7 @@
           },
           error: function(xhr, status, error) {
             console.error('Error loading contracts:', error);
-            alert('Erreur lors du chargement des modèles de contrat');
+            alert('Erreur lors du chargement des modèles de contrat: ' + error);
           }
         });
     }
@@ -704,16 +803,16 @@
         if (currentSearchTerm.trim() !== '') {
           const searchTerm = currentSearchTerm.toLowerCase();
           filteredData = filteredData.filter(function(item) {
-            return (item.nom.toLowerCase().includes(searchTerm) || 
-                    item.type_contrat.toLowerCase().includes(searchTerm) || 
-                    item.statut.toLowerCase().includes(searchTerm));
+            return (item.nom && item.nom.toLowerCase().includes(searchTerm)) || 
+                    (item.type_contrat && item.type_contrat.toLowerCase().includes(searchTerm)) || 
+                    (item.statut && item.statut.toLowerCase().includes(searchTerm));
           });
         }
         
         // Apply type filter if not default
         if (currentFilterType !== '0') {
           filteredData = filteredData.filter(function(item) {
-            return item.type_contrat.toLowerCase().includes(currentFilterType);
+            return item.type_contrat && item.type_contrat.toLowerCase().includes(currentFilterType);
           });
         }
         
@@ -818,15 +917,15 @@
                 if (currentSearchTerm.trim() !== '') {
                     const searchTerm = currentSearchTerm.toLowerCase();
                     filteredData = filteredData.filter(function(item) {
-                        return (item.nom.toLowerCase().includes(searchTerm) || 
-                                item.type_contrat.toLowerCase().includes(searchTerm) || 
-                                item.statut.toLowerCase().includes(searchTerm));
+                        return (item.nom && item.nom.toLowerCase().includes(searchTerm)) || 
+                                (item.type_contrat && item.type_contrat.toLowerCase().includes(searchTerm)) || 
+                                (item.statut && item.statut.toLowerCase().includes(searchTerm));
                     });
                 } else {
                     // If search is empty, show all contracts that match other filters
                     if (currentFilterType !== '0') {
                         filteredData = filteredData.filter(function(item) {
-                            return item.type_contrat.toLowerCase().includes(currentFilterType);
+                            return item.type_contrat && item.type_contrat.toLowerCase().includes(currentFilterType);
                         });
                     }
                     if (currentFilterDate !== '0') {
@@ -868,9 +967,9 @@
       
       if (modele) {
         $('#id_modele').val(modele.id);
-        $('#update_nom').val(modele.nom);
-        $('#update_annee_scolaire').val(modele.annee_scolaire);
-        $('#update_statut').val(modele.statut);
+        $('#update_nom').val(modele.nom || '');
+        $('#update_annee_scolaire').val(modele.annee_scolaire || '');
+        $('#update_statut').val(modele.statut || '');
         
         // Charger les formations
         var options = '<option value="">Sélectionner une formation</option>';
@@ -883,7 +982,7 @@
         
         // Attendre un peu pour que les options soient chargées, puis sélectionner la bonne formation
         setTimeout(function() {
-            $('#update_formation').val(modele.formation_id);
+            $('#update_formation').val(modele.formation_id || '');
         }, 100);
         
         $('#updateModeleModal').modal('show');
@@ -1106,11 +1205,15 @@
     function displayArticles(articles) {
       var html = '';
       if (articles.length === 0) {
-        html = '<tr><td colspan="4" class="text-center text-muted py-4">Aucun article pour ce modèle de contrat</td></tr>';
+        html = '<tr><td colspan="5" class="text-center text-muted py-4">Aucun article pour ce modèle de contrat</td></tr>';
       } else {
         $.each(articles, function(index, article) {
+          // Échapper le contenu de l'article pour l'affichage sécurisé
+          var escapedArticle = $('<div>').text(article.article || '').html();
+          var escapedTitre = $('<div>').text(article.titre || '').html();
           html += '<tr class="align-middle" data-article-id="' + article.id + '">';
-          html += '<td>' + (article.article || '') + '</td>';
+          html += '<td><strong>' + escapedTitre + '</strong></td>';
+          html += '<td>' + escapedArticle + '</td>';
           html += '<td>' + (article.created_at || '') + '</td>';
           html += '<td>' + (article.updated_at || '') + '</td>';
           html += '<td class="text-end">';
@@ -1146,9 +1249,44 @@
       loadArticles(id_modele);
     });
     
+    // Fonction pour échapper le texte HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Fonction pour convertir le contenu éditable en texte brut
+    function getContentAsPlainText(element) {
+      // Récupérer le texte brut dans un contenteditable
+      return element.text();
+    }
+    
+    // Fonction pour insérer du texte à la position du curseur dans un élément contenteditable
+    function insertTextAtCursor(element, text) {
+      if (document.queryCommandSupported('insertText')) {
+        document.execCommand('insertText', false, text);
+      } else {
+        const sel = window.getSelection();
+        if (sel.rangeCount) {
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          $(element).append(document.createTextNode(text));
+        }
+      }
+    }
+    
     // Gestion de l'ajout d'un article
     $(document).on('click', '#addArticleBtn', function(){
       var modele_id = $('#current_modele_id').val();
+      var titre = $('#new_titre').val();
       var article = $('#new_article').val();
       
       if (!article.trim()) {
@@ -1161,13 +1299,16 @@
         type: 'POST',
         data: {
           modele_id: modele_id,
+          titre: titre,
           article: article,
           csrfmiddlewaretoken: '{{ csrf_token }}'
         },
         success: function(response) {
           if (response.status === 'success') {
             alertify.success(response.message);
-            $('#new_article').val(''); // Réinitialiser le champ
+            $('#new_titre').val(''); // Réinitialiser le titre
+            $('#new_article_container').text(''); // Réinitialiser le champ
+            $('#new_article').val(''); // Réinitialiser le textarea
             $('#article_error').hide(); // Cacher l'erreur
             loadArticles(modele_id); // Recharger la liste
           } else {
@@ -1181,58 +1322,47 @@
       });
     });
     
-    // Gestion de la modification d'un article
+    // Gestion de la modification d'un article - ouvrir la modal
     $(document).on('click', '.edit-article', function(){
       var article_id = $(this).data('id');
       var current_row = $(this).closest('tr');
-      var current_article = current_row.find('td:first').text();
       
-      // Créer un champ d'édition temporaire avec les tags
-      var edit_row = '<tr id="edit_row_' + article_id + '" class="align-middle">';
-      edit_row += '<td colspan="3">';
-      edit_row += '<div class="d-flex justify-content-between align-items-center mb-1">';
-      edit_row += '<small class="text-muted">Tags disponibles:</small>';
-      edit_row += '<div class="dropdown">';
-      edit_row += '<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-article-id="' + article_id + '">';
-      edit_row += 'Tags';
-      edit_row += '</button>';
-      edit_row += '<ul class="dropdown-menu dropdown-menu-end available-tags-dropdown" data-article-id="' + article_id + '">';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[nom_etudiant]" data-article-id="' + article_id + '">Nom étudiant</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[prenom_etudiant]" data-article-id="' + article_id + '">Prénom étudiant</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[duree_formation]" data-article-id="' + article_id + '">Durée formation</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[formations]" data-article-id="' + article_id + '">Formations</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[qualification]" data-article-id="' + article_id + '">Qualification</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[frais_inscription]" data-article-id="' + article_id + '">Frais d\'inscription</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[prix_formation]" data-article-id="' + article_id + '">Prix de la formation</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[date_naissance_etudiant]" data-article-id="' + article_id + '">Date naissance étudiant</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[lieu_naissance_etudiant]" data-article-id="' + article_id + '">Lieu naissance étudiant</a></li>';
-      edit_row += '<li><a class="dropdown-item tag-option-edit" href="#" data-tag="[adresse_etudiant]" data-article-id="' + article_id + '">Adresse étudiant</a></li>';
-      edit_row += '</ul>';
-      edit_row += '</div>';
-      edit_row += '</div>';
-      edit_row += '<textarea class="form-control" id="edit_article_' + article_id + '">' + current_article + '</textarea>';
-      edit_row += '</td>';
-      edit_row += '<td class="text-end">';
-      edit_row += '<button class="btn btn-success btn-sm save-edit-article me-2" data-id="' + article_id + '">';
-      edit_row += '<i class="ri-check-line"></i></button>';
-      edit_row += '<button class="btn btn-secondary btn-sm cancel-edit-article" data-id="' + article_id + '">';
-      edit_row += '<i class="ri-close-line"></i></button>';
-      edit_row += '</td>';
-      edit_row += '</tr>';
+      // Récupérer les données de l'article (titre est dans la première colonne, contenu dans la deuxième)
+      var titre = current_row.find('td').eq(0).text();
+      var content = current_row.find('td').eq(1).text();
       
-      current_row.after(edit_row);
-      current_row.hide();
+      // Remplir les champs de la modal
+      $('#edit_article_id').val(article_id);
+      var modele_id = $('#current_modele_id').val();
+      $('#edit_article_modele_id').val(modele_id);
+      
+      // Mettre à jour les champs
+      $('#edit_titre').val(titre);
+      $('#edit_article_container').text(content);
+      $('#edit_article_content').val(content);
+      
+      // Attacher l'événement de mise à jour du textarea
+      $('#edit_article_container').off('input.propertychange').on('input propertychange', function() {
+        const plainText = $(this).text();
+        $('#edit_article_content').val(plainText);
+      });
+      
+      // Afficher la modal
+      $('#editArticleModal').modal('show');
     });
     
-    // Sauvegarder la modification
-    $(document).on('click', '.save-edit-article', function(){
-      var article_id = $(this).data('id');
-      var article = $('#edit_article_' + article_id).val();
-      var modele_id = $('#current_modele_id').val();
+    // Sauvegarder la modification dans la modal
+    $(document).on('click', '#saveEditArticleBtn', function(){
+      var article_id = $('#edit_article_id').val();
+      var titre = $('#edit_titre').val();
+      var article = $('#edit_article_content').val();
+      var modele_id = $('#edit_article_modele_id').val();
       
       if (!article.trim()) {
-        alertify.error('Veuillez saisir le contenu de l\'article');
+        $('#edit_article_error').text('Veuillez saisir le contenu de l\'article').show();
         return;
+      } else {
+        $('#edit_article_error').hide();
       }
       
       $.ajax({
@@ -1240,6 +1370,7 @@
         type: 'POST',
         data: {
           article_id: article_id,
+          titre: titre,
           article: article,
           csrfmiddlewaretoken: '{{ csrf_token }}'
         },
@@ -1247,22 +1378,16 @@
           if (response.status === 'success') {
             alertify.success(response.message);
             loadArticles(modele_id); // Recharger la liste
+            $('#editArticleModal').modal('hide'); // Fermer la modal
           } else {
-            alertify.error(response.message);
+            $('#edit_article_error').text(response.message).show();
           }
         },
         error: function(xhr, status, error) {
           console.error('Error updating article:', error);
-          alertify.error('Erreur lors de la mise à jour de l\'article');
+          $('#edit_article_error').text('Erreur lors de la mise à jour de l\'article').show();
         }
       });
-    });
-    
-    // Annuler la modification
-    $(document).on('click', '.cancel-edit-article', function(){
-      var article_id = $(this).data('id');
-      $('#edit_row_' + article_id).remove();
-      $('#articlesList tr[data-article-id="' + article_id + '"]').show();
     });
     
     // Modal de confirmation pour la suppression d'article
@@ -1313,19 +1438,79 @@
     $(document).on('click', '.tag-option', function(e) {
       e.preventDefault();
       var tag = $(this).data('tag');
-      var currentText = $('#new_article').val();
-      $('#new_article').val(currentText + tag);
-      $('#new_article').focus(); // Mettre le focus sur le champ
+      var container = $('#new_article_container');
+      
+      insertTextAtCursor(container[0], tag);
+      container.focus();
+      
+      // Mettre à jour le textarea caché après l'insertion du tag
+      var plainText = container.text();
+      $('#new_article').val(plainText);
     });
     
-    // Gestion des tags pour l'article en modification
-    $(document).on('click', '.tag-option-edit', function(e) {
+    // Gestion des tags pour la modification d'article
+    $(document).on('click', '.edit-tag-option', function(e) {
       e.preventDefault();
       var tag = $(this).data('tag');
-      var articleId = $(this).data('article');
-      var currentText = $('#edit_article_' + articleId).val();
-      $('#edit_article_' + articleId).val(currentText + tag);
-      $('#edit_article_' + articleId).focus(); // Mettre le focus sur le champ
+      var container = $('#edit_article_container');
+      
+      insertTextAtCursor(container[0], tag);
+      container.focus();
+      
+      // Mettre à jour le textarea caché après l'insertion du tag
+      var plainText = container.text();
+      $('#edit_article_content').val(plainText);
+    });
+    
+    // Gestion des tags pour le nouvel article
+    $(document).on('click', '.tag-option', function(e) {
+      e.preventDefault();
+      var tag = $(this).data('tag');
+      var container = $('#new_article_container');
+      
+      insertTextAtCursor(container[0], tag);
+      container.focus();
+    });
+    
+    // Disable selection in contenteditable for better UX
+    $(document).on('focus', '[contenteditable="true"]', function() {
+        document.execCommand('defaultParagraphSeparator', false, 'div');
+    });
+    
+    // Mettre à jour le textarea caché à partir du contenu éditable
+    $(document).on('input propertychange', '[contenteditable="true"]', function() {
+      const editableId = $(this).attr('id');
+      // Extraire le texte brut et le mettre dans le textarea caché correspondant
+      if (editableId === 'new_article_container') {
+        const plainText = $(this).text();
+        $('#new_article').val(plainText);
+      } else if (editableId === 'edit_article_container') {
+        const plainText = $(this).text();
+        $('#edit_article_content').val(plainText);
+      }
+    });
+    
+    // Initialiser le conteneur editable dans la modal de création
+    $('#createModeleModal').on('shown.bs.modal', function() {
+        $('#new_article_container').text($('#new_article').val());
+        
+        // Détacher l'événement précédent et attacher le nouveau
+        $('#new_article_container').off('input.propertychange').on('input propertychange', function() {
+            const plainText = $(this).text();
+            $('#new_article').val(plainText);
+        });
+    });
+    
+    // Attacher l'événement de mise à jour du textarea dans la modal d'édition
+    $('#editArticleModal').on('shown.bs.modal', function() {
+        var current_article = $('#edit_article_content').val();
+        $('#edit_article_container').text(current_article);
+        
+        // Détacher l'événement précédent et attacher le nouveau
+        $('#edit_article_container').off('input.propertychange').on('input propertychange', function() {
+            const plainText = $(this).text();
+            $('#edit_article_content').val(plainText);
+        });
     });
   });
 </script>
