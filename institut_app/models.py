@@ -73,6 +73,7 @@ class Entreprise(models.Model):
     entete = models.TextField(null=True, blank=True)
     code_postal = models.CharField(max_length=100, null=True, blank=True)
     observations = models.TextField(null=True, blank=True)
+    representant = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
