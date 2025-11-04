@@ -260,6 +260,8 @@ def ApiGetClientEcheancier(request):
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.formation.prix_formation,
             'frais_inscription' : voeux.specialite.formation.frais_inscription,
+            'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
+            'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0

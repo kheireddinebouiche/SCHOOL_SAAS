@@ -786,6 +786,10 @@
                                     </button>
                                 </div>
                             </div>
+                            
+                            <!-- Hidden fields for logo URLs -->
+                            <input type="hidden" id="_logoHeader" />
+                            <input type="hidden" id="_logoFooter" />
                         </div>
                     </div>
                     <!-- Payment sections -->
@@ -2788,6 +2792,12 @@
     </div>
 </div>
 
+<input disabled type="hidden" id="_logoHeader" />
+<input disabled type="hidden" id="_logoFooter" />
+
+<input disabled type="hidden" id="_date_naissance" />
+<input disabled type="hidden" id="_lieu_naissance" />
+
 <script>
     
     
@@ -2886,6 +2896,12 @@
                     $('#clientAddress').text(data.user_data.adresse || 'Non spécifié');
                     $('#clientBirthDate').text(data.user_data.date_naissance || 'Non spécifié');
                     $('#clientBirthPlace').text(data.user_data.lieu_naissance || 'Non spécifié');
+
+                    $('#_logoHeader').val(data.voeux.logo_header);
+                    $('#_logoFooter').val(data.voeux.logo_footer);
+
+                    $('#_date_naissance').val(data.user_data.demandeur_date_naissance);
+                    $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
                     
                     // Informations sur la formation
                     $('#specialite').text(data.voeux.specialite_label);
@@ -3678,27 +3694,60 @@
                         // Créer le PDF
                         const doc = new jsPDFInstance();
                         
+                        // Récupérer les URLs des logos
+                        const logoHeaderUrl = document.getElementById('_logoHeader').value;
+                        const logoFooterUrl = document.getElementById('_logoFooter').value;
+                        
+                        // Fonction pour ajouter les logos au PDF
+                        const addLogosToPDF = () => {
+                            // Ajouter le logo d'en-tête si disponible
+                            if (logoHeaderUrl) {
+                                const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
+                                // Set the header logo width to 25% of the page width
+                                const headerLogoWidth = doc.internal.pageSize.width * 0.25;
+                                // Maintain aspect ratio by adjusting height proportionally
+                                doc.addImage(headerLogoUrl, 'PNG', 20, 10, headerLogoWidth, headerLogoWidth * 0.375); // 0.375 maintains typical logo ratio
+                            }
+                            
+                            // Ajouter le logo de pied de page si disponible
+                            if (logoFooterUrl) {
+                                const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
+                                // Position the footer logo across the full width of the page but respecting margins
+                                // Starting from x=20 (left margin) and spanning the full width minus margins
+                                doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
+                            }
+                        };
+                        
+                        // Ajouter les logos au PDF
+                        addLogosToPDF();
+                        
+                        // Définir la police Times New Roman
+                        doc.setFont('times');
+                        
                         // Ajouter le titre
                         doc.setFontSize(18);
-                        doc.text("Engagement de l'étudiant", 105, 20, null, null, 'center');
+                        doc.text("Engagement de paiements", 105, 55, null, null, 'center');
                         
                         // Ajouter les informations de l'étudiant
                         doc.setFontSize(12);
-                        doc.text("Nom de l'étudiant: " + studentName, 20, 40);
-                        doc.text("Formation: " + formation, 20, 50);
-                        doc.text("Promo: " + promo, 20, 60);
-                        doc.text("Date: " + currentDate, 20, 70);
+                        doc.text("Nom de l'étudiant: " + studentName, 20, 75);
+                        doc.text("Formation: " + formation, 20, 85);
+                        doc.text("Promo: " + promo, 20, 95);
+                        doc.text("Date: " + currentDate, 20, 105);
                         
                         // Ajouter le texte d'engagement
                         doc.setFontSize(12);
                         var engagementText = "Je soussigné(e), " + studentName + ", déclare avoir pris connaissance des échéances de paiement ci-dessous et m'engage à les respecter:";
-                        doc.text(engagementText, 20, 90, { maxWidth: 170 });
+                        doc.text(engagementText, 20, 125, { maxWidth: 170 });
                         
                         // Préparer les données pour le tableau
                         var columns = ["Libellé", "Montant", "Date echeance"];
                         var rows = [];
                         paymentsData.forEach(function(payment) {
-                            rows.push([payment.label, payment.amount, payment.date_echeance]);
+                            // Exclure les lignes contenant "frais d'inscription"
+                            if (!payment.label.toLowerCase().includes('frais d\'inscription')) {
+                                rows.push([payment.label, payment.amount, payment.date_echeance]);
+                            }
                         });
                         
                         // Ajouter le tableau des paiements
@@ -3706,8 +3755,21 @@
                             doc.autoTable({
                                 head: [columns],
                                 body: rows,
-                                startY: 100,
-                                theme: 'grid'
+                                startY: 145,
+                                theme: 'plain',  // Changed from 'grid' to 'plain' to remove colors
+                                styles: {
+                                    fillColor: false,  // Remove background colors
+                                    textColor: [0, 0, 0],  // Set text to black
+                                    lineWidth: 0.1  // Light borders
+                                },
+                                headStyles: {
+                                    fillColor: false,  // Remove header background color
+                                    textColor: [0, 0, 0],  // Header text in black
+                                    halign: 'center'
+                                },
+                                bodyStyles: {
+                                    fillColor: false  // Remove body background colors
+                                }
                             });
                             
                             // Ajouter la signature
@@ -3716,7 +3778,7 @@
                             doc.text("Signature de l'administrateur: ___________________", 20, finalY + 40);
                         } else {
                             // Si autoTable n'est pas disponible, ajouter les paiements manuellement
-                            var yPosition = 100;
+                            var yPosition = 145;
                             doc.text("Paiements dus:", 20, yPosition);
                             yPosition += 10;
                             
@@ -3731,7 +3793,7 @@
                         }
                         
                         // Télécharger le PDF
-                        doc.save("engagement_etudiant_" + studentName.replace(/\s+/g, '_') + ".pdf");
+                        doc.save("engagement_paiements_" + studentName.replace(/\s+/g, '_') + ".pdf");
                         alertify.success("Document d'engagement généré avec succès !");
                         
                     } catch (error) {
@@ -4073,73 +4135,86 @@
                 function drawQuittance(yOffset) {
                     doc.setFontSize(14);
                     doc.setTextColor(40, 40, 40);
-                    doc.text("QUITTANCE DE PAIEMENT", 105, yOffset + 15, null, null, 'center');
+                    doc.text("BON DE PRE-INSCRIPTION", 105, yOffset + 15, null, null, 'center');
 
                     doc.setDrawColor(59, 125, 221);
                     doc.setLineWidth(0.5);
                     doc.line(20, yOffset + 20, 190, yOffset + 20);
 
-                    doc.setFontSize(8);
-                    doc.setTextColor(80, 80, 80);
-                    doc.text(entreprise.designation || "Nom de l'entreprise", 20, yOffset + 28);
-                    doc.text(entreprise.adresse || "Adresse non spécifiée", 20, yOffset + 32);
-                    doc.text("Tél: " + (entreprise.telephone || "+213 XX XX XX XX"), 20, yOffset + 36);
-                    if (entreprise.email) doc.text("Email: " + entreprise.email, 20, yOffset + 40);
-
+                    doc.setFontSize(10);  // Set the same font size as other texts
                     doc.setTextColor(40, 40, 40);
-                    doc.text("Date: " + currentDate, 150, yOffset + 28);
-                    doc.text("N° Quittance: " + payment.num, 150, yOffset + 32);
+                    doc.text("Date: " + currentDate, 150, yOffset + 25);
+                    doc.text("N° Bon: " + payment.num, 150, yOffset + 30);
 
                     doc.setFontSize(10);
-                    doc.text("Reçu de:", 20, yOffset + 50);
+                    doc.text("Reçu de:", 20, yOffset + 35);
                     doc.setFontSize(9);
-                    doc.text(studentName, 45, yOffset + 50);
+                    doc.text(studentName, 45, yOffset + 35);
 
                     doc.setFontSize(10);
-                    doc.text("Formation:", 20, yOffset + 56);
+                    doc.text("Formation:", 20, yOffset + 41);
                     doc.setFontSize(9);
-                    doc.text(formation, 45, yOffset + 56);
+                    doc.text(formation, 45, yOffset + 41);
 
                     doc.setFontSize(10);
-                    doc.text("Promo:", 20, yOffset + 62);
+                    doc.text("Promo:", 20, yOffset + 47);
                     doc.setFontSize(9);
-                    doc.text(promo, 45, yOffset + 62);
+                    doc.text(promo, 45, yOffset + 47);
+
+                    // Get date of birth and place of birth from hidden input fields
+                    const dateNaissance = document.getElementById('_date_naissance').value;
+                    const lieuNaissance = document.getElementById('_lieu_naissance').value;
+
+                    // Add date and place of birth if available
+                    if (dateNaissance) {
+                        doc.setFontSize(10);
+                        doc.text("Date de naissance:", 20, yOffset + 53);
+                        doc.setFontSize(9);
+                        doc.text(dateNaissance, 65, yOffset + 53);
+                    }
+                    
+                    if (lieuNaissance) {
+                        doc.setFontSize(10);
+                        doc.text("Lieu de naissance:", 20, yOffset + (dateNaissance ? 59 : 53));
+                        doc.setFontSize(9);
+                        doc.text(lieuNaissance, 65, yOffset + (dateNaissance ? 59 : 53));
+                    }
 
                     doc.setFontSize(11);
                     doc.setTextColor(59, 125, 221);
-                    doc.text("DÉTAILS DU PAIEMENT", 20, yOffset + 75);
+                    doc.text("DÉTAILS DU PAIEMENT", 20, yOffset + (dateNaissance || lieuNaissance ? 70 : 60));
 
                     doc.setFontSize(9);
                     doc.setTextColor(40, 40, 40);
-                    doc.text("Motif de paiement :", 20, yOffset + 82);
-                    doc.text(payment.label_paiements || "N/A", 60, yOffset + 82);
+                    doc.text("Motif de paiement :", 20, yOffset + (dateNaissance || lieuNaissance ? 77 : 67));
+                    doc.text(payment.label_paiements || "N/A", 60, yOffset + (dateNaissance || lieuNaissance ? 77 : 67));
 
-                    doc.text("Montant payé :", 20, yOffset + 88);
+                    doc.text("Montant payé :", 20, yOffset + (dateNaissance || lieuNaissance ? 83 : 73));
                     doc.setFont("helvetica", "bold");
-                    doc.text(payment.montant_paye + " DA", 60, yOffset + 88);
+                    doc.text(payment.montant_paye + " DA", 60, yOffset + (dateNaissance || lieuNaissance ? 83 : 73));
                     doc.setFont("helvetica", "normal");
 
-                    doc.text("Date de paiement :", 20, yOffset + 94);
-                    doc.text(payment.date_paiement, 60, yOffset + 94);
+                    doc.text("Date de paiement :", 20, yOffset + (dateNaissance || lieuNaissance ? 89 : 79));
+                    doc.text(payment.date_paiement, 60, yOffset + (dateNaissance || lieuNaissance ? 89 : 79));
 
-                    doc.text("Mode de paiement :", 20, yOffset + 100);
-                    doc.text(payment.mode_paiement, 60, yOffset + 100);
+                    doc.text("Mode de paiement :", 20, yOffset + (dateNaissance || lieuNaissance ? 95 : 85));
+                    doc.text(payment.mode_paiement, 60, yOffset + (dateNaissance || lieuNaissance ? 95 : 85));
 
-                    doc.text("Référence :", 20, yOffset + 106);
-                    doc.text(payment.reference || "N/A", 60, yOffset + 106);
+                    doc.text("Référence :", 20, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
+                    doc.text(payment.reference || "N/A", 60, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
 
                     doc.setFontSize(9);
                     doc.setTextColor(40, 167, 69);
-                    doc.text("Merci pour votre paiement.", 20, yOffset + 115);
+                    doc.text("Merci pour votre pré-inscription.", 20, yOffset + (dateNaissance || lieuNaissance ? 110 : 100));
 
                     doc.setFontSize(8);
                     doc.setTextColor(80, 80, 80);
-                    doc.text("Date d'impression: " + printDate, 20, yOffset + 122);
-                    doc.text("Signature de l'agent:", 20, yOffset + 128);
-                    doc.line(20, yOffset + 131, 80, yOffset + 131);
+                    doc.text("Date d'impression: " + printDate, 20, yOffset + (dateNaissance || lieuNaissance ? 117 : 107));
+                    doc.text("Signature de l'agent:", 20, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
+                    doc.line(20, yOffset + (dateNaissance || lieuNaissance ? 126 : 116), 80, yOffset + (dateNaissance || lieuNaissance ? 126 : 116));
 
-                    doc.text("Signature du responsable:", 120, yOffset + 128);
-                    doc.line(120, yOffset + 131, 180, yOffset + 131);
+                    doc.text("Signature du responsable:", 120, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
+                    doc.line(120, yOffset + (dateNaissance || lieuNaissance ? 126 : 116), 180, yOffset + (dateNaissance || lieuNaissance ? 126 : 116));
                 }
 
                 // Première quittance
@@ -4155,8 +4230,8 @@
                 drawQuittance(middle + 5);
 
                 // Sauvegarde
-                doc.save("quittance_" + payment.num + "_" + studentName.replace(/\s+/g, '_') + ".pdf");
-                alertify.success("Deux quittances générées avec succès !");
+                doc.save("pre_inscription_" + payment.num + "_" + studentName.replace(/\s+/g, '_') + ".pdf");
+                alertify.success("Deux bons de pré-inscription générés avec succès !");
             } catch (error) {
                 console.error("Erreur lors de la génération du PDF:", error);
                 alert("Erreur : " + error.message);
