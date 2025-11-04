@@ -127,8 +127,7 @@ def ApiGetDetailsDemandePaiement(request):
         voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
         echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
-        print(echeancierId.id)
-
+    
         special_echeancier_data = []
         has_special_echeancier = False
         echeancier_state_approuvel = False
@@ -263,6 +262,7 @@ def ApiGetDetailsDemandePaiement(request):
         
 
         user_data = {
+            "demandeur_id" : obj.client.id,
             "demandeur_nom": obj.client.nom,
             "demandeur_prenom": obj.client.prenom,
             "demandeur_email" : obj.client.email,
@@ -281,9 +281,12 @@ def ApiGetDetailsDemandePaiement(request):
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
+            'formation' : voeux.specialite.formation.nom,
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.formation.prix_formation,
             'frais_inscription' : voeux.specialite.formation.frais_inscription,
+            'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
+            'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
