@@ -123,7 +123,7 @@ DATABASES = {
      'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
         'NAME': 'insim',
-        'USER': 'postgres',
+        'USER': 'insim',
         'PASSWORD': '1230042690',
         'HOST': 'localhost',
         'PORT': '5432',
