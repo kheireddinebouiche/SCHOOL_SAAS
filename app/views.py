@@ -9,17 +9,38 @@ from django.contrib.auth.models import User
 from django.contrib.auth import logout, authenticate, login
 
 
-@login_required(login_url='login')
-def Index(request):
-    
-    tenant = getattr(request, 'tenant', None)
-    # Get the schema name or set it to "Unknown" if no tenant is found
-    schema_name = tenant.schema_name if tenant else "Unknown"
 
+def Index(request):
+    tenants = Institut.objects.exclude(schema_name='public')
+    
+    if request.method == 'POST':
+        tenant_slug = request.POST.get('tenant_slug')
+        return redirect_to_tenant(request, tenant_slug)
+    
     context = {
-        'tenant' : request.tenant
+        'tenants': tenants
     }
-    return render(request, 'public_folder/index.html', context)
+    return render(request, 'public_folder/organisation_select.html', context)
+
+def redirect_to_tenant(request, tenant_slug):
+    try:
+        tenant = Institut.objects.get(nom=tenant_slug)
+        domain = Domaine.objects.filter(tenant=tenant, is_primary=True).first()
+        
+        if domain:
+            # Construire l'URL du tenant
+            scheme = 'https' if request.is_secure() else 'http'
+            tenant_url = f"{scheme}://{domain.domain}"
+            
+            # Pour le développement local avec port
+            if 'localhost' in request.get_host():
+                port = request.get_host().split(':')[1] if ':' in request.get_host() else '8000'
+                tenant_url = f"{scheme}://{tenant.nom}.localhost:{port}"
+            return redirect(tenant_url)
+    except Institut.DoesNotExist:
+        pass
+    
+    return redirect('tenant_selection')
 
 def new_tenant(request):
     form = NewTenantForm()
