@@ -44,3 +44,37 @@ def StudentDetails(request, pk):
         'remises' : remises,
     }
     return render(request, 'tenant_folder/student/profile_etudiant.html',context)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdate_etudiant(request):
+    
+    id = request.POST.get('id_etudiant')
+    etu = Prospets.objects.get(id=id)
+    etu.nom = request.POST.get('nom')
+    etu.prenom = request.POST.get('prenom')
+    etu.date_naissance = request.POST.get('date_naissance') or None
+    etu.lieu_naissance = request.POST.get('lieu_naissance')
+    etu.nationnalite = request.POST.get('nationalite')
+    etu.email = request.POST.get('email')
+    etu.telephone = request.POST.get('telephone')
+    etu.adresse = request.POST.get('adresse')
+    etu.niveau_scolaire = request.POST.get('niveau_etude')
+    etu.diplome = request.POST.get('dernier_diplome')
+    etu.etablissement = request.POST.get('etablissement_origine')
+    etu.prenom_pere = request.POST.get('nom_pere')
+    etu.tel_pere = request.POST.get('tel_pere')
+    etu.nom_mere = request.POST.get('nom_mere')
+    etu.prenom_mere = request.POST.get('prenom_mere')
+    etu.tel_mere = request.POST.get('tel_mere')
+    # Tu peux aussi stocker les indicatifs :
+    etu.indic1 = request.POST.get('indicatif_pere')
+    etu.indic2 = request.POST.get('indicatif_mere')
+    etu.save()
+    print(id,request.POST.get('nationalite'))
+
+    messages.success(request,'Information mises à jours')
+    return JsonResponse({'status': 'success'})
+
+  

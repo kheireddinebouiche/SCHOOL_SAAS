@@ -33,4 +33,5 @@ urlpatterns = [
     path('ApiUpdateGroupeCode', ApiUpdateGroupeCode ,name="ApiUpdateGroupeCode"),
 
     path('ApiCancelStudentAffectation', ApiCancelStudentAffectation, name="ApiCancelStudentAffectation"),
+    path('ApiUpdate_etudiant',ApiUpdate_etudiant,name="ApiUpdate_etudiant"),
 ]
