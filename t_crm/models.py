@@ -201,6 +201,7 @@ class Prospets(models.Model):
     has_endicap = models.BooleanField(default=False, null=True, blank=True)
     type_handicap = models.CharField(max_length=1000, null=True, blank=True)
 
+    commune = models.CharField(max_length=100, null=True, blank=True)
     adresse = models.CharField(max_length=1000, null=True, blank=True)
     pays = models.CharField(max_length=100, null=True, blank=True)
     wilaya = models.CharField(max_length=100, null=True, blank=True)
@@ -212,6 +213,7 @@ class Prospets(models.Model):
     niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 am'),('2_am','2 am'),('3_am', '3_am'),('4_am','4 am'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminal'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','Licence'),('m','Master')])
     diplome = models.CharField(max_length=100, null=True, blank=True)
     etablissement = models.CharField(max_length=100, null=True, blank=True)
+    annee_obtention = models.CharField(max_length=100, null=True, blank=True)
     statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance de paiement'),('convertit','Convertit'),('annuler','Inscription Annulé')])
 
     profile_completed = models.BooleanField(default=False)
@@ -233,6 +235,9 @@ class Prospets(models.Model):
     preinscri_date= models.DateField(null=True, blank=True)
     instance_date = models.DateField(null=True, blank=True)
     convertit_date = models.DateField(null=True, blank=True)
+
+    tuteur_legal = models.CharField(max_length=100, null=True, blank=True)
+    indic3 = models.CharField(max_length=10, null=True, blank=True, choices=INDICATIF)
 
     is_affected = models.BooleanField(default=False)
     annee_inscription = models.CharField(max_length=100, null=True, blank=True, choices=[('1','1 Année'),('2','2 Année'),('stage','Stage')])

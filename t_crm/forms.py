@@ -60,7 +60,7 @@ class VisiteurForm(forms.ModelForm):
 
 class NewProspecFormParticulier(forms.ModelForm):
     contact_situation = forms.ChoiceField(
-        choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visite')],
+        choices=[('fist_contact','Premiere visite'),('a_appeler','Appel téléphonique'),('est_passer','Visite')],
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
@@ -74,6 +74,7 @@ class NewProspecFormParticulier(forms.ModelForm):
         labels = {
             'nom' : "Nom :",
             'prenom' : "Prénom :",
+            "lead_source" : "Source du lead (Quelle action à conduit le prospect a venir à l'insim) :"
         }
         widgets = {
             "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name'}),

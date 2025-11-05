@@ -123,27 +123,14 @@ DATABASES = {
      'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
         'NAME': 'insim',
-        'USER': 'insim',
+        'USER': 'postgres',
         'PASSWORD': '1230042690',
         'HOST': 'localhost',
         'PORT': '5432',
     }
 }
 
-# --- Redis Cache ---
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env("REDIS_URL", default="redis://127.0.0.1:6379/1"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
-    }
-}
 
-# --- Sessions dans Redis ---
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-SESSION_CACHE_ALIAS = "default"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
