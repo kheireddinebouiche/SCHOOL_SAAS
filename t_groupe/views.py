@@ -26,6 +26,15 @@ def NewGroupe(request):
 
     return render(request,'tenant_folder/formations/groupe/nouveau_groupe.html', context)
 
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiCreateGroupe(request):
+    if request.method == "POST":
+        pass
+    else:
+        return JsonResponse({"status":"error",'message':'Méthode non autoriser'})
+
 @login_required(login_url="insitut_app:login")
 def ListeGroupe(request):
     groupes = Groupe.objects.all()
