@@ -11,7 +11,7 @@ class Groupe(models.Model):
     code_partenaire = models.CharField(max_length=100 ,null=True, blank=True)
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)
     promotion = models.ForeignKey(Promos, on_delete=models.DO_NOTHING, null=True)
-
+    num_groupe = models.CharField(max_length=100, null=True, blank=True)
     min_student = models.IntegerField(default=0, null=True, blank=True)
     max_student = models.IntegerField(default=0, null=True, blank=True)
 

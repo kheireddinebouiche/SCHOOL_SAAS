@@ -90,8 +90,7 @@
                             </div>
                         </div><!-- end card header -->
                         <div class="card-body p-4">
-                            <form method='POST'>
-                                {% csrf_token %}
+                           
                                 
                                 <div class="row">
                                     <div class="col-lg-6">
@@ -111,16 +110,29 @@
                                 </div>
                                 
                                 <div class="row">
-                                    <div class="col-lg-6">
+                                    <div class="col-lg-4">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
-                                            {{ form.start_date }}
+                                            <label class="form-label" for="id_numero_groupe_readonly">Nom du groupe :</label>
+                                            <input type="text" id="id_numero_groupe_readonly" class="form-control bg-light" value="G-" readonly style="background-color: #e9ecef; color: #6c757d; cursor: not-allowed;">
+                                            <input type="hidden" name="numero_groupe" id="id_numero_groupe" value="">
                                         </div>
                                     </div>
-                                    <div class="col-lg-6">
+                                    <div class="col-lg-2">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
-                                            {{ form.end_date }}
+                                            <label class="form-label" for="id_numero_libre">Numéro du groupe :</label>
+                                            <input type="text" id="id_numero_libre" class="form-control" placeholder="ex: 01">
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="mb-3">
+                                            <label class="form-label" for="start_date">Date de lancement :</label>
+                                            <input type="date" id="start_date" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="mb-3">
+                                            <label class="form-label" for="end_date">Date de fin de formation</label>
+                                            <input type="date" id="end_date" class="form-control" />
                                         </div>
                                     </div>
                                 </div>
@@ -128,35 +140,30 @@
                                 <div class="row">
                                     <div class="col-lg-6">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.min_student.id_for_label }}">{{ form.min_student.label }}</label>
-                                            {{ form.min_student }}
+                                            <label class="form-label">Minimum d'étudiants pour démarrer la formation :</label>
+                                            <input type="number" value="0" class="form-control" min="5" id="min_student" />
                                         </div>
                                     </div>
                                     <div class="col-lg-6">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.max_student.id_for_label }}">{{ form.max_student.label }}</label>
-                                            {{ form.max_student }}
-                                        </div>
+                                            <label class="form-label">Maximum d'étudiants pour cloturer la formation :</label>
+                                            <input type="number" value="30" class="form-control" id="max_student"/>
+                                       </div>
                                     </div>
                                 </div>
                                 
                                 <div class="row">
-                                    <div class="col-lg-4">
+                                    <div class="col-lg-6">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.specialite.id_for_label }}">{{ form.specialite.label }}</label>
-                                            {{ form.specialite }}
+                                            <label class="form-label" for="_annee_scolaire">Année scolaire :</label>
+                                            <input type="text" id="_annee_scolaire" class="form-control">
                                         </div>
                                     </div>
-                                    <div class="col-lg-4">
+                                    <div class="col-lg-6">
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.annee_scolaire.id_for_label }}">{{ form.annee_scolaire.label }}</label>
-                                            {{ form.annee_scolaire }}
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-4">
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.promotion.id_for_label }}">{{ form.promotion.label }}</label>
-                                            {{ form.promotion }}
+                                            <label class="form-label" for="id_promotion">Promotion :</label>
+                                            <select class="form-select" id="id_promotion">
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -165,11 +172,11 @@
                                     <button type="reset" class="btn btn-light px-4 py-2">
                                         <i class="ri-refresh-line me-1"></i> Réinitialiser
                                     </button>
-                                    <button type="submit" class="btn btn-primary px-4 py-2">
+                                    <button id="saveBtn" type="submit" class="btn btn-primary px-4 py-2">
                                         <i class="ri-save-line me-1"></i> Enregistrer
                                     </button>
                                 </div>
-                            </form>
+                           
                         </div>
                     </div>
                 </div>
@@ -183,8 +190,8 @@
 <!-- SCRIPT TO CHECK BEGINNING DATE AND ENDING DATE-->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        let startDateInput = document.getElementById("_date_debut");
-        let endDateInput = document.getElementById("_date_fin");
+        let startDateInput = document.getElementById("start_date");
+        let endDateInput = document.getElementById("end_date");
 
         function validateDates() {
             let startDate = new Date(startDateInput.value);
@@ -225,6 +232,189 @@
                     errorMsg.remove();
                 }
             }
+        });
+    });
+</script>
+
+<script>
+    $(document).ready(function(){
+
+        function loadformation(){
+            $.ajax({
+                url :'{% url "t_groupe:ApiGetFormation" %}',
+                dataType : "JSON",
+                type:"GET",
+                success: function(data){
+                    var option = "<option ='0'>Veuillez sélectionner une formation </option> ";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.code+">"+p.nom+"</option>";
+                    });
+
+                    $('#_formSelectFormation').html(option);
+                }
+            })
+           
+
+        }
+
+        loadformation();
+
+        function loadPromo(){
+            $.ajax({
+                url : "{% url 't_groupe:ApiListePromo' %}",
+                dataType:"JSON",
+                type : "GET",
+                success: function(data){
+                    var option = "<option value='0'>Veuillez sélectionner une promotion </option>";
+                    $.each(data, function(index, p){
+                         option += "<option value="+p.code+">"+p.code+" - "+p.begin_year+"/"+p.end_year+" - "+p.session+"</option>";
+                    });
+                    $('#id_promotion').html(option);
+                }
+            })
+        }
+
+        loadPromo();
+
+        // Variable to store the selected speciality abbreviation
+        let selectedSpecialiteAbreviation = '';
+
+        $(document).on('change', "#_formSelectFormation", function(){
+            var formationCode = $(this).val();
+
+            $.ajax({
+                url : "{% url 't_groupe:ApiSelectSpecialite' %}",
+                dataType:"JSON",
+                type: "GET",
+                data : {
+                    'formation' : formationCode,
+                },
+                success : function(data){
+                    var option ="<option value='0'>Veuillez selectionner une spécialité</option>";
+                    const $specialiteSelect = $('#_formSelectSpecialite');
+
+                    $specialiteSelect.html("<option value='0'>Chargement...</option>");
+
+                    if (formationCode === "0") {
+                        $specialiteSelect.html("<option value='0'>Veuillez sélectionner une formation d'abord</option>");
+                        // Reset the group number if no formation is selected
+                        selectedSpecialiteAbreviation = '';
+                        var freeNumber = $('#id_numero_libre').val();
+                        var fullGroupNumber;
+                        if(freeNumber) {
+                            fullGroupNumber = 'G-' + '-' + freeNumber;
+                        } else {
+                            fullGroupNumber = 'G-';
+                        }
+                        $('#id_numero_groupe_readonly').val(fullGroupNumber);
+                        $('#id_numero_groupe').val(fullGroupNumber);
+                        return;
+                    }
+                    $.each(data, function(index, p){
+                        option += "<option data-abreviation="+p.abr+" value="+p.id+">"+p.label+"</option>";
+
+                    });
+
+                    $('#_formSelectSpecialite').html(option);
+                },
+            })
+        });
+        
+        $(document).on('change', "#_formSelectSpecialite", function(){
+            var specialiteId = $(this).val();
+            var selectedOption = $(this).find('option:selected');
+            selectedSpecialiteAbreviation = selectedOption.data('abreviation') || '';
+
+            // Update the group number with the selected speciality abbreviation
+            var freeNumber = $('#id_numero_libre').val();
+            var fullGroupNumber;
+            if(selectedSpecialiteAbreviation && freeNumber) {
+                fullGroupNumber = 'G-' + selectedSpecialiteAbreviation + '-' + freeNumber;
+            } else if(selectedSpecialiteAbreviation) {
+                fullGroupNumber = 'G-' + selectedSpecialiteAbreviation;
+            } else if(freeNumber) {
+                fullGroupNumber = 'G--' + freeNumber;
+            } else {
+                fullGroupNumber = 'G-';
+            }
+            $('#id_numero_groupe_readonly').val(fullGroupNumber);
+            $('#id_numero_groupe').val(fullGroupNumber);
+        });
+        
+        $(document).on('input', "#id_numero_libre", function(){
+            var freeNumber = $(this).val();
+
+            var fullGroupNumber;
+            if(selectedSpecialiteAbreviation && freeNumber) {
+                fullGroupNumber = 'G-' + selectedSpecialiteAbreviation + '-' + freeNumber;
+            } else if(selectedSpecialiteAbreviation) {
+                fullGroupNumber = 'G-' + selectedSpecialiteAbreviation;
+            } else if(freeNumber) {
+                fullGroupNumber = 'G--' + freeNumber;
+            } else {
+                fullGroupNumber = 'G-';
+            }
+            $('#id_numero_groupe_readonly').val(fullGroupNumber);
+            $('#id_numero_groupe').val(fullGroupNumber);
+        });
+        
+        // Set initial display value
+        $(document).ready(function() {
+            $('#id_numero_groupe_readonly').val($('#id_numero_groupe').val() || 'G-');
+        });
+
+        $(document).on('click','#saveBtn', function(){
+           var _formSelectFormation = $('#_formSelectFormation').val();
+           var _formSelectSpecialite = $('#_formSelectSpecialite').val();
+           var id_numero_groupe = $('#id_numero_groupe').val();
+           var id_numero_libre = $('#id_numero_libre').val();
+           var start_date = $('#start_date').val();
+           var end_date = $('#end_date').val();
+           var _annee_scolaire = $('#_annee_scolaire').val();
+           var id_promotion = $('#id_promotion').val();
+           var min_student = $('#min_student').val();
+           var max_student = $('#max_student').val();
+
+           var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
+            $.ajax({
+                url : "{% url 't_groupe:ApiCreateGroupe' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    '_formSelectFormation' : _formSelectFormation,
+                    '_formSelectSpecialite' : _formSelectSpecialite,
+                    'id_numero_groupe' : id_numero_groupe,
+                    'id_numero_libre' : id_numero_libre,
+                    'start_date' : start_date,
+                    'end_date' : end_date,
+                    '_annee_scolaire' : _annee_scolaire,
+                    'id_promotion' : id_promotion,
+                    'min_student' : min_student,
+                    'max_student' : max_student,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        window.location.href = "{% url 't_groupe:listegroupes' %}";
+                    }else{
+                        alertify.error(response.message)
+                    }
+                },
+                complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
+            })
         });
     });
 </script>

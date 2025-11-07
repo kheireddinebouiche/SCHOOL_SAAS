@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import *
 from .forms import *
+from t_formations.models import *
 from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
@@ -26,14 +27,66 @@ def NewGroupe(request):
 
     return render(request,'tenant_folder/formations/groupe/nouveau_groupe.html', context)
 
+@login_required(login_url="institut_app:login")
+def ApiGetFormation(request):
+    if request.method =="GET":
+        liste = Formation.objects.all().values('code','nom','code')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status":"error", "message":"methode non autoriser"})
+
+@login_required(login_url='institut_app:login')
+def ApiSelectSpecialite(request):
+    if request.method == 'GET':
+        value = request.GET.get('formation')
+        if not value:
+            return JsonResponse({"status":'error',"message":"Valeurs manquante"})
+        
+        liste= Specialites.objects.filter(formation__code=value).values('id','label','version','abr')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status" : "error",'message':"methode non autoriser"})
+
+@login_required(login_url="institut_app:login")
+def ApiListePromo(request):
+    if request.method == "GET":
+        liste = Promos.objects.filter().values('id','code','begin_year','end_year','session')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status":"error","message" :"Methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiCreateGroupe(request):
-    if request.method == "POST":
-        pass
-    else:
-        return JsonResponse({"status":"error",'message':'Méthode non autoriser'})
+   
+    _formSelectSpecialite = request.POST.get('_formSelectSpecialite')
+    id_numero_groupe = request.POST.get('id_numero_groupe')
+    id_numero_libre = request.POST.get('id_numero_libre')
+    start_date = request.POST.get('start_date')
+    end_date = request.POST.get('end_date')
+    _annee_scolaire = request.POST.get('_annee_scolaire')
+    id_promotion = request.POST.get('id_promotion')
+    min_student = request.POST.get('min_student')
+    max_student = request.POST.get('max_student')
+    print(id_promotion)
+    try:
+        Groupe.objects.create(
+            nom = id_numero_groupe,
+            annee_scolaire = _annee_scolaire,
+            promotion = Promos.objects.get(code=id_promotion),
+            num_groupe = id_numero_libre,
+            min_student = min_student,
+            max_student = max_student,
+            start_date = start_date,
+            end_date = end_date,
+            specialite_id = _formSelectSpecialite,
+        )
+        messages.success(request,"Le groupe à été crée avec succès")
+        return JsonResponse({"status":"success"})
+    except:
+        return JsonResponse({"status":"error",'message':"Une erreur c'est produite lors du traitement"})
+
+    
 
 @login_required(login_url="insitut_app:login")
 def ListeGroupe(request):
@@ -82,6 +135,21 @@ def UpdateGroupe(request, pk):
         'tenant' : request.tenant
     }
     return render(request,"tenant_folder/formations/groupe/update_groupe.html", context)
+
+@login_required(login_url="institut_app:login")
+
+def ApiDeleteGroupe(request):
+    if request.method == "GET":
+        id = request.GET.get('id')
+        if not id:
+            return JsonResponse({"status" : "error", "message": "Information manquante"})
+        
+        obj = Groupe.objects.get(id = id)
+        obj.delete()
+        messages.success(request,"Le groupe à été supprimer avec succès")
+        return JsonResponse({"status":"success"})
+    else:
+        return JsonResponse({"status":"success",'message':"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

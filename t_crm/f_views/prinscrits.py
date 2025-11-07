@@ -16,7 +16,7 @@ from .generate_paiements import ApiGeneratePaiementRequest
 from django.db.models import Q, Sum
 
 
-@login_required(login_url='intitut_app:login')
+@login_required(login_url='institut_app:login')
 def ListeDesPrinscrits(request):
     context = {
         'tenant' : request.tenant
@@ -67,7 +67,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'adresse': prospect.adresse,
         'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
         'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
-
+        'commune' : prospect.commune,
         'preinscri_date' : prospect.preinscri_date.strftime("%Y-%m-%d") if prospect.preinscri_date else None,
         'instance_date' : prospect.instance_date.strftime("%Y-%m-%d") if prospect.instance_date else None,
         'convertit_date' : prospect.convertit_date.strftime("%Y-%m-%d") if prospect.convertit_date else None,
@@ -91,12 +91,15 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'niveau_scolaire' : prospect.get_niveau_scolaire_display(),
         'niveau_scolaire_pure' : prospect.niveau_scolaire,
         'diplome' : prospect.diplome,
+        'annee_obtention': prospect.annee_obtention,
         'etablissement' : prospect.etablissement,
 
         'pays' : prospect.pays,
         'wilaya' : prospect.wilaya,
         'code_zip' : prospect.code_zip,
         'lieu_naissance' : prospect.lieu_naissance,
+        'secu' : prospect.num_secu,
+        
     }
 
     return JsonResponse(data, safe=False)
@@ -170,11 +173,15 @@ def ApiUpdatePreinscritInfos(request):
     indic_pere = request.POST.get('indic_pere')
     indic_mere = request.POST.get('indic_mere')
 
+    annee_diplome = request.POST.get('annee_diplome')
+    commune = request.POST.get('commune')
+    num_secu = request.POST.get('secu')
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
     preinscrit.indic1 = indic_pere
     preinscrit.indic2 = indic_mere
     
+    preinscrit.annee_obtention = annee_diplome
     preinscrit.nom_arabe = nom_arabe
     preinscrit.prenom_arabe = prenom_arabe
     preinscrit.date_naissance = date_naissance
@@ -197,7 +204,8 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.wilaya = wilaya
     preinscrit.code_zip = code_zip
     preinscrit.lieu_naissance = lieu_naissance
-
+    preinscrit.commune = commune
+    preinscrit.num_secu = num_secu
 
     preinscrit.save()
 

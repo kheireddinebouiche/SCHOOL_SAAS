@@ -179,6 +179,7 @@ class Prospets(models.Model):
     canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicitée')])
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
     nationnalite = models.CharField(max_length=100, null=True, blank=True)
+    num_secu = models.CharField(max_length=100, null=True, blank=True)
     entreprise = models.CharField(max_length=255, null=True, blank=True)
     poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Résponsable'),('directeur','Directeur'),('gerant','Gérant')])
     observation = models.TextField(null=True, blank=True)
