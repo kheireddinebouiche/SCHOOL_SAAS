@@ -69,6 +69,7 @@ class EntrepriseForm(forms.ModelForm):
             'ville' : "Ville :",
             'code_wilaya' : "Code wilaya :",
             'numero' : "Numéro (numéro de l'annexe) :",
+            'representant' : "Signataire/Représentant légal de l'entreprise :"
         }
 
         widgets = {
@@ -88,6 +89,7 @@ class EntrepriseForm(forms.ModelForm):
             'ville' : forms.TextInput({'class':'form-control'}),
             'code_wilaya' : forms.TextInput({"class":"form-control"}),
             'numero' : forms.TextInput({"class":"form-control"}),
+            'representant' : forms.TextInput({"class":"form-control"}),
         }
 
 class CustomGroupForm(forms.ModelForm):

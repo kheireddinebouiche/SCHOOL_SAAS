@@ -34,11 +34,15 @@ def ApiLoadEntrepriseData(request):
         'site_web' : entreprise.site_web,
         'code_postal' : entreprise.code_postal,
         'ville' : entreprise.ville,
+        'numero' : entreprise.numero,
+        'code_wilaya' : entreprise.code_wilaya,
+        'representant' : entreprise.representant,
     }
 
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiUpdateEntrepriseData(request):
     if request.method =="POST":
         id_entreprise = request.POST.get('id_entreprise')
@@ -56,7 +60,9 @@ def ApiUpdateEntrepriseData(request):
         nis = request.POST.get('nis')
         observations = request.POST.get('observations')
         ville = request.POST.get('ville')
-        
+        numero = request.POST.get('numero')
+        code_wilaya = request.POST.get('code_wilaya')
+        representant = request.POST.get('representant')
 
         entreprise = Entreprise.objects.get(id = id_entreprise)
         
@@ -74,6 +80,9 @@ def ApiUpdateEntrepriseData(request):
         entreprise.telephone = telephone
         entreprise.observations = observations
         entreprise.ville = ville
+        entreprise.numero = numero
+        entreprise.code_wilaya = code_wilaya
+        entreprise.representant = representant
         entreprise.save()
 
         return JsonResponse({'status':"success",'message':'Les informations ont été mis a jour avec succès'})
