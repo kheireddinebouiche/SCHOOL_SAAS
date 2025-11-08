@@ -77,6 +77,9 @@ class Entreprise(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    code_wilaya = models.CharField(max_length=100, null=True, blank=True)
+    numero = models.CharField(max_length=100, null=True, blank=True)
+
     class Meta:
         verbose_name="Entreprise"
         verbose_name_plural = "Entreprises"

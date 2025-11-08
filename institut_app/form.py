@@ -66,7 +66,9 @@ class EntrepriseForm(forms.ModelForm):
             'site_web' : "Site WEB :",
             'entete' : "Entête :",
             'logo' : "Logo :",
-            'ville' : "Ville :"
+            'ville' : "Ville :",
+            'code_wilaya' : "Code wilaya :",
+            'numero' : "Numéro (numéro de l'annexe) :",
         }
 
         widgets = {
@@ -84,6 +86,8 @@ class EntrepriseForm(forms.ModelForm):
             'site_web' : forms.URLInput(attrs={'class':'form-control'}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'ville' : forms.TextInput({'class':'form-control'}),
+            'code_wilaya' : forms.TextInput({"class":"form-control"}),
+            'numero' : forms.TextInput({"class":"form-control"}),
         }
 
 class CustomGroupForm(forms.ModelForm):

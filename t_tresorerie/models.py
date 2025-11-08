@@ -239,3 +239,7 @@ class EcheancierPaiementSpecialLine(models.Model):
 
     def __str__(self):
         return self.echeancier.prospect.nom
+
+
+class Caisse(models.Model):
+    pass
