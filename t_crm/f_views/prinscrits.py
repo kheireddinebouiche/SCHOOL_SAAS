@@ -94,6 +94,10 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'annee_obtention': prospect.annee_obtention,
         'etablissement' : prospect.etablissement,
 
+        'tuteur_legal' : prospect.tuteur_legal,
+        'tel_tuteur' : prospect.tel_tuteur,
+        'indic3' : prospect.indic3,
+
         'pays' : prospect.pays,
         'wilaya' : prospect.wilaya,
         'code_zip' : prospect.code_zip,
@@ -147,6 +151,7 @@ def ApiCheckCompletedDoc(request):
     return JsonResponse(data)
 
 @login_required(login_url='intitut_app:login')
+@transaction.atomic
 def ApiUpdatePreinscritInfos(request):
     nom_arabe = request.POST.get('nom_arabe')
     prenom_arabe = request.POST.get('prenom_arabe')
@@ -176,6 +181,10 @@ def ApiUpdatePreinscritInfos(request):
     annee_diplome = request.POST.get('annee_diplome')
     commune = request.POST.get('commune')
     num_secu = request.POST.get('secu')
+    tuteur_legal = request.POST.get('tuteur_legal')
+    indicatif_tuteur = request.POST.get('indicatif_tuteur')
+    tel_tuteur = request.POST.get('tel_tuteur')
+
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
     preinscrit.indic1 = indic_pere
@@ -206,6 +215,9 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.lieu_naissance = lieu_naissance
     preinscrit.commune = commune
     preinscrit.num_secu = num_secu
+    preinscrit.tuteur_legal = tuteur_legal
+    preinscrit.indic3 = indicatif_tuteur
+    preinscrit.tel_tuteur = tel_tuteur
 
     preinscrit.save()
 

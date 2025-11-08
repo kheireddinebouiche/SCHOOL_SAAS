@@ -238,6 +238,7 @@ class Prospets(models.Model):
     convertit_date = models.DateField(null=True, blank=True)
 
     tuteur_legal = models.CharField(max_length=100, null=True, blank=True)
+    tel_tuteur = models.CharField(max_length=100, null=True, blank=True)
     indic3 = models.CharField(max_length=10, null=True, blank=True, choices=INDICATIF)
 
     is_affected = models.BooleanField(default=False)

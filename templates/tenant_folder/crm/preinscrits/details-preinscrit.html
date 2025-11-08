@@ -868,7 +868,7 @@
                                             <option value="+598">🇺🇾 +598 Uruguay</option>
                                             <option value="+599">🇨🇼 +599 Curaçao</option>
                                         </select>
-                                        <input type="text" id="tel_pere" class="form-control form-control-sm border rounded-end-3 py-2" placeholder="Téléphone père">
+                                        <input type="text" id="tel_pere" maxlength="12" class="form-control form-control-sm border rounded-end-3 py-2" placeholder="Téléphone père">
                                     </div>
                                 </div>
                             </div>
@@ -1522,6 +1522,20 @@
                                         <div class="d-flex">
                                             <div class="text-muted fw-medium me-2">Téléphone mère:</div>
                                             <div id="profile_tel_mere">-</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="d-flex">
+                                            <div class="text-muted fw-medium me-2">Téléphone mère:</div>
+                                            <div id="profile_tuteur_legal">-</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="d-flex">
+                                            <div class="text-muted fw-medium me-2">Téléphone mère:</div>
+                                            <div id="profile_tel_tuteur">-</div>
                                         </div>
                                     </div>
                                 </div>
@@ -2988,6 +3002,9 @@
                     $('#profile_nom_mere').text(data.nom_mere);
                     $('#profile_prenom_mere').text(data.prenom_mere);
                     $('#profile_tel_mere').text(data.indic_mere+''+data.tel_mere);
+                    $('#profile_tuteur_legal').text(data.tuteur_legal);
+                    $('#profile_tel_tuteur').text(data.indic3+''+data.tel_tuteur);
+
                     if(data.has_endicap == true){
                         var p = "Oui";
                     }else{
@@ -3034,6 +3051,10 @@
                     $('#commune').val(data.commune);
                     $('#annee_diplome').val(data.annee_obtention);
                     $('#secu').val(data.secu);
+
+                    $('#tuteur_legal').val(data.tuteur_legal);
+                    $('#tel_tuteur').val(data.tel_tuteur);
+                    $('#indicatif_tuteur').val(data.indic3);
 
                     if(data.statut_key !== "prinscrit"){
                         document.getElementById("validatePreinscritBtn").disabled = true;
@@ -3718,6 +3739,10 @@
                 'tel_mere': $('#tel_mere').val(),
                 'indic_mere' : $('#indicatif_mere').val(),
 
+                'tuteur_legal' : $('#tuteur_legal').val(),
+                'indic3' : $('#indicatif_tuteur').val(),
+                'tel_tuteur' : $('#tel_tuteur').val(),
+
                 
                 // Médical
                 'has_handicap': $('#has_handicap option:selected').text(),
@@ -3758,7 +3783,9 @@
             confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Nom mère</p><h6 class="mb-0">' + (formData.nom_mere || '-') + '</h6></div></div>';
             confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Prénom mère</p><h6 class="mb-0">' + (formData.prenom_mere || '-') + '</h6></div></div>';
             confirmationHtml += '<div class="col-md-4"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Téléphone mère</p><h6 class="mb-0">' + (formData.indic_mere || '-') + (formData.tel_mere || '-') + '</h6></div></div>';
-            
+            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Tuteur légal</p><h6 class="mb-0">' + (formData.tuteur_legal || '-') + '</h6></div></div>';
+            confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Telephone</p><h6 class="mb-0">' + (formData.indic3 || '-') + (formData.tel_tuteur || '-') + '</h6></div></div>';
+           
             // Médical
             confirmationHtml += '<div class="col-12 mt-3"><h5 class="text-warning fw-bold border-bottom pb-2 mb-3">Informations médicales</h5></div>';
             confirmationHtml += '<div class="col-md-6"><div class="bg-light rounded-3 p-3 h-100"><p class="mb-1 text-muted">Handicap</p><h6 class="mb-0">' + (formData.has_handicap || '-') + '</h6></div></div>';
@@ -3788,7 +3815,7 @@
             $('#confirmAdditionalInfoModal').modal('show');
         });
 
-        function loadDataToUpdate(secu,annee_diplome,commune,wilaya,code_zip,pays,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome,indic_pere,indic_mere){
+        function loadDataToUpdate(tuteur_legal,indicatif_tuteur,tel_tuteur,secu,annee_diplome,commune,wilaya,code_zip,pays,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome,indic_pere,indic_mere){
             $.ajax({
                 url : "{% url 't_crm:ApiUpdatePreinscritInfos' %}",
                 dataType: "JSON",
@@ -3822,6 +3849,10 @@
 
                     'commune' : commune,
                     'annee_diplome' : annee_diplome,
+
+                    'tuteur_legal' : tuteur_legal,
+                    'indicatif_tuteur' : indicatif_tuteur,
+                    'tel_tuteur' : tel_tuteur,
 
                     'csrfmiddlewaretoken': '{{ csrf_token }}',
                 },
@@ -3869,9 +3900,13 @@
             var code_zip = $('#code_zip').val();
             var lieu_naissance = $('#lieu_naissance').val();
             var secu = $("#secu").val();
+
+            var tuteur_legal = $('#tuteur_legal').val();
+            var indicatif_tuteur = $('#indicatif_tuteur').val();
+            var tel_tuteur = $('#tel_tuteur').val();
                         
             
-            loadDataToUpdate(secu,annee_diplome,commune,wilaya,code_zip,pays,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome,indic_pere,indic_mere)
+            loadDataToUpdate(tuteur_legal,indicatif_tuteur,tel_tuteur,secu,annee_diplome,commune,wilaya,code_zip,pays,lieu_naissance,nom_arabe,prenom_arabe,date_naissance,nin,nationnalite,prenom_pere,tel_pere,nom_mere,prenom_mere,tel_mere,has_handicap,type_handicap,groupe_sanguin,adresse,niveau_scolaire,diplome,etablissement_diplome,indic_pere,indic_mere)
                       
         });
 
@@ -4331,6 +4366,65 @@
             $('#additionalInfoModal').modal('show');
         }); 
        
+        document.getElementById('tel_pere').addEventListener('input', function (e) {
+            // 1️⃣ On récupère la valeur et on garde uniquement les chiffres
+            let value = e.target.value.replace(/\D/g, '');
+
+            // 2️⃣ Si le premier caractère est un 0, on le supprime
+            if (value.startsWith('0')) {
+                value = value.slice(1);
+            }
+
+            // 3️⃣ Reformater selon le schéma XXX-XX-XX-XX
+            let formatted = '';
+            if (value.length > 0) formatted += value.substring(0, 3);
+            if (value.length >= 4) formatted += '-' + value.substring(3, 5);
+            if (value.length >= 6) formatted += '-' + value.substring(5, 7);
+            if (value.length >= 8) formatted += '-' + value.substring(7, 9);
+
+            // 4️⃣ Réinjecter la valeur formatée dans le champ
+            e.target.value = formatted;
+        });
+
+        document.getElementById('tel_mere').addEventListener('input', function (e) {
+            // 1️⃣ On récupère la valeur et on garde uniquement les chiffres
+            let value = e.target.value.replace(/\D/g, '');
+
+            // 2️⃣ Si le premier caractère est un 0, on le supprime
+            if (value.startsWith('0')) {
+                value = value.slice(1);
+            }
+
+            // 3️⃣ Reformater selon le schéma XXX-XX-XX-XX
+            let formatted = '';
+            if (value.length > 0) formatted += value.substring(0, 3);
+            if (value.length >= 4) formatted += '-' + value.substring(3, 5);
+            if (value.length >= 6) formatted += '-' + value.substring(5, 7);
+            if (value.length >= 8) formatted += '-' + value.substring(7, 9);
+
+            // 4️⃣ Réinjecter la valeur formatée dans le champ
+            e.target.value = formatted;
+        });
+
+        document.getElementById('tel_tuteur').addEventListener('input', function (e) {
+            // 1️⃣ On récupère la valeur et on garde uniquement les chiffres
+            let value = e.target.value.replace(/\D/g, '');
+
+            // 2️⃣ Si le premier caractère est un 0, on le supprime
+            if (value.startsWith('0')) {
+                value = value.slice(1);
+            }
+
+            // 3️⃣ Reformater selon le schéma XXX-XX-XX-XX
+            let formatted = '';
+            if (value.length > 0) formatted += value.substring(0, 3);
+            if (value.length >= 4) formatted += '-' + value.substring(3, 5);
+            if (value.length >= 6) formatted += '-' + value.substring(5, 7);
+            if (value.length >= 8) formatted += '-' + value.substring(7, 9);
+
+            // 4️⃣ Réinjecter la valeur formatée dans le champ
+            e.target.value = formatted;
+        });
     });
 </script>
 
