@@ -259,6 +259,156 @@
             $('input[name="pays"]').val('Algérie');
         }
         
+        // Convert designation and code fields to uppercase as user types
+        $('input[name="designation"]').on('input', function() {
+            $(this).val($(this).val().toUpperCase());
+        });
+        
+        $('input[name="code"]').on('input', function() {
+            $(this).val($(this).val().toUpperCase());
+        });
+
+        // Format telephone field to handle different country codes
+        $('input[name="telephone"]').on('input', function() {
+            let input = $(this).val().replace(/\D/g, ''); // Remove all non-digit characters
+
+            // Check if input starts with a known country code
+            let countryCode = '';
+            let shouldUseDefault = true; // Flag to determine if we should use default country code
+            
+            if (input.length >= 1) {
+                // Check if user is typing a specific country code
+                if (input.length >= 3 && input.substring(0, 3) === '213') {
+                    countryCode = '213';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 2 && input.substring(0, 2) === '33') {
+                    countryCode = '33';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 1 && input.substring(0, 1) === '1') {
+                    countryCode = '1';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 2 && input.substring(0, 2) === '44') {
+                    countryCode = '44';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 2 && input.substring(0, 2) === '49') {
+                    countryCode = '49';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 2 && input.substring(0, 2) === '34') {
+                    countryCode = '34';
+                    shouldUseDefault = false;
+                } 
+                // Add more specific country code checks as needed
+                else if (input.length >= 2 && input.substring(0, 2) === '39') {
+                    countryCode = '39';
+                    shouldUseDefault = false;
+                } 
+                else if (input.length >= 2 && input.substring(0, 2) === '43') {
+                    countryCode = '43';
+                    shouldUseDefault = false;
+                }
+                else if (input.length >= 2 && input.substring(0, 2) === '32') {
+                    countryCode = '32';
+                    shouldUseDefault = false;
+                }
+                else if (input.length >= 2 && input.substring(0, 2) === '31') {
+                    countryCode = '31';
+                    shouldUseDefault = false;
+                }
+                else if (input.length >= 2 && input.substring(0, 2) === '41') {
+                    countryCode = '41';
+                    shouldUseDefault = false;
+                }
+                // Check if it starts with '0' (common for local Algerian numbers)
+                else if (input.startsWith('0')) {
+                    countryCode = '213'; // Convert 0 to 213
+                    input = '213' + input.substring(1);
+                    shouldUseDefault = false;
+                }
+            }
+
+            // Only use the default if no specific country code was detected
+            if (shouldUseDefault && input.length > 0 && !input.startsWith('2') && !input.startsWith('3') && !input.startsWith('4')) {
+                // Default to 213 only for numbers that don't look like they're starting with another country code
+                countryCode = '213';
+                // If the number doesn't already have a country code, add the default
+                if (!input.startsWith('213')) {
+                    input = countryCode + input;
+                }
+            }
+
+            // Extract numbers after country code to format them
+            let nationalNumber = input;
+            if (countryCode && input.startsWith(countryCode)) {
+                nationalNumber = input.substring(countryCode.length);
+            }
+
+            let formattedNumber = '';
+            
+            if (input.length > 0) {
+                formattedNumber = '+' + countryCode;
+                
+                // Format the national number part based on country code
+                if (countryCode === '213' || countryCode === '33') {
+                    // For Algeria and France, format as XXX-XX-XX-XX after the country code
+                    if (nationalNumber.length > 0) {
+                        formattedNumber += ' - ' + nationalNumber.substring(0, 3); // First 3 digits
+                    }
+                    if (nationalNumber.length > 3) {
+                        formattedNumber += '-' + nationalNumber.substring(3, 5); // Next 2 digits
+                    }
+                    if (nationalNumber.length > 5) {
+                        formattedNumber += '-' + nationalNumber.substring(5, 7); // Next 2 digits
+                    }
+                    if (nationalNumber.length > 7) {
+                        formattedNumber += '-' + nationalNumber.substring(7, 9); // Final 2 digits
+                    }
+                } else if (countryCode === '1') {
+                    // For US/Canada format as (XXX) XXX-XXXX
+                    if (nationalNumber.length > 0) {
+                        formattedNumber += ' (' + nationalNumber.substring(0, 3) + ') ';
+                    }
+                    if (nationalNumber.length > 3) {
+                        formattedNumber += nationalNumber.substring(3, 6);
+                    }
+                    if (nationalNumber.length > 6) {
+                        formattedNumber += '-' + nationalNumber.substring(6, 10);
+                    }
+                } else if (countryCode === '44') {
+                    // For UK format as XXXX XXX XXXX
+                    if (nationalNumber.length > 0) {
+                        formattedNumber += ' ' + nationalNumber.substring(0, 4);
+                    }
+                    if (nationalNumber.length > 4) {
+                        formattedNumber += ' ' + nationalNumber.substring(4, 7);
+                    }
+                    if (nationalNumber.length > 7) {
+                        formattedNumber += ' ' + nationalNumber.substring(7, 11);
+                    }
+                } else {
+                    // Default formatting for other country codes
+                    if (nationalNumber.length > 0) {
+                        formattedNumber += ' ' + nationalNumber.substring(0, 3);
+                    }
+                    if (nationalNumber.length > 3) {
+                        formattedNumber += '-' + nationalNumber.substring(3, 5);
+                    }
+                    if (nationalNumber.length > 5) {
+                        formattedNumber += '-' + nationalNumber.substring(5, 7);
+                    }
+                    if (nationalNumber.length > 7) {
+                        formattedNumber += '-' + nationalNumber.substring(7, 9);
+                    }
+                }
+            }
+            
+            $(this).val(formattedNumber);
+        });
+
         // Handle form submission with AJAX
         $('form').on('submit', function(e) {
             e.preventDefault(); // Prevent default form submission

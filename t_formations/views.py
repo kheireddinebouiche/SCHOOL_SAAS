@@ -88,27 +88,27 @@ def ApiCheckIfFormationCompleted(request):
 @login_required(login_url='institut_app:login')
 @transaction.atomic
 def updateFormation(request, pk):
-    if request.tenant.tenant_type == "master":
-        formation = Formation.objects.get(pk = pk)
-        form = NewFormationFormMaster(instance = formation)
-        if request.method == "POST":
-            form = NewFormationFormMaster(request.POST, instance=formation)
-            if form.is_valid():
-                updated_formation = form.save()
-                updated_formation.updated = True
-                updated_formation.save()
+    
+    formation = Formation.objects.get(pk = pk)
+    form = NewFormationFormMaster(instance = formation)
+    if request.method == "POST":
+        form = NewFormationFormMaster(request.POST, instance=formation)
+        if form.is_valid():
+            updated_formation = form.save()
+            updated_formation.updated = True
+            updated_formation.save()
 
-                messages.success(request, 'Les informations de la formation ont été modifier avec succès')
-                return redirect('t_formations:listFormations')
-            else:
-                messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
-                return redirect('t_formations:updateFormation', pk)
+            messages.success(request, 'Les informations de la formation ont été modifier avec succès')
+            return redirect('t_formations:listFormations')
         else:
-            context = {
-                'form' : form,
-                'tenant' : request.tenant
-            }
-            return render(request, 'tenant_folder/formations/update_formation.html', context)
+            messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
+            return redirect('t_formations:updateFormation', pk)
+    else:
+        context = {
+            'form' : form,
+            'tenant' : request.tenant
+        }
+        return render(request, 'tenant_folder/formations/update_formation.html', context)
 
 @transaction.atomic
 @login_required(login_url='institut_app:login')

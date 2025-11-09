@@ -19,3 +19,4 @@ def ApiListeDepenses(request):
 @login_required(login_url="institut_app:login")
 def PageNouvelleDepense(request):
     return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html")
+

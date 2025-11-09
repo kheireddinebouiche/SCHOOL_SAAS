@@ -125,6 +125,12 @@ urlpatterns = [
     path('fournisseurs/liste/',PageFournisseur, name="PageFournisseur"),
     path('ApiListeFournisseurs',ApiListeFournisseurs, name="ApiListeFournisseurs"),
     path('fournisseur/nouveau-fournisseur/',PageNouveauFournisseur, name="PageNouveauFournisseur"),
+    path('fournisseur/details/<int:pk>/', PageDetailsFournisseur, name="PageDetailsFournisseur"),
     path('enregistrer_fournisseur', enregistrer_fournisseur, name="enregistrer_fournisseur"),
+    path('UpdateFournisseur', UpdateFournisseur, name="UpdateFournisseur"),
+    path('ApiLoadFournisseur', ApiLoadFournisseur, name="ApiLoadFournisseur"),
+
+    #### Gestion des dépenses
+    path('parametres/type-depense/', liste_types_depenses, name="liste_types_depenses"),
 
 ]

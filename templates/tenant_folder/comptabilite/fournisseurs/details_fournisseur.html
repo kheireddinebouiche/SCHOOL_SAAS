@@ -1,0 +1,568 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Détails du fournisseur {% endblock title %}
+
+{% block content %}
+<style>
+    /* Style de secours pour les icônes */
+    .ri:before {
+        display: inline-block;
+        font-family: "remixicon" !important;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Style pour les boutons avec icônes */
+    .btn i {
+        vertical-align: middle;
+    }
+
+    .btn span {
+        vertical-align: middle;
+    }
+
+    /* Style pour le modal de chargement */
+    #loadingModal .modal-content {
+        background: rgba(0, 0, 0, 0.8) !important;
+    }
+
+    #loadingModal .modal-backdrop {
+        background: rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-store-2-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Détails du fournisseur</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Comptabilité</a>
+                                    </li>
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 't_tresorerie:PageFournisseur' %}">Fournisseurs</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Détails du fournisseur</li>
+                                </ol>
+                            </nav>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary px-4 py-2" id="editSupplierBtn">
+                                    <i class="ri-edit-line me-2"></i>Modifier
+                                </button>
+                                <a href="{% url 't_tresorerie:PageFournisseur' %}" class="btn btn-light px-4 py-2">
+                                    <i class="ri-arrow-left-line me-2"></i>Retour à la liste
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Première rangée : Informations du Fournisseur -->
+            <div class="row mb-4">
+                <!-- Informations générales -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-store-2-line text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-semibold text-primary mb-1">Informations générales</h5>
+                                    <p class="text-muted small mb-0">Détails du fournisseur</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-barcode-line text-primary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Code</small>
+                                    <span class="fw-semibold">{{ fournisseur.code|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-store-2-line text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Désignation</small>
+                                    <span class="fw-semibold">{{ fournisseur.designation|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-phone-line text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Téléphone</small>
+                                    <span class="fw-semibold">{{ fournisseur.telephone|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-map-pin-line text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Adresse</small>
+                                    <span class="fw-semibold">{{ fournisseur.adresse|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-calendar-line text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Créé le</small>
+                                    <span class="fw-semibold">{{ fournisseur.created_at|date:"d/m/Y"|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations de localisation -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-map-pin-line text-info fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-info mb-1">Coordonnées</h5>
+                                        <p class="text-muted small mb-0">Informations de localisation</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-map-pin-line text-primary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Commune</small>
+                                    <span class="fw-semibold">{{ fournisseur.commune|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-map-pin-2-line text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Wilaya</small>
+                                    <span class="fw-semibold">{{ fournisseur.wilaya|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-flag-line text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Pays</small>
+                                    <span class="fw-semibold">{{ fournisseur.pays|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deuxième rangée : Informations commerciales -->
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-building-line text-success fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-success mb-1">Documents commerciaux</h5>
+                                        <p class="text-muted small mb-0">Informations légales et fiscales</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="mb-4 d-flex align-items-start">
+                                        <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-file-line text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">RC</small>
+                                            <span class="fw-semibold">{{ fournisseur.rc|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-4 d-flex align-items-start">
+                                        <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-file-text-line text-secondary"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">NIF</small>
+                                            <span class="fw-semibold">{{ fournisseur.nif|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-4 d-flex align-items-start">
+                                        <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-file-2-line text-info"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">ART</small>
+                                            <span class="fw-semibold">{{ fournisseur.art|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-start">
+                                        <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-file-3-line text-success"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">NIS</small>
+                                            <span class="fw-semibold">{{ fournisseur.nis|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troisième rangée : Informations bancaires -->
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-bank-line text-warning fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-warning mb-1">Informations bancaires</h5>
+                                        <p class="text-muted small mb-0">Détails du compte bancaire</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-4 d-flex align-items-start">
+                                        <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-building-line text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">Banque</small>
+                                            <span class="fw-semibold">{{ fournisseur.banque|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-4 d-flex align-items-start">
+                                        <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-credit-card-line text-secondary"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">N° Compte</small>
+                                            <span class="fw-semibold">{{ fournisseur.num_compte|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-start">
+                                        <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-key-2-line text-success"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">Code banque</small>
+                                            <span class="fw-semibold">{{ fournisseur.code_banque|default:"N/A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Observations -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <!-- Header -->
+                        <div class="card-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-sticky-note-line text-danger fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-danger mb-1">Observations</h5>
+                                        <p class="text-muted small mb-0">Commentaires et observations</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="d-flex align-items-start">
+                                        <div class="icon-circle bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="ri-file-text-line text-danger"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block mb-1">Détails</small>
+                                            <span class="fw-semibold">{{ fournisseur.observation|default:"Aucune observation"|linebreaks }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                    <!-- Modal de modification du fournisseur -->
+            <div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content rounded-4 shadow-lg border-0">
+                        <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-edit-line text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-semibold text-primary mb-1" id="editSupplierModalLabel">
+                                        Modifier les informations du fournisseur
+                                    </h5>
+                                    <p class="text-muted small mb-0">Mise à jour des détails du fournisseur</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <form id="editSupplierForm">
+                                <input type="hidden" id="edit_supplier_id" value="{{ fournisseur.id }}">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Code</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text border-0 bg-light">
+                                                    <i class="ri-barcode-line text-muted"></i>
+                                                </span>
+                                                <input type="text" class="form-control border-0 bg-light py-2" id="edit_code" value="{{ fournisseur.code }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Désignation</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text border-0 bg-light">
+                                                    <i class="ri-store-2-line text-muted"></i>
+                                                </span>
+                                                <input type="text" class="form-control border-0 bg-light py-2" id="edit_designation" value="{{ fournisseur.designation }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Téléphone</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text border-0 bg-light">
+                                                    <i class="ri-phone-line text-muted"></i>
+                                                </span>
+                                                <input type="tel" class="form-control border-0 bg-light py-2" id="edit_telephone" value="{{ fournisseur.telephone }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Adresse</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text border-0 bg-light">
+                                                    <i class="ri-map-pin-line text-muted"></i>
+                                                </span>
+                                                <input type="text" class="form-control border-0 bg-light py-2" id="edit_adresse" value="{{ fournisseur.adresse }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Commune</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_commune" value="{{ fournisseur.commune }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Wilaya</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_wilaya" value="{{ fournisseur.wilaya }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Pays</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_pays" value="{{ fournisseur.pays }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">RC</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_rc" value="{{ fournisseur.rc }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">NIF</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_nif" value="{{ fournisseur.nif }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">ART</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_art" value="{{ fournisseur.art }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">NIS</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_nis" value="{{ fournisseur.nis }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Banque</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_banque" value="{{ fournisseur.banque }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">N° Compte</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_num_compte" value="{{ fournisseur.num_compte }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Code banque</label>
+                                            <input type="text" class="form-control border-0 bg-light py-2" id="edit_code_banque" value="{{ fournisseur.code_banque }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-label fw-medium">Observation</label>
+                                            <textarea class="form-control border-0 bg-light py-2" id="edit_observation" rows="3">{{ fournisseur.observation }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer border-0 bg-light px-4 py-3">
+                            <div class="hstack gap-2 justify-content-center w-100">
+                                <button type="button" class="btn btn-light px-4 py-2 w-100" data-bs-dismiss="modal">
+                                    <i class="ri-close-line me-2"></i>Annuler
+                                </button>
+                                <button type="button" class="btn btn-primary px-4 py-2 w-100" id="saveEditSupplierBtn">
+                                    <i class="ri-save-line me-2"></i>Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show the edit modal when the edit button is clicked
+        const editBtn = document.getElementById('editSupplierBtn');
+        const editModal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
+        
+        editBtn.addEventListener('click', function() {
+            editModal.show();
+        });
+        
+        // Handle save button click
+        document.getElementById('saveEditSupplierBtn').addEventListener('click', function() {
+            // Get form data
+            const formData = {
+                id: document.getElementById('edit_supplier_id').value,
+                code: document.getElementById('edit_code').value,
+                designation: document.getElementById('edit_designation').value,
+                telephone: document.getElementById('edit_telephone').value,
+                adresse: document.getElementById('edit_adresse').value,
+                commune: document.getElementById('edit_commune').value,
+                wilaya: document.getElementById('edit_wilaya').value,
+                pays: document.getElementById('edit_pays').value,
+                rc: document.getElementById('edit_rc').value,
+                nif: document.getElementById('edit_nif').value,
+                art: document.getElementById('edit_art').value,
+                nis: document.getElementById('edit_nis').value,
+                banque: document.getElementById('edit_banque').value,
+                num_compte: document.getElementById('edit_num_compte').value,
+                code_banque: document.getElementById('edit_code_banque').value,
+                observation: document.getElementById('edit_observation').value,
+                csrfmiddlewaretoken: document.querySelector('[name=csrfmiddlewaretoken]').value
+            };
+            
+            // Send AJAX request to update the supplier
+            fetch('{% url "t_tresorerie:UpdateFournisseur" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Close modal and refresh the page to show updated information
+                    editModal.hide();
+                    location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour du fournisseur: ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Une erreur est survenue lors de la mise à jour du fournisseur');
+            });
+        });
+    });
+</script>
+
+{% endblock content %}

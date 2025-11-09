@@ -145,6 +145,8 @@ class ConfigurationDesDocument(models.Model):
 class Fournisseur(models.Model):
     designation = models.CharField(max_length=100, null=True, blank=True)
     telephone = models.CharField(max_length=100, null=True, blank=True)
+    email = models.CharField(max_length=100, null=True, blank=True)
+    site_web = models.CharField(max_length=100, null=True, blank=True)
     code = models.CharField(max_length=100, null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
     commune = models.CharField(max_length=100, null=True, blank=True)

@@ -551,3 +551,7 @@ def ApiCheckForPayments(request):
     else:
 
         return JsonResponse({'status' : "system-error",'message' : "Methode non autoriser"})
+    
+@login_required(login_url="institut_app:login")
+def liste_types_depenses(request):
+    return render(request, 'tenant_folder/comptabilite/depenses/type_depense.html')
