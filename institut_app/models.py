@@ -142,4 +142,28 @@ class ConfigurationDesDocument(models.Model):
     def __str__(self):
         return f"Configuration des documents pour {self.entreprise.designation}" if self.entreprise else "Configuration des documents sans entreprise"
 
+class Fournisseur(models.Model):
+    designation = models.CharField(max_length=100, null=True, blank=True)
+    code = models.CharField(max_length=100, null=True, blank=True)
+    adresse = models.CharField(max_length=100, null=True, blank=True)
+    commune = models.CharField(max_length=100, null=True, blank=True)
+    wilaya = models.CharField(max_length=100, null=True, blank=True)
+    pays = models.CharField(max_length=100, null=True, blank=True)
 
+    rc = models.CharField(max_length=100, null=True, blank=True)
+    nif = models.CharField(max_length=100, null=True, blank=True)
+    art = models.CharField(max_length=100, null=True, blank=True)
+    nis = models.CharField(max_length=100, null=True, blank=True)
+
+    banque = models.CharField(max_length=100, null=True, blank=True)
+    num_compte = models.CharField(max_length=100, null=True, blank=True)
+    code_banque = models.CharField(max_length=100, null=True, blank=True)
+    observation = models.TextField(null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+    
+    def __str__(self):
+        return self.designation
+
+   

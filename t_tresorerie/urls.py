@@ -6,6 +6,8 @@ from .f_views.echeancier_special import *
 from .f_views.suivie_echeancier import *
 from .f_views.paiements import *
 from .f_views.rembourssement import *
+from .f_views.depenses import *
+from .f_views.fournisseurs import *
 
 app_name="t_tresorerie"
 
@@ -112,5 +114,17 @@ urlpatterns = [
     path('ApiCheckForPayments', ApiCheckForPayments, name="ApiCheckForPayments"),
 
     path('ApiGetProspectsList', ApiGetProspectsList, name="ApiGetProspectsList"),
+
+
+    ##### Gestion des depenses
+    path('depenses/liste/',PageDepenses, name="PageDepenses"),
+    path('ApiListeDepenses', ApiListeDepenses, name="ApiListeDepenses"),
+    path('depenses/creation/', PageNouvelleDepense, name="PageNouvelleDepense"),
+
+    #### Gestion des fournisseurs
+    path('fournisseurs/liste/',PageFournisseur, name="PageFournisseur"),
+    path('ApiListeFournisseurs',ApiListeFournisseurs, name="ApiListeFournisseurs"),
+    path('fournisseur/nouveau-fournisseur/',PageNouveauFournisseur, name="PageNouveauFournisseur"),
+    path('enregistrer_fournisseur', enregistrer_fournisseur, name="enregistrer_fournisseur"),
 
 ]
