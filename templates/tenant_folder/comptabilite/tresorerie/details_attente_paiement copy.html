@@ -2330,70 +2330,6 @@
     </div>
 </div>
 
-<!-- Modal Assistant Engagement -->
-<div class="modal fade" id="engagementAssistantModal" tabindex="-1" aria-labelledby="engagementAssistantModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-file-info-line text-info fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-info mb-1" id="engagementAssistantModalLabel">Assistant d'impression d'engagement</h5>
-                        <p class="text-muted small mb-0">Sélectionnez les informations pour l'impression de l'engagement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Signataire *</label>
-                        <select class="form-select" id="signataireSelect" required>
-                            <option value="">Sélectionnez le signataire</option>
-                            <option value="Apprenant">Apprenant</option>
-                            <option value="Parents">Parents</option>
-                            <option value="Tuteur">Tuteur</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Pièce d'identité *</label>
-                        <select class="form-select" id="pieceIdentiteSelect" required>
-                            <option value="">Sélectionnez la pièce</option>
-                            <option value="CNI">CNI</option>
-                            <option value="Passeport">Passeport</option>
-                            <option value="Permis de conduire">Permis de conduire</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">N° *</label>
-                        <input type="text" class="form-control" id="numeroPieceInput" placeholder="Numéro de la pièce" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Date de délivrance *</label>
-                        <input type="date" class="form-control" id="dateDelivranceInput" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Lieu de délivrance *</label>
-                        <input type="text" class="form-control" id="lieuDelivranceInput" placeholder="Lieu de délivrance" required>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-success px-4 py-2" id="printEngagementWithDetails">
-                    <i class="ri-printer-line me-2"></i>Imprimer l'engagement
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Synthèse et Confirmation Paiement -->
 <div class="modal fade" id="synthesePaiementModal" tabindex="-1" aria-labelledby="synthesePaiementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -3836,43 +3772,12 @@
 
         // Imprimer l'engagement
         $(document).on('click', '#btnPrintEngagement', function(){
-            $('#engagementAssistantModal').modal('show');
-        });
-
-        
-        // Add click handler for the assistant modal print button
-        $(document).on('click', '#printEngagementWithDetails', function() {
-            // Validate required fields from assistant modal
-            var signataire = $('#signataireSelect').val();
-            var pieceIdentite = $('#pieceIdentiteSelect').val();
-            var numeroPiece = $('#numeroPieceInput').val();
-            var dateDelivrance = $('#dateDelivranceInput').val();
-            var lieuDelivrance = $('#lieuDelivranceInput').val();
-            
-            if (!signataire || !pieceIdentite || !numeroPiece || !dateDelivrance || !lieuDelivrance) {
-                alert("Veuillez remplir tous les champs obligatoires dans l'assistant.");
-                return;
-            }
-            
-            // Close the assistant modal
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('engagementAssistantModal')).hide();
-            
-            // Call the original printEngagement function which will now have access to the modal data
-            printEngagement(numeroPiece, signataire);
-        });
-        
-    
-        function printEngagement(numeroPiece, signataire){
             // Récupérer les données de l'étudiant
             var studentName = $('#demandeur').text();
             var formation = $('#specialite').text();
             var promo = $('#promo').text();
             var currentDate = new Date().toLocaleDateString('fr-FR');
-
-
-            var numeroPiece = numeroPiece;
-            var signataire = signataire;
-
+            
             // Vérifier qu'on a les données de l'étudiant
             if (!studentName || !formation || !promo) {
                 alert("Les informations de l'étudiant ne sont pas complètes.");
@@ -3881,7 +3786,8 @@
             
             // Récupérer les paiements dus
             var paymentsData = [];
-              
+           
+            
             $('#ListePaiementRequestLine tr').each(function() {
                 var label = $(this).find('td:eq(1)').text().trim();
                 var date_echeance = $(this).find('td:eq(2)').text().trim();
@@ -3934,7 +3840,8 @@
                 };
                 document.head.appendChild(script1);
             }
-              
+            
+            
             // Fonction pour générer le PDF
             function generateEngagementPDF() {
                 // Vérifier si jsPDF est disponible de différentes manières
@@ -3996,25 +3903,18 @@
                         } else {
                             doc.text("Engagement de paiements", 105, 55, null, null, 'center');
                         }
-
-                        // Ajouter le texte d'engagement
-                        doc.setFontSize(12);
-                        var engagementText = "Je soussigné(e), " + studentName + "";
-                        doc.text(engagementText, 20, 125, { maxWidth: 170 });
                         
-                        var agissant = "Agissant en qualité de : " + signataire + "";
-                        doc.text(agissant, 20, 135, { maxWidth: 170 });
-
                         // Ajouter les informations de l'étudiant
                         doc.setFontSize(12);
                         doc.text("Nom de l'étudiant: " + studentName, 20, 75);
                         doc.text("Formation: " + formation, 20, 85);
                         doc.text("Promo: " + promo, 20, 95);
                         doc.text("Date: " + currentDate, 20, 105);
-
-                        doc.text("N° Piece d'identite :" + numeroPiece, 20, 115);
-
                         
+                        // Ajouter le texte d'engagement
+                        doc.setFontSize(12);
+                        var engagementText = "Je soussigné(e), " + studentName + ", déclare avoir pris connaissance des échéances de paiement ci-dessous et m'engage à les respecter:";
+                        doc.text(engagementText, 20, 125, { maxWidth: 170 });
                         
                         // Préparer les données pour le tableau
                         var columns = ["Libellé", "Montant", "Date echeance"];
@@ -4083,7 +3983,7 @@
             
             // Générer le document (PDF ou texte)
             generateEngagementPDF();
-        }
+        }); 
 
 
         $(document).on('click', "#applyReductionBtn", function(){
@@ -4689,8 +4589,7 @@
     
  
 
-  
-    </script>
+</script>
 
 
 
