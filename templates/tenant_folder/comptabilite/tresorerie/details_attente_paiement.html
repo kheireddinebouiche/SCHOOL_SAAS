@@ -2367,6 +2367,27 @@
                         </select>
                     </div>
                 </div>
+                
+                <!-- Champs nom et prénom pour Parents/Tuteur -->
+                <div id="parentTuteurFields" class="row d-none">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Nom du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="nomParentTuteurInput" placeholder="Nom du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Prénom du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="prenomParentTuteurInput" placeholder="Prénom du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Adresse du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="adresseParentTuteurInput" placeholder="Adresse du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Contact téléphonique du parent/tuteur *</label>
+                        <input type="tel" class="form-control" id="contactParentTuteurInput" placeholder="Contact téléphonique du parent ou tuteur" required>
+                    </div>
+                </div>
+                
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label fw-semibold">N° *</label>
@@ -2851,6 +2872,11 @@
 <input disabled type="hidden" id="_lieu_naissance" />
 <input disabled type="hidden" id="_formation" />
 
+<input disabled type="hidden" id="_demandeurAdresse" />
+<input disabled type="hidden" id="_demandeurContact" />
+<input disabled type="hidden" id="_entite" />
+<input disabled type="hidden" id="_ville" />
+<input disabled type="hidden" id="_montant_formation" />
 
 <script>
     
@@ -2922,7 +2948,10 @@
                     clientId = data.user_data.client_id;
                     promoCode = data.voeux.promo;
                     $('#clientIdInput').val(clientId);
-                    
+                    $('#_formation').val(data.voeux.formation);
+                    $('#_entite').val(data.voeux.entite);
+                    $('#_ville').val(data.voeux.entite_ville);
+
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#clientEmail').text(data.user_data.email || 'Non spécifié');
@@ -2933,6 +2962,7 @@
                     
                     // Informations sur la formation
                     $('#specialite').text(data.voeux.specialite_label);
+                    
                     $('#promo').text(data.voeux.promo);
                     $('#prix_formation').text(data.voeux.prix_formation + " DA");
                     
@@ -2941,6 +2971,9 @@
 
                     $('#_date_naissance').val(data.user_data.demandeur_date_naissance);
                     $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
+
+                    $('#_demandeurAdresse').val(data.user_data.demandeur_adresse);
+                    $('#_demandeurContact').val(data.user_data.demandeur_telephone);
 
                     // Stocker le prix de la formation pour le modal spécial
                     prixFormation = data.voeux.prix_formation;
@@ -2994,9 +3027,10 @@
                             document.getElementById('notifApprobReduc').style.setProperty('display', 'none', 'important');
                             document.getElementById('notifAlertReduc').style.setProperty('display', 'flax', 'important');
                         }
-                       
-
-                       
+                        
+                        $('#_montant_formation').val(data.remise.montant_remise);
+                    }else{
+                        $('#_montant_formation').val(data.voeux.prix_formation);
                     }
 
                     if(data.has_special_echeancier){
@@ -3832,6 +3866,18 @@
                 $('#confirmEngagementBtn').prop('disabled', true);
             }
         });
+
+        // Gérer le changement de signataire pour afficher les champs nom/prénom si nécessaire
+        $(document).on('change', '#signataireSelect', function(){
+            var selectedValue = $(this).val();
+            var parentTuteurFields = $('#parentTuteurFields');
+            
+            if (selectedValue === 'Parents' || selectedValue === 'Tuteur') {
+                parentTuteurFields.removeClass('d-none');
+            } else {
+                parentTuteurFields.addClass('d-none');
+            }
+        });
        
 
         // Imprimer l'engagement
@@ -3848,33 +3894,77 @@
             var numeroPiece = $('#numeroPieceInput').val();
             var dateDelivrance = $('#dateDelivranceInput').val();
             var lieuDelivrance = $('#lieuDelivranceInput').val();
+            var demandeurAdresse = $('#_demandeurAdresse').val();
+            var demandeurContact = $('#_demandeurContact').val();
+
             
             if (!signataire || !pieceIdentite || !numeroPiece || !dateDelivrance || !lieuDelivrance) {
                 alert("Veuillez remplir tous les champs obligatoires dans l'assistant.");
                 return;
+            }
+
+            // Vérifier si les champs nom et prénom sont requis (pour Parents ou Tuteur)
+            if (signataire === 'Parents' || signataire === 'Tuteur') {
+                var nomParentTuteur = $('#nomParentTuteurInput').val();
+                var prenomParentTuteur = $('#prenomParentTuteurInput').val();
+                var adresseParentTuteur = $('#adresseParentTuteurInput').val();
+                var contactParentTuteur = $('#contactParentTuteurInput').val();
+                
+
+                if (!nomParentTuteur || !prenomParentTuteur || !adresseParentTuteur || !contactParentTuteur ) {
+                    alert("Veuillez remplir les informations du parent ou tuteur.");
+                    return;
+                }
             }
             
             // Close the assistant modal
             bootstrap.Modal.getOrCreateInstance(document.getElementById('engagementAssistantModal')).hide();
             
             // Call the original printEngagement function which will now have access to the modal data
-            printEngagement(numeroPiece, signataire);
+            if (signataire === 'Parents' || signataire === 'Tuteur') {
+                var nomParentTuteur = $('#nomParentTuteurInput').val();
+                var prenomParentTuteur = $('#prenomParentTuteurInput').val();
+                var adresseParentTuteur = $('#adresseParentTuteurInput').val();
+                var contactParentTuteur = $('#contactParentTuteurInput').val();
+
+                printEngagement(numeroPiece, signataire, nomParentTuteur, prenomParentTuteur,adresseParentTuteur,contactParentTuteur,pieceIdentite,dateDelivrance,numeroPiece, lieuDelivrance);
+            } else {
+                printEngagement(numeroPiece, signataire, null, null, demandeurAdresse, demandeurContact,pieceIdentite,dateDelivrance, numeroPiece, lieuDelivrance);
+            }
         });
         
     
-        function printEngagement(numeroPiece, signataire){
+        function printEngagement(numeroPiece, signataire, nomParentTuteur, prenomParentTuteur,adresseParentTuteur,contactParentTuteur,pieceIdentite,dateDelivrance,numeroPiece, lieuDelivrance){
             // Récupérer les données de l'étudiant
             var studentName = $('#demandeur').text();
-            var formation = $('#specialite').text();
+            var specialite = $('#specialite').text();
+            var formationLabel =$('#_formation').val();
             var promo = $('#promo').text();
             var currentDate = new Date().toLocaleDateString('fr-FR');
-
+            var _date_naissance = $('#_date_naissance').val();
+            var _lieu_naissance = $('#_lieu_naissance').val();
+            var entite = $('#_entite').val();
+            var ville = $('#_ville').val();
+            var montant = $('#_montant_formation').val();
+            var montant_lettre = numberToWordsDZD(montant);
 
             var numeroPiece = numeroPiece;
             var signataire = signataire;
+            var nomParentTuteur = nomParentTuteur;
+            var prenomParentTuteur = prenomParentTuteur;
+            var adresseParentTuteur = adresseParentTuteur;
+            var contactParentTuteur = contactParentTuteur;
+            var pieceIdentite = pieceIdentite;
+            var  dateDelivrance = dateDelivrance;
+            var  numeroPiece = numeroPiece;
+            var lieuDelivrance = lieuDelivrance;
+
+            
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('fr-FR');
 
             // Vérifier qu'on a les données de l'étudiant
-            if (!studentName || !formation || !promo) {
+            if (!studentName || !promo) {
                 alert("Les informations de l'étudiant ne sont pas complètes.");
                 return;
             }
@@ -3937,152 +4027,196 @@
               
             // Fonction pour générer le PDF
             function generateEngagementPDF() {
-                // Vérifier si jsPDF est disponible de différentes manières
                 var jsPDFInstance = null;
-                
-                // Méthode 1: jsPDF direct
                 if (typeof jsPDF !== 'undefined') {
                     jsPDFInstance = jsPDF;
-                }
-                // Méthode 2: window.jspdf.jsPDF
-                else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
                     jsPDFInstance = window.jspdf.jsPDF;
-                }
-                // Méthode 3: jspdf.jsPDF
-                else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
+                } else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
                     jsPDFInstance = jspdf.jsPDF;
                 }
-                
-                // Si jsPDF est disponible, générer le PDF
+
                 if (jsPDFInstance) {
                     try {
-                        // Créer le PDF
                         const doc = new jsPDFInstance();
-                        
-                        // Récupérer les URLs des logos
+
+                        // Logos
                         const logoHeaderUrl = document.getElementById('_logoHeader').value;
                         const logoFooterUrl = document.getElementById('_logoFooter').value;
-                        
-                        // Fonction pour ajouter les logos au PDF
+
                         const addLogosToPDF = () => {
-                            // Ajouter le logo d'en-tête si disponible
                             if (logoHeaderUrl) {
                                 const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
-                                // Set the header logo width to 25% of the page width
                                 const headerLogoWidth = doc.internal.pageSize.width * 0.25;
-                                // Maintain aspect ratio by adjusting height proportionally
-                                doc.addImage(headerLogoUrl, 'PNG', 20, 10, headerLogoWidth, headerLogoWidth * 0.375); // 0.375 maintains typical logo ratio
+                                doc.addImage(headerLogoUrl, 'PNG', 20, 10, headerLogoWidth, headerLogoWidth * 0.375);
                             }
-                            
-                            // Ajouter le logo de pied de page si disponible
+
                             if (logoFooterUrl) {
                                 const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
-                                // Position the footer logo across the full width of the page but respecting margins
-                                // Starting from x=20 (left margin) and spanning the full width minus margins
                                 doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
                             }
                         };
-                        
-                        // Ajouter les logos au PDF
+
                         addLogosToPDF();
-                        
-                        // Définir la police Arial
-                        doc.setFont('helvetica'); // Using helvetica as Arial alternative (both are sans-serif)
-                        
-                        // Ajouter le titre
-                        doc.setFontSize(18);
-                        if (has_special_echeancier) {
-                            doc.text("LETTRE D'ENGAGEMENT POUR UN ÉCHÉANCIER SPÉCIAL", 105, 55, null, null, 'center');
+                        doc.setFont('helvetica');
+                        doc.setFontSize(16);
+                        doc.text("LETTRE D'ENGAGEMENT POUR UN ÉCHÉANCIER SPÉCIAL", 105, 50, null, null, 'center');
+
+                        doc.setFontSize(10);
+                        let y = 68; // point de départ légèrement plus haut
+                        const line = (step = 6) => y += step; // espacement réduit entre les lignes
+
+                        // Afficher le signataire avec le nom/prénom si c'est un parent ou tuteur
+                        if (signataire === 'Parents' || signataire === 'Tuteur') {
+                            doc.text("Je soussigné(e),  "+prenomParentTuteur+" "+nomParentTuteur, 20, line());
+                            doc.text("Agissant en qualité de : "+signataire, 20, line());
                         } else {
-                            doc.text("Engagement de paiements", 105, 55, null, null, 'center');
+                            doc.text("Je soussigné(e),  "+studentName, 20, line());
+                            doc.text("Agissant en qualité de : "+signataire, 20, line());
                         }
+                        doc.text("Demeurant à : "+adresseParentTuteur, 20, line());
+                        doc.text("Contact téléphonique : "+contactParentTuteur, 20, line(8));
 
-                        // Ajouter le texte d'engagement
-                        doc.setFontSize(12);
-                        var engagementText = "Je soussigné(e), " + studentName + "";
-                        doc.text(engagementText, 20, 125, { maxWidth: 170 });
-                        
-                        var agissant = "Agissant en qualité de : " + signataire + "";
-                        doc.text(agissant, 20, 135, { maxWidth: 170 });
+                        doc.text("M'engage formellement à régler la somme de :", 20, line(8));
+                        doc.text("(en chiffres) "+montant+" DZD", 30, line());
+                        doc.text("(en lettres) "+montant_lettre+"", 30, line(8));
 
-                        // Ajouter les informations de l'étudiant
-                        doc.setFontSize(12);
-                        doc.text("Nom de l'étudiant: " + studentName, 20, 75);
-                        doc.text("Formation: " + formation, 20, 85);
-                        doc.text("Promo: " + promo, 20, 95);
-                        doc.text("Date: " + currentDate, 20, 105);
+                        doc.text("Au titre des frais de scolarité et de formation de l'apprenant(e) :", 20, line(8));
+                        doc.text("Nom et prénom : "+studentName, 30, line());
+                        doc.text("Né(e) le : "+_date_naissance+"  À : "+_lieu_naissance+"", 30, line());
+                        doc.text("Inscrit(e) au niveau de "+entite+", pour la formation de : "+formationLabel, 30, line());
+                        doc.text("Spécialité :"+specialite, 30, line());
+                        doc.text("Année académique : 2023 / 2024", 30, line(8));
 
-                        doc.text("N° Piece d'identite :" + numeroPiece, 20, 115);
+                        doc.text("Le paiement de la somme susmentionnée s’effectuera selon l’échéancier suivant :", 20, line(8));
 
-                        
-                        
-                        // Préparer les données pour le tableau
-                        var columns = ["Libellé", "Montant", "Date echeance"];
-                        var rows = [];
-                        paymentsData.forEach(function(payment) {
-                            rows.push([payment.label, payment.amount, payment.date_echeance]);
-                        });
-                        
-                        // Ajouter le tableau des paiements
+                        // Tableau = seulement les paiements existants
+                        const columns = ["N°", "Montant (DZD)", "Date de règlement prévue"];
+                        const rows = paymentsData.map((p, i) => [
+                            i + 1,
+                            p.amount || "",
+                            p.date_echeance || ""
+                        ]);
+
                         if (typeof doc.autoTable === 'function') {
                             doc.autoTable({
                                 head: [columns],
                                 body: rows,
-                                startY: 145,
-                                theme: 'plain',  // Changed from 'grid' to 'plain' to remove colors
-                                styles: {
-                                    fillColor: false,  // Remove background colors
-                                    textColor: [0, 0, 0],  // Set text to black
-                                    lineWidth: 0.1  // Light borders
-                                },
-                                headStyles: {
-                                    fillColor: false,  // Remove header background color
-                                    textColor: [0, 0, 0],  // Header text in black
-                                    halign: 'center'
-                                },
-                                bodyStyles: {
-                                    fillColor: false  // Remove body background colors
-                                }
+                                startY: line(5),
+                                theme: 'plain',
+                                styles: { textColor: [0, 0, 0], lineWidth: 0.1, fontSize: 11 },
+                                headStyles: { halign: 'center', fontStyle: 'bold' },
+                                bodyStyles: { halign: 'center' }
                             });
-                            
-                            // Ajouter la signature
-                            var finalY = doc.lastAutoTable.finalY || 150;
-                            doc.text("Signature de l'étudiant: _______________________", 20, finalY + 20);
-                            doc.text("Signature de l'administrateur: ___________________", 20, finalY + 40);
+                            y = doc.lastAutoTable.finalY + 10;
                         } else {
-                            // Si autoTable n'est pas disponible, ajouter les paiements manuellement
-                            var yPosition = 145;
-                            doc.text("Paiements dus:", 20, yPosition);
-                            yPosition += 10;
-                            
-                            rows.forEach(function(row) {
-                                doc.text(row[0] + " - Montant: " + row[1] + " - Restant: " + row[2], 20, yPosition);
-                                yPosition += 10;
-                            });
-                            
-                            // Ajouter la signature
-                            doc.text("Signature de l'étudiant: _______________________", 20, yPosition + 20);
-                            doc.text("Signature de l'administrateur: ___________________", 20, yPosition + 40);
+                            doc.text("Erreur : AutoTable non chargée.", 20, line());
                         }
-                        
-                        // Télécharger le PDF
-                        doc.save("engagement_paiements_" + studentName.replace(/\s+/g, '_') + ".pdf");
-                        alertify.success("Document d'engagement généré avec succès !");
-                        
+
+                        doc.text("Fait à "+ville+", le "+formattedDate, 150, y); y += 5;
+                        doc.text("Signature précédée de la mention « Lu et approuvé » :", 20, y-5); y += 5;
+                        doc.text("(Signature de l'apprenant / parent / tuteur légal)", 20, y-5); y += 5;
+
+                        doc.text("Pièce d'identité :", 20, y+6); y += 10;
+                        doc.text("Type : "+pieceIdentite, 30, y); y += 6;
+                        doc.text("N° : "+numeroPiece, 30, y); y += 6;
+                        doc.text("Délivrée le : "+dateDelivrance+"   Par : "+lieuDelivrance+"", 30, y); y += 10;
+
+                        doc.text("Visa de l'administration", 150, y-30);
+
+                        doc.save("engagement_special_" + studentName.replace(/\s+/g, '_') + ".pdf");
+                        alertify.success("Document d'engagement spécial généré avec succès !");
                     } catch (error) {
                         console.error("Erreur lors de la génération du PDF:", error);
-                        // En cas d'erreur, utiliser la solution de secours
-                        if (confirm("Erreur lors de la génération du PDF. Voulez-vous générer un document texte à la place ?")) {
-                            generateTextDocument();
-                        } else {
-                            alert("Erreur lors de la génération du document. Détails: " + error.message);
-                        }
+                        alert("Erreur lors de la génération du document : " + error.message);
                     }
                 }
             }
-            
+
             // Générer le document (PDF ou texte)
             generateEngagementPDF();
+        }
+
+        // Convertir un nombre en lettres (ex : 12500 -> "douze mille cinq cents dinars algériens")
+        function numberToWordsDZD(nombre) {
+            if (!nombre || isNaN(nombre)) return "";
+
+            nombre = parseInt(nombre);
+
+            const unite = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
+            const dizaine = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante"];
+            const dizaine_special = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
+
+            function toWords(n) {
+                let words = "";
+
+                if (n < 10) {
+                    words = unite[n];
+                } else if (n < 20) {
+                    words = dizaine_special[n - 10];
+                } else if (n < 70) {
+                    words = dizaine[Math.floor(n / 10)];
+                    if (n % 10 === 1 && n !== 11 && n !== 71 && n !== 91) words += " et un";
+                    else if (n % 10 > 0) words += "-" + unite[n % 10];
+                } else if (n < 80) {
+                    words = "soixante-" + toWords(n - 60);
+                } else if (n < 100) {
+                    words = "quatre-vingt";
+                    if (n > 80) words += "-" + toWords(n - 80);
+                }
+
+                return words.trim();
+            }
+
+            function underThousand(n) {
+                let words = "";
+                const hundreds = Math.floor(n / 100);
+                const remainder = n % 100;
+
+                if (hundreds > 0) {
+                    if (hundreds === 1) words = "cent";
+                    else words = unite[hundreds] + " cent";
+                    if (remainder === 0 && hundreds > 1) words += "s";
+                }
+
+                if (remainder > 0) {
+                    words += (words ? " " : "") + toWords(remainder);
+                }
+
+                return words;
+            }
+
+            function fullNumberToWords(n) {
+                if (n === 0) return "zéro";
+
+                const parts = [];
+                const milliards = Math.floor(n / 1_000_000_000);
+                const millions = Math.floor((n % 1_000_000_000) / 1_000_000);
+                const milliers = Math.floor((n % 1_000_000) / 1000);
+                const reste = n % 1000;
+
+                if (milliards > 0) {
+                    parts.push((milliards > 1 ? underThousand(milliards) + " milliards" : "un milliard"));
+                }
+
+                if (millions > 0) {
+                    parts.push((millions > 1 ? underThousand(millions) + " millions" : "un million"));
+                }
+
+                if (milliers > 0) {
+                    if (milliers === 1) parts.push("mille");
+                    else parts.push(underThousand(milliers) + " mille");
+                }
+
+                if (reste > 0) {
+                    parts.push(underThousand(reste));
+                }
+
+                return parts.join(" ").replace(/\s+/g, " ").trim();
+            }
+
+            const resultat = fullNumberToWords(nombre);
+            return resultat.charAt(0).toUpperCase() + resultat.slice(1) + " dinars algériens";
         }
 
 
@@ -4355,9 +4489,16 @@
             var formation = $('#specialite').text();
             var promo = $('#promo').text();
             var currentDate = new Date().toLocaleDateString('fr-FR');
+
+            console.log(payment.label_paiements);
+            if(payment.label_paiements === "Rembourssement"){
+                generateDechargeRemboursementPDF();
+            }else{
+                // Generate PDF
+                generateQuittancePDF(payment, studentName, formation, promo, currentDate,id_demande);
+            }
             
-            // Generate PDF
-            generateQuittancePDF(payment, studentName, formation, promo, currentDate,id_demande);
+            
         });
         
         // === Charger les infos entreprise ===
@@ -4440,7 +4581,12 @@
                 function drawQuittance(yOffset) {
                     doc.setFontSize(14);
                     doc.setTextColor(40, 40, 40);
-                    doc.text("BON DE PRE-INSCRIPTION", 105, yOffset + 15, null, null, 'center');
+                    if(payment.label_paiements === "Frais d'inscription")
+                        doc.text("BON DE PRE-INSCRIPTION", 105, yOffset + 15, null, null, 'center');
+                    else{
+                        doc.text("BON DE PAIEMENT", 105, yOffset + 15, null, null, 'center');
+                        
+                    }
 
                     doc.setDrawColor(59, 125, 221);
                     doc.setLineWidth(0.5);
@@ -4540,6 +4686,95 @@
             } catch (error) {
                 console.error("Erreur lors de la génération du PDF:", error);
                 alert("Erreur : " + error.message);
+            }
+        }
+
+        function generateDechargeRemboursementPDF() {
+            var jsPDFInstance = null;
+            if (typeof jsPDF !== 'undefined') {
+                jsPDFInstance = jsPDF;
+            } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = window.jspdf.jsPDF;
+            } else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = jspdf.jsPDF;
+            }
+
+            if (jsPDFInstance) {
+                try {
+                    const doc = new jsPDFInstance();
+
+                    // Charger les logos si disponibles
+                    const logoHeaderUrl = document.getElementById('_logoHeader')?.value;
+                    const logoFooterUrl = document.getElementById('_logoFooter')?.value;
+
+                    const addLogosToPDF = () => {
+                        if (logoHeaderUrl) {
+                            const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
+                            const headerLogoWidth = doc.internal.pageSize.width * 0.25;
+                            doc.addImage(headerLogoUrl, 'PNG', 20, 10, headerLogoWidth, headerLogoWidth * 0.375);
+                        }
+
+                        if (logoFooterUrl) {
+                            const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
+                            doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
+                        }
+                    };
+
+                    addLogosToPDF();
+
+                    // Police et format
+                    doc.setFont('helvetica');
+                    doc.setFontSize(16);
+                    doc.text("DÉCHARGE DE REMBOURSEMENT", 105, 50, null, null, 'center');
+
+                    doc.setFontSize(12);
+                    let y = 70;
+                    const line = (step = 6) => y += step; // espacement serré
+
+                    // Corps du document
+                    doc.text("Je soussigné(e) : Mme / M. __________________________________________", 20, line());
+                    doc.text("Qualité : ☐ Apprenant(e) ☐ Parent(e) ☐ Tuteur(trice) légal(e)", 20, line(8));
+
+                    doc.text("Agissant en ma qualité de représentant(e) de l’apprenant(e) :", 20, line(10));
+                    doc.text("Nom : __________________________________________", 30, line());
+                    doc.text("Prénom : _______________________________________", 30, line());
+                    doc.text("Né(e) le : ____________________   À : ____________________", 30, line(8));
+
+                    doc.text("Préinscrit(e) / Inscrit(e) en formation :", 20, line(10));
+                    doc.text("__________________________________________", 30, line());
+                    doc.text("Spécialité : __________________________________________", 30, line());
+                    doc.text("Semestre : ___________   Groupe : ___________", 30, line());
+                    doc.text("Année académique : 2025 – 2026", 30, line(8));
+
+                    doc.text("Je reconnais avoir reçu, en espèces, en chèque, autres, ce jour, de la caisse de", 20, line(10));
+                    doc.text("l’INSIM / HIMI, la somme de :", 20, line(6));
+                    doc.text("__________________________________________________________ DZD", 30, line());
+                    doc.text("(en toutes lettres : ____________________________________________).", 30, line(8));
+
+                    doc.text("Cette somme représente le remboursement (total / partiel) des frais de formation", 20, line(10));
+                    doc.text("réglés en date du : ____________________", 20, line(8));
+
+                    doc.text("Raison du remboursement : __________________________________________", 20, line(10));
+
+                    doc.text("Fait à Alger, le ____ / ____ / 2025", 20, line(12));
+
+                    doc.text("Signature du bénéficiaire précédée de la mention « Lu et approuvé » :", 20, line(12));
+                    doc.text("CNI / PC / Passeport N° ___________________", 20, line(10));
+                    doc.text("Délivré(e) le : ___________________________", 20, line(8));
+                    doc.text("Par : __________________________________", 20, line(8));
+
+                    doc.text("_____________________________________", 20, line(15));
+                    doc.text("(Signature)", 20, line());
+
+                    doc.text("Visa et cachet de l’administration :", 20, line(15));
+
+                    // Sauvegarde du fichier
+                    doc.save("decharge_remboursement.pdf");
+                    alertify.success("Décharge de remboursement générée avec succès !");
+                } catch (error) {
+                    console.error("Erreur lors de la génération du PDF:", error);
+                    alert("Erreur lors de la génération du document : " + error.message);
+                }
             }
         }
 

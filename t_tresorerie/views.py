@@ -206,11 +206,15 @@ def ApiGetDetailsDemandePaiement(request):
             id_reduction = remiseObj.remise_appliquer.id
             is_appliced_remise = remiseObj.remise_appliquer.is_applicated
 
+            montant_remise = voeux.specialite.formation.prix_formation - ((remise_appliquer * voeux.specialite.formation.prix_formation ) / 100)
+
             remiseDatas = {
                 'valeur' : remise_appliquer,
                 'remise_approuver' : is_approuved_remise,
                 'remise_appliquer' : is_appliced_remise,
                 'type_remise' : reduction_type,
+                'montant_remise' : montant_remise,
+                'montant_sans_remise' : voeux.specialite.formation.prix_formation,
                 'id_applied_reduction' : id_reduction,
             }
 
@@ -260,6 +264,7 @@ def ApiGetDetailsDemandePaiement(request):
             has_pending_refund = False
             refund_data = []
         
+        
 
         user_data = {
             "demandeur_id" : obj.client.id,
@@ -282,6 +287,8 @@ def ApiGetDetailsDemandePaiement(request):
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
             'formation' : voeux.specialite.formation.nom,
+            'entite' : voeux.specialite.formation.entite_legal.designation,
+            'entite_ville' : voeux.specialite.formation.entite_legal.ville,
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.formation.prix_formation,
             'frais_inscription' : voeux.specialite.formation.frais_inscription,
