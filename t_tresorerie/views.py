@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
 from t_remise.models import *
+from t_groupe.models import *
 from django.db.models import Sum
 from django.db.models import Q
 from institut_app.decorators import *
@@ -92,16 +93,14 @@ def ApiAccepteRembourssement(request):
     modePaiement = request.GET.get('modePaiement')
     client = request.GET.get('client')
     id_remboursement = request.GET.get('id_remboursement') 
-    
-    print(id_remboursement)
 
     obj_rembourssement = Rembourssements.objects.get(id = id_remboursement)
     obj_rembourssement.mode_rembourssement = modePaiement
     obj_rembourssement.allowed_amount = montantRembourser
     obj_rembourssement.etat = "acp"
     obj_rembourssement.is_done = True
-
     obj_rembourssement.save()
+
 
     return JsonResponse({'status' : 'success'})
 
@@ -139,6 +138,18 @@ def ApiGetDetailsDemandePaiement(request):
         has_processed_refund = False
         is_appliced = False
         special_echeancier_validate = False
+
+        try:
+            group = GroupeLine.objects.get(student=obj.client)
+
+            groupe_data = {
+                'groupe_nom' : group.groupe.nom,
+                'groupe_semestre' : group.groupe.semestre,
+            }
+
+        except GroupeLine.DoesNotExist:
+            groupe_data = {}
+            group = None
 
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
@@ -265,6 +276,7 @@ def ApiGetDetailsDemandePaiement(request):
             refund_data = []
         
         
+        
 
         user_data = {
             "demandeur_id" : obj.client.id,
@@ -302,6 +314,7 @@ def ApiGetDetailsDemandePaiement(request):
             'user_data' : user_data,
             'voeux' : voeux_data,
             'echeancier' : list(echeancier_data),
+            'groupe_data': groupe_data,
             'remise' : remiseDatas,
             'has_special_echeancier' : has_special_echeancier,
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,

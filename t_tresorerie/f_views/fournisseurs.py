@@ -14,7 +14,7 @@ def PageFournisseur(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeFournisseurs(request):
-    liste = Fournisseur.objects.all().values('id', 'designation','telephone','code')
+    liste = Fournisseur.objects.all().values('id', 'designation','telephone','code','email')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
