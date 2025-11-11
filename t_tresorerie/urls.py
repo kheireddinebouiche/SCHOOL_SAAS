@@ -133,6 +133,7 @@ urlpatterns = [
     #### Gestion des dépenses
     path('parametres/type-depense/', liste_types_depenses, name="liste_types_depenses"),
     path('ApiLoadTypeDepense', ApiLoadTypeDepense, name="ApiLoadTypeDepense"),
+    path('ApiStoreNewType', ApiStoreNewType, name="ApiStoreNewType"),
 
 
 ]

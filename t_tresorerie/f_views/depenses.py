@@ -27,3 +27,14 @@ def ApiLoadTypeDepense(request):
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status":"error",'message':'methode non autoriser'})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiStoreNewType(request):
+    if request.method == "POST":
+        typeName = request.POST.get('typeName')
+        typeDescription = request.POST.get('typeDescription')
+    else:
+        return JsonResponse({"status":"error",'message':"methode non autoriser"})
+
+

@@ -281,65 +281,33 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <form id="typeForm">
-                    <input type="hidden" id="typeId">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="mb-4">
-                                <label for="typeName" class="form-label fw-semibold">Nom du Type *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light">
-                                        <i class="ri-edit-box-line text-muted"></i>
-                                    </span>
-                                    <input type="text" class="form-control form-control-lg" id="typeName" placeholder="Entrez le nom du type de dépense" required>
-                                </div>
-                                <div class="form-text">Le nom doit être unique et descriptif</div>
+                
+                <input type="hidden" id="typeId">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-4">
+                            <label for="typeName" class="form-label fw-semibold">Nom du Type *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="ri-edit-box-line text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control form-control-lg" id="typeName" placeholder="Entrez le nom du type de dépense" required>
                             </div>
+                            <div class="form-text">Le nom doit être unique et descriptif</div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="mb-4">
-                                <label for="typeDescription" class="form-label fw-semibold">Description</label>
-                                <textarea class="form-control" id="typeDescription" rows="4" placeholder="Décrivez le type de dépense..."></textarea>
-                                <div class="form-text">Fournissez une description détaillée de ce type de dépense</div>
-                            </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-4">
+                            <label for="typeDescription" class="form-label fw-semibold">Description</label>
+                            <textarea class="form-control" id="typeDescription" rows="4" placeholder="Décrivez le type de dépense..."></textarea>
+                            <div class="form-text">Fournissez une description détaillée de ce type de dépense</div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <label for="typeStatus" class="form-label fw-semibold">Statut</label>
-                                <div class="d-flex gap-3">
-                                    <div class="form-check form-check-custom form-check-primary">
-                                        <input class="form-check-input" type="radio" name="statusRadio" id="statusActive" value="active" checked>
-                                        <label class="form-check-label" for="statusActive">
-                                            Actif
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-check-custom form-check-danger">
-                                        <input class="form-check-input" type="radio" name="statusRadio" id="statusInactive" value="inactive">
-                                        <label class="form-check-label" for="statusInactive">
-                                            Inactif
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Catégorie</label>
-                                <select class="form-select" id="typeCategory">
-                                    <option value="">Sélectionnez une catégorie</option>
-                                    <option value="operation">Opérationnelle</option>
-                                    <option value="investissement">Investissement</option>
-                                    <option value="administrative">Administrative</option>
-                                    <option value="autre">Autre</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </form>
+                </div>
+                
+                
             </div>
             <div class="modal-footer bg-light p-3">
                 <div class="d-flex w-100 gap-2">
@@ -448,6 +416,52 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         });
         
+        $(document).on('click','#saveTypeBtn', function(){
+            var typeName = $('#typeName').val();
+            var typeDescription = $('#typeDescription').val();
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
+            if (!typeName){
+                btn.prop('disabled', false); 
+                btn.html(originalText);
+                return alertify.error("Informations manquante");
+            }
+
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiStoreNewType' %}",
+                dataType: "JSON",
+                type : "POST",
+                data: {
+                    'typeName' : typeName,
+                    'typeDescription' : typeDescription,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("Les informations ont été enregistrer avec succès");
+                        loadItems();
+                        $('#addTypeModal').modal('hide');
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+                    }
+                },
+                 complete: function() {
+                    // Réactiver le bouton et restaurer son texte après la requête
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
+                
+            });
+        });
+
         // Add delete functionality
         $(document).on('click', '.remove-item-btn', function() {
             const id = $(this).data('id');
@@ -466,25 +480,6 @@
             showNotification('Type de dépense supprimé avec succès', 'success');
         });
         
-        // Save type functionality
-        $('#saveTypeBtn').click(function() {
-            // In a real application, you would gather form data and make an AJAX call
-            const id = $('#typeId').val();
-            const name = $('#typeName').val();
-            
-            // Close the modal and show a success message
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).hide();
-            if(id) {
-                showNotification('Type de dépense "' + name + '" mis à jour avec succès', 'success');
-            } else {
-                showNotification('Type de dépense "' + name + '" ajouté avec succès', 'success');
-            }
-            
-            // Reset form
-            $('#typeForm')[0].reset();
-            $('#addTypeModalLabel').text('Ajouter un Type de Dépense');
-            $('#saveTypeBtn').text('Enregistrer');
-        });
         
         // Function to show notification
         function showNotification(message, type) {
