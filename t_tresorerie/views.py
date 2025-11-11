@@ -576,7 +576,4 @@ def ApiCheckForPayments(request):
 def liste_types_depenses(request):
     return render(request, 'tenant_folder/comptabilite/depenses/type_depense.html')
 
-@login_required(login_url="institut_app:login")
-def ApiListeTypeDepense(request):
-    liste = TypeDepense.objects.all().values('id','label')
-    return JsonResponse(list(liste), safe=False)
+

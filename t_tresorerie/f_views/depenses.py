@@ -20,3 +20,10 @@ def ApiListeDepenses(request):
 def PageNouvelleDepense(request):
     return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html")
 
+@login_required(login_url="institut_app:login")
+def ApiLoadTypeDepense(request):
+    if request.method == 'GET':
+        liste = TypeDepense.objects.all().values('id','label')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status":"error",'message':'methode non autoriser'})
