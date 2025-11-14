@@ -134,6 +134,15 @@ urlpatterns = [
     path('parametres/type-depense/', liste_types_depenses, name="liste_types_depenses"),
     path('ApiLoadTypeDepense', ApiLoadTypeDepense, name="ApiLoadTypeDepense"),
     path('ApiStoreNewType', ApiStoreNewType, name="ApiStoreNewType"),
+    path('ApiAddCategorieComptable', ApiAddCategorieComptable, name="ApiAddCategorieComptable"),
+    path('ApiLoadCategories', ApiLoadCategories, name="ApiLoadCategories"),
+    path('ApiGetCategorie', ApiGetCategorie, name="ApiGetCategorie"),
+    path('ApiFilterSousCategrorie', ApiFilterSousCategrorie, name="ApiFilterSousCategrorie"),
+    path('ApiStoreDepense', ApiStoreDepense, name="ApiStoreDepense"),
+    path('ApiGetDepenseDetails',ApiGetDepenseDetails,name="ApiGetDepenseDetails"),
+    path('ApiUpdateDepense', ApiUpdateDepense, name="ApiUpdateDepense"),
+    path('ApiValidateDepense', ApiValidateDepense, name="ApiValidateDepense"),
+    path('ApiDeleteDepense', ApiDeleteDepense, name="ApiDeleteDepense"),
 
 
 ]

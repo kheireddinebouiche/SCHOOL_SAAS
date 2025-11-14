@@ -19,6 +19,19 @@ def tenant_directory_path(instance, filename):
         filename
     )
 
+def tenant_directory_path_for_piece_depanse(instance, filename):
+    
+    tenant = getattr(connection, "tenant", None)
+    schema_name = tenant.schema_name if tenant else "public"
+
+    return os.path.join(
+        schema_name,
+        "tresorerie",
+        "depenses",
+        timezone.now().strftime("%Y/%m"),
+        filename
+    )
+
 def tenant_directory_path_for_image(instance, filename):
     """
     Retourne un chemin du type :

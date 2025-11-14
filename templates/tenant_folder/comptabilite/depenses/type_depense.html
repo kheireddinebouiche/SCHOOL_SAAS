@@ -81,19 +81,32 @@
     .rounded-pill {
         border-radius: 50rem !important;
     }
-    
+
     /* Avatar styling */
     .avatar-sm {
         height: 3rem;
         width: 3rem;
     }
-    
+
     .avatar-title {
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100%;
         width: 100%;
+    }
+    
+    /* Additional styles for harmonized design */
+    .modal-content {
+        border-radius: 0.75rem !important; /* 12px rounded corners like the presence modal */
+    }
+    
+    .modal-header .btn-close:focus {
+        box-shadow: none;
+    }
+    
+    .btn {
+        border-radius: 0.5rem !important; /* More consistent rounded buttons */
     }
 </style>
 
@@ -224,7 +237,7 @@
                                             <option value="inactive">Inactif</option>
                                         </select>
                                     </div>
-                                    
+
                                     <div>
                                         <button class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addTypeModal">
                                             <i class="fas fa-plus me-1"></i>Nouveau
@@ -239,7 +252,8 @@
                                 <table id="example" class="table table-hover align-middle mb-0">
                                     <thead class="bg-light">
                                         <tr>
-                                            <th class="border-0 rounded-start">Nom du Type</th>
+                                            <th class="border-0 rounded-start">Catégories</th>
+                                            <th class="border-0">Sous catégories</th>
                                             <th class="border-0">Description</th>
                                             <th class="border-0">Statut</th>
                                             <th class="border-0">Date de Création</th>
@@ -247,9 +261,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="listeTypes">
-                                        
-                                        
-                                        
+
                                     </tbody>
                                 </table>
                             </div>
@@ -267,55 +279,89 @@
 <!-- Modal for adding/editing expense type -->
 <div class="modal fade" id="addTypeModal" tabindex="-1" aria-labelledby="addTypeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white p-4">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
                 <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-white bg-opacity-25 rounded-circle me-3 d-flex align-items-center justify-content-center">
-                        <i class="ri-money-euro-circle-line fs-4"></i>
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-money-euro-circle-line text-danger fs-4"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title" id="addTypeModalLabel">Créer un nouveau type de dépense</h5>
-                        <small class="opacity-75">Remplissez les détails du type de dépense</small>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="addTypeModalLabel">
+                            Créer un nouveau type de dépense
+                        </h5>
+                        <p class="text-muted small mb-0">Définissez les détails du type de dépense</p>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                
+
                 <input type="hidden" id="typeId">
-                <div class="row">
-                    <div class="col-md-12">
+                <div class="row g-4">
+                    <div class="col-lg-12">
                         <div class="mb-4">
-                            <label for="typeName" class="form-label fw-semibold">Nom du Type *</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">
-                                    <i class="ri-edit-box-line text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control form-control-lg" id="typeName" placeholder="Entrez le nom du type de dépense" required>
-                            </div>
+                            <label class="form-label text-muted">Nom du Type <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="typeName" placeholder="Entrez le nom du type de dépense" required>
                             <div class="form-text">Le nom doit être unique et descriptif</div>
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-12">
+                <div class="row g-4">
+                    <div class="col-lg-12">
                         <div class="mb-4">
-                            <label for="typeDescription" class="form-label fw-semibold">Description</label>
+                            <label class="form-label text-muted">Description</label>
                             <textarea class="form-control" id="typeDescription" rows="4" placeholder="Décrivez le type de dépense..."></textarea>
                             <div class="form-text">Fournissez une description détaillée de ce type de dépense</div>
                         </div>
                     </div>
                 </div>
-                
-                
+
+                <!-- Category Selection Field -->
+                <div class="row g-4">
+                    <div class="col-lg-12">
+                        <div class="mb-4">
+                            <label class="form-label text-muted">Catégorie</label>
+                            <div class="input-group">
+                                <select class="form-select" id="typeCategory">
+                                    <option value="">Sélectionnez une catégorie</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                                <button class="btn btn-outline-danger" type="button" id="addCategoryBtn" title="Ajouter une nouvelle catégorie">
+                                    <i class="ri-add-circle-line"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Sélectionnez une catégorie pour ce type de dépense</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add New Category Input (Hidden by default) -->
+                <div class="row g-4" id="newCategorySection" style="display: none;">
+                    <div class="col-lg-12">
+                        <div class="mb-4">
+                            <label class="form-label text-muted">Nouvelle Catégorie</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="newCategoryInput" placeholder="Entrez le nom de la nouvelle catégorie">
+                                <button class="btn btn-success" type="button" id="saveNewCategoryBtn">
+                                    <i class="fas fa-check"></i> Enregistrer
+                                </button>
+                                <button class="btn btn-secondary" type="button" id="cancelNewCategoryBtn">
+                                    <i class="ri-close-circle-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
             </div>
-            <div class="modal-footer bg-light p-3">
-                <div class="d-flex w-100 gap-2">
-                    <button type="button" class="btn btn-outline-secondary flex-fill rounded-pill" data-bs-dismiss="modal">
-                        <i class="ri-close-line me-1"></i>Annuler
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                        <i class="ri-close-line me-1"></i> Annuler
                     </button>
-                    <button type="button" class="btn btn-primary flex-fill rounded-pill" id="saveTypeBtn">
-                        <i class="ri-save-3-line me-1"></i>Enregistrer
+                    <button type="button" class="btn btn-danger px-4" id="saveTypeBtn">
+                        <i class="ri-save-3-line me-1"></i> Enregistrer
                     </button>
                 </div>
             </div>
@@ -343,39 +389,176 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<!-- Modal for displaying expense type details -->
+<div class="modal fade" id="detailsTypeModal" tabindex="-1" aria-labelledby="detailsTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-info-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="detailsTypeModalLabel">
+                            Détails du Type de Dépense
+                        </h5>
+                        <p class="text-muted small mb-0">Informations détaillées sur le type de dépense</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-12">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Nom du Type</label>
+                            <p class="mb-0" id="detailTypeName">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-lg-12">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Description</label>
+                            <p class="mb-0" id="detailTypeDescription">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Catégorie</label>
+                            <p class="mb-0" id="detailTypeCategory">-</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Statut</label>
+                            <p class="mb-0">
+                                <span class="badge bg-success" id="detailTypeStatus">Actif</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Date de Création</label>
+                            <p class="mb-0" id="detailTypeCreatedAt">-</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Date de Modification</label>
+                            <p class="mb-0" id="detailTypeUpdatedAt">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sous-types section -->
+                <div class="row g-4">
+                    <div class="col-lg-12">
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold">Sous-types</label>
+                            <div id="detailTypeSousTypes">
+                                <p class="mb-0">Aucun sous-type</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-info px-4" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
 
+        var totalCategories = 0;
+        
+
+        // Load categories for the dropdown
+        function loadCategories(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiLoadCategories' %}", // This URL needs to be created
+                dataType : "JSON",
+                type : "GET",
+                success : function(data){
+                    var options = '<option value="">Sélectionnez une catégorie</option>';
+                    if(data.length > 0){
+                        $.each(data, function(index, cat){
+                            options += '<option value="'+cat.id+'">'+cat.label+'</option>';
+                        });
+                    }
+                    $('#typeCategory').html(options);
+                },
+                error: function(){
+                    // If API endpoint doesn't exist yet, just show a message
+                    console.log("Category API endpoint not yet implemented");
+                    $('#typeCategory').html('<option value="">Fonctionnalité catégorie non disponible</option>');
+                }
+            });
+        }
+
         function loadItems(){
+            
             $.ajax({
                 url : "{% url 't_tresorerie:ApiLoadTypeDepense' %}",
                 dataType : "JSON",
                 type : "GET",
                 success : function(data){
                     var row = "";
-                    if(data.length > 0){
-                        $.each(data, function(index, p){
+                    if (data.length > 0) {
+                        var row = '';
+                        $.each(data, function(index, p) {
+                            var sousTypesList = "Aucun";
+                            if (p.sous_types && p.sous_types.length > 0) {
+                                // On limite à 3 sous-types visibles
+                                var visibles = p.sous_types.slice(0, 3);
+                                var total = p.sous_types.length;
+
+                                sousTypesList = visibles.map(function(st) {
+                                    return '<span class="badge bg-info me-1">' + st.label + '</span>';
+                                }).join(" ");
+
+                                // S'il y a plus de 3 sous-types, on affiche une mention "+X"
+                                if (total > 3) {
+                                    var reste = total - 3;
+                                    sousTypesList += '<span class="badge bg-secondary">+' + reste + '</span>';
+                                }
+                            }
                             row += '<tr>';
-                                row += '<td>Fournitures de bureau</td>';
-                                row += '<td>Dépenses pour les fournitures de bureau</td>';
+                                row += '<td>' + p.label + '</td>';
+                                row += '<td>' + sousTypesList + '</td>';
+                                row += '<td>' + (p.description || 'N/A') + '</td>';
                                 row += '<td><span class="badge bg-success">Actif</span></td>';
-                                row += '<td>12/05/2024</td>';
+                                row += '<td>' + p.created_at + '</td>';
                                 row += '<td class="text-center">';
                                     row += '<div class="dropdown">';
-                                        row += '<button class="btn btn-soft-secondary btn-sm " type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+                                        row += '<button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
                                             row += '<i class="ri-more-fill align-middle"></i>';
                                         row += '</button>';
                                         row += '<ul class="dropdown-menu dropdown-menu-end">';
-                                            row += '<li><a class="dropdown-item edit-item-btn" href="#" data-id="1"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
-                                            row += '<li><a class="dropdown-item remove-item-btn" href="#" data-id="1"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer</a></li>';
+                                            row += '<li><a class="dropdown-item edit-item-btn" href="#" data-id="' + p.id + '"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+                                            row += '<li><a class="dropdown-item details-item-btn" href="#" data-id="' + p.id + '"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>';
+                                            row += '<li><a class="dropdown-item remove-item-btn" href="#" data-id="' + p.id + '"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer</a></li>';
                                         row += '</ul>';
                                     row += '</div>';
                                 row += '</td>';
                             row += '</tr>';
                         });
-                    }else{
+                    } else {
+                        var row = '';
                         row += '<tr>';
-                            row += '<td colspan="5">';
+                            row += '<td colspan="6">';
                                 row += '<div class="d-flex flex-column align-items-center justify-content-center py-5">';
                                     row += '<div class="avatar-sm mb-4">';
                                         row += '<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
@@ -389,11 +572,83 @@
                         row += "</tr>";
                     }
                     $('#listeTypes').html(row);
+                    $('#totalTypes').text(totalCategories);
                 },
             });
         }
 
+        // Load initial data
         loadItems();
+        loadCategories(); // Load categories
+
+        // Add category button functionality - Show the new category input
+        $(document).on('click', '#addCategoryBtn', function() {
+            $('#newCategorySection').show();
+            $('#newCategoryInput').focus();
+        });
+        
+        // Save new category functionality
+        $(document).on('click', '#saveNewCategoryBtn', function() {
+            var categoryName = $('#newCategoryInput').val();
+            if (categoryName && categoryName.trim() !== '') {
+                // Make AJAX call to create new category
+                $.ajax({
+                    url: "{% url 't_tresorerie:ApiAddCategorieComptable' %}", // This endpoint would need to be created
+                    type: "POST",
+                    data: {
+                        'label': categoryName,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if(response.status === "success" && response.category) {
+                            var newOption = $('<option></option>')
+                                .attr('value', response.category.id)
+                                .text(response.category.label);
+                            $('#typeCategory').append(newOption);
+                            $('#typeCategory').val(response.category.id);
+                            
+                            $('#newCategorySection').hide();
+                            $('#newCategoryInput').val('');
+                            
+                            alertify.success(response.message);
+                        } else {
+                            alertify.error("Erreur lors de la création de la catégorie");
+                        }
+                    },
+                    error: function() {
+                        // If API endpoint doesn't exist, just add to dropdown temporarily
+                        var newId = Date.now(); // Use timestamp as temporary ID
+                        var newOption = $('<option></option>')
+                            .attr('value', newId)
+                            .text(categoryName);
+                        $('#typeCategory').append(newOption);
+                        
+                        // Select the newly added category
+                        $('#typeCategory').val(newId);
+                        
+                        // Hide the new category section and clear input
+                        $('#newCategorySection').hide();
+                        $('#newCategoryInput').val('');
+                        
+                        alertify.warning("Fonctionnalité de création de catégorie non implémentée. La catégorie sera perdue après actualisation.");
+                    }
+                });
+            } else {
+                alertify.error("Veuillez entrer un nom pour la catégorie");
+            }
+        });
+        
+        // Cancel new category functionality
+        $(document).on('click', '#cancelNewCategoryBtn', function() {
+            $('#newCategorySection').hide();
+            $('#newCategoryInput').val('');
+        });
+        
+        // Also hide the new category section when the modal is closed
+        $('#addTypeModal').on('hidden.bs.modal', function() {
+            $('#newCategorySection').hide();
+            $('#newCategoryInput').val('');
+        });
 
         // Add edit functionality
         $(document).on('click', '.edit-item-btn', function() {
@@ -402,23 +657,92 @@
             $('#typeId').val(id);
             $('#typeName').val('Type ' + id);
             $('#typeDescription').val('Description pour le type ' + id);
-            
+            $('#typeCategory').val(''); // Reset category selection
+
             // Update radio buttons based on status
             if('active' === 'active') {
                 $('#statusActive').prop('checked', true);
             } else {
                 $('#statusInactive').prop('checked', true);
             }
-            
-            $('#typeCategory').val('');
+
             $('#addTypeModalLabel').html('<i class="ri-edit-box-line me-2"></i>Modifier le Type de Dépense');
             $('#saveTypeBtn').html('<i class="ri-refresh-line me-1"></i>Mettre à jour');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('addTypeModal')).show();
         });
-        
+
+        // Add details functionality
+        $(document).on('click', '.details-item-btn', function() {
+            const id = $(this).data('id');
+            // In a real application, you would fetch the detailed type data from the API
+            // For now, we'll simulate with sample data based on the current data structure
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadTypeDepense' %}", // Using the same endpoint to get all data
+                type: "GET",
+                dataType: "JSON",
+                success: function(response) {
+                    // Find the type with the matching ID
+                    const type = response.find(item => item.id == id);
+                    
+                    if (type) {
+                        // Populate the modal with type details
+                        $('#detailTypeName').text(type.label || '-');
+                        $('#detailTypeDescription').text(type.description || '-');
+                        $('#detailTypeCategory').text(type.category || '-');
+                        $('#detailTypeCreatedAt').text(type.created_at || '-');
+                        $('#detailTypeUpdatedAt').text(type.updated_at || '-');
+                        
+                        // Set status badge
+                        if (type.status === 'active' || type.is_active === true || type.is_active === undefined) {
+                            $('#detailTypeStatus').removeClass('bg-danger').addClass('bg-success').text('Actif');
+                        } else {
+                            $('#detailTypeStatus').removeClass('bg-success').addClass('bg-danger').text('Inactif');
+                        }
+                        
+                        // Populate sous-types
+                        if (type.sous_types && type.sous_types.length > 0) {
+                            let sousTypesHtml = '';
+                            type.sous_types.forEach(function(sousType) {
+                                sousTypesHtml += '<span class="badge bg-info me-1 mb-1">' + (sousType.label || sousType.name || '-') + '</span>';
+                            });
+                            $('#detailTypeSousTypes').html(sousTypesHtml);
+                        } else {
+                            $('#detailTypeSousTypes').html('<p class="mb-0">Aucun sous-type</p>');
+                        }
+                    } else {
+                        // If type not found, clear all fields
+                        $('#detailTypeName').text('-');
+                        $('#detailTypeDescription').text('-');
+                        $('#detailTypeCategory').text('-');
+                        $('#detailTypeStatus').removeClass('bg-success').addClass('bg-danger').text('Inconnu');
+                        $('#detailTypeCreatedAt').text('-');
+                        $('#detailTypeUpdatedAt').text('-');
+                        $('#detailTypeSousTypes').html('<p class="mb-0">Aucun sous-type</p>');
+                    }
+                    
+                    // Show the modal
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('detailsTypeModal')).show();
+                },
+                error: function() {
+                    // If API call fails, fill with available data from the table
+                    // For now, we'll just show the modal with placeholder data
+                    $('#detailTypeName').text('Nom temporaire');  // This would be updated after getting from the table row if needed
+                    $('#detailTypeDescription').text('Description temporaire');
+                    $('#detailTypeCategory').text('Catégorie temporaire');
+                    $('#detailTypeStatus').removeClass('bg-danger').addClass('bg-success').text('Actif');
+                    $('#detailTypeCreatedAt').text('Date temporaire');
+                    $('#detailTypeUpdatedAt').text('Date temporaire');
+                    $('#detailTypeSousTypes').html('<p class="mb-0">Aucun sous-type</p>');
+                    
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('detailsTypeModal')).show();
+                }
+            });
+        });
+
         $(document).on('click','#saveTypeBtn', function(){
             var typeName = $('#typeName').val();
             var typeDescription = $('#typeDescription').val();
+            var typeCategory = $('#typeCategory').val(); // Get selected category
             var btn = $(this); // référence du bouton
             btn.prop('disabled', true); // désactive le bouton
 
@@ -430,7 +754,7 @@
             `);
 
             if (!typeName){
-                btn.prop('disabled', false); 
+                btn.prop('disabled', false);
                 btn.html(originalText);
                 return alertify.error("Informations manquante");
             }
@@ -442,12 +766,14 @@
                 data: {
                     'typeName' : typeName,
                     'typeDescription' : typeDescription,
+                    'typeCategory' : typeCategory, 
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){
                     if(response.status === "success"){
-                        alertify.success("Les informations ont été enregistrer avec succès");
+                        alertify.success(response.message);
                         loadItems();
+                        loadCategories(); // Reload categories after save
                         $('#addTypeModal').modal('hide');
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
@@ -458,7 +784,7 @@
                     btn.prop('disabled', false);
                     btn.html(originalText);
                 }
-                
+
             });
         });
 
@@ -469,7 +795,7 @@
             $('#confirmDeleteBtn').data('id', id);
             bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
         });
-        
+
         // Confirm deletion
         $('#confirmDeleteBtn').click(function() {
             const id = $(this).data('id');
@@ -479,29 +805,32 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).hide();
             showNotification('Type de dépense supprimé avec succès', 'success');
         });
-        
-        
+
         // Function to show notification
         function showNotification(message, type) {
             // For now, just show a simple alert
             alert(message);
         }
-        
+
         // Clear form when modal is closed
         $('#addTypeModal').on('hidden.bs.modal', function() {
             $('#typeForm')[0].reset();
             $('#typeId').val('');
             $('#statusActive').prop('checked', true); // Default to active
-            $('#typeCategory').val('');
+            $('#typeCategory').val(''); // Clear category selection
+            $('#newCategorySection').hide(); // Hide new category input
+            $('#newCategoryInput').val(''); // Clear new category input
             $('#addTypeModalLabel').html('<i class="ri-add-line me-2"></i>Créer un nouveau type de dépense');
             $('#saveTypeBtn').html('<i class="ri-save-3-line me-1"></i>Enregistrer');
         });
-        
+
         // Initialize statistics
-        $('#totalTypes').text(3);
+        
         $('#activeTypes').text(2);
         $('#inactiveTypes').text(1);
         $('#totalMontantTypes').text('0 DA');
     });
 </script>
+
+
 {% endblock content %}

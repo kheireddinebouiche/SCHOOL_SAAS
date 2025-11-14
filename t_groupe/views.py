@@ -137,14 +137,16 @@ def UpdateGroupe(request, pk):
     return render(request,"tenant_folder/formations/groupe/update_groupe.html", context)
 
 @login_required(login_url="institut_app:login")
-
+@transaction.atomic
 def ApiDeleteGroupe(request):
     if request.method == "GET":
         id = request.GET.get('id')
         if not id:
             return JsonResponse({"status" : "error", "message": "Information manquante"})
-        
         obj = Groupe.objects.get(id = id)
+
+        if obj.etat != "brouillon":
+            return JsonResponse({"status":"error",'message':'Le groupe est en cours d\'utilisation, vous ne pouvez pas effectuer la suppression'})
         obj.delete()
         messages.success(request,"Le groupe à été supprimer avec succès")
         return JsonResponse({"status":"success"})

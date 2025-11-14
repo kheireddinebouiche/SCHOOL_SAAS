@@ -228,7 +228,7 @@ class Prospets(models.Model):
 
     context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Acceuil'),('con','Conseil')])
 
-    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visiste')])
+    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premiere visiste'),('a_appeler','Appelle téléphonique'),('est_passer','Visiste (Le prospect est déja passer à l\'insim)')])
 
     has_refund = models.BooleanField(default=False)
 

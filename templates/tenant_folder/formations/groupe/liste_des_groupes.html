@@ -204,7 +204,7 @@
                   <tbody id="listeItem" class="border-top-0">
                     {% if liste.count != 0 %}
                       {% for i in liste %}
-                      <tr> 
+                      <tr data-id="{{i.id}}"> 
                         <td>{{i.nom}}</td>
                         <td>{{i.start_date}}</td>
                         <td>{{i.end_date}}</td>
@@ -226,16 +226,13 @@
                               <i class="ri-more-fill align-middle"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a href="{% url 't_groupe:detailsgroupe' pk=i.id %}" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
-                              <li><a class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-
-                              {% comment %} {% if i.etat != 'enc' %} {% endcomment %}
+                              <li><a href="{% url 't_groupe:detailsgroupe' pk=i.id %}" data-id="{{i.id}}" class=" dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
                               <li>
                                 <button data-id="{{i.id}}" id="deleteConfirmation" class="dropdown-item remove-item-btn">
                                   <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
                                 </button>
                               </li>
-                              {% comment %} {% endif %} {% endcomment %}
+                              
                             </ul>
                           </div>
                         </td>
@@ -363,28 +360,34 @@
       // Convert template data to a format for client-side filtering
       var templateData = [];
       $('#listeItem tr').each(function() {
-        var $row = $(this);
-        var cells = $row.find('td');
-        if (cells.length > 0) {
-          var nom = cells.eq(0).text().trim();
-          if (nom !== 'Aucun groupe trouvé') {
-            templateData.push({
-              nom: nom,
-              start_date: cells.eq(1).text().trim(),
-              end_date: cells.eq(2).text().trim(),
-              specialite: cells.eq(3).text().trim(),
-              annee_scolaire: cells.eq(4).text().trim(),
-              etat: cells.eq(5).find('span').text().trim(), // Get the text from the badge
-              id: cells.eq(6).find('button').data('id') || 0
-            });
+          var $row = $(this);
+          var id = $row.data("id");   // 👈 ICI l'ID
+          
+          var cells = $row.find('td');
+          if (cells.length > 0) {
+              var nom = cells.eq(0).text().trim();
+              if (nom !== 'Aucun groupe trouvé') {
+
+                  templateData.push({
+                      id: id,  // 👈 on stocke ici
+                      nom: nom,
+                      start_date: cells.eq(1).text().trim(),
+                      end_date: cells.eq(2).text().trim(),
+                      specialite: cells.eq(3).text().trim(),
+                      annee_scolaire: cells.eq(4).text().trim(),
+                      etat: cells.eq(5).find('span').text().trim()
+                  });
+
+              }
           }
-        }
       });
       
       originalData = templateData;
       updateStatistics(originalData);
       populateSpecialtyFilter(originalData);
     }
+
+    
     
     function populateSpecialtyFilter(data) {
       var specialtySelect = $('#filter-specialty');
@@ -461,7 +464,7 @@
           }
 
           // Action dropdown
-          var actions = '<div class="dropdown"><button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-fill align-middle"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/formations/groupe/details/' + item.id + '/"><i class="ri-eye-line me-2 align-middle"></i> Voir détails</a><li><a class="dropdown-item edit-item-btn" href="javascript:void(0);"><i class="ri-pencil-line me-2 align-middle"></i> Modifier</a><li><a class="dropdown-item remove-item-btn" href="javascript:void(0);"><i class="ri-delete-bin-line me-2 align-middle"></i> Supprimer</a></ul></div>';
+          var actions = '<div class="dropdown"><button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-fill align-middle"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/formations/groupe/details/' + item.id + '/"><i class="ri-eye-line me-2 align-middle"></i> Consulter</a><li><a class="dropdown-item remove-item-btn" href="javascript:void(0);"><i class="ri-delete-bin-line me-2 align-middle"></i> Supprimer</a></ul></div>';
           row += "<td class='text-end'>" + actions + "</td>";
           row += "</tr>";
         });

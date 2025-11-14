@@ -246,7 +246,16 @@ class Caisse(models.Model):
 
 class Depenses(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
-    montant= models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    fournisseur = models.ForeignKey(Fournisseur, null=True, blank=True, on_delete=models.CASCADE)
+    categorie = models.ForeignKey("TypeDepense", null=True, blank=True, on_delete=models.CASCADE)
+    sous_categorie = models.ForeignKey("SousTypeDepense", null=True, blank=True, on_delete=models.CASCADE)
+    date = models.DateField(null=True, blank=True)
+    montant_ht = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    tva = models.CharField(max_length=10, null=True, blank=True)
+    montant_ttc= models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    piece = models.FileField(upload_to=tenant_directory_path_for_piece_depanse, null=True, blank=True)
+    etat = models.BooleanField(default=False)
+    description = models.TextField(max_length=1000, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
@@ -256,9 +265,21 @@ class Depenses(models.Model):
     
 class TypeDepense(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
+    description = models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+    
+class SousTypeDepense(models.Model):
+    type = models.ForeignKey(TypeDepense, on_delete=models.CASCADE, null=True, blank=True)
+    label = models.CharField(max_length=100, null=True, blank=True)
+    description = models.CharField(max_length=100, null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateField(auto_now=True, null=True, blank=True)
 
     def __str__(self):
         return self.label

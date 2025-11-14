@@ -10,7 +10,7 @@ class Tva(models.Model):
 class ComptesComptable(models.Model):
     pass
 
-class CategorieComptable(models.Model):
-    pass
+
+
 
 
