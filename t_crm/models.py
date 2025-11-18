@@ -247,6 +247,8 @@ class Prospets(models.Model):
     matricule = models.CharField(max_length=100, null=True, blank=True)
     matricule_interne = models.CharField(max_length=100, null=True, blank=True)
 
+    is_double = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -256,6 +258,8 @@ class Prospets(models.Model):
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"
+    
+
 
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux")

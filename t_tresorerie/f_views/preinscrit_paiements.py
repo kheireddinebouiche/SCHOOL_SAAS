@@ -123,6 +123,7 @@ def ApiStoreClientPaiement(request):
             mode_paiement = modePaiement,
             reference_paiement = reference,
             context = "frais_f",
+            paiement_label = echeance,
             promo = Promos.objects.get(code = promo) if promo else None,
         )
 

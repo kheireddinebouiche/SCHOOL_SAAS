@@ -1,0 +1,914 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Détails du Remboursement{% endblock title %}
+
+{% block content %}
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .icon-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+
+    /* Update badge styles with low opacity but visible text */
+    .badge.bg-success {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        color: #28a745 !important;
+        font-weight: 500 !important;
+    }
+
+    .badge.bg-warning {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        font-weight: 500 !important;
+    }
+
+    .badge.bg-primary {
+        background-color: rgba(59, 125, 221, 0.2) !important;
+        color: #3b7ddd !important;
+        font-weight: 500 !important;
+    }
+
+    .badge.bg-danger {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+        color: #dc3545 !important;
+        font-weight: 500 !important;
+    }
+
+    .badge.bg-info {
+        background-color: rgba(23, 162, 184, 0.2) !important;
+        color: #17a2b8 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Table styling */
+    .table th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    /* Rounded elements */
+    .rounded-pill {
+        border-radius: 50rem !important;
+    }
+
+    .badge {
+        padding: 0.5em 1em;
+        font-weight: 500;
+    }
+
+    .payment-status-badge {
+        border-radius: 20px;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .payment-status-badge.paid {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+
+    .payment-status-badge.pending {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+    }
+
+    .payment-status-badge.overdue {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+
+    .card-section {
+        margin-bottom: 1.5rem;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<!-- ============================================================== -->
+<!-- Start right Content here -->
+<!-- ============================================================== -->
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-refund-line text-info"></i>
+                            </div>
+                            <h4 class="mb-0 text-info">Détails du Remboursement</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <button type="button" class="btn btn-outline-info">
+                                <i class="ri-question-line me-1"></i> Aide
+                            </button>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Finance</a>
+                                    </li>
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Trésorerie</a>
+                                    </li>
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 't_tresorerie:listeDesRembourssement' %}">Liste des Remboursements</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Détails du Remboursement</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Main content -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-refund-line text-info fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-semibold text-info mb-1">
+                                        Détails du Remboursement
+                                    </h5>
+                                    <p class="text-muted small mb-0"><span id="prospectNameInModal">{{ client.nom }} {{ client.prenom }}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                                    <i class="ri-user-line text-info fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 class="card-title fw-semibold text-info mb-1">Informations du prospect</h5>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Nom & Prénom</label>
+                                                <p class="mb-0 fw-semibold" id="detailNomPrenom">{{ obj.client.nom }} {{ obj.client.prenom }}</p>
+                                                <span class="badge bg-info" id="detailStatut">{{ obj.client.get_statut_display|default:"-" }}</span>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Email</label>
+                                                <p class="mb-0 fw-semibold" id="detailEmail">{{ obj.client.email|default:"-" }}</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Téléphone</label>
+                                                <p class="mb-0 fw-semibold" id="detailTelephone">{{ obj.client.telephone|default:"-" }}</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Formation</label>
+                                                <p class="mb-0 fw-semibold" id="detailFormation">{{ voeux.specialite.formation.nom|default:"-" }}</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Spécialite</label>
+                                                <p class="mb-0 fw-semibold" id="detailSpecialite">{{ voeux.specialite.label|default:"-" }}</p>
+                                            </div>
+                                            <div>
+                                                <label class="form-label fw-medium text-muted">Groupe/Semestre</label><br>
+                                                <p class="mb-0 fw-semibold d-inline-block" id="detailGroupe">
+                                                    {{ groupe.groupe.label|default:"-" }}
+                                                </p> / 
+                                                <p class="mb-0 fw-semibold d-inline-block ms-2" id="detailSemestre">
+                                                    {{ groupe.groupe.get_semestre_display|default:"-" }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                                    <i class="ri-money-dollar-circle-line text-success fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 class="card-title fw-semibold text-success mb-1">Informations financières</h5>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Montant à rembourser</label>
+                                                <p class="mb-0 fw-semibold text-danger" id="detailMontantRembourse"></p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Total Payé</label>
+                                                <p class="mb-0 fw-semibold" id="detailMontantPaye"> </p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Méthode de remboursement</label>
+                                                <p class="mb-0 fw-semibold" id="detailMethodeRemboursement">{{ obj.get_mode_rembourssement_display|default:"-" }}</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Date de remboursement</label>
+                                                <p class="mb-0 fw-semibold" id="detailDateRemboursement">{{ obj.updated_at|default:"-" }}</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label fw-medium text-muted">Motif d'annulation</label>
+                                                <p class="mb-0 fw-semibold" id="detailMotifAnnulation">{{ obj.motif_rembourssement|default:"-" }}</p>
+                                            </div>
+                                            <div>
+                                                <label class="form-label fw-medium text-muted">Promotion</label>
+                                                <p class="mb-0 fw-semibold" id="detailPromotion">{{ voeux.promo.get_session_display|default:"-" }}-{{ voeux.promo.begin_year|default:"" }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="card border-0 shadow-sm rounded-4">
+                                    <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                                <i class="ri-bank-card-line text-success fs-4"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="card-title fw-semibold text-success mb-1">Historique des Paiements</h5>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th class="border-0 rounded-start">Date</th>
+                                                        <th class="border-0">N°</th>
+                                                        <th class="border-0">Méthode</th>
+                                                        <th class="border-0">Motif</th>
+                                                        <th class="border-0">Montant</th>
+                                                        <th class="border-0 rounded-end text-center">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="paiementsTableBody">
+                                                    {% if paiements %}
+                                                        {% for paiement in paiements %}
+                                                            <tr>
+                                                                <td>{{ paiement.date_paiement|default:"-" }}</td>
+                                                                <td><strong>#{{ paiement.num|default:"-" }}</strong></td>
+                                                                <td><span class="badge bg-info">{{ paiement.get_mode_paiement_display|default:"-" }}</span></td>
+                                                                <td><span class="badge {% if paiement.is_refund %}bg-danger{% else %}bg-info{% endif %}">{{paiement.paiement_label}}</span></td>
+                                                                <td>{{ paiement.montant_paye|default:0 }} DA</td>
+                                                                <td class="text-center">
+                                                                    <div class="btn-group" role="group">
+                                                                        <button
+                                                                            data-num="{{ paiement.num }}"
+                                                                            data-montant="{{ paiement.montant_paye|default:0 }}"
+                                                                            data-date="{{ paiement.date_paiement|default:'-' }}"
+                                                                            data-mode="{{ paiement.get_mode_paiement_display|default:'-' }}"
+                                                                            data-label="{{ paiement.paiement_label }}"
+                                                                            data-reference="{{ paiement.reference_paiement|default:'' }}"
+                                                                            data-is-refund="{{ paiement.is_refund|yesno:'true,false' }}"
+                                                                            data-motif_paiement="{{ paiement.motif_paiement }}"
+                                                                            type="button"
+                                                                            class="btn btn-outline-primary btn-sm print-quittance-btn"
+                                                                            title="Quittance"
+                                                                        >
+                                                                            <i class="ri-file-pdf-line"></i>
+                                                                        </button>
+                                                                        <button type="button"
+                                                                            class="btn btn-outline-info btn-sm"
+                                                                            title="Facture">
+                                                                            <i class="ri-file-list-line"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <tr>
+                                                            <td colspan="7" class="text-center text-muted py-4">
+                                                                <i class="ri-bank-card-line fs-2 mb-2"></i>
+                                                                <p class="mb-0">Aucun paiement enregistré pour le moment</p>
+                                                            </td>
+                                                        </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 bg-light px-4 py-3">
+                            <button type="button" class="btn btn-primary px-4 py-2" id="printDechargeBtn">
+                                <i class="ri-printer-line me-2"></i>Décharge de rembourssement
+                            </button>
+                            <a href="{% url 't_tresorerie:listeDesRembourssement' %}" class="btn btn-light px-4 py-2">
+                                <i class="ri-arrow-left-line me-2"></i>Retour
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- container-fluid -->
+    </div>
+    <!-- End Page-content -->
+</div>
+
+<!-- Modal Assistant decharge rembourssement -->
+<div class="modal fade" id="refundAssistantModal" tabindex="-1" aria-labelledby="refundAssistantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-info-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="refundAssistantModalLabel">Assistant d'impression du rembourssement</h5>
+                        <p class="text-muted small mb-0">Sélectionnez les informations pour l'impression duu remboursement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Signataire *</label>
+                        <select class="form-select" id="signataireSelectRefund" required>
+                            <option value="">Sélectionnez le signataire</option>
+                            <option value="Apprenant">Apprenant</option>
+                            <option value="Parents">Parents</option>
+                            <option value="Tuteur">Tuteur</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Pièce d'identité *</label>
+                        <select class="form-select" id="pieceIdentiteSelectPID" required>
+                            <option value="">Sélectionnez la pièce</option>
+                            <option value="CNI">CNI</option>
+                            <option value="Passeport">Passeport</option>
+                            <option value="Permis de conduire">Permis de conduire</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Champs nom et prénom pour Parents/Tuteur -->
+                <div id="parentTuteurFieldsRefund" class="row d-none">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Nom du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="nomParentTuteurInputRefund" placeholder="Nom du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Prénom du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="prenomParentTuteurInputRefund" placeholder="Prénom du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Adresse du parent/tuteur *</label>
+                        <input type="text" class="form-control" id="adresseParentTuteurInputRefund" placeholder="Adresse du parent ou tuteur" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Contact téléphonique du parent/tuteur *</label>
+                        <input type="tel" class="form-control" id="contactParentTuteurInputRefund" placeholder="Contact téléphonique du parent ou tuteur" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">N° *</label>
+                        <input type="text" class="form-control" id="numeroPieceInputRefund" placeholder="Numéro de la pièce" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Date de délivrance *</label>
+                        <input type="date" class="form-control" id="dateDelivranceInputRefund" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Lieu de délivrance *</label>
+                        <input type="text" class="form-control" id="lieuDelivranceInputRefund" placeholder="Lieu de délivrance" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="printRefundWithDetails">
+                    <i class="ri-printer-line me-2"></i>Imprimer la décharge
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="text" disabled hidden id="_logoHeader" value="{{entreprise.entete_logo.url}}"/>
+<input type="text" disabled hidden id="_logoFooter" value="{{entreprise.pied_page_logo.url}}"/>
+<input type="text" disabled hidden id="_allowed_amount" value="{{obj.allowed_amount}}" />
+<input type="text" disabled hidden id="_ville" value="{{entreprise.ville}}" />
+<input type="data" disabled hidden id="_last_date_payment" value="{{last_payment.date_paiement}}" />
+<input type="text" disabled hidden id="_date_naissance" value="{{client.date_naissance|date:'d/m/Y' }}" />
+<input type="text" disabled hidden id="_lieu_naissance" value="{{client.lieu_naissance}}" />
+<input type="text" disabled hidden id="_formation" value="{{voeux.specialite.formation.nom|default:''}}" />
+<input type="text" disabled hidden id="_annee_scolaire" value="{{voeux.promo.get_session_display|default:''}}-{{voeux.promo.begin_year|default:''}}" />
+<input type="text" disabled hidden id="_nom_groupe" value="{{groupe.groupe.label|default:''}}" />
+<input type="text" disabled hidden id="_semestre_groupe" value="{{groupe.groupe.get_semestre_display|default:''}}" />
+<input type="text" disabled hidden id="_entite" value="{{entreprise.nom_entreprise|default:''}}" />
+
+
+<script>
+    $(document).ready(function(){
+
+        function formatComptable(number) {
+            if (number == null || number === '') return "0,00";
+
+            return parseFloat(number)
+                .toFixed(2)                       // deux décimales
+                .replace('.', ',')                // virgule pour décimales
+                .replace(/\B(?=(\d{3})+(?!\d))/g, "."); // points pour milliers
+        }
+
+        $('#detailMontantPaye').text(formatComptable('{{ total_paye|default:"0.00" }}')+" DA");
+        $('#detailMontantRembourse').text(formatComptable('{{ obj.allowed_amount|default:"0.00" }}')+" DA");
+
+
+        $(document).on('click','#printDechargeBtn', function(){
+            $('#refundAssistantModal').modal('show');
+        })
+
+        $('#signataireSelectRefund').on('change', function(){
+            var selectedValue = $(this).val();
+            var parentTuteurFields = $('#parentTuteurFieldsRefund');
+            
+            if (selectedValue === 'Parents' || selectedValue === 'Tuteur') {
+                parentTuteurFields.removeClass('d-none');
+            } else {
+                parentTuteurFields.addClass('d-none');
+            }
+        });
+
+        $(document).on('click','#printRefundWithDetails', function(){
+            var signataireSelectRefund = $('#signataireSelectRefund').val();
+            var pieceIdentiteSelectPID = $('#pieceIdentiteSelectPID').val();
+            var nomParentTuteurInputRefund = $('#nomParentTuteurInputRefund').val();
+            var prenomParentTuteurInputRefund = $('#prenomParentTuteurInputRefund').val();
+            var adresseParentTuteurInputRefund = $('#adresseParentTuteurInputRefund').val();
+            var contactParentTuteurInputRefund = $('#contactParentTuteurInputRefund').val();
+            var numeroPieceInputRefund = $('#numeroPieceInputRefund').val();
+            var dateDelivranceInputRefund = $('#dateDelivranceInputRefund').val();
+            var lieuDelivranceInputRefund = $('#lieuDelivranceInputRefund').val();
+
+            if (signataireSelectRefund === 'Parents' || signataireSelectRefund === 'Tuteur') {
+                generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,nomParentTuteurInputRefund,prenomParentTuteurInputRefund,adresseParentTuteurInputRefund,contactParentTuteurInputRefund,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund);
+            } else {
+                generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,null,null,null,null,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund);
+            }
+
+        });
+
+        // Convertir un nombre en lettres (ex : 12500 -> "douze mille cinq cents dinars algériens")
+        function numberToWordsDZD(nombre) {
+            if (!nombre || isNaN(nombre)) return "";
+
+            nombre = parseInt(nombre);
+
+            const unite = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
+            const dizaine = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante"];
+            const dizaine_special = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
+
+            function toWords(n) {
+                let words = "";
+
+                if (n < 10) {
+                    words = unite[n];
+                } else if (n < 20) {
+                    words = dizaine_special[n - 10];
+                } else if (n < 70) {
+                    words = dizaine[Math.floor(n / 10)];
+                    if (n % 10 === 1 && n !== 11 && n !== 71 && n !== 91) words += " et un";
+                    else if (n % 10 > 0) words += "-" + unite[n % 10];
+                } else if (n < 80) {
+                    words = "soixante-" + toWords(n - 60);
+                } else if (n < 100) {
+                    words = "quatre-vingt";
+                    if (n > 80) words += "-" + toWords(n - 80);
+                }
+
+                return words.trim();
+            }
+
+            function underThousand(n) {
+                let words = "";
+                const hundreds = Math.floor(n / 100);
+                const remainder = n % 100;
+
+                if (hundreds > 0) {
+                    if (hundreds === 1) words = "cent";
+                    else words = unite[hundreds] + " cent";
+                    if (remainder === 0 && hundreds > 1) words += "s";
+                }
+
+                if (remainder > 0) {
+                    words += (words ? " " : "") + toWords(remainder);
+                }
+
+                return words;
+            }
+
+            function fullNumberToWords(n) {
+                if (n === 0) return "zéro";
+
+                const parts = [];
+                const milliards = Math.floor(n / 1_000_000_000);
+                const millions = Math.floor((n % 1_000_000_000) / 1_000_000);
+                const milliers = Math.floor((n % 1_000_000) / 1000);
+                const reste = n % 1000;
+
+                if (milliards > 0) {
+                    parts.push((milliards > 1 ? underThousand(milliards) + " milliards" : "un milliard"));
+                }
+
+                if (millions > 0) {
+                    parts.push((millions > 1 ? underThousand(millions) + " millions" : "un million"));
+                }
+
+                if (milliers > 0) {
+                    if (milliers === 1) parts.push("mille");
+                    else parts.push(underThousand(milliers) + " mille");
+                }
+
+                if (reste > 0) {
+                    parts.push(underThousand(reste));
+                }
+
+                return parts.join(" ").replace(/\s+/g, " ").trim();
+            }
+
+            const resultat = fullNumberToWords(nombre);
+            return resultat.charAt(0).toUpperCase() + resultat.slice(1) + " dinars algériens";
+        }
+    
+
+        // === Fonction principale pour générer le PDF de quittance ===
+        function generateQuittancePDF(payment, studentName, formation, promo, currentDate) {
+
+            // Étape 1 : Vérifier jsPDF
+            var jsPDFInstance = null;
+
+            if (typeof jsPDF !== 'undefined') {
+                jsPDFInstance = jsPDF;
+                createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, null);
+            }
+            else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = window.jspdf.jsPDF;
+                createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, null);
+            }
+            else {
+                // Étape 2 : Charger jsPDF dynamiquement
+                var script1 = document.createElement('script');
+                script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                script1.onload = function() {
+                    var script2 = document.createElement('script');
+                    script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js';
+                    script2.onload = function() {
+                        var loadedJsPDF = null;
+                        if (typeof jsPDF !== 'undefined') {
+                            loadedJsPDF = jsPDF;
+                        } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                            loadedJsPDF = window.jspdf.jsPDF;
+                        }
+
+                        if (loadedJsPDF) {
+                            createQuittancePDF(payment, studentName, formation, promo, currentDate, loadedJsPDF, null);
+                        } else {
+                            alert("Erreur lors du chargement de jsPDF.");
+                        }
+                    };
+                    script2.onerror = function() {
+                        alert("Erreur lors du chargement de jsPDF AutoTable.");
+                    };
+                    document.head.appendChild(script2);
+                };
+                script1.onerror = function() {
+                    alert("Erreur lors du chargement de jsPDF.");
+                };
+                document.head.appendChild(script1);
+            }
+        }
+
+         // === Fonction pour créer le PDF ===
+        function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise) {
+            try {
+                var doc = new jsPDFInstance('p', 'mm', 'a4');
+                doc.setFont("helvetica");
+
+                const pageHeight = doc.internal.pageSize.height;
+                const middle = pageHeight / 2;
+
+                // Get current print date
+                var today = new Date();
+                var printDate = today.toLocaleDateString('fr-FR');
+
+                function drawQuittance(yOffset) {
+                    doc.setFontSize(14);
+                    doc.setTextColor(40, 40, 40);
+                    if(payment.label_paiements === "Frais d'inscription")
+                        doc.text("BON DE PRE-INSCRIPTION", 105, yOffset + 15, null, null, 'center');
+                    else{
+                        doc.text("BON DE PAIEMENT", 105, yOffset + 15, null, null, 'center');
+                        
+                    }
+
+                    doc.setDrawColor(59, 125, 221);
+                    doc.setLineWidth(0.5);
+                    doc.line(20, yOffset + 20, 190, yOffset + 20);
+
+                    doc.setFontSize(10);  // Set the same font size as other texts
+                    doc.setTextColor(40, 40, 40);
+                    doc.text("Date: " + currentDate, 150, yOffset + 25);
+                    doc.text("N° Bon: " + payment.num, 150, yOffset + 30);
+
+                    doc.setFontSize(10);
+                    doc.text("Reçu de:", 20, yOffset + 35);
+                    doc.setFontSize(9);
+                    doc.text(studentName, 40, yOffset + 35);
+
+                    doc.setFontSize(10);
+                    doc.text("Formation:", 20, yOffset + 41);
+                    doc.setFontSize(9);
+                    doc.text(formation, 40, yOffset + 41);
+
+                    doc.setFontSize(10);
+                    doc.text("Promo:", 20, yOffset + 47);
+                    doc.setFontSize(9);
+                    doc.text(promo, 35, yOffset + 47);
+
+                    doc.setFontSize(10);
+                    doc.text("Groupe:", 60, yOffset + 47);
+                    doc.setFontSize(9);
+                    doc.text("grp", 75, yOffset + 47);
+
+                    doc.setFontSize(10);
+                    doc.text("Semestre:", 110, yOffset + 47);
+                    doc.setFontSize(9);
+                    doc.text("sem", 130, yOffset + 47);
+
+                    // Get date of birth and place of birth from hidden input fields
+                    const dateNaissance = document.getElementById('_date_naissance').value;
+                    const lieuNaissance = document.getElementById('_lieu_naissance').value;
+
+                    // Always show both date and place of birth, regardless of value
+                    doc.setFontSize(10);
+                    doc.text("Date de naissance:", 20, yOffset + 53);
+                    doc.setFontSize(9);
+                    doc.text(dateNaissance, 52, yOffset + 53);
+
+                    doc.setFontSize(10);
+                    doc.text("Lieu de naissance:", 20, yOffset + 59);  // Always at fixed position
+                    doc.setFontSize(9);
+                    doc.text(lieuNaissance, 52, yOffset + 59);  // Always at fixed position
+
+                    doc.setFontSize(11);
+                    doc.text("DÉTAILS DU PAIEMENT", 20, yOffset + 70);  // Fixed position after both fields
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(40, 40, 40);
+                    doc.text("Motif de paiement :", 20, yOffset + 77);
+                    doc.text(payment.label_paiements || "N/A", 60, yOffset + 77);
+
+                    doc.text("Montant payé :", 20, yOffset + 83);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(payment.montant_paye + " DA", 60, yOffset + 83);
+                    doc.setFont("helvetica", "normal");
+
+                    doc.text("Date de paiement :", 20, yOffset + 89);
+                    doc.text(payment.date_paiement, 60, yOffset + 89);
+
+                    doc.text("Mode de paiement :", 20, yOffset + 95);
+                    doc.text(payment.mode_paiement, 60, yOffset + 95);
+
+                    doc.text("Référence :", 20, yOffset + 101);
+                    doc.text(payment.reference || "N/A", 60, yOffset + 101);
+
+                    doc.setFontSize(8);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text("Date d'impression: " + printDate, 20, yOffset + 117);
+
+                    doc.text("Signature du responsable:", 120, yOffset + 123);
+                    doc.line(120, yOffset + 126, 180, yOffset + 126);
+                }
+
+                // Première quittance
+                drawQuittance(0);
+
+                // Ligne de séparation
+                doc.setFontSize(8);
+                // Dessiner le texte "À découper ici" sur toute la largeur
+                doc.text("--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", 10, middle - 2);
+                doc.text("À découper ici", 105, middle - 2, null, null, 'center');
+
+                // Deuxième quittance
+                drawQuittance(middle + 5);
+
+                // Sauvegarde
+                doc.save("pre_inscription_" + payment.num + "_" + studentName.replace(/\s+/g, '_') + ".pdf");
+                alertify.success("Deux bons de pré-inscription générés avec succès !");
+            } catch (error) {
+                console.error("Erreur lors de la génération du PDF:", error);
+                alert("Erreur : " + error.message);
+            }
+        }
+
+        
+
+        function generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,nomParentTuteurInputRefund,prenomParentTuteurInputRefund,adresseParentTuteurInputRefund,contactParentTuteurInputRefund,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund) {
+            
+            var clientFullName  = $('#detailNomPrenom').text();
+
+            var etudiant = $('#detailNomPrenom').text();
+            var date_naissance = $('#_date_naissance').val();
+            var lieu_naissance = $('#_lieu_naissance').val();
+            var formation = $('#detailFormation').text();
+            var date_dernier_paiement = $('#_last_date_payment').val();
+
+            var signataire = signataireSelectRefund;
+            var TypeId = pieceIdentiteSelectPID;
+            var dateDelivrance = dateDelivranceInputRefund;
+            var numerPiece = numeroPieceInputRefund;
+            var lieuDeDelivrance = lieuDelivranceInputRefund;
+            var nomParentTuteur = nomParentTuteurInputRefund;
+            var prenomParentTuteur = prenomParentTuteurInputRefund;
+
+            var groupe = $('#detailGroupe').text();
+            var semestre=$('#detailSemestre').text();
+
+            var specialite = $('#detailSpecialite').text();
+            var entite = $('#_entite').val();
+            var ville = $('#_ville').val();
+
+            var _allowed_amount = $('#_allowed_amount').val();
+            var _total_paid = $('#detailMontantPaye').text();
+            var _motif_remboursement = $('#detailMotifAnnulation').text();
+            var amountValue = _allowed_amount.replace(/[^\d,.-]/g, '').replace(',', '.');
+            var amountLettre = numberToWordsDZD(amountValue);
+
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('fr-FR');
+            
+
+            if(signataireSelectRefund === "Parents" || signataireSelectRefund === "Tuteur"){
+                clientFullName = nomParentTuteur+" "+prenomParentTuteur;
+            }
+
+
+            var jsPDFInstance = null;
+            if (typeof jsPDF !== 'undefined') {
+                jsPDFInstance = jsPDF;
+            } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = window.jspdf.jsPDF;
+            } else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
+                jsPDFInstance = jspdf.jsPDF;
+            }
+
+            if (jsPDFInstance) {
+                try {
+                    const doc = new jsPDFInstance();
+
+                    // Charger les logos si disponibles
+                    const logoHeaderUrl = document.getElementById('_logoHeader')?.value;
+                    const logoFooterUrl = document.getElementById('_logoFooter')?.value;
+
+                    const addLogosToPDF = () => {
+                        if (logoHeaderUrl) {
+                            const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
+                            const headerLogoWidth = doc.internal.pageSize.width * 0.25;
+                            doc.addImage(headerLogoUrl, 'PNG', 150, 10, headerLogoWidth, headerLogoWidth * 0.375);
+                        }
+
+                        if (logoFooterUrl) {
+                            const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
+                            doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
+                        }
+                    };
+
+                    addLogosToPDF();
+
+                    // Police et format
+                    doc.setFont('helvetica');
+                    doc.setFontSize(12);
+                    doc.text("DÉCHARGE DE REMBOURSEMENT", 105, 30, null, null, 'center');
+
+                    let y = 40;
+                    const line = (step = 5) => y += step; // Réduit l'interligne de 6 à 5
+
+                    // Marges gauche et droite
+                    const leftMargin = 20;
+                    const rightMargin = 190;
+
+                    // Corps du document
+                    doc.text("Je soussigné(e) : "+clientFullName, leftMargin, line());
+                    doc.text("Qualité : "+signataire, leftMargin, line(6));
+
+                    doc.text("Agissant en ma qualité de représentant(e) de l'apprenant(e) :", leftMargin, line(8));
+                    doc.text("Nom et Prénom : "+etudiant, leftMargin+10, line());
+                    doc.text("Né(e) le : "+date_naissance+"   À : "+lieu_naissance, leftMargin+10, line(6));
+
+                    doc.text("Préinscrit(e) / Inscrit(e) en formation :", leftMargin, line(8));
+                    doc.text(formation, leftMargin+10, line());
+                    doc.text("Spécialité : "+specialite, leftMargin+10, line());
+                    if(groupe){
+                        doc.text("Semestre : "+semestre+"   Groupe : "+groupe, leftMargin+10, line(6));
+                    }
+                    doc.text("Année académique : 2025 – 2026", leftMargin+10, line(6));
+
+                    doc.text("Je reconnais avoir reçu, en espèces, en chèque, autres, ce jour, de la caisse de", leftMargin, line(8));
+                    doc.text("l'INSIM / HIMI, la somme de :", leftMargin, line(5));
+                    doc.text(_allowed_amount+" DZD", leftMargin+10, line());
+                    doc.text("(en toutes lettres : "+amountLettre+").", leftMargin+10, line(6));
+
+                    doc.text("Cette somme représente le remboursement (total / partiel) des frais de formation", leftMargin, line(8));
+                    doc.text("réglés en date du :"+date_dernier_paiement, leftMargin, line(5));
+
+                    doc.text("Raison du remboursement :"+_motif_remboursement, leftMargin, line(8));
+
+                    // Calculer la largeur du texte pour l'alignement à droite
+                    const faitText = "Fait à "+ville+", le "+formattedDate;
+                    const textWidth = doc.getTextWidth(faitText);
+                    const pageWidth = doc.internal.pageSize.width;
+                    doc.text(faitText, pageWidth - textWidth - 20, line(10));
+
+                    doc.text("Signature du bénéficiaire précédée de la mention « Lu et approuvé » :", leftMargin, line(10));
+                    doc.text(TypeId, leftMargin, line(8));
+                    doc.text("Délivré(e) le : "+dateDelivrance, leftMargin, line(5));
+                    doc.text("Par : "+lieuDeDelivrance, leftMargin, line(5));
+
+                    doc.text("_____________________________________", leftMargin, line(12));
+                    doc.text("(Signature)", leftMargin, line());
+
+                    doc.text("Visa et cachet de l’administration :", leftMargin, line(12));
+
+                    // Sauvegarde du fichier
+                    doc.save("decharge_remboursement.pdf");
+                    alertify.success("Décharge de remboursement générée avec succès !");
+                } catch (error) {
+                    console.error("Erreur lors de la génération du PDF:", error);
+                    alert("Erreur lors de la génération du document : " + error.message);
+                }
+            }
+        }
+
+        // Imprimer la quittance
+        $(document).on('click', '.print-quittance-btn', function(){
+            // Get payment information directly from the button's data attributes
+            var payment = {
+                num: $(this).data('num'),
+                montant_paye: $(this).data('montant'),
+                date_paiement: $(this).data('date'),
+                mode_paiement: $(this).data('mode'),
+                label_paiements: $(this).data('label'),
+                reference: $(this).data('reference'),
+                is_refund: $(this).data('is-refund') === 'true'
+            };
+
+            // Get student information from the "Informations du prospect" section
+            var studentName = $('#detailNomPrenom').text().trim();
+            var formation = $('#detailFormation').text().trim();
+            var promo = $('#detailPromotion').text().trim();
+            var currentDate = new Date().toLocaleDateString('fr-FR');
+
+            // Check if this is a refund payment and handle accordingly
+            if(payment.label_paiements.includes("Rembourssement") || payment.is_refund){
+                $('#refundAssistantModal').modal('show');
+            }else{
+                // Generate PDF
+                generateQuittancePDF(payment, studentName, formation, promo, currentDate);
+            }
+        });
+
+
+
+    })
+</script>
+
+{% endblock content %}

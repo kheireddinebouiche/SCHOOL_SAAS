@@ -14,13 +14,14 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
 
 
-
+@login_required(login_url="institut_app:login")
 def listeVisiteurs(request):
     context = {
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/crm/liste_visiteurs.html',context)
 
+@login_required(login_url="institut_app:login")
 def ApiListeVisiteurs(request):
     liste = Visiteurs.objects.filter().values('id','cin','etat','type_visiteur','nom','prenom','email','telephone','created_at')
 
@@ -31,6 +32,7 @@ def ApiListeVisiteurs(request):
 
     return JsonResponse(list(liste), safe=False)
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def nouveauVisiteur(request):
     form = VisiteurForm()

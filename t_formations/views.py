@@ -614,7 +614,7 @@ def listPromos(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','date_debut', 'date_fin')
+    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','date_debut', 'date_fin','annee_academique')
 
     for l in liste:
         l_obj = Promos.objects.get(id = l['id'])
@@ -665,35 +665,40 @@ def ApiDeletePromo(request):
 @login_required(login_url="institut_app:login")
 def ApiGetPromo(request):
     id = request.GET.get('id')
-    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year','date_debut','date_fin')
+    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year','date_debut','date_fin','annee_academique')
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdatePromo(request):
-    id = request.POST.get('id')
-    label = request.POST.get('label')
-    session = request.POST.get('session')
-    new_code  = request.POST.get('new_code')
-    new_begin_year = request.POST.get('new_begin_year')
-    new_end_year = request.POST.get('new_end_year')
+    if request.method == "POST":
+        id = request.POST.get('id')
+        label = request.POST.get('label')
+        session = request.POST.get('session')
+        new_code  = request.POST.get('new_code')
+        new_begin_year = request.POST.get('new_begin_year')
+        new_end_year = request.POST.get('new_end_year')
 
-    new_date_debut = request.POST.get('new_date_debut')
-    new_date_fin = request.POST.get('new_date_fin')
+        annee_academique = request.POST.get('annee_academique')
+        new_date_debut = request.POST.get('new_date_debut')
+        new_date_fin = request.POST.get('new_date_fin')
 
-    if not label or not session:
-        return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
+        if not label or not session:
+            return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
+        else:
+            promo = Promos.objects.get(id = id)
+            promo.label = label
+            promo.session = session
+            promo.code = new_code
+            promo.begin_year = new_begin_year
+            promo.end_year = new_end_year
+            promo.date_debut = new_date_debut
+            promo.date_fin = new_date_fin
+            promo.annee_academique = annee_academique
+            promo.save()
+            return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
     else:
-        promo = Promos.objects.get(id = id)
-        promo.label = label
-        promo.session = session
-        promo.code = new_code
-        promo.begin_year = new_begin_year
-        promo.end_year = new_end_year
-        promo.date_debut = new_date_debut
-        promo.date_fin = new_date_fin
-        promo.save()
-        return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
+        return JsonResponse({"status" : "error"})
     
 def ApiActivatePromo(request):
     id = request.POST.get('id')

@@ -712,7 +712,7 @@
                                         <div class="text-muted small">Total dû</div>
                                         <div class="amount text-primary" id="totalDueAmount">0.00 DA</div>
                                     </div>
-                                    <span class="status bg-warning bg-opacity-10 text-warning">En attente</span>
+                                    <span class="status bg-warning bg-opacity-10 text-warning">Total à payer</span>
                                 </div>
                                 <div class="payment-summary">
                                     <div>
@@ -776,7 +776,7 @@
                                             <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#aideEcheancierModal">
                                                 <i class="ri-question-line me-1"></i>Aide
                                             </button>
-                                            <button id="idBtnConfirmeEcheancierModal" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#confirmEcheancierModal">
+                                            <button id="idBtnConfirmeEcheancierModal" class="btn btn-sm btn-outline-success" >
                                                 <i class="ri-check-line me-1"></i>Confirmer
                                             </button>
                                             <button id="specialBoutonConf" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#specialEcheancierModal">
@@ -2779,7 +2779,14 @@
                         Cette action effectuera le remboursement au client. Cette opération est irréversible.
                     </div>
                 </div>
-                
+
+                <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <div>
+                        Une fois le remboursement confirmé, vous serez redirigé vers une autre partie de l'application où vous pourrez afficher les détails du client ayant reçu un remboursement.
+                    </div>
+                </div>
+
                 <div class="card border border-info mb-3">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between mb-1">
@@ -2957,7 +2964,7 @@
 <input disabled type="hidden" id="_lieu_naissance" />
 <input disabled type="hidden" id="_formation" />
 
-
+<input disabled type="hidden" id="_annee_scolaire" />
 
 <input disabled type="hidden" id="_demandeurAdresse" />
 <input disabled type="hidden" id="_demandeurContact" />
@@ -2992,6 +2999,7 @@
         let promoCode = null;
         let has_pending_refund = false;
         let has_special_echeancier = false;
+        let validated_echeancier = false;
         let specialEcheancierState = false;
         let IdSpecialEcheancier = null; 
         let RefundState = false;
@@ -3020,11 +3028,19 @@
            
         }
 
+        function formatComptable(number) {
+            if (number == null || number === '') return "0,00";
 
-        function SummeryPaiement(totalPaye,total_initial,total_solde){
-            $('#totalPaidAmount').text(parseFloat(totalPaye).toFixed(2) + ' DA');
-            $('#totalDueAmount').text(parseFloat(total_initial).toFixed(2) + ' DA');
-            $('#balanceAmount').text(parseFloat(total_solde).toFixed(2) + ' DA');    
+            return parseFloat(number)
+                .toFixed(2)                       // deux décimales
+                .replace('.', ',')                // virgule pour décimales
+                .replace(/\B(?=(\d{3})+(?!\d))/g, "."); // points pour milliers
+        }
+
+        function SummeryPaiement(totalPaye, total_initial, total_solde) {
+            $('#totalPaidAmount').text(formatComptable(totalPaye) + ' DA');
+            $('#totalDueAmount').text(formatComptable(total_initial) + ' DA');
+            $('#balanceAmount').text(formatComptable(total_solde) + ' DA');
         }
 
         
@@ -3066,7 +3082,7 @@
                     $('#specialite').text(data.voeux.specialite_label);
                     
                     $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(data.voeux.prix_formation + " DA");
+                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
                     
                     $('#_logoHeader').val(data.voeux.logo_header);
                     $('#_logoFooter').val(data.voeux.logo_footer);
@@ -3154,13 +3170,17 @@
 
                     if(data.echeancier_special_state_approuvel){
                         document.getElementById('specialBoutonConf').disabled = true;
+                        
                     }else{
                         document.getElementById('specialBoutonConf').disabled = false;
+                    
                     }
                     
                     if(data.special_echeancier_validate){
+                        validated_echeancier = true
                         document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
                         document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "flex", "important");
+                       
                     }else if (data.echeancier_special_state_approuvel){
 
                         document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
@@ -3191,8 +3211,8 @@
                             duePaiementHtml += '<td hidden>' + item.id_due_paiement + '</td>';
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + parseFloat(item.montant_due).toFixed(2) + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + parseFloat(item.montant_restant).toFixed(2) + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + item.montant_due + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + item.montant_restant+ ' DA</span></td>';
                             duePaiementHtml += '</td>';
                             duePaiementHtml += '</tr>';
                         });
@@ -3250,7 +3270,7 @@
                                 montant_paye: item.montant_paye,
                                 date_paiement: item.date_paiement,
                                 mode_paiement: item.mode_paiement || 'Non spécifié',
-                                reference: item.reference || 'Non spécifié',
+                                reference_paiement: item.reference_paiement || 'Non spécifié',
                                 label_paiements : item.label_paiements,                               
                             };
                             
@@ -3300,8 +3320,6 @@
                             row += "<div class='dropdown-menu dropdown-menu-end' aria-labelledby='dropdownMenuButton"+item.num+"'>";
                             row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
                             row += "<button class='dropdown-item print-facture-btn' type='button' data-id='"+item.num+"'><i class='ri-printer-line me-2'></i>Facture</button>";
-                            //row += "<div class='dropdown-divider'></div>";
-                            //row += "<button class='dropdown-item delete-btn' type='button' data-id='"+item.num+"'><i class='ri-delete-bin-line me-2'></i>Supprimer</button>";
                             row += "</div>";
                             row += "</div>";
                             row += "</td>";
@@ -3391,7 +3409,7 @@
         
         function ShowRefundNotification(has_pending_refund, has_processed_refund = false, is_appliced = false){
             if(has_processed_refund && !is_appliced){
-                console.log(has_processed_refund,is_appliced);
+                
                 // Show the processed refund notification
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
@@ -3399,7 +3417,6 @@
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
             } else if(has_pending_refund){
-                console.log(has_processed_refund,is_appliced);
                 // Show the pending refund notification
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
@@ -3407,7 +3424,6 @@
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
             }else if(has_processed_refund && is_appliced){
-                console.log(has_processed_refund,is_appliced);
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
@@ -3456,7 +3472,7 @@
             }            
         });
 
-         $(document).on('click', '#confirmerRemboursementBtn', function(){
+        $(document).on('click', '#confirmerRemboursementBtn', function(){
             var amount = $('#confirmationRemboursementModal').data('amount');
             var mode_rembourssement = $('#confirmationRemboursementModal').data('mode_paiement');
             var id_refund = $('#confirmationRemboursementModal').data('id_refund');
@@ -3473,9 +3489,46 @@
                 },
                 success : function(response){
                     if(response.status === "success"){
-                        alertify.success("Le rembourssement a été effectué avec succés");
-                        $('#confirmationRemboursementModal').modal('hide');
-                        loadDatas();
+                        let spinner = document.createElement("div");
+                        spinner.innerHTML = `
+                            <div id="loadingSpinner" style="
+                                position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                z-index: 9999;
+                                backdrop-filter: blur(3px);">
+                                <div class="modern-spinner" style="width: 60px;height: 60px;border: 5px solid #e0e0e0;border-top: 5px solid #3b7ddd;border-radius: 50%;animation: spin 1s linear infinite;margin-bottom: 20px;"></div>
+                                <div class="success-message" style="
+                                    font-family: Arial, sans-serif;
+                                    font-size: 18px;
+                                    color: #3b7ddd;
+                                    font-weight: 500;
+                                    text-align: center;
+                                    margin-bottom: 10px;">
+                                    <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
+                                </div>
+                                
+                            </div>
+                            <style>
+                                @keyframes spin {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                                .modern-spinner {
+                                    width: 60px;
+                                    height: 60px;
+                                    border: 5px solid #e0e0e0;
+                                    border-top: 5px solid #3b7ddd;
+                                    border-radius: 50%;
+                                    animation: spin 1s linear infinite;
+                                }
+                            </style>
+                        `;
+                        document.body.appendChild(spinner);
+                        setTimeout(function() {
+                            window.location.href = "{% url 't_tresorerie:DetailsRembourssement' pk=0 %}".replace('0',response.rembourssementId);
+                        }, 1000);
+                        
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
 
@@ -3491,52 +3544,56 @@
         });
              
         $(document).on('click', '#confirmEcheancierBtn', function(){
-            // Remplir la modale avec les informations actuelles
-            $('#modalSpecialite').text($('#specialite').text());
-            $('#modalPromo').text($('#promo').text());
-            $('#modalPrixFormation').text($('#prix_formation').text());
-            
-            // Vérifier s'il y a une réduction et mettre à jour l'affichage
-            if (hasReduction && reductionApprouved) {
-                $('#modalPrixFormation').text($('#initialPrice').text() + ' DA');
-                $('#modalPrixFinalRow').show();
-                $('#modalPrixFinal').text($('#finalPrice').text() + ' DA');
-                // Afficher la colonne Prix final dans le tableau
-                $('#modalPrixFinalHeader').show();
-            } else {
-                $('#modalPrixFinalRow').hide();
-                // Masquer la colonne Prix final dans le tableau
-                $('#modalPrixFinalHeader').hide();
-            }
-            
-            // Remplir le tableau des échéances dans la modale
-            var echeancesHtml = '';
-            $('#echeancierTable tr').each(function(index) {
-                var libelle = $(this).find('td:eq(0)').text();
-                var date = $(this).find('td:eq(1)').text();
-                var montant = $(this).find('td:eq(2)').text();
+
+           
+                // Remplir la modale avec les informations actuelles
+                $('#modalSpecialite').text($('#specialite').text());
+                $('#modalPromo').text($('#promo').text());
+                $('#modalPrixFormation').text($('#prix_formation').text());
                 
-                echeancesHtml += '<tr>';
-                echeancesHtml += '<td>' + libelle + '</td>';
-                echeancesHtml += '<td>' + date + '</td>';
-                echeancesHtml += '<td>' + montant + '</td>';
-                
-                // Ajouter le prix final si une réduction est appliquée
+                // Vérifier s'il y a une réduction et mettre à jour l'affichage
                 if (hasReduction && reductionApprouved) {
-                    var prixReduitElement = $(this).find('td:eq(3)');
-                    if (prixReduitElement.length > 0) {
-                        var prixReduit = prixReduitElement.text();
-                        echeancesHtml += '<td>' + prixReduit + '</td>';
-                    }
+                    $('#modalPrixFormation').text($('#initialPrice').text() + ' DA');
+                    $('#modalPrixFinalRow').show();
+                    $('#modalPrixFinal').text($('#finalPrice').text() + ' DA');
+                    // Afficher la colonne Prix final dans le tableau
+                    $('#modalPrixFinalHeader').show();
+                } else {
+                    $('#modalPrixFinalRow').hide();
+                    // Masquer la colonne Prix final dans le tableau
+                    $('#modalPrixFinalHeader').hide();
                 }
                 
-                echeancesHtml += '</tr>';
-            });
-            $('#modalEcheancesTable').html(echeancesHtml);
+                // Remplir le tableau des échéances dans la modale
+                var echeancesHtml = '';
+                $('#echeancierTable tr').each(function(index) {
+                    var libelle = $(this).find('td:eq(0)').text();
+                    var date = $(this).find('td:eq(1)').text();
+                    var montant = $(this).find('td:eq(2)').text();
+                    
+                    echeancesHtml += '<tr>';
+                    echeancesHtml += '<td>' + libelle + '</td>';
+                    echeancesHtml += '<td>' + date + '</td>';
+                    echeancesHtml += '<td>' + montant + '</td>';
+                    
+                    // Ajouter le prix final si une réduction est appliquée
+                    if (hasReduction && reductionApprouved) {
+                        var prixReduitElement = $(this).find('td:eq(3)');
+                        if (prixReduitElement.length > 0) {
+                            var prixReduit = prixReduitElement.text();
+                            echeancesHtml += '<td>' + prixReduit + '</td>';
+                        }
+                    }
+                    
+                    echeancesHtml += '</tr>';
+                });
+                $('#modalEcheancesTable').html(echeancesHtml);
+                
+                // Afficher la modale de détails
+                $('#confirmEcheancierModal').modal('hide');
+                $('#confirmationDetailsModal').modal('show');
+           
             
-            // Afficher la modale de détails
-            $('#confirmEcheancierModal').modal('hide');
-            $('#confirmationDetailsModal').modal('show');
         });
         
         // Pré-remplir les informations dans le modal spécial
@@ -4162,7 +4219,12 @@
                         addLogosToPDF();
                         doc.setFont('helvetica');
                         doc.setFontSize(16);
-                        doc.text("LETTRE D'ENGAGEMENT POUR UN ÉCHÉANCIER SPÉCIAL", 105, 50, null, null, 'center');
+                        if(has_special_echeancier){
+                            doc.text("LETTRE D'ENGAGEMENT POUR UN ÉCHÉANCIER SPÉCIAL", 105, 50, null, null, 'center');
+                        }else{
+                            doc.text("LETTRE D'ENGAGEMENT", 105, 50, null, null, 'center');
+                        }
+                        
 
                         doc.setFontSize(10);
                         let y = 68; // point de départ légèrement plus haut
@@ -4729,17 +4791,27 @@
                     doc.setFontSize(10);
                     doc.text("Reçu de:", 20, yOffset + 35);
                     doc.setFontSize(9);
-                    doc.text(studentName, 45, yOffset + 35);
+                    doc.text(studentName, 40, yOffset + 35);
 
                     doc.setFontSize(10);
                     doc.text("Formation:", 20, yOffset + 41);
                     doc.setFontSize(9);
-                    doc.text(formation, 45, yOffset + 41);
+                    doc.text(formation, 40, yOffset + 41);
 
                     doc.setFontSize(10);
                     doc.text("Promo:", 20, yOffset + 47);
                     doc.setFontSize(9);
-                    doc.text(promo, 45, yOffset + 47);
+                    doc.text(promo, 35, yOffset + 47);
+
+                    doc.setFontSize(10);
+                    doc.text("Groupe:", 60, yOffset + 47);
+                    doc.setFontSize(9);
+                    doc.text("grp", 75, yOffset + 47);
+
+                    doc.setFontSize(10);
+                    doc.text("Semestre:", 110, yOffset + 47);
+                    doc.setFontSize(9);
+                    doc.text("sem", 130, yOffset + 47);
 
                     // Get date of birth and place of birth from hidden input fields
                     const dateNaissance = document.getElementById('_date_naissance').value;
@@ -4750,18 +4822,17 @@
                         doc.setFontSize(10);
                         doc.text("Date de naissance:", 20, yOffset + 53);
                         doc.setFontSize(9);
-                        doc.text(dateNaissance, 65, yOffset + 53);
+                        doc.text(dateNaissance, 52, yOffset + 53);
                     }
                     
                     if (lieuNaissance) {
                         doc.setFontSize(10);
                         doc.text("Lieu de naissance:", 20, yOffset + (dateNaissance ? 59 : 53));
                         doc.setFontSize(9);
-                        doc.text(lieuNaissance, 65, yOffset + (dateNaissance ? 59 : 53));
+                        doc.text(lieuNaissance, 52, yOffset + (dateNaissance ? 59 : 53));
                     }
 
                     doc.setFontSize(11);
-                    doc.setTextColor(59, 125, 221);
                     doc.text("DÉTAILS DU PAIEMENT", 20, yOffset + (dateNaissance || lieuNaissance ? 70 : 60));
 
                     doc.setFontSize(9);
@@ -4783,15 +4854,11 @@
                     doc.text("Référence :", 20, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
                     doc.text(payment.reference || "N/A", 60, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
 
-                    doc.setFontSize(9);
-                    doc.setTextColor(40, 167, 69);
-                    doc.text("Merci pour votre pré-inscription.", 20, yOffset + (dateNaissance || lieuNaissance ? 110 : 100));
+                    
 
                     doc.setFontSize(8);
                     doc.setTextColor(80, 80, 80);
                     doc.text("Date d'impression: " + printDate, 20, yOffset + (dateNaissance || lieuNaissance ? 117 : 107));
-                    doc.text("Signature de l'agent:", 20, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
-                    doc.line(20, yOffset + (dateNaissance || lieuNaissance ? 126 : 116), 80, yOffset + (dateNaissance || lieuNaissance ? 126 : 116));
 
                     doc.text("Signature du responsable:", 120, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
                     doc.line(120, yOffset + (dateNaissance || lieuNaissance ? 126 : 116), 180, yOffset + (dateNaissance || lieuNaissance ? 126 : 116));
@@ -4825,6 +4892,7 @@
             var date_naissance = $('#_date_naissance').val();
             var lieu_naissance = $('#_lieu_naissance').val();
             var formation = $('#_formation').val();
+            var annee_scolaire = $('#_annee_scolaire').val();
 
             var signataire = signataireSelectRefund;
             var TypeId = pieceIdentiteSelectPID;
@@ -5083,6 +5151,14 @@
         function showUnpaidPaymentNotification() {
             $('#unpaidPaymentModal').modal('show');
         }
+    
+        $(document).on('click','#idBtnConfirmeEcheancierModal', function(){
+            if(has_special_echeancier == true && validated_echeancier == false){
+                alertify.error("Un echéancier spécial est approuver, veuillez d'abord le confirmer");
+            }else{
+                $('#confirmEcheancierModal').modal('show');
+            }
+        });
     });
     
     

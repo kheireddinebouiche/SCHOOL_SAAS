@@ -275,9 +275,6 @@ def ApiGetDetailsDemandePaiement(request):
             has_pending_refund = False
             refund_data = []
         
-        
-        
-
         user_data = {
             "demandeur_id" : obj.client.id,
             "demandeur_nom": obj.client.nom,

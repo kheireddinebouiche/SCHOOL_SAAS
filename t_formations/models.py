@@ -219,6 +219,7 @@ class Promos(models.Model):
     begin_year = models.CharField(null=True, blank=True)
     end_year = models.CharField(null=True, blank=True)
     session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
+    annee_academique = models.CharField(max_length=255, null=True, blank=True)
 
     date_debut = models.DateField(null=True)
     date_fin = models.DateField(null=True)

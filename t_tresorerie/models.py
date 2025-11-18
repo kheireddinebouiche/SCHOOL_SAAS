@@ -93,6 +93,9 @@ class Paiements(models.Model):
     is_done = models.BooleanField(default=False)
     is_refund = models.BooleanField(default=False)
     refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.SET_NULL)
+
+    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -176,7 +179,7 @@ class ModelEcheancier(models.Model):
 
     description = models.CharField(max_length=1000, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-
+    is_double_diplomation = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now_add=True)
@@ -187,6 +190,7 @@ class ModelEcheancier(models.Model):
 class EcheancierPaiement(models.Model):
     model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
+    specialites = models.ManyToManyField(Specialites, null=True, blank=True)
     
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)

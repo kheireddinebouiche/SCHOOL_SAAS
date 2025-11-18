@@ -182,14 +182,16 @@ class PromoForm(forms.ModelForm):
             'end_year': forms.TextInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
             'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),
             'date_fin' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_fin"}),
+            'annee_academique' : forms.TextInput(attrs={"class" : "form-control",'id':"id_annee_academique"})
         }
 
         labels = {
             'label' : "Nom d'affichage :",
             'session' : "Rentrée :",
             'code' : "Code Unique :",
-            'begin_year' : "Année de début",
-            'end_year' : "Année de fin",
-            'date_debut' : "Date de lançement",
-            'date_fin' : "Date de fin de formation",
+            'begin_year' : "Année de début :",
+            'end_year' : "Année de fin :",
+            'date_debut' : "Date de lançement :",
+            'date_fin' : "Date de fin de formation :",
+            'annee_academique' : "Année academique :",
         }

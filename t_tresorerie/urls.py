@@ -100,6 +100,7 @@ urlpatterns = [
     path('ApiShowRefundTraiteResult', ApiShowRefundTraiteResult, name="ApiShowRefundTraiteResult"),
 
     path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
+    path('rembourssement/details/<int:pk>/',DetailsRembourssement, name="DetailsRembourssement"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
 
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
@@ -143,6 +144,8 @@ urlpatterns = [
     path('ApiUpdateDepense', ApiUpdateDepense, name="ApiUpdateDepense"),
     path('ApiValidateDepense', ApiValidateDepense, name="ApiValidateDepense"),
     path('ApiDeleteDepense', ApiDeleteDepense, name="ApiDeleteDepense"),
+
+    path('ApiLoadPaiements',ApiLoadPaiements , name="ApiLoadPaiements"),
 
 
 ]

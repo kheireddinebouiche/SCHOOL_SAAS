@@ -113,6 +113,7 @@
                     <tr>
                       <th class="border-0 rounded-start">Code</th>
                       <th class="border-0">Session</th>
+                      <th class="border-0">Année academique</th>
                       <th class="border-0">Date de debut</th>
                       <th class="border-0">Date de fin</th>
                       <th class="border-0">État</th>
@@ -265,6 +266,13 @@
             <input type="date" name="updated_date_fin" id="updated_date_fin" class="form-control border-0 bg-light py-2 " />
           </div>
         </div>
+        <div class="row">
+          <div class="col-lg-12 form-group mb-3">
+            <label for="updated_annee_academique" class="form-label fw-medium">Année académique</label>
+            <input type="text" name="updated_annee_academique" id="updated_annee_academique" class="form-control border-0 bg-light py-2 " />
+          </div>
+        </div>
+        
        
 
 
@@ -275,6 +283,35 @@
   </div>
 </div>
 <!-- /.modal -->
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let anneeInput = document.getElementById("updated_annee_academique");
+    
+        anneeInput.addEventListener("input", function() {
+            let anneeFormat = /^\d{4}\/\d{4}$/;  // Format attendu : YYYY/YYYY
+            let valeur = anneeInput.value;
+    
+            if (!anneeFormat.test(valeur)) {
+                anneeInput.classList.add("is-invalid"); // Ajoute une bordure rouge (si Bootstrap)
+                if (!document.getElementById("error-msg")) {
+                    let errorMsg = document.createElement("div");
+                    errorMsg.id = "error-msg";
+                    errorMsg.className = "invalid-feedback";
+                    errorMsg.innerText = "Format invalide. Exemple : 2020/2021";
+                    anneeInput.parentNode.appendChild(errorMsg);
+                }
+            } else {
+                anneeInput.classList.remove("is-invalid"); // Enlève la bordure rouge si correct
+                let errorMsg = document.getElementById("error-msg");
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+            }
+        });
+    });
+</script>
 
 <script>
   $(document).ready(function () {
@@ -304,6 +341,7 @@
               row += "<tr class='align-middle'>";
               row += "<td><strong>"+p.code+"</strong></td>";
               row += "<td><b>Rentrée : </b> "+p.session_label+"</td>";
+              row += "<td>"+p.annee_academique+"</td>";
               row += "<td>"+p.date_debut+"</td>";
               row += "<td>"+p.date_fin+"</td>";
               row += "<td class='text-left'>"+(p.etat == 'active' ? '<span class="badge bg-success fs-6">'+p.etat_label+'</span>' : '<span class="badge bg-warning fs-6">'+p.etat_label+'</span>' )+"</td>";
@@ -323,7 +361,7 @@
               row += "</tr>";
             });
           }else{
-              row += "<tr><td colspan='6' class='text-center text-muted'>";
+              row += "<tr><td colspan='7' class='text-center text-muted'>";
               row += '<div class="d-flex flex-column align-items-center justify-content-center py-5">';
               row += '<div class="avatar-sm mb-4">';
               row += ' <div class="avatar-title bg-light text-muted rounded-circle fs-1">';
@@ -397,6 +435,7 @@
           $('#updated_code').val(data[0].code);
           $('#updated_date_debut').val(data[0].date_debut);
           $('#updated_date_fin').val(data[0].date_fin);
+          $('#updated_annee_academique').val(data[0].annee_academique);
           
 
           $('.session').html(row);
@@ -409,6 +448,7 @@
       var new_label = document.getElementById('updated_label').value;
       var new_session = document.getElementById('updated_session').value;
       var new_code = document.getElementById('updated_code').value;
+      var annee_academique = document.getElementById('updated_annee_academique').value;
       
       var new_date_debut = document.getElementById('updated_date_debut').value;
       var new_date_fin = document.getElementById('updated_date_fin').value;
@@ -432,6 +472,7 @@
           'new_end_year' : new_end_year,
           'new_date_debut' : new_date_debut,
           'new_date_fin' : new_date_fin,
+          'annee_academique' : annee_academique,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         success : function(data){

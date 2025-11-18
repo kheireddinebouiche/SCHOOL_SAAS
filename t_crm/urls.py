@@ -60,6 +60,7 @@ urlpatterns = [
 
     ########################################## Fiche des voeux###################################################
     path('ApiLoadFicheVoeuxProspect', ApiLoadFicheVoeuxProspect, name="ApiLoadFicheVoeuxProspect"),
+    path('ApiConfirmeDoubleDiplome', ApiConfirmeDoubleDiplome, name="ApiConfirmeDoubleDiplome"),
     ########################################## Fiche des voeux###################################################
     
 

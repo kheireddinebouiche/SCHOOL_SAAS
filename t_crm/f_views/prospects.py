@@ -381,3 +381,10 @@ def ApiCreateVoeux(request):
     )
 
     return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrer avec succès"})
+
+@login_required(login_url="institut_app:login")
+def ApiConfirmeDoubleDiplome(request):
+    if request.method == "POST":
+        pass
+    else:
+        return JsonResponse({"status":"error"})

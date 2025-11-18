@@ -96,6 +96,7 @@ def ApiGetLunchedSpec(request):
 
         return JsonResponse(list(liste), safe=False)
 
+from t_groupe.models import GroupeLine
 
 @login_required(login_url="institut_app:login")
 def ApiGetClientEcheancier(request):
@@ -108,7 +109,14 @@ def ApiGetClientEcheancier(request):
         voeux = FicheDeVoeux.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
 
         echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+
+        groupe = GroupeLine.objects.filter(student_id = id_client).first()
         
+        groupe_data = {
+            'id' : groupe.groupe.id,
+            'nom' : groupe.groupe.nom,
+            'semestre' : groupe.groupe.semestre,
+        }
 
         special_echeancier_data = []
         has_special_echeancier = False
@@ -270,6 +278,7 @@ def ApiGetClientEcheancier(request):
             'user_data' : user_data,
             'voeux' : voeux_data,
             'echeancier' : list(echeancier_data),
+            'groupe' : groupe_data,
             'remise' : remiseDatas,
             'has_special_echeancier' : has_special_echeancier,
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
@@ -325,7 +334,7 @@ def ApiSaveRefundOperation(request):
         DuePaiements.objects.filter(client_id = change_client, type="frais_f").update(is_annulated=True)
 
        
-        return JsonResponse({"status" : "success"})
+        return JsonResponse({"status" : "success","rembourssementId" : obj_refund.id})
     else:
         return JsonResponse({"status" : "error"})
     
