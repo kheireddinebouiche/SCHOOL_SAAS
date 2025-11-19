@@ -11,7 +11,7 @@ def ListeModelEcheancier(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadModelEcheancier(request):
-    liste = ModelEcheancier.objects.all().values('id','promo__label','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active')
+    liste = ModelEcheancier.objects.all().values('id','promo__label','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active','is_double_diplomation')
     for i in liste:
         i_obj = ModelEcheancier.objects.get(id = i['id'])
         i['promo_session_label'] = i_obj.promo.get_session_display()
@@ -27,11 +27,27 @@ def ApiLoadPromo(request):
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
+def ApiLoadSpecialites(request):
+    if request.method == "GET":
+        liste = Specialites.objects.all().values('id','label','prix_double_diplomation','version')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status": "error"})
+
+@login_required(login_url="institut_app:login")
 def ApiLoadEcheancierDetails(request):
     id = request.GET.get("id")
     try:
         echeancier = EcheancierPaiement.objects.get(id=id)
         
+        # Gestion des spécialités
+        specialites_list = []
+        if echeancier.model and echeancier.model.is_double_diplomation:
+            # On récupère toutes les spécialités et on les transforme en dict sérialisables
+            specialites_list = list(
+                echeancier.specialites.all().values('id', 'label')
+            )
+
         # Récupérer les tranches associées
         tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).values(
             'id', 'taux', 'value', 'date_echeancier','montant_tranche'
@@ -40,7 +56,8 @@ def ApiLoadEcheancierDetails(request):
         data = {
             'id': echeancier.id,
             'model_label': echeancier.model.label,
-            'formation_label': echeancier.formation.nom,
+            'formation_label': echeancier.formation.nom if echeancier.formation else None,
+            'specialites': specialites_list,
             'is_active': echeancier.is_active,
             'created_at': echeancier.created_at,
             'tranches': list(tranches)
@@ -58,34 +75,60 @@ def ApiSaveEcheancier(request):
             modele_id = request.POST.get('modele_id')
             formation_id = request.POST.get('formation_id')
             tranches_data = request.POST.get('tranches')
-            
+            is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
+            specialite_ids = request.POST.get('specialite_ids', '')  # Get the specialite IDs
+
             # Convertir les données JSON en objet Python
             import json
             tranches = json.loads(tranches_data)
             modele = ModelEcheancier.objects.get(id = modele_id)
-            has_aleready = EcheancierPaiement.objects.filter(formation_id = formation_id, model__promo = modele.promo )
-           
-            if has_aleready.exists():
 
-                return JsonResponse({"status" : "error-head-already"})
+            # Check based on mode - if double diplomation, check against specialites, otherwise formation
+            if is_double_diplomation and specialite_ids:
+                specialite_ids_list = specialite_ids.split(',')
+                # Check if an echeancier already exists for any of these specialites with the same model/promo
+                has_already = EcheancierPaiement.objects.filter(
+                    specialites__id__in=specialite_ids_list,
+                    model__promo=modele.promo
+                ).exists()
+            else:
+                # Check against formation as before
+                has_already = EcheancierPaiement.objects.filter(
+                    formation_id=formation_id,
+                    model__promo=modele.promo
+                ).exists()
+
+            if has_already:
+                return JsonResponse({"status": "error-head-already"})
 
             # Créer l'échéancier principal
             echeancier = EcheancierPaiement.objects.create(
                 model=ModelEcheancier.objects.get(id=modele_id),
-                formation=Formation.objects.get(id=formation_id),
                 is_active=True
             )
-            
+
+            # Set formation or specialites based on mode
+            if is_double_diplomation and specialite_ids:
+                # Set specialites if in double diplomation mode
+                specialite_ids_list = [int(id) for id in specialite_ids.split(',') if id.strip()]
+                specialites = Specialites.objects.filter(id__in=specialite_ids_list)
+                echeancier.specialites.set(specialites)
+            else:
+                # Set formation as before
+                echeancier.formation = Formation.objects.get(id=formation_id)
+
+            echeancier.save()
+
             # Créer les lignes d'échéancier
             for tranche in tranches:
                 EcheancierPaiementLine.objects.create(
                     echeancier=echeancier,
                     taux=tranche['pourcentage'],
                     value=tranche['libelle'],
-                    montant_tranche = tranche['montant_echeance'],
+                    montant_tranche=tranche['montant_echeance'],
                     date_echeancier=tranche['date'] if tranche['date'] else None
                 )
-            
+
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
@@ -103,21 +146,34 @@ def ApiLoadFormations(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiSaveModeleEcheancier(request):
-    libelle = request.POST.get('libelle')
-    promo = request.POST.get('promo')
-    description = request.POST.get('description')
-    nbtranche = request.POST.get('nbtranche')
-    try:
-        ModelEcheancier.objects.create(
-            label = libelle,
-            promo = Promos.objects.get(id = promo),
-            nombre_tranche = nbtranche,
-            description = description
-        )
+    if request.method == "POST":
+        libelle = request.POST.get('libelle')
+        promo = request.POST.get('promo')
+        description = request.POST.get('description')
+        nbtranche = request.POST.get('nbtranche')
+        doubleDiplomation = request.POST.get('doubleDiplomation')
 
-        return JsonResponse({"status" : 'success'})
-    except:
-        return JsonResponse({"status" : "error"})
+        if doubleDiplomation == "on":
+            double = True
+        else:
+            double = False
+
+        print(doubleDiplomation)
+
+        try:
+            ModelEcheancier.objects.create(
+                label = libelle,
+                promo = Promos.objects.get(id = promo),
+                nombre_tranche = nbtranche,
+                description = description,
+                is_double_diplomation = double
+            )
+
+            return JsonResponse({"status" : 'success'})
+        except:
+            return JsonResponse({"status" : "error"})
+    else:
+        return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadModeleEcheancierDetails(request):
@@ -138,6 +194,7 @@ def ApiLoadModeleEcheancierDetails(request):
             'nombre_tranche': model.nombre_tranche,
             'description': model.description,
             'is_active': model.is_active,
+            'double_diplomation' : model.is_double_diplomation,
             'created_at': model.created_at.strftime('%d/%m/%Y') if model.created_at else ''
         }
 

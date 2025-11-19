@@ -544,6 +544,25 @@
                 <textarea class="form-control border-0 bg-light py-2" id="descriptionEcheancier" name="description_echeancier" rows="3" placeholder="Description détaillée du modèle d'échéancier"></textarea>
                 <div class="form-text">Décrivez brièvement le modèle d'échéancier (optionnel)</div>
               </div>
+              <div class="col-lg-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="doubleDiplomationToggle" name="double_diplomation" role="switch">
+                  <label class="form-check-label" for="doubleDiplomationToggle">Activer le mode Double diplomation</label>
+                </div>
+              </div>
+              <div class="col-lg-12 mt-2" id="doubleDiplomationInfo" style="display: none;">
+                <div class="alert alert-info border-0 bg-info bg-opacity-10" role="alert">
+                  <div class="d-flex align-items-center">
+                    <div class="me-3">
+                      <i class="ri-information-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                      <h6 class="alert-heading mb-1">Mode Double diplomation</h6>
+                      <p class="mb-0">Lorsque ce mode est activé, la configuration de l'échéancier concernera deux spécialités différentes, non une formation/palier qui regroupe un ensemble de spécialités.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -615,6 +634,25 @@
                 <textarea class="form-control border-0 bg-light py-2" id="editDescriptionEcheancier" name="description_echeancier" rows="3" placeholder="Description détaillée du modèle d'échéancier"></textarea>
                 <div class="form-text">Décrivez brièvement le modèle d'échéancier (optionnel)</div>
               </div>
+              <div class="col-lg-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="editDoubleDiplomationToggle" name="edit_double_diplomation" role="switch">
+                  <label class="form-check-label" for="editDoubleDiplomationToggle">Activer le mode Double diplomation</label>
+                </div>
+              </div>
+              <div class="col-lg-12 mt-2" id="editDoubleDiplomationInfo" style="display: none;">
+                <div class="alert alert-info border-0 bg-info bg-opacity-10" role="alert">
+                  <div class="d-flex align-items-center">
+                    <div class="me-3">
+                      <i class="ri-information-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                      <h6 class="alert-heading mb-1">Mode Double diplomation</h6>
+                      <p class="mb-0">Lorsque ce mode est activé, la configuration de l'échéancier concernera deux spécialités différentes, non une formation/palier qui regroupe un ensemble de spécialités.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -681,6 +719,12 @@
               <div class="col-lg-12">
                 <label class="form-label fw-medium">Description</label>
                 <div class="border rounded-3 p-2 bg-light" id="detailEcheancierDescription">-</div>
+              </div>
+              <div class="col-lg-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="detailDoubleDiplomationToggle" name="detail_double_diplomation" role="switch" disabled>
+                  <label class="form-check-label" for="detailDoubleDiplomationToggle">Mode Double diplomation activé</label>
+                </div>
               </div>
             </div>
           </div>
@@ -899,7 +943,14 @@ $(document).ready(function () {
               $('#editEcheancierId').val(data.id);
               $('#editLibelleEcheancier').val(data.label);
               $('#editDescriptionEcheancier').val(data.description);
-              $('#editNbtranche').val(data.nb_tranche);
+              $('#editNbtranche').val(data.nombre_tranche);
+              $('#editDoubleDiplomationToggle').prop('checked', data.double_diplomation === true);
+
+              if(data.double_diplomation){
+                $('#editDoubleDiplomationInfo').show();
+              }else{
+                $('#editDoubleDiplomationInfo').hide();
+              }
               
               // Charger les promotions et sélectionner celle de l'échéancier
               loadEditPromo(data.promo_id);
@@ -975,6 +1026,17 @@ $(document).ready(function () {
       var promo = $('#promoEcheancier').val();
       var description = $('#descriptionEcheancier').val();
       var nbtranche = $('#nbtranche').val();
+      var doubleDiplomation = $('#doubleDiplomationToggle').val();
+
+      var btn = $(this); // référence du bouton
+      btn.prop('disabled', true); // désactive le bouton
+
+      // Optionnel : afficher un spinner pour indiquer le chargement
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Envoi en cours...
+      `);
       
       if(!libelle) {
         alertify.error("Veuillez saisir un libellé pour le modèle d'échéancier");
@@ -1000,6 +1062,7 @@ $(document).ready(function () {
           'promo': promo,
           'description': description,
           'nbtranche' : nbtranche,
+          'doubleDiplomation' : doubleDiplomation,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         dataType: 'JSON',
@@ -1014,6 +1077,11 @@ $(document).ready(function () {
         },
         error: function() {
           alertify.error("Erreur lors de la communication avec le serveur");
+        },
+        complete: function() {
+            // Réactiver le bouton et restaurer son texte après la requête
+            btn.prop('disabled', false);
+            btn.html(originalText);
         }
       });
     });
@@ -1125,6 +1193,24 @@ $(document).ready(function () {
             alertify.error("Erreur lors de la communication avec le serveur");
           }
         });
+      });
+
+      // Show/hide info message based on double diplomation toggle
+      $('#doubleDiplomationToggle').on('change', function() {
+        if ($(this).is(':checked')) {
+          $('#doubleDiplomationInfo').show();
+        } else {
+          $('#doubleDiplomationInfo').hide();
+        }
+      });
+
+      // Show/hide info message for edit modal
+      $('#editDoubleDiplomationToggle').on('change', function() {
+        if ($(this).is(':checked')) {
+          $('#editDoubleDiplomationInfo').show();
+        } else {
+          $('#editDoubleDiplomationInfo').hide();
+        }
       });
 });
 </script>

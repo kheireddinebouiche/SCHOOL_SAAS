@@ -492,44 +492,13 @@
                           <div class="form-text">Sélectionnez un modèle d'échéancier existant</div>
                         </div>
                         
-                        <div class="col-lg-12" id="formationField">
+                        <div class="col-lg-12">
                           <label class="form-label fw-medium" for="formationEcheancier">Formation</label>
                           <select class="form-select py-2" id="formationEcheancier" name="formation_echeancier">
                             <option value="">Sélectionnez une formation</option>
                             <!-- Options à charger dynamiquement -->
                           </select>
                           <div class="form-text">Sélectionnez la formation associée à cet échéancier</div>
-                        </div>
-
-                        <div class="col-lg-12" id="specialiteSection" style="display: none;">
-                          <div class="row g-3 align-items-end">
-                            <div class="col-md-9">
-                              <label class="form-label fw-medium" for="specialiteEcheancier">Spécialité</label>
-                              <select class="form-select py-2" id="specialiteEcheancier" name="specialite_echeancier">
-                                <option value="">Sélectionnez une spécialité</option>
-                                <!-- Options à charger dynamiquement -->
-                              </select>
-                             
-                            </div>
-                            <div class="col-md-3">
-                              <button type="button" class="btn btn-primary w-100" id="btnAjouterSpecialite">
-                                <i class="ri-add-line me-1"></i>Ajouter
-                              </button>
-                            </div>
-                          </div>
-
-                          <div class="mt-3">
-                            <label class="form-label fw-medium">Spécialités sélectionnées</label>
-                            <div id="listeSpecialites" class="border rounded-3 p-3 bg-light">
-                              <!-- Les spécialités ajoutées seront affichées ici -->
-                              <div class="d-flex justify-content-center align-items-center text-muted py-3" id="listeSpecialitesPlaceholder">
-                                Aucune spécialité ajoutée
-                              </div>
-                              <div class="list-group" id="listSpecialitesContainer" style="display: none;">
-                                <!-- Les spécialités ajoutées seront affichées ici -->
-                              </div>
-                            </div>
-                          </div>
                         </div>
                         
                         <div class="col-lg-12">
@@ -727,7 +696,7 @@ $(document).ready(function () {
             success: function(data) {
                 var option = "<option value=''>Sélectionnez un modèle d'échéancier</option>";
                 $.each(data, function(index, item) {
-                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"'>"+item.label+"</option>";
+                    option += "<option value='"+item.id+"'>"+item.label+"</option>";
                 });
                 $('#modeleEcheancier').html(option);
             },
@@ -755,60 +724,29 @@ $(document).ready(function () {
             }
         });
     }
-
+    
     // Initialiser les données
-    // Variable globale pour suivre l'état du mode double diplomation
-    var isDoubleDiplomationMode = false;
-
     loadModelesEcheanciers();
     loadFormations();
     
     // Mettre à jour les montants lorsque le pourcentage change
     $(document).on('input', '.tranche-pourcentage', function() {
         var pourcentage = parseFloat($(this).val()) || 0;
-
-        var prixFormation = 0;
-        if (isDoubleDiplomationMode) {
-            // For double diplomation mode, get the total price from selected specialites in the list
-            var specialitePrixTotal = 0;
-
-            $('#listSpecialitesContainer .specialite-item').each(function() {
-                var specialitePrix = parseFloat($(this).find('.specialite-prix').val()) || 0;
-                specialitePrixTotal += specialitePrix;
-            });
-
-            prixFormation = specialitePrixTotal;
-        } else {
-            var selectedFormation = $('#formationEcheancier option:selected');
-            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-        }
-
+        var selectedFormation = $('#formationEcheancier option:selected');
+        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
         var montant = (prixFormation * pourcentage / 100).toFixed(2);
-
+        
         // Mettre à jour le champ montant correspondant
         $(this).closest('.row').find('.montant-echeance').val(montant);
     });
-
-    // Mettre à jour les montants lorsque la formation ou spécialités changent
+    
+    // Mettre à jour les montants lorsque la formation change
     $('#formationEcheancier').on('change', function() {
         // Si les tranches sont déjà générées, mettre à jour tous les montants
         if($('#tranchesContainer').is(':visible')) {
-            var prixFormation = 0;
-            if (isDoubleDiplomationMode) {
-                // For double diplomation mode, get the total price from selected specialites in the list
-                var specialitePrixTotal = 0;
-
-                $('#listSpecialitesContainer .specialite-item').each(function() {
-                    var specialitePrix = parseFloat($(this).find('.specialite-prix').val()) || 0;
-                    specialitePrixTotal += specialitePrix;
-                });
-
-                prixFormation = specialitePrixTotal;
-            } else {
-                var selectedFormation = $('#formationEcheancier option:selected');
-                prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-            }
-
+            var selectedFormation = $('#formationEcheancier option:selected');
+            var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+            
             $('.tranche-pourcentage').each(function() {
                 var pourcentage = parseFloat($(this).val()) || 0;
                 var montant = (prixFormation * pourcentage / 100).toFixed(2);
@@ -817,51 +755,19 @@ $(document).ready(function () {
         }
     });
     
-    // Show/hide formation or specialite fields based on model selection
-    $('#modeleEcheancier').on('change', function() {
-        var selectedOption = $(this).find('option:selected');
-        var isDoubleDiplomation = selectedOption.data('is-double-diplomation');
-
-        // Mettre à jour la variable globale
-        isDoubleDiplomationMode = isDoubleDiplomation;
-
-        if (isDoubleDiplomation) {
-            $('#formationField').hide();
-            $('#specialiteSection').show();
-        } else {
-            $('#formationField').show();
-            $('#specialiteSection').hide();
-            // Clear the specialite list when switching to non-double diplomation mode
-            $('#listSpecialitesContainer').empty();
-            $('#listeSpecialitesPlaceholder').show();
-        }
-    });
-
     // Charger les tranches lorsque le bouton est cliqué
     $('#btnChargerTranches').on('click', function() {
         var modeleId = $('#modeleEcheancier').val();
         var formationId = $('#formationEcheancier').val();
-
+        
         if(!modeleId) {
             alertify.error("Veuillez sélectionner un modèle d'échéancier");
             return;
         }
-
-        if (isDoubleDiplomationMode) {
-            var specialiteCount = $('#listSpecialitesContainer .specialite-item').length;
-            if(specialiteCount < 1) {
-                alertify.error("Veuillez ajouter au moins une spécialité");
-                return;
-            }
-            if(specialiteCount > 2) {
-                alertify.error("Vous ne pouvez pas ajouter plus de 2 spécialités");
-                return;
-            }
-        } else {
-            if(!formationId) {
-                alertify.error("Veuillez sélectionner une formation");
-                return;
-            }
+        
+        if(!formationId) {
+            alertify.error("Veuillez sélectionner une formation");
+            return;
         }
         
         // Charger les détails du modèle
@@ -873,39 +779,21 @@ $(document).ready(function () {
             success: function(response) {
                 if(response.status === 'success') {
                     var data = response.data;
-
-                    var prixFormation = 0;
-                    var selectedText = "";
-
-                    if (isDoubleDiplomationMode) {
-                        // For double diplomation mode, get the price from selected specialites in the list
-                        var specialitePrixTotal = 0;
-                        var specialiteNoms = [];
-
-                        $('#listSpecialitesContainer .specialite-item').each(function() {
-                            var specialitePrix = parseFloat($(this).find('.specialite-prix').val()) || 0;
-                            specialitePrixTotal += specialitePrix;
-                            var specialiteNom = $(this).find('strong').first().text().trim();
-                            specialiteNoms.push(specialiteNom);
-                        });
-
-                        prixFormation = specialitePrixTotal;
-                        selectedText = specialiteNoms.join(' & ');
-                    } else {
-                        // Récupérer le prix de la formation sélectionnée
-                        var selectedFormation = $('#formationEcheancier option:selected');
-                        prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-                        selectedText = selectedFormation.text();
-                    }
-
+                    
+                    // Récupérer le prix de la formation sélectionnée
+                    var selectedFormation = $('#formationEcheancier option:selected');
+                    var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+                    
                     // Mettre à jour le résumé
                     $('#resumeModele').text(data.label);
                     $('#resumeTranches').text(data.nombre_tranche + " tranches");
                     $('#resumePrix').text(prixFormation.toFixed(2) + " €");
                     $('#resumeTotal').text(prixFormation.toFixed(2) + " €");
-
-                    // Mettre à jour la formation/spécialités dans le résumé
-                    $('#resumeFormation').text(selectedText);
+                    
+                    // Mettre à jour la formation dans le résumé
+                    $('#formationEcheancier option:selected').each(function() {
+                        $('#resumeFormation').text($(this).text());
+                    });
                     
                     // Afficher les conteneurs
                     $('#tranchesContainer').show();
@@ -928,24 +816,10 @@ $(document).ready(function () {
     
     // Générer les tranches dynamiquement
     function generateTranches(tranches, nombreTranches) {
-        var prixFormation = 0;
-
-        if (isDoubleDiplomationMode) {
-            // For double diplomation mode, get the total price from selected specialites in the list
-            var specialitePrixTotal = 0;
-
-            $('#listSpecialitesContainer .specialite-item').each(function() {
-                var specialitePrix = parseFloat($(this).find('.specialite-prix').val()) || 0;
-                specialitePrixTotal += specialitePrix;
-            });
-
-            prixFormation = specialitePrixTotal;
-        } else {
-            // Récupérer le prix de la formation sélectionnée
-            var selectedFormation = $('#formationEcheancier option:selected');
-            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-        }
-
+        // Récupérer le prix de la formation sélectionnée
+        var selectedFormation = $('#formationEcheancier option:selected');
+        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        
         var container = $('#listeTranchesContainer');
         container.empty();
         
@@ -1035,14 +909,13 @@ $(document).ready(function () {
     $('#btnEnregistrerEcheancier').on('click', function() {
         var modeleId = $('#modeleEcheancier').val();
         var formationId = $('#formationEcheancier').val();
-
+        
         if(!modeleId) {
             alertify.error("Veuillez sélectionner un modèle d'échéancier");
             return;
         }
-
-        // Vérifier la formation seulement si ce n'est pas un mode double diplomation
-        if (!isDoubleDiplomationMode && !formationId) {
+        
+        if(!formationId) {
             alertify.error("Veuillez sélectionner une formation");
             return;
         }
@@ -1084,22 +957,9 @@ $(document).ready(function () {
             type: 'POST',
             data: {
                 'modele_id': modeleId,
-                'formation_id': isDoubleDiplomationMode ? null : formationId,  // Send null if double diplomation mode
+                'formation_id': formationId,
                 'tranches': JSON.stringify(tranchesData),
-                'is_double_diplomation': isDoubleDiplomationMode,
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            // Include specialite data if in double diplomation mode
-            beforeSend: function(xhr, settings) {
-                if (isDoubleDiplomationMode) {
-                    // Add specialite IDs to the request
-                    var specialiteIds = [];
-                    $('#listSpecialitesContainer .specialite-item').each(function() {
-                        var specialiteId = $(this).data('specialite-id');
-                        specialiteIds.push(specialiteId);
-                    });
-                    settings.data += '&specialite_ids=' + specialiteIds.join(',');
-                }
             },
             dataType: 'JSON',
             success: function(response) {
@@ -1130,99 +990,6 @@ $(document).ready(function () {
             }
         });
     });
-
-    // Charger les spécialités
-    function loadSpecialites() {
-        $.ajax({
-            url: "{% url 't_tresorerie:ApiLoadSpecialites' %}",
-            dataType: 'JSON',
-            type: "GET",
-            success: function(data) {
-                var option = "<option value=''>Sélectionnez une spécialité</option>";
-                $.each(data, function(index, item) {
-                    option += "<option value='"+item.id+"' data-prix='"+item.prix_double_diplomation+"'>"+item.label+"</option>";
-                });
-                $('#specialiteEcheancier').html(option);
-            },
-            error: function() {
-                alertify.error("Erreur lors du chargement des spécialités");
-            }
-        });
-    }
-
-    // Add specialite to list
-    $('#btnAjouterSpecialite').on('click', function() {
-        var specialiteId = $('#specialiteEcheancier').val();
-        var specialiteText = $('#specialiteEcheancier option:selected').text();
-        var specialitePrix = $('#specialiteEcheancier option:selected').data('prix');
-
-        if (!specialiteId) {
-            alertify.error("Veuillez sélectionner une spécialité");
-            return;
-        }
-
-        // Check if specialite is already in the list
-        var isAlreadyAdded = false;
-        $('#listSpecialitesContainer .specialite-item').each(function() {
-            if ($(this).data('specialite-id') == specialiteId) {
-                isAlreadyAdded = true;
-            }
-        });
-
-        if (isAlreadyAdded) {
-            alertify.error("Cette spécialité est déjà ajoutée");
-            return;
-        }
-
-        // Check if we've reached the maximum of 2 specialities
-        if ($('#listSpecialitesContainer .specialite-item').length >= 2) {
-            alertify.error("Vous ne pouvez pas ajouter plus de 2 spécialités");
-            return;
-        }
-
-
-        // Add specialite to list
-        var newItem = `
-            <div class="list-group-item d-flex justify-content-between align-items-center specialite-item" data-specialite-id="${specialiteId}">
-                <div>
-                    <strong>${specialiteText}</strong><br>
-                    <small class="text-muted">Prix: ${(specialitePrix || '0.00')} €</small>
-                    <input type="hidden" class="specialite-id" name="specialite_ids[]" value="${specialiteId}">
-                    <input type="hidden" class="specialite-prix" name="specialite_prix[]" value="${specialitePrix}">
-                </div>
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeSpecialite('${specialiteId}')">
-                    <i class="ri-delete-bin-line"></i> Retirer
-                </button>
-            </div>
-        `;
-
-        $('#listSpecialitesContainer').append(newItem);
-
-        // Show the container and hide the placeholder
-        $('#listSpecialitesContainer').show();
-        $('#listeSpecialitesPlaceholder').hide();
-
-        // Reset the select to placeholder
-        $('#specialiteEcheancier').val('');
-
-        alertify.success("Spécialité ajoutée avec succès");
-    });
-
-    // Function to remove a specialite from the list
-    window.removeSpecialite = function(specialiteId) {
-        $('#listSpecialitesContainer .specialite-item[data-specialite-id="' + specialiteId + '"]').remove();
-
-        // Show placeholder and hide container if no items left
-        if ($('#listSpecialitesContainer .specialite-item').length === 0) {
-            $('#listeSpecialitesPlaceholder').show();
-            $('#listSpecialitesContainer').hide();
-        }
-
-        alertify.success("Spécialité retirée");
-    };
-
-    // Initialize specialites
-    loadSpecialites();
 });
 </script>
 {% endblock content %}

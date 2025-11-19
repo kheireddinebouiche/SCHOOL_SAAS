@@ -388,6 +388,7 @@ def addSpecialite(request):
 
         return render(request, 'tenant_folder/formations/nouvelle_specialite.html', context)
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def updateSpecialite(request,pk):
     specialite = Specialites.objects.get(id = pk)
@@ -396,7 +397,6 @@ def updateSpecialite(request,pk):
         form = NewSpecialiteForm(request.POST, instance=specialite)
         if form.is_valid():
             updated_spec = form.save()
-            updated_spec.updated_by = request.user
             updated_spec.save()
 
             formation  = specialite.formation
@@ -411,7 +411,6 @@ def updateSpecialite(request,pk):
     
     context = {
         'form' : form,
-        'tenant' : request.tenant
     }
     return render(request, "tenant_folder/formations/update_specialite.html", context)
 

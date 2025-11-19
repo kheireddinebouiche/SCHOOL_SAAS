@@ -124,12 +124,13 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['abr','code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version','condition_access']
+        fields = ['abr','code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version','condition_access','prix_double_diplomation']
 
         widgets = {
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'specialiteId'}),
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prix' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'prix_double_diplomation' : forms.TextInput(attrs={'class' : 'form-control'}),
             'formation' : forms.Select(attrs={'class' : 'form-control'}),
             'duree' : forms.TextInput(attrs={'class' : 'form-control'}),
             'responsable' : forms.Select(attrs={'class':'form-control'}),
@@ -150,6 +151,8 @@ class NewSpecialiteForm(forms.ModelForm):
             'condition_access' : "Conditions d'accès :",
             'dossier_inscription' : "Dossier d'inscription :",
             'abr' : "Abreviation :",
+            'prix' : "Prix (Prix standard de la formation) :",
+            'prix_double_diplomation' : "Prix de la formation en double diplomation :"
         }
 
         def clean_name(self):

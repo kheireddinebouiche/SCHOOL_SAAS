@@ -67,6 +67,7 @@ class Specialites(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, unique =True)
     label = models.CharField(max_length=100, null=True, blank=True)
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
+    prix_double_diplomation = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
     duree = models.CharField(max_length=300, null=True, blank=True)
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
     branche = models.CharField(max_length=100, null=True, blank=True)
