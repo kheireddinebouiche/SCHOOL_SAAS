@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 from .f_views.formateurs import *
+from .f_views.double_diplomation import *
 
 app_name="t_formations"
 
@@ -18,6 +19,15 @@ urlpatterns = [
     path('ApiSyncFormation',ApiSyncFormation, name="ApiSyncFormation"),
     path('ApiSyncUpdateFormation', ApiSyncUpdateFormation, name="ApiSyncUpdateFormation"),
     path('ApiCheckFormationState', ApiCheckFormationState, name="ApiCheckFormationState"),
+
+    ### Gestion de la double diplomation
+    path('formation/double-diplomation/liste/',PageAssociation, name="PageAssociation"),
+    path('ApiLoadFormations', ApiLoadFormations, name="ApiLoadFormations"),
+    path('ApiLoadSpecialites',ApiLoadSpecialites, name="ApiLoadSpecialites"),
+    path('ApiSaveDouble', ApiSaveDouble, name="ApiSaveDouble"),
+    path('ApiLoadDoubleDiplomation', ApiLoadDoubleDiplomation, name="ApiLoadDoubleDiplomation"),
+    path('ApiDeleteDoubleDiplomation', ApiDeleteDoubleDiplomation, name="ApiDeleteDoubleDiplomation"),
+    path('ApiLoadSelestDoubleDiplomation', ApiLoadSelestDoubleDiplomation, name="ApiLoadSelestDoubleDiplomation"),
 
     path('formations/modification/<int:pk>/', updateFormation, name="updateFormation"),
     

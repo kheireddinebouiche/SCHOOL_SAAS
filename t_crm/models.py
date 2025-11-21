@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from t_formations.models import Formation,Specialites,Promos
 from django_countries.fields import CountryField
-from t_formations.models import DossierInscription
+from t_formations.models import DossierInscription, DoubleDiplomation
 from .tenant_path import *
 from t_remise.models import *
 from phonenumber_field.modelfields import PhoneNumberField
@@ -173,8 +173,8 @@ class Prospets(models.Model):
     
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
-    indic = models.CharField(max_length=10, null=True, blank=True, choices=INDICATIF)
-    telephone = models.CharField(max_length=14, null=True, blank=True)
+    indic = models.CharField(max_length=10, null=True, choices=INDICATIF)
+    telephone = models.CharField(max_length=14, null=True)
     type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
     canal = models.CharField(max_length=255, null=True, choices=[('email', 'Email'), ('telephone', 'Téléphone'), ('autre', 'Autre'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicitée')])
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
@@ -259,8 +259,6 @@ class Prospets(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}"
     
-
-
 class FicheDeVoeux(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux")
     specialite = models.ForeignKey(Specialites, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialite_fiche_voeux")
@@ -278,6 +276,21 @@ class FicheDeVoeux(models.Model):
     
     def __str__(self):
         return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
+    
+
+class FicheVoeuxDouble(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux_double")
+    specialite = models.ForeignKey(DoubleDiplomation, on_delete=models.DO_NOTHING, null=True, blank=True)
+    promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_fiche_voeux_double", limit_choices_to={'etat':'active'})
+
+    is_confirmed = models.BooleanField(default=False)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return f"Fiche de voeux double diplômation : {self.prospect.nom} {self.prospect.prenom}"
+
     
 class FicheDeVoeuxAddiotionnel(models.Model):
     order = models.CharField(max_length=10, null=True, blank=True)

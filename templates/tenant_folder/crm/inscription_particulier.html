@@ -44,7 +44,7 @@
               </div>
             </div>
             <div class="card-body p-3">
-              <form method="POST" class="needs-validation" novalidate onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+              <form method="POST" class="needs-validation" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
                 {% csrf_token %}
                 <div class="bg-light p-3 rounded-3 mb-3 border">
                   <div class="d-flex align-items-center mb-3">
@@ -74,11 +74,11 @@
                   <div class="row g-3">
                     <div class="col-lg-6">
                       <label class="form-label" for="id_last_name">{{form.nom.label}}</label>
-                      {{ form.nom }}
+                      <input type="text" required name="nom" class="form-control" />
                     </div>
                     <div class="col-lg-6">
                       <label class="form-label" for="id_first_name">{{form.prenom.label}}</label>
-                      {{ form.prenom }}
+                      <input type="text" required name="prenom" class="form-control" />
                     </div>
                   </div>
                 </div>
@@ -112,9 +112,43 @@
                   </div>
                 </div>
 
-                
-                <!-- Voeux de formation -->
+                <!-- Possede d'autres voeux -->
                 <div class="bg-light p-3 rounded-3 mb-3 border">
+                  <div class="d-flex align-items-center mb-3">
+                    
+                    <h5 class="text-info mb-0">Sélection du type du cursus :</h5>
+                  </div>
+                  
+                    {{form.select_type}}
+                  
+                  <p class="text-muted small mb-0">
+                    Veuillez sélectionner un type de cursus que l'etudiant va suivre
+                  </p>
+                </div>
+
+                <!-- Voeux de formation -->
+                <div id="sectionSelectionDoubleDiplomation" class="bg-light p-3 rounded-3 mb-3 border">
+                  <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-graduation-cap text-info me-2"></i>
+                    <h5 class="text-info mb-0">Voeux de formation (double diplomation)</h5>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-lg-6">
+                    <label class="form-label" for="id_promo_selection_double">Promo</label>
+                      <select class="form-select" id="id_promo_selection_double" name="promo_selection_double">
+                        
+                      </select>
+                    </div>  
+                    <div class="col-lg-6">
+                      <label class="form-label" for="id_select_double">Formation (Double diplômation)</label>
+                      <select class="form-select" id="id_select_double" name="id_select_double">
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Voeux de formation -->
+                <div id="sectionVoeuxFormation" class="bg-light p-3 rounded-3 mb-3 border">
                   <div class="d-flex align-items-center mb-3">
                     <i class="fas fa-graduation-cap text-info me-2"></i>
                     <h5 class="text-info mb-0">Voeux de formation</h5>
@@ -188,6 +222,9 @@
   <script>
     $(document).ready(function () {
 
+      $('#sectionVoeuxFormation').hide();
+      $('#sectionSelectionDoubleDiplomation').hide();
+      
       function loadPromo(){
         $.ajax({
           url : "{% url 't_formations:ApiListePromos' %}",
@@ -199,6 +236,7 @@
               option += "<option value="+item.code+">#"+item.code+ " - "+item.session_label+'-'+item.begin_year+'/'+item.end_year+"</option>";
             });
             $('#id_promo_selection').html(option);
+            $('#id_promo_selection_double').html(option);
           }
         });
       }
@@ -248,14 +286,47 @@
         });
       }
 
-    
+      function loadDoubleInscription(){
+        $.ajax({
+          url : "{% url 't_formations:ApiLoadSelestDoubleDiplomation' %}",
+          dataType : "JSON",
+          type : "GET",
+          success : function(data){
+            var option = "<option value='0'>Veuillez sélectionner une double diplômation</option>";
+            $.each(data, function(index, p){
+              option += "<option value="+p.id+">"+p.label+"</label>";
+            });
+
+            $("#id_select_double").html(option);
+          }
+        });
+      }
+
       $(document).on('change', '#id_voeux_formation', function(){
         var value = $(this).val();
 
         loadSpecialite(value);
       });
 
-      
+      $(document).on('change','#selectTypeCursusID', function(){
+        var value = $(this).val();
+
+        if (value === "0"){
+
+          $('#sectionVoeuxFormation').show();
+          $('#sectionSelectionDoubleDiplomation').hide();
+          
+
+        }else{
+
+          $('#sectionVoeuxFormation').hide();
+          loadDoubleInscription();
+          $('#sectionSelectionDoubleDiplomation').show();
+
+
+        }
+
+      })
      
     });
   </script>

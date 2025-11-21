@@ -91,6 +91,17 @@ class Specialites(models.Model):
     def __str__(self):
         return self.label
     
+class DoubleDiplomation(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    specialite1 = models.ForeignKey(Specialites, related_name="double_spec1", on_delete = models.DO_NOTHING, null=True, blank=True)
+    specialite2 = models.ForeignKey(Specialites, related_name="double_spec2", on_delete = models.DO_NOTHING, null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+    
 class Modules(models.Model):
    
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True, to_field="code")

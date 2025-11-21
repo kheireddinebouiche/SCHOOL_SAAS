@@ -30,6 +30,7 @@ class VisiteurForm(forms.ModelForm):
             'post_occupe' : forms.TextInput(attrs={'class':'form-control'}),
             'experience' : forms.TextInput(attrs={'class':'form-control'}),
             'entreprise' : forms.TextInput(attrs={'class':'form-control'}),
+            'is_double' : forms.CheckboxInput(attrs={"class" : "form-control"}),
             
         }
 
@@ -55,6 +56,7 @@ class VisiteurForm(forms.ModelForm):
             'experience' : 'Expérience',
             'entreprise' : 'Entreprise',
             'specialite' : 'Spécialité',
+            'is_double' : "Souhaite intégrer une double diplômation :"
         }
     
 
@@ -65,7 +67,11 @@ class NewProspecFormParticulier(forms.ModelForm):
         required=True
     )
     
-    
+    select_type = forms.ChoiceField(
+        choices=[('10','Veuillez sélectionner un type de cursus'),('0','Cursus standard (Une seule formation)'),('1','Cursus double diplômation (Deux spécialitées en même temps)')],
+        widget=forms.Select(attrs={'class': 'form-control','id':"selectTypeCursusID"}),
+        required=True,
+    )
     class Meta:
         model = Prospets
         fields = '__all__'
@@ -85,6 +91,7 @@ class NewProspecFormParticulier(forms.ModelForm):
             "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "observation" : forms.Textarea(attrs={'class':'form-control', "rows" : "3"}),
             "lead_source" : forms.Select(attrs={'class' : "form-control"}),
+            'is_double' : forms.CheckboxInput(attrs={"class" : "form-control",'id':'IdSelectDoubleDiplomation'})
         }
 
 class NewProspecFormEntreprise(forms.ModelForm):

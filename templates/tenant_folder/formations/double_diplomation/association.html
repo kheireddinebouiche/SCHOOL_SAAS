@@ -1,0 +1,876 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Double Diplomation - Combinaisons de Spécialités{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="ri-links-line text-success"></i>
+              </div>
+              <h4 class="mb-0 text-success">Combinaisons de Spécialités</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Formations</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Double Diplomation</a>
+                  </li>
+                  <li class="breadcrumb-item active">Combinaisons</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="ri-filter-line text-success me-2"></i>
+                  <h5 class="card-title mb-0 text-success">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="ri-search-line text-muted search-icon"></i>
+                  </div>
+                  <select class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par formation 1</option>
+                    <option value="informatique">Informatique</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="finance">Finance</option>
+                  </select>
+
+                  <select class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par formation 2</option>
+                    <option value="informatique">Informatique</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="finance">Finance</option>
+                  </select>
+
+                  <button id="addCombinaisonBtn" class="btn btn-success rounded-pill px-3">
+                    <i class="ri-add-line me-1"></i>Ajouter
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3">
+              <div class="table-responsive">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Spécialités</th>
+                      <th class="border-0">Libellé</th>
+                      <th class="border-0">État</th>
+                      <th class="border-0">Date de création</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="border-top-0">
+                    
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+
+    <!-- Modal Ajouter Combinaison -->
+    <div class="modal fade" id="ajouterCombinaisonModal" tabindex="-1" aria-labelledby="ajouterCombinaisonModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-success bg-opacity-10 border-0">
+            <h5 class="modal-title text-success" id="ajouterCombinaisonModalLabel">
+              <i class="ri-add-line me-2"></i>Ajouter une nouvelle combinaison
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              {% csrf_token %}
+              <div class="mb-4">
+                <label for="formationSelectId" class="form-label">Sélectionnez une formation</label>
+                <select class="form-select" id="formationSelectId">
+                  <option value="">Chargement...</option>
+                </select>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Spécialités de la formation</label>
+                <div class="row">
+                  <div class="col-md-6">
+                    <select class="form-select" id="specialite" disabled>
+                      <option value="">Sélectionnez une formation d'abord</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <button type="button" class="btn btn-outline-success w-100" id="ajouterSpecialiteBtn" disabled>
+                      <i class="ri-add-line me-1"></i>Ajouter la spécialité
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Spécialités sélectionnées</label>
+                <div class="specialites-container" id="specialitesContainer">
+                  <div class="empty-state text-center py-4 text-muted">
+                    <i class="ri-links-line display-6 mb-2"></i>
+                    <p>Aucune spécialité sélectionnée. Ajoutez des spécialités depuis la liste ci-dessus.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="statut" class="form-label">Statut</label>
+                <select class="form-select" id="statut">
+                  <option value="actif" selected>Actif</option>
+                  <option value="en_attente">En attente</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="label" class="form-label">Libellé</label>
+                <input type="text" class="form-control" id="label" placeholder="Saisissez le libellé de la combinaison" required>
+              </div>
+              <div class="mb-3">
+                <label for="description" class="form-label">Description (Facultatif)</label>
+                <textarea class="form-control" id="description" rows="3" placeholder="Saisissez une description pour cette combinaison..."></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-success" id="enregistrerBtn" disabled>
+              <i class="ri-save-line me-1"></i>Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Consulter Combinaison -->
+    <div class="modal fade" id="consulterCombinaisonModal" tabindex="-1" aria-labelledby="consulterCombinaisonModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-success bg-opacity-10 border-0">
+            <h5 class="modal-title text-success" id="consulterCombinaisonModalLabel">
+              <i class="ri-eye-line me-2"></i>Détails de la combinaison
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label text-muted">Formation 1</label>
+                  <p class="mb-0">Licence Informatique</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Spécialité 1</label>
+                  <p class="mb-0">Développement Web</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label text-muted">Formation 2</label>
+                  <p class="mb-0">Master Marketing</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Spécialité 2</label>
+                  <p class="mb-0">Marketing Digital</p>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label text-muted">Statut</label>
+                  <p class="mb-0">
+                    <span class="badge bg-success bg-opacity-10 text-success">Actif</span>
+                  </p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label text-muted">Date de création</label>
+                  <p class="mb-0">15 Juin 2023</p>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-muted">Description</label>
+              <p class="mb-0">Combinaison entre le développement web et le marketing digital pour former des professionnels polyvalents.</p>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Modifier Combinaison -->
+    <div class="modal fade" id="modifierCombinaisonModal" tabindex="-1" aria-labelledby="modifierCombinaisonModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary bg-opacity-10 border-0">
+            <h5 class="modal-title text-primary" id="modifierCombinaisonModalLabel">
+              <i class="ri-edit-line me-2"></i>Modifier la combinaison
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="formation1Modif" class="form-label">Formation 1</label>
+                    <select class="form-select" id="formation1Modif">
+                      <option value="informatique" selected>Licence Informatique</option>
+                      <option value="genie_civil">Master Génie Civil</option>
+                      <option value="biologie">Licence Biologie</option>
+                      <option value="economie">Licence Économie</option>
+                      <option value="marketing">Master Marketing</option>
+                      <option value="chimie">Master Chimie</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="specialite1Modif" class="form-label">Spécialité 1</label>
+                    <select class="form-select" id="specialite1Modif">
+                      <option value="developpement_web" selected>Développement Web</option>
+                      <option value="structures">Structures</option>
+                      <option value="biologie_moleculaire">Biologie Moléculaire</option>
+                      <option value="economie_appliquee">Économie Appliquée</option>
+                      <option value="marketing_digital">Marketing Digital</option>
+                      <option value="chimie_organique">Chimie Organique</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="formation2Modif" class="form-label">Formation 2</label>
+                    <select class="form-select" id="formation2Modif">
+                      <option value="marketing" selected>Master Marketing</option>
+                      <option value="informatique">Licence Informatique</option>
+                      <option value="genie_civil">Master Génie Civil</option>
+                      <option value="biologie">Licence Biologie</option>
+                      <option value="economie">Licence Économie</option>
+                      <option value="chimie">Master Chimie</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="specialite2Modif" class="form-label">Spécialité 2</label>
+                    <select class="form-select" id="specialite2Modif">
+                      <option value="marketing_digital" selected>Marketing Digital</option>
+                      <option value="developpement_web">Développement Web</option>
+                      <option value="structures">Structures</option>
+                      <option value="biologie_moleculaire">Biologie Moléculaire</option>
+                      <option value="economie_appliquee">Économie Appliquée</option>
+                      <option value="chimie_organique">Chimie Organique</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="statutModif" class="form-label">Statut</label>
+                    <select class="form-select" id="statutModif">
+                      <option value="actif" selected>Actif</option>
+                      <option value="en_attente">En attente</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="dateCreationModif" class="form-label">Date de création</label>
+                    <input type="date" class="form-control" id="dateCreationModif" value="2023-06-15">
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="descriptionModif" class="form-label">Description (Facultatif)</label>
+                <textarea class="form-control" id="descriptionModif" rows="3">Combinaison entre le développement web et le marketing digital pour former des professionnels polyvalents.</textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Supprimer Combinaison -->
+    <div class="modal fade" id="supprimerCombinaisonModal" tabindex="-1" aria-labelledby="supprimerCombinaisonModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-danger bg-opacity-10 border-0">
+            <h5 class="modal-title text-danger" id="supprimerCombinaisonModalLabel">
+              <i class="ri-delete-bin-line me-2"></i>Confirmer la suppression
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <div class="avatar-sm mx-auto mb-4">
+              <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-4">
+                <i class="ri-delete-bin-line"></i>
+              </div>
+            </div>
+            <p class="mb-2">Êtes-vous sûr de vouloir supprimer cette combinaison ?</p>
+            <p class="text-muted mb-0">Cette action est irréversible et supprimera définitivement la combinaison "Licence Informatique - Développement Web" avec "Master Marketing - Marketing Digital".</p>
+          </div>
+          <div class="modal-footer justify-content-center bg-light border-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-danger">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End Page-content -->
+</div>
+
+
+<script>
+  
+   
+ 
+$(document).ready(function(){
+    // Variables pour stocker les données chargées
+    let formationsData = [];
+    let specialtiesData = [];
+    let specialitesSelectionnees = [];
+
+    // Fonction pour charger les combinaisons existantes
+    function loadDoubleDiplomation() {
+        $.ajax({
+            url: '{% url "t_formations:ApiLoadDoubleDiplomation" %}',
+            type: "GET",
+            dataType: "JSON",
+            success: function(response) {
+                if (response.success) {
+                    updateTableData(response.combinaisons);
+                } else {
+                    console.error('Erreur lors du chargement des combinaisons:', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur AJAX lors du chargement des combinaisons:', error);
+            }
+        });
+    }
+
+    // Fonction pour mettre à jour les données du tableau
+    function updateTableData(combinaisons) {
+        // Effacer le contenu actuel du tbody
+        $('#example tbody').empty();
+
+        if (combinaisons.length === 0) {
+            // Afficher le message "aucune combinaison trouvée"
+            var emptyRow = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                            <div class="avatar-sm mb-4">
+                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                    <i class="ri-folder-cloud-line"></i>
+                                </div>
+                            </div>
+                            <h5 class="mb-2">Aucune combinaison trouvée</h5>
+                            <p class="text-muted mb-0">Il n'y a aucune combinaison de spécialités enregistrée pour le moment</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            $('#example tbody').append(emptyRow);
+        } else {
+            // Ajouter chaque combinaison au tableau
+            $.each(combinaisons, function(index, combinaison) {
+                var row = `
+                    <tr>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="ri-book-2-line text-success me-2"></i>
+                                    <div>
+                                        <div class="fw-medium">${combinaison.specialite1_label}</div>
+                                        <div class="text-muted small">${combinaison.specialite1_formation}</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-book-2-line text-success me-2"></i>
+                                    <div>
+                                        <div class="fw-medium">${combinaison.specialite2_label}</div>
+                                        <div class="text-muted small">${combinaison.specialite2_formation}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            ${combinaison.label}
+                        </td>
+                        <td>
+                            <span class="badge bg-success bg-opacity-10 text-success">Actif</span>
+                        </td>
+                        <td>
+                            ${combinaison.created_at}
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-soft-success btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri-more-2-fill"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                                    <li>
+                                        <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2" data-bs-toggle="modal" data-bs-target="#consulterCombinaisonModal" data-combinaison-id="${combinaison.id}">
+                                            <i class="ri-eye-line text-success me-2"></i>Consulter
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2" data-bs-toggle="modal" data-bs-target="#modifierCombinaisonModal" data-combinaison-id="${combinaison.id}">
+                                            <i class="ri-edit-line text-primary me-2"></i>Modifier
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li>
+                                        <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger" data-bs-toggle="modal" data-bs-target="#supprimerCombinaisonModal" data-combinaison-id="${combinaison.id}">
+                                            <i class="ri-delete-bin-line me-2"></i>Supprimer
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                $('#example tbody').append(row);
+            });
+        }
+    }
+
+    // Fonction pour charger les formations
+    function loadFormations() {
+        $.ajax({
+            url: '{% url "t_formations:ApiLoadFormations" %}',
+            type: "GET",
+            dataType: "JSON",
+            success: function(data) {
+                formationsData = data;
+                var option = "<option value=''>Sélectionnez une formation</option>";
+                $.each(data, function(index, formation) {
+                    option += "<option value='"+formation.id+"'>"+formation.nom+"</option>";
+                });
+                $('#formationSelectId').html(option);
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur lors du chargement des formations:', error);
+                $('#formationSelectId').html("<option value=''>Erreur de chargement</option>");
+            }
+        });
+    }
+
+    // Fonction pour charger les spécialités
+    function loadSpecialites() {
+        $.ajax({
+            url: '{% url "t_formations:ApiLoadSpecialites" %}',
+            type: "GET",
+            dataType: "JSON",
+            success: function(data) {
+                specialtiesData = data;
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur lors du chargement des spécialités:', error);
+            }
+        });
+    }
+
+    // Charger les formations, spécialités et combinaisons au chargement de la page
+    loadFormations();
+    loadSpecialites();
+    loadDoubleDiplomation();
+
+    // Écouteur pour le changement de formation
+    $('#formationSelectId').on('change', function() {
+        const formationId = $(this).val();
+
+        // Réinitialiser le select des spécialités
+        $('#specialite').html('<option value="">Sélectionnez une spécialité</option>');
+        $('#specialite').prop('disabled', true);
+
+        if (formationId) {
+            // Filtrer les spécialités pour cette formation
+            const specialtiesForFormation = specialtiesData.filter(specialite =>
+                specialite.formation__id == formationId
+            );
+
+            if (specialtiesForFormation.length > 0) {
+                // Activer le select des spécialités
+                $('#specialite').prop('disabled', false);
+                $('#specialite').html('<option value="">Sélectionnez une spécialité</option>');
+
+                // Ajouter les spécialités de la formation sélectionnée
+                specialtiesForFormation.forEach(specialite => {
+                    const option = `<option value="${specialite.id}">${specialite.label}</option>`;
+                    $('#specialite').append(option);
+                });
+            } else {
+                $('#specialite').html('<option value="">Aucune spécialité pour cette formation</option>');
+            }
+        } else {
+            // Désactiver le select des spécialités si aucune formation n'est sélectionnée
+            $('#specialite').prop('disabled', true);
+            $('#specialite').html('<option value="">Sélectionnez une formation d\'abord</option>');
+        }
+
+        // Désactiver le bouton d'ajout
+        $('#ajouterSpecialiteBtn').prop('disabled', true);
+    });
+
+    // Écouteur pour le changement de spécialité
+    $('#specialite').on('change', function() {
+        // Activer le bouton d'ajout si une spécialité est sélectionnée
+        const isSpecialiteSelected = $(this).val() !== '';
+        $('#ajouterSpecialiteBtn').prop('disabled', !isSpecialiteSelected);
+    });
+
+    // Écouteur pour le bouton d'ajout de spécialité
+    $('#ajouterSpecialiteBtn').on('click', function() {
+        const formationId = parseInt($('#formationSelectId').val());
+        const specialiteId = parseInt($('#specialite').val());
+
+        if (!formationId || !specialiteId) return;
+
+        // Vérifier si la limite de 2 spécialités est atteinte
+        if (specialitesSelectionnees.length >= 2) {
+            alertify.error('Vous ne pouvez pas ajouter plus de 2 spécialités à une combinaison.');
+            return;
+        }
+
+        // Vérifier si la spécialité est déjà sélectionnée
+        if (specialitesSelectionnees.some(s => s.id === specialiteId)) {
+            alertify.error('Cette spécialité est déjà sélectionnée.');
+            return;
+        }
+
+        // Trouver les détails de la formation
+        const formationNom = $('#formationSelectId option:selected').text();
+
+        // Trouver les détails de la spécialité
+        const specialiteDetails = specialtiesData.find(s => s.id === specialiteId);
+
+        // Créer l'objet spécialité
+        const nouvelleSpecialite = {
+            id: specialiteId,
+            nom: specialiteDetails ? specialiteDetails.label : '',
+            formation: formationNom,
+            formationId: formationId
+        };
+
+        // Ajouter à la liste
+        specialitesSelectionnees.push(nouvelleSpecialite);
+
+        // Mettre à jour l'affichage
+        mettreAJourAffichageSpecialites();
+
+        // Réinitialiser le select de spécialité
+        $('#specialite').val('');
+        $('#ajouterSpecialiteBtn').prop('disabled', true);
+
+        // Activer le bouton d'enregistrement si 2 spécialités sont sélectionnées
+        if (specialitesSelectionnees.length === 2) {
+            $('#enregistrerBtn').prop('disabled', false);
+        }
+    });
+
+    // Écouteur pour le bouton d'ajout de combinaison
+    $(document).on('click', '#addCombinaisonBtn', function(){
+        $('#ajouterCombinaisonModal').modal('show');
+    });
+
+    // Écouteur pour l'ouverture du modal
+    $('#ajouterCombinaisonModal').on('show.bs.modal', function() {
+        // Réinitialiser le formulaire
+        $('#formationSelectId').val('');
+        $('#specialite').html('<option value="">Sélectionnez une formation d\'abord</option>');
+        $('#specialite').prop('disabled', true);
+        $('#ajouterSpecialiteBtn').prop('disabled', true);
+        specialitesSelectionnees = [];
+        mettreAJourAffichageSpecialites();
+        $('#statut').val('actif');
+        $('#description').val('');
+    });
+
+    // Fonction pour mettre à jour l'affichage des spécialités sélectionnées
+    function mettreAJourAffichageSpecialites() {
+        if (specialitesSelectionnees.length === 0) {
+            $('#specialitesContainer').html(`
+                <div class="empty-state text-center py-4 text-muted">
+                    <i class="ri-links-line display-6 mb-2"></i>
+                    <p>Aucune spécialité sélectionnée. Ajoutez des spécialités depuis la liste ci-dessus.</p>
+                </div>
+            `);
+            $('#enregistrerBtn').prop('disabled', true);
+            return;
+        }
+
+        // Supprimer le message d'état vide s'il existe
+        if ($('#specialitesContainer').find('.empty-state').length) {
+            $('#specialitesContainer').html('');
+        }
+
+        // Créer les tags pour chaque spécialité
+        $('#specialitesContainer').empty(); // Clear previous content
+        specialitesSelectionnees.forEach((specialite, index) => {
+            const tag = `
+                <div class="selected-specialite-tag d-flex justify-content-between align-items-center bg-light rounded-pill px-3 py-2 mb-2" data-index="${index}">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-book-2-line text-success me-2"></i>
+                        <div>
+                            <div class="fw-medium">${specialite.formation}</div>
+                            <div class="text-muted small">${specialite.nom}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-specialite" data-index="${index}">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
+            `;
+
+            $('#specialitesContainer').append(tag);
+        });
+
+        // Mettre à jour l'état du bouton d'enregistrement
+        $('#enregistrerBtn').prop('disabled', specialitesSelectionnees.length !== 2);
+    }
+
+    // Écouteur pour supprimer une spécialité
+    $(document).on('click', '.remove-specialite', function() {
+        const indexToRemove = parseInt($(this).data('index'));
+        specialitesSelectionnees.splice(indexToRemove, 1);
+        mettreAJourAffichageSpecialites();
+    });
+
+    // Écouteur pour l'enregistrement des données
+    $('#enregistrerBtn').on('click', function() {
+        // Récupérer les données du formulaire
+        const specialite1 = specialitesSelectionnees[0];
+        const specialite2 = specialitesSelectionnees[1];
+        const label = $('#label').val();
+        const statut = $('#statut').val();
+        const description = $('#description').val();
+
+        // Valider qu'il y a exactement 2 spécialités sélectionnées
+        if (specialitesSelectionnees.length !== 2) {
+            alertify.error('Veuillez sélectionner exactement 2 spécialités.');
+            return;
+        }
+
+        // Préparer les données à envoyer
+        const dataToSend = {
+            specialite1_id: specialite1.id,
+            specialite2_id: specialite2.id,
+            label: label.toUpperCase(), // Convertir le label en majuscule
+            statut: statut,
+            description: description,
+            csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+        };
+
+        // Désactiver le bouton pendant l'envoi
+        $('#enregistrerBtn').prop('disabled', true).text('Enregistrement...');
+
+        // Envoyer les données via AJAX
+        $.ajax({
+            url: "{% url 't_formations:ApiSaveDouble' %}", 
+            type: 'POST',
+            data: dataToSend,
+            success: function(response) {
+                if (response.success) {
+                    // Afficher un message de succès
+                    alertify.success('La combinaison a été enregistrée avec succès.');
+
+                    // Fermer le modal
+                    $('#ajouterCombinaisonModal').modal('hide');
+
+                    // Réinitialiser le formulaire
+                    specialitesSelectionnees = [];
+                    mettreAJourAffichageSpecialites();
+                    $('#statut').val('actif');
+                    $('#description').val('');
+
+                    // Rafraîchir les données de la table
+                    loadDoubleDiplomation();
+                } else {
+                    // Gérer les erreurs spécifiques du backend
+                    alertify.error('Erreur : ' + (response.message || 'Une erreur est survenue lors de l\'enregistrement.'));
+                    $('#enregistrerBtn').prop('disabled', false).text('Enregistrer');
+                }
+            },
+            error: function(xhr, status, error) {
+                // Gérer les erreurs AJAX
+                console.error('Erreur AJAX:', error);
+                console.error('Réponse:', xhr.responseText);
+
+                let errorMessage = 'Une erreur est survenue lors de l\'enregistrement.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 400) {
+                    errorMessage = 'Données invalides. Veuillez vérifier les informations saisies.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'Accès refusé. Veuillez vérifier vos autorisations.';
+                }
+
+                alertify.error(errorMessage);
+                $('#enregistrerBtn').prop('disabled', false).text('Enregistrer');
+            }
+        });
+    });
+
+    // Écouteur pour le clic sur le bouton "Supprimer" dans le dropdown
+    $(document).on('click', '[data-bs-target="#supprimerCombinaisonModal"]', function() {
+        const combinaisonId = $(this).data('combinaison-id');
+        // Stocker l'ID de la combinaison à supprimer dans un attribut du modal
+        $('#supprimerCombinaisonModal').data('combinaison-id', combinaisonId);
+
+        // Mettre à jour le message dans le modal avec les informations de la combinaison
+        // Pour cela, on va chercher la ligne correspondante dans le tableau
+        const row = $(this).closest('tr');
+        const formation1 = row.find('td:first .text-body').text();
+        const specialite1 = row.find('td:eq(1) .text-body').text().replace('  ', '').trim(); // Remove icon spacing
+        const formation2 = row.find('td:eq(2) .text-body').text();
+        const specialite2 = row.find('td:eq(3) .text-body').text().replace('  ', '').trim(); // Remove icon spacing
+
+        // Mettre à jour le texte dans le modal de suppression
+        $('#supprimerCombinaisonModal .modal-body p.text-muted').html(
+            `Cette action est irréversible et supprimera définitivement la combinaison "${formation1} - ${specialite1}" avec "${formation2} - ${specialite2}".`
+        );
+    });
+
+    // Écouteur pour le bouton de confirmation de suppression
+    $(document).on('click', '#supprimerCombinaisonModal .btn-danger', function() {
+        const combinaisonId = $('#supprimerCombinaisonModal').data('combinaison-id');
+
+        if (!combinaisonId) {
+            alertify.error('Erreur: ID de combinaison non trouvé.');
+            return;
+        }
+
+        // Désactiver le bouton pendant l'opération
+        const deleteBtn = $(this);
+        deleteBtn.prop('disabled', true).text('Suppression...');
+
+        // Envoyer la requête de suppression
+        $.ajax({
+            url: '{% url "t_formations:ApiDeleteDoubleDiplomation" %}',
+            type: 'POST',
+            data: {
+                'combinaison_id': combinaisonId,
+                'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Fermer le modal
+                    $('#supprimerCombinaisonModal').modal('hide');
+
+                    // Afficher un message de succès
+                    alertify.success(response.message);
+
+                    // Rafraîchir les données de la table
+                    loadDoubleDiplomation();
+                } else {
+                    // Afficher un message d'erreur
+                    alertify.error('Erreur : ' + response.message);
+                }
+                // Réactiver le bouton
+                deleteBtn.prop('disabled', false).text('Supprimer');
+            },
+            error: function(xhr, status, error) {
+                // Gérer les erreurs AJAX
+                console.error('Erreur AJAX lors de la suppression:', error);
+                console.error('Réponse:', xhr.responseText);
+
+                let errorMessage = 'Une erreur est survenue lors de la suppression.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 400) {
+                    errorMessage = 'Données invalides. Veuillez vérifier les informations.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'Accès refusé. Veuillez vérifier vos autorisations.';
+                }
+
+                alertify.error(errorMessage);
+
+                // Réactiver le bouton
+                deleteBtn.prop('disabled', false).text('Supprimer');
+            }
+        });
+    });
+
+});
+
+
+
+</script>
+
+{% endblock content %}
+

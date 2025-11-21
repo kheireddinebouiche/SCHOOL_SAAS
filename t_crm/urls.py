@@ -60,6 +60,7 @@ urlpatterns = [
 
     ########################################## Fiche des voeux###################################################
     path('ApiLoadFicheVoeuxProspect', ApiLoadFicheVoeuxProspect, name="ApiLoadFicheVoeuxProspect"),
+    path('ApiLoadFicheVoeuxDoubleProspect',ApiLoadFicheVoeuxDoubleProspect, name="ApiLoadFicheVoeuxDoubleProspect"),
     path('ApiConfirmeDoubleDiplome', ApiConfirmeDoubleDiplome, name="ApiConfirmeDoubleDiplome"),
     ########################################## Fiche des voeux###################################################
     
@@ -90,6 +91,7 @@ urlpatterns = [
     path('ApiUpdateVoeux', ApiUpdateVoeux, name="ApiUpdateVoeux"),
 
     path('ApiCheckIfVoeuxExiste', ApiCheckIfVoeuxExiste, name="ApiCheckIfVoeuxExiste"),
+    path('ApiCheckIfVoeuxDoubleExiste', ApiCheckIfVoeuxDoubleExiste, name="ApiCheckIfVoeuxDoubleExiste"),
 
     path('ApiUpdateProspectData', ApiUpdateProspectData, name="ApiUpdateProspectData"),
     path('ApiCreateVoeux', ApiCreateVoeux, name="ApiCreateVoeux"),

@@ -109,6 +109,29 @@ def ApiLoadFicheVoeuxProspect(request):
         })
     return JsonResponse({'fiche_voeux': fiche_voeux_list})
 
+@login_required(login_url="institut_app:login")
+def ApiLoadFicheVoeuxDoubleProspect(request):
+    id_prospect = request.GET.get('id_prospect')
+    prospect = Prospets.objects.get(id = id_prospect)
+    fiche_voeux = FicheVoeuxDouble.objects.filter(prospect = prospect)
+
+    fiche_voeux_list = []
+    for fiche in fiche_voeux:
+        fiche_voeux_list.append({
+            'id': fiche.id,
+            'specialite1_code': fiche.specialite.specialite1.code,
+            'specialite1_label': fiche.specialite.specialite1.label,
+
+            'specialite2_code': fiche.specialite.specialite2.code,
+            'specialite2_label': fiche.specialite.specialite2.label,
+
+            'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+            'created_at' : fiche.created_at,
+            'updated_at' : fiche.updated_at
+            
+        })
+    return JsonResponse({'fiche_voeux': fiche_voeux_list})
+
 @login_required(login_url='institut_app:login')
 def ApiUpdateFicheVoeuxProspect(request):
     pass

@@ -173,6 +173,22 @@ def ApigetFormationSync(request):
 
     return JsonResponse(instituts, safe=False)
 
+@login_required(login_url="institut_app:login")
+def ApiLoadFormations(request):
+    if request.method == "GET":
+        liste = Formation.objects.all().values('id','nom')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({'status':"error"})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiLoadSpecialites(request):
+    if request.method == "GET":
+        liste = Specialites.objects.all().values('id','code','label','version','formation__id')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({'status':"error"})
 
 ######### methode de syncronisation des formations #############################################
 def update_or_create_formation_in_tenant(formation, institut_schema):

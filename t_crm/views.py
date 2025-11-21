@@ -332,23 +332,44 @@ def InscriptionParticulier(request):
         if form.is_valid():
             donnee = form.save()
             donnee.type_prospect = "particulier"
-            donnee.etat
             donnee.save()
 
-            voeux_specialite = request.POST.get('voeux_specialite')
-            promo_selection = request.POST.get('promo_selection')
+            type_select = form.cleaned_data.get('select_type')
+            
+            if type_select == "10":
+                messages.error(request,"Veuillez sélectionner le type de formation")
+                return redirect('t_crm:inscription_particulier')
+            
+            if type_select == "0":
+                donnee = form.save()
+                donnee.type_prospect = "particulier"
+                donnee.save()
+
+                voeux_specialite = request.POST.get('voeux_specialite')
+                promo_selection = request.POST.get('promo_selection')
+
+                if voeux_specialite is not None and voeux_specialite != "":
+                    specialite = Specialites.objects.get(id=voeux_specialite)
+                    FicheDeVoeux.objects.create(prospect=donnee,specialite=specialite,promo = Promos.objects.get(code = promo_selection))
+
+                messages.success(request, "Prospect ajouté avec succès")
+                return redirect('t_crm:ListeDesProspects')
+            
+            else:
+
+                donnee.is_double = True
+                donnee.save()
+
+                promo = request.POST.get('promo_selection_double')
+                double = request.POST.get('id_select_double')
+
+                
+                if double is not None and double != "":
+                    FicheVoeuxDouble.objects.create(prospect = donnee, specialite_id = double, promo = Promos.objects.get(code = promo))
 
 
-            if voeux_specialite is not None and voeux_specialite != "":
-                specialite = Specialites.objects.get(id=voeux_specialite)
-                FicheDeVoeux.objects.create(
-                    prospect=donnee,
-                    specialite=specialite,
-                    promo = Promos.objects.get(code = promo_selection)
-                )
-
-            messages.success(request, "Prospect ajouté avec succès")
-            return redirect('t_crm:ListeDesProspects')
+                messages.success(request, "L'inscription du prospect est réussie")
+                return redirect('t_crm:ListeDesProspects')
         else:
             messages.error(request, "Une erreur s'est produite lors de l'enregistrement du prospect")
 
@@ -393,7 +414,7 @@ from django.utils.dateformat import format
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise')
+    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
     for l in prospects:
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()
@@ -462,6 +483,13 @@ def ApiLoadSpecialite(request):
 @login_required(login_url='institut_app:login')
 def DetailsProspect(request, pk):
     prospect = Prospets.objects.get(id=pk)
+
+    if prospect.is_double and prospect.type_prospect == "particulier":
+        context = {
+            'pk' : pk,
+        }
+        return render(request,'tenant_folder/crm/details_prospect_double.html', context)
+
     if prospect.type_prospect == "particulier":
         context = {
             'tenant' : request.tenant,
@@ -583,6 +611,16 @@ def ApiUpdateProspectEtsDetails(request):
 def ApiCheckIfVoeuxExiste(request):
     id_prospoect = request.GET.get('id_prospect')
     fiche_voeux  = FicheDeVoeux.objects.filter(prospect = Prospets.objects.get(id=id_prospoect), is_confirmed = False)
+
+    if fiche_voeux:
+        return JsonResponse({'status' : 'success'})
+    else:
+        return JsonResponse({'status' : 'error'})
+    
+@login_required(login_url="institut_app:login")
+def ApiCheckIfVoeuxDoubleExiste(request):
+    id_prospoect = request.GET.get('id_prospect')
+    fiche_voeux  = FicheVoeuxDouble.objects.filter(prospect = Prospets.objects.get(id=id_prospoect), is_confirmed = False)
 
     if fiche_voeux:
         return JsonResponse({'status' : 'success'})
