@@ -349,7 +349,7 @@
                           </button>
                           <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
                             <li>
-                              <button class="dropdown-item d-flex align-items-center px-3 py-2" onclick="showDossierDetails({{ item.prospect.id }})">
+                              <button class="dropdown-item d-flex align-items-center px-3 py-2" onclick="showDossierDetails({{ item.prospect.id }},'{{ item.prospect.is_double }}')">
                                 <i class="ri-eye-line text-info me-2"></i>Consulter le dossier
                               </button>
                             </li>
@@ -684,7 +684,8 @@
     definirRappel(prospectId);
   }
   
-  function showDossierDetails(candidateId) {
+  function showDossierDetails(candidateId, is_double) {
+     const isDouble = (is_double == true || is_double == "True" || is_double == 1 || is_double == "1");
     // Show loading state
     document.getElementById('documentsManquantsList').innerHTML = `
       <div class="text-center py-5">
@@ -701,14 +702,19 @@
     // Set the candidate ID in the modal
     document.getElementById('viewFullDossierLink').href = "/crm/details-preinscrit/" + candidateId + "/";
     
-    // Fetch candidate details via AJAX
-    fetchDossierDetails(candidateId);
+    if(isDouble){
+      fetchDossierDetails(candidateId, "{% url 't_crm:ApiGetDossierDetailsDouble' %}");
+    }else{
+      // Fetch candidate details via AJAX
+      fetchDossierDetails(candidateId, "{% url 't_crm:ApiGetDossierDetails' %}");
+    }
+    
   }
   
-  function fetchDossierDetails(candidateId) {
-    // Make AJAX call to fetch real data
+  function fetchDossierDetails(candidateId, api) {
+    
     $.ajax({
-      url: "{% url 't_crm:ApiGetDossierDetails' %}",
+      url: api,
       type: "GET",
       data: { 'id_prospect': candidateId },
       dataType: "JSON",

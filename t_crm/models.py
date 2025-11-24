@@ -282,6 +282,7 @@ class FicheVoeuxDouble(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux_double")
     specialite = models.ForeignKey(DoubleDiplomation, on_delete=models.DO_NOTHING, null=True, blank=True)
     promo = models.ForeignKey(Promos, on_delete=models.SET_NULL, null=True, blank=True, related_name="promo_fiche_voeux_double", limit_choices_to={'etat':'active'})
+    commentaire = models.CharField(max_length=1000,null=True, blank=True)
 
     is_confirmed = models.BooleanField(default=False)
 
@@ -399,6 +400,7 @@ class DemandeInscription(models.Model):
 class DocumentsDemandeInscription(models.Model):
     demande_inscription = models.ForeignKey(DemandeInscription, on_delete=models.CASCADE, null=True, blank=True)
     fiche_voeux = models.ForeignKey(FicheDeVoeux, blank=True, null=True, on_delete=models.CASCADE)
+    fiche_voeux_double = models.ForeignKey(FicheVoeuxDouble, blank=True, null=True, on_delete=models.CASCADE)
     prospect = models.ForeignKey(Prospets, null=True, blank=True, on_delete=models.CASCADE)
     id_document = models.ForeignKey(DossierInscription, on_delete=models.CASCADE, null=True, blank=True)
     file = models.FileField(upload_to=tenant_directory_path, null=True, blank=True)

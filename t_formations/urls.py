@@ -28,6 +28,7 @@ urlpatterns = [
     path('ApiLoadDoubleDiplomation', ApiLoadDoubleDiplomation, name="ApiLoadDoubleDiplomation"),
     path('ApiDeleteDoubleDiplomation', ApiDeleteDoubleDiplomation, name="ApiDeleteDoubleDiplomation"),
     path('ApiLoadSelestDoubleDiplomation', ApiLoadSelestDoubleDiplomation, name="ApiLoadSelestDoubleDiplomation"),
+    path('ApiUpdateDoubleDiplomation', ApiUpdateDoubleDiplomation, name="ApiUpdateDoubleDiplomation"),
 
     path('formations/modification/<int:pk>/', updateFormation, name="updateFormation"),
     

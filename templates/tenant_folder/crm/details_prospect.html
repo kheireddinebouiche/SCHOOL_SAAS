@@ -157,6 +157,9 @@
                                     <button type="button" class="btn btn-info px-4 py-2" id="editVoeuxBtn">
                                         <i class="ri-edit-line me-2"></i>Modifier les voeux
                                     </button>
+                                    <button type="button" class="btn btn-success px-4 py-2" id="inscriptionDoubleDiplomation">
+                                        <i class="ri-user-add-line me-2"></i>S'inscrire à une double diplômation
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1413,6 +1416,90 @@
     </div>
 </div>
 
+<!-- Modal Création Fiche de Voeux -->
+<div class="modal fade" id="createVoeuxDoubleModal" tabindex="-1" aria-labelledby="createVoeuxDoubleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-add-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="createVoeuxDoubleModalLabel">
+                            Créer une fiche de voeux
+                        </h5>
+                        <p class="text-muted small mb-0">Enregistrement des préférences académiques</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <form class="vstack gap-4">
+                    <!-- Sélection de la promotion/session -->
+                    <div class="form-group">
+                        <label class="form-label fw-medium" for="promo_double">Promotion/Session</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0">
+                                <i class="ri-calendar-line text-muted"></i>
+                            </span>
+                            <select id="promo_double" class="form-select border-0 bg-light py-2" aria-label="Sélectionnez une promo">
+                                <option value="0">Rechercher et sélectionner une promotion/session</option>
+                                <!-- Options à charger dynamiquement -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sélection de la formation avec recherche -->
+                    <div class="form-group">
+                        <label class="form-label fw-medium" for="formation_double">Formation</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0">
+                                <i class="ri-book-2-line text-muted"></i>
+                            </span>
+                            <select id="formation_double" class="form-select border-0 bg-light py-2" aria-label="Sélectionnez une formation">
+                                <option value="0">Rechercher et sélectionner une formation</option>
+                                <!-- Options à charger dynamiquement -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Affichage des spécialités liées à la formation -->
+                    <div class="form-group">
+                        <label class="form-label fw-medium">Spécialités liées à la formation</label>
+                        <div class="specialite-cards-container" id="create_specialite_double_voeux_container">
+                            <!-- Cartes de spécialités seront chargées dynamiquement -->
+                            <div class="text-center text-muted py-4">
+                                <i class="ri-stack-line fs-2 mb-2"></i>
+                                <p>Veuillez sélectionner une formation pour afficher les spécialités liées</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Commentaires avec compteur de caractères -->
+                    <div class="form-group">
+                        <label class="form-label fw-medium" for="create_commentaires_voeux">Commentaires</label>
+                        <textarea id="create_commentaires_voeux_double" class="form-control border-0 bg-light py-2" placeholder="Ajoutez vos commentaires ici..." rows="3" maxlength="500"></textarea>
+                        <div class="form-text text-end">
+                            <small class="text-muted"><span id="createCommentairesCount">0</span>/500</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="saveCreateVoeuxDoubleBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 
@@ -2600,6 +2687,102 @@
             })
         });
 
+        $(document).on('click',"#inscriptionDoubleDiplomation", function(){
+            $('#createVoeuxDoubleModal').modal('show');
+            loadDoubleFormation();
+            loadPromos();
+        });
+
+        function loadPromos(){
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadPromos' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option = "<option value='0'>Sélectionnez une promotion</option>";
+                    data = data.data;
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.code+">"+p.session+" - "+p.start_year+"</option>";
+                    });
+                    $('#promo_double').html(option);
+                }
+            });
+        }
+
+        function loadDoubleFormation(){
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadDoubleDiplomations' %}",
+                dataType: "JSON",
+                type : "GET",
+                success : function(data){
+                    var option = "<option value='0'>Sélectionnez une formation (double diplômation)</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.label+"</label>";
+                    });
+                    $('#formation_double').html(option);
+                }
+            });
+        }
+
+
+        function loadDoubleFormationSpecialite(id_formation){
+            $.ajax({
+                url : "{% url 't_crm:ApiLoadDoubleSpecialite' %}",
+                dataType : "JSON",
+                type: "GET",
+                data : {
+                    "id_formation" : id_formation,
+                },
+                success : function(data){
+                   
+                }
+            });
+        }
+
+        $(document).on('change','#formation_double', function(){
+            var id_formation = $(this).val();
+            loadDoubleFormationSpecialite(id_formation);
+        });
+
+        $(document).on('click', '#saveCreateVoeuxDoubleBtn', function(){
+            var promo_double = $('#promo_double').val();
+            var formation_double = $('#formation_double').val();
+            var commentaire = $('#create_commentaires_voeux_double').val();
+
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
+
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
+            $.ajax({
+                url : "{% url 't_crm:ApiCreateDoubleDiplomation' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'id_prospect' : id,
+                    'promo' : promo_double,
+                    'formation' : formation_double,
+                    'commentaires' : commentaire,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if (response.status === "success"){
+                        window.location.href = "{% url 't_crm:DetailsProspect' pk=0 %}".replace('0', id);
+                    }else{  
+                        alertify.error(response.message);
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
+            });
+        });
     });
 </script>
 

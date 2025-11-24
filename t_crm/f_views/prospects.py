@@ -111,26 +111,180 @@ def ApiLoadFicheVoeuxProspect(request):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadFicheVoeuxDoubleProspect(request):
-    id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.get(id = id_prospect)
-    fiche_voeux = FicheVoeuxDouble.objects.filter(prospect = prospect)
+    if request.method == "GET":
+        id_prospect = request.GET.get('id_prospect')
+        prospect = Prospets.objects.get(id = id_prospect)
+        fiche_voeux = FicheVoeuxDouble.objects.filter(prospect = prospect)
 
-    fiche_voeux_list = []
-    for fiche in fiche_voeux:
-        fiche_voeux_list.append({
-            'id': fiche.id,
-            'specialite1_code': fiche.specialite.specialite1.code,
-            'specialite1_label': fiche.specialite.specialite1.label,
+        fiche_voeux_list = []
+        for fiche in fiche_voeux:
+            fiche_voeux_list.append({
+                'id': fiche.id,
+                'specialite1_code': fiche.specialite.specialite1.code,
+                'specialite1_label': fiche.specialite.specialite1.label,
 
-            'specialite2_code': fiche.specialite.specialite2.code,
-            'specialite2_label': fiche.specialite.specialite2.label,
+                'specialite2_code': fiche.specialite.specialite2.code,
+                'specialite2_label': fiche.specialite.specialite2.label,
 
-            'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
-            'created_at' : fiche.created_at,
-            'updated_at' : fiche.updated_at
-            
-        })
-    return JsonResponse({'fiche_voeux': fiche_voeux_list})
+                'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+                'created_at' : fiche.created_at,
+                'updated_at' : fiche.updated_at
+                
+            })
+        return JsonResponse({'fiche_voeux': fiche_voeux_list})
+    else:
+        return JsonResponse({"status":"error"})
+
+
+@login_required(login_url="institut_app:login")
+def ApiLoadDoubleDiplomations(request):
+    if request.method == "GET":
+        liste = DoubleDiplomation.objects.all().values('id', 'label')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status":"error"})
+    
+@login_required(login_url="institut_app:login")
+def ApiLoadDoubleSpecialite(request):
+    if request.method == "GET":
+        id_formation = request.GET.get('id_formation')
+
+        if not id_formation:
+            return JsonResponse({"status":"error","message":"Informations manquantes"})
+
+        obj = DoubleDiplomation.objects.get(id = id_formation)
+
+        data = {
+            'specialite1' : obj.specialite1.label,
+            'specialite1_formation' : obj.specialite1.formation.nom,
+
+            'specialite2' : obj.specialite2.label,
+            'specialite2_formation' : obj.specialite2.formation.nom,
+
+        }
+
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app:login")
+def ApiLoadPromos(request):
+    if request.method == "GET":
+        liste = Promos.objects.all()
+        data = []
+        for i in liste:
+            data.append({
+                "id" : i.id,
+                "code" : i.code,
+                "start_year" : i.begin_year,
+                "end_year" : i.end_year,
+                "session" : i.get_session_display()
+            })
+        
+        return JsonResponse({"data" : data},  safe=False)
+        
+    else:
+        return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app")
+def ApiCreateDoubleDiplomation(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        promo = request.POST.get('promo')
+        formation = request.POST.get('formation')
+        commentaires = request.POST.get('commentaires')
+
+        if not id_prospect or not promo or not formation:
+            return JsonResponse({"status":"error",'message':"Informations manquantes"})
+        
+        try:
+            FicheVoeuxDouble.objects.create(
+                prospect_id = id_prospect,
+                specialite_id = formation,
+                promo = Promos.objects.get(code = promo),
+                commentaire = commentaires,
+            )
+            prospect = Prospets.objects.get(id = id_prospect)
+            prospect.is_double =True
+            prospect.save()
+
+            ## Rajouter la suppression de la fiche de voeux standard dans le cas ou elle existe
+            voeux_standard = FicheDeVoeux.objects.filter(prospect_id=id_prospect, promo = Promos.objects.get(code=promo), is_confirmed=False)
+
+            if voeux_standard.exists():
+                voeux_standard.delete()
+
+            messages.success(request, "Inscription du prospect en double diplômation confirmé.")
+            return JsonResponse({"status" : "success"})
+        
+        except Exception as e:
+            return JsonResponse({"status" : "error", 'message' : str(e)})
+        
+    else:
+        return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateDoubleVoeux(request):
+    if request.method == "POST":
+        id_formation = request.POST.get('id_formation')
+        id_prospect = request.POST.get('id_prospect')
+        id_voeux = request.POST.get('id_voeux')
+        promo = request.POST.get('promo')
+        comment = request.POST.get('comment')
+
+        if not id_formation or not promo or not id_voeux or not id_prospect:
+            return JsonResponse({"status":"error","message":"Informations manquante"})
+        
+        obj = FicheVoeuxDouble.objects.get(id = id_voeux, prospect_id = id_prospect)
+
+        obj.specialite = DoubleDiplomation.objects.get(id = id_formation)
+        obj.promo = Promos.objects.get(code = promo)
+        obj.commentaire = comment
+        obj.save()
+
+        return JsonResponse({"status" : "success", "message":"Les modifications ont été effectuer avec succès"})
+
+
+
+    else:
+        return JsonResponse({"status":"error"})
+
+@login_required(login_url="insitut_app:login")
+@transaction.atomic
+def ApiChangeToStandardCursus(request):
+    if request.method == "POST":
+        formation = request.POST.get('formation')
+        promo = request.POST.get('promo')
+        specialite = request.POST.get('specialite')
+        commentaires = request.POST.get('commentaires')
+        id_prospect = request.POST.get('id_prospect')
+
+        if not formation or not promo or not specialite or not id_prospect:
+            return JsonResponse({"status":"error",'message':"Informations manquante"})
+        
+        try:
+            FicheDeVoeux.objects.create(
+                prospect_id = id_prospect,
+                specialite_id = specialite,
+                promo = Promos.objects.get(code = promo),
+                commentaire = commentaires
+            )
+
+            fiche_double = FicheVoeuxDouble.objects.get(prospect_id = id_prospect, is_confirmed=False, promo__code = promo)
+            fiche_double.delete()
+
+            prosepect = Prospets.objects.get(id = id_prospect)
+            prosepect.is_double = False
+            prosepect.save()
+
+            messages.success(request, "L'inscription de l'étudiant à un cursus standard à été effectuer avec succès")
+            return JsonResponse({"status":"success"})
+
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message" : str(e)})
+
+    else:
+        return JsonResponse({"status":"error"})
 
 @login_required(login_url='institut_app:login')
 def ApiUpdateFicheVoeuxProspect(request):
@@ -270,6 +424,29 @@ def ApiValidateProspect(request):
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
+
+@login_required(login_url="institut_app:login")
+def ApiValidateProspectDouble(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        id_fiche_voeux = request.POST.get("id_fiche_voeux")
+        try:
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.etat = "accepte"
+            prospect.statut = "prinscrit"
+            prospect.preinscri_date = datetime.now()
+            prospect.save()
+
+
+            voeux = FicheVoeuxDouble.objects.get(id = id_fiche_voeux)
+            voeux.is_confirmed = True
+            voeux.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({"status" : "error"})
 
 @login_required(login_url='institut_app:login')
 def ApiCheckStatutProspect(request):

@@ -42,6 +42,11 @@ def DetailsPrinscrit(request, pk):
         'pk' : pk,
         'tenant' : request.tenant
     }
+    preinscrit = Prospets.objects.get(id = pk)
+
+    if preinscrit.is_double:
+        return render(request, 'tenant_folder/crm/preinscrits/details_preinscript_double.html', context)
+    
     return render(request, 'tenant_folder/crm/preinscrits/details-preinscrit.html', context)
 
 @login_required(login_url='institut_app:login')
@@ -108,6 +113,32 @@ def ApiLoadPreinscrisPerosnalInfos(request):
 
     return JsonResponse(data, safe=False)
 
+
+@login_required(login_url="institut_app:login")
+def ApiLoadPreinscritDoubleVoeux(request):
+    if request.method == "GET":
+        id_prospect = request.GET.get('id_prospect')
+        prospect = Prospets.objects.get(id = id_prospect)
+        fiche_voeux = FicheVoeuxDouble.objects.filter(prospect = prospect)
+
+        fiche_voeux_list = []
+        for fiche in fiche_voeux:
+            fiche_voeux_list.append({
+                'id': fiche.id,
+                'specialite1_code': fiche.specialite.specialite1.code,
+                'specialite1_label': fiche.specialite.specialite1.label,
+
+                'specialite2_code': fiche.specialite.specialite2.code,
+                'specialite2_label': fiche.specialite.specialite2.label,
+
+                'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+                'created_at' : fiche.created_at,
+                'updated_at' : fiche.updated_at
+                
+            })
+        return JsonResponse({'fiche_voeux': fiche_voeux_list})
+    else:
+        return JsonResponse({"status":"error"})
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscritRendezVous(request):
@@ -225,13 +256,25 @@ def ApiUpdatePreinscritInfos(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadRequiredDocs(request):
-    id_preinscrit = request.GET.get('id_preinscrit')
+    if request.method == "GET":
+        id_preinscrit = request.GET.get('id_preinscrit')
+        obj_pre = Prospets.objects.get(id = id_preinscrit)
 
-    specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
-    formation_id = specialites.specialite.formation.id
+        if obj_pre.is_double:
+            fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id = id_preinscrit, is_confirmed = True)
+            formation1 = fiche_voeux_double.specialite.specialite1.formation
+            formation2 = fiche_voeux_double.specialite.specialite2.formation
+            files = DossierInscription.objects.filter(Q(formation = formation1) and Q(formation = formation2)).values('id','label','is_required')
+        else:
+            specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
+            formation_id = specialites.specialite.formation.id
+            files = DossierInscription.objects.filter(formation = formation_id).values('id','label','is_required')
 
-    files = DossierInscription.objects.filter(formation = formation_id).values('id','label','is_required')
-    return JsonResponse(list(files), safe=False)
+
+        return JsonResponse(list(files), safe=False)
+    
+    else:
+        return JsonResponse({"status" : "error"})
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -243,13 +286,10 @@ def add_document(request):
             file = request.FILES.get("file")
             id_prospect = request.POST.get('id_prospect')
             try :
-                DocumentsDemandeInscription.objects.get(
-                    prospect__id = id_prospect, 
-                    fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
-                    id_document__id=doc_type
-                )
+                DocumentsDemandeInscription.objects.get(prospect__id = id_prospect,fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),id_document__id=doc_type)
                 return JsonResponse({'success' : False, "error" : "Document déja présent !"})
             except:
+
                 if not name or not doc_type or not file:
                     return JsonResponse({"success": False, "error": "Champs manquants"})
 
@@ -268,20 +308,70 @@ def add_document(request):
     
     return JsonResponse({"success": False, "error": "Méthode non autorisée"})
 
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def add_document_double(request):
+    if request.method == "POST":
+        try:
+            name = request.POST.get("name")
+            doc_type = request.POST.get("type")
+            file = request.FILES.get("file")
+            id_prospect = request.POST.get('id_prospect')
+            try :
+                DocumentsDemandeInscription.objects.get(prospect__id = id_prospect,fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect__id = id_prospect),id_document__id=doc_type)
+                return JsonResponse({'success' : False, "error" : "Document déja présent !"})
+            except:
+
+                if not name or not doc_type or not file:
+                    return JsonResponse({"success": False, "error": "Champs manquants"})
+
+                document = DocumentsDemandeInscription.objects.create(
+                    id_document=DossierInscription.objects.get(id=doc_type),
+                    file=file,
+                    prospect = Prospets.objects.get(id = id_prospect),
+                    fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect__id = id_prospect),
+                    label = name,
+                )
+
+                return JsonResponse({"success": True, "id": document.id})
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    
+    return JsonResponse({"success": False, "error": "Méthode non autorisée"})
+
+
+
 @login_required(login_url='institut_app:login')
 def LoadPresinscritDocs(request):
-    id_preinscrit = request.GET.get('id_preinscrit')
-    
-    docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_preinscrit))
-    data = [{
-        "id": doc.id,
-        "label": doc.label,
-        "id_document__label": doc.id_document.label if doc.id_document else "",
-        "created_at": doc.created_at.strftime("%d/%m/%Y %H:%M"),
-        "file": doc.file.url if doc.file else "",
-    } for doc in docs]
+    if request.method == "GET":
+        id_preinscrit = request.GET.get('id_preinscrit')
+        
+        if not id_preinscrit:
+            return JsonResponse({"status" : "error","message" : "Informations manquantes"})
+        
+        obj_preinscrit = Prospets.objects.get(id = id_preinscrit)
 
-    return JsonResponse(data, safe=False)
+        if obj_preinscrit.is_double:
+            docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect__id = id_preinscrit))
+        else:
+            docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_preinscrit))
+
+        data = [{
+            "id": doc.id,
+            "label": doc.label,
+            "id_document__label": doc.id_document.label if doc.id_document else "",
+            "created_at": doc.created_at.strftime("%d/%m/%Y %H:%M"),
+            "file": doc.file.url if doc.file else "",
+        } for doc in docs]
+
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({"status":"error"})
+
+
+
 
 @login_required(login_url='intitut_app:login')
 def DeleteDocumentPreinscrit(request):
@@ -298,38 +388,49 @@ def check_all_required_docs(request):
     try:
         fiche_voeux = FicheDeVoeux.objects.get(prospect__id=prospect_id)
         formation = fiche_voeux.specialite.formation
-    except FicheDeVoeux.DoesNotExist:
-        return JsonResponse({
-            "success": False,
-            "missing_docs": [],
-            "error": "Aucune fiche de vœux trouvée pour ce prospect"
-        })
+    except Exception as e:
+        return JsonResponse({"success": False,"missing_docs": [],"error": str(e)})
 
-    required_docs = DossierInscription.objects.filter(
-        formation=formation,
-        is_required=True
-    )
+    required_docs = DossierInscription.objects.filter(formation=formation,is_required=True)
 
-    provided_docs = DocumentsDemandeInscription.objects.filter(
-        prospect_id=prospect_id,
-        id_document__in=required_docs
-    ).exclude(file="")
+    provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id=prospect_id,id_document__in=required_docs).exclude(file="")
 
-    missing_docs = required_docs.exclude(
-        id__in=provided_docs.values_list("id_document_id", flat=True)
-    )
+    missing_docs = required_docs.exclude(id__in=provided_docs.values_list("id_document_id", flat=True))
 
     if missing_docs.exists():
-        return JsonResponse({
-            "success": False,
-            #"missing_docs": list(missing_docs.values_list("label", flat=True))
-            "missing_docs": list(missing_docs.values("id", "label"))
-        })
+        return JsonResponse({"success": False,"missing_docs": list(missing_docs.values("id", "label"))})
 
-    return JsonResponse({
-        "success": True,
-        "missing_docs": []
-    })
+    return JsonResponse({"success": True,"missing_docs": []})
+
+@login_required(login_url="institut_app:login")
+def check_all_required_doc_double(request):
+    if request.method == "GET":
+        prospect_id = request.GET.get('id_prospect')
+
+        if not prospect_id:
+            return JsonResponse({"status" : "error","message":"Informations manquante."})
+        
+        fiche_voeux = FicheVoeuxDouble.objects.get(prospect_id = prospect_id)
+
+        formation1 = fiche_voeux.specialite.specialite1.formation
+        formation2 = fiche_voeux.specialite.specialite2.formation
+
+        # required_docs_formation1 = DossierInscription.objects.filter(formation = formation1, is_required=True)
+        # required_docs_formation2 = DossierInscription.objects.filter(formation = formation2, is_required=True)
+
+        required_docs = DossierInscription.objects.filter(Q(formation = formation1) and Q(formation=formation2))
+
+        provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id = prospect_id, id_document__in = required_docs).exclude(file="")
+
+        missings_docs = required_docs.exclude(id__in=provided_docs.values_list("id_document_id", flat=True))
+
+        if missings_docs.exists():
+            return JsonResponse({"success" : False, "missing_docs" : list(missings_docs.values("id","label"))})
+        
+        return JsonResponse({"status" : True, "missing_docs" : []})
+
+    else:
+        return JsonResponse({"status":"error"})
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -378,38 +479,36 @@ def ApiStoreRappelPreinscrit(request):
     return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
 
 def get_prospects_incomplets():
-    # Tous les prospects préinscrits
+    
     prospects = Prospets.objects.filter(type_prospect="particulier").filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit"))
     results = []
 
     for prospect in prospects:
-        # Récupérer la fiche de voeux confirmée ou non
+        
         try:
+
             fiche_voeux = FicheDeVoeux.objects.get(prospect=prospect)
+
         except FicheDeVoeux.DoesNotExist:
-            continue  # si pas de fiche, on ignore
+            continue  
 
         formation = fiche_voeux.specialite.formation
         if not formation:
-            continue  # si pas de formation, on ignore
+            continue  
 
-        # Documents requis pour cette formation
+        
         docs_requis = DossierInscription.objects.filter(formation=formation)
         total_docs = docs_requis.count()
 
-        # Documents déjà uploadés par le prospect
-        docs_fournis = DocumentsDemandeInscription.objects.filter(
-            prospect=prospect,
-            fiche_voeux=fiche_voeux,
-            file__isnull=False
-        ).values_list("id_document_id", flat=True)
+
+        docs_fournis = DocumentsDemandeInscription.objects.filter(prospect=prospect,fiche_voeux=fiche_voeux,file__isnull=False).values_list("id_document_id", flat=True)
 
         provided_docs = len(docs_fournis)
 
-        # Documents manquants
+        
         docs_manquants = docs_requis.exclude(id__in=docs_fournis)
 
-        # Calculate progression (percentage of completed documents)
+       
         progression = int((provided_docs / total_docs) * 100) if total_docs > 0 else 0
 
         if not docs_fournis:
@@ -422,10 +521,59 @@ def get_prospects_incomplets():
                 "provided_docs": provided_docs
             })
         elif docs_manquants.exists():
+            results.append({"prospect": prospect,"cas": "documents manquants","documents_manquants": list(docs_manquants.values("id", "label")),
+                "progression": progression,
+                "total_docs": total_docs,
+                "provided_docs": provided_docs
+            })
+
+    return results
+
+def get_prospects_incomplets_double():
+    
+    prospects = Prospets.objects.filter(type_prospect="particulier", is_double=True).filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit"))
+    results = []
+
+    for prospect in prospects:
+        
+        try:
+            
+            fiche_voeux = FicheVoeuxDouble.objects.get(prospect=prospect)
+
+        except FicheVoeuxDouble.DoesNotExist:
+            continue  
+
+        formation1 = fiche_voeux.specialite.specialite1.formation
+        formation2 = fiche_voeux.specialite.specialite2.formation
+        if not formation1 and not formation2:
+            continue  
+
+        
+        docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation = formation2))
+        total_docs = docs_requis.count()
+
+
+        docs_fournis = DocumentsDemandeInscription.objects.filter(prospect=prospect,fiche_voeux_double=fiche_voeux,file__isnull=False).values_list("id_document_id", flat=True)
+
+        provided_docs = len(docs_fournis)
+
+        
+        docs_manquants = docs_requis.exclude(id__in=docs_fournis)
+
+       
+        progression = int((provided_docs / total_docs) * 100) if total_docs > 0 else 0
+
+        if not docs_fournis:
             results.append({
                 "prospect": prospect,
-                "cas": "documents manquants",
-                "documents_manquants": list(docs_manquants.values("id", "label")),
+                "cas": "aucun document fourni",
+                "documents_manquants": list(docs_requis.values("id", "label")),
+                "progression": progression,
+                "total_docs": total_docs,
+                "provided_docs": provided_docs
+            })
+        elif docs_manquants.exists():
+            results.append({"prospect": prospect,"cas": "documents manquants","documents_manquants": list(docs_manquants.values("id", "label")),
                 "progression": progression,
                 "total_docs": total_docs,
                 "provided_docs": provided_docs
@@ -487,6 +635,7 @@ def ApiGetDossierDetails(request):
             'email': prospect.email,
             'telephone': prospect.telephone,
             'type_prospect': prospect.type_prospect,
+            'is_double' : prospect.is_double,
             'entreprise': prospect.entreprise,
             'created_at': prospect.created_at.strftime('%Y-%m-%d') if prospect.created_at else None,
             'documents_manquants': docs_manquants,
@@ -504,13 +653,25 @@ def ApiGetDossierDetails(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+def ApiGetDossierDetailsDouble(request):
+    pass
+
 def prospects_incomplets_view(request):
-    data = get_prospects_incomplets()
+    data = get_prospects_incomplets()                  # fiches simples
+    data_double = get_prospects_incomplets_double()    # fiches double
+
+    # Fusionner les deux dans ta variable data
+    data = data + data_double
+
+    # Option : trier par nom (facultatif)
+    data = sorted(data, key=lambda x: x["prospect"].nom.lower())
+
     context = {
-        'data': data,
+        'data': data,           # ✔ on garde data !!
         'tenant': request.tenant
     }
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)
+
 
 from django.utils.timezone import now
 

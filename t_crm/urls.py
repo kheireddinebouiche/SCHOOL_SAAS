@@ -44,11 +44,12 @@ urlpatterns = [
     path('ApiFilterPrinscrit', ApiFilterPrinscrit, name="ApiFilterPrinscrit"),
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
     path('details-prospect/<int:pk>/', DetailsProspect, name="DetailsProspect"),
-
+    path('ApiLoadPromos', ApiLoadPromos, name="ApiLoadPromos"),
     #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
     path('ApiLoadProspectDetails', ApiLoadProspectDetails, name="ApiLoadProspectDetails"),
     path('ApiUpdatePropectDetails', ApiUpdatePropectDetails, name="ApiUpdatePropectDetails"),
     path('ApiUpdateProspectEtsDetails', ApiUpdateProspectEtsDetails, name="ApiUpdateProspectEtsDetails"),
+    path('ApiCreateDoubleDiplomation', ApiCreateDoubleDiplomation, name="ApiCreateDoubleDiplomation"),
 
 
     ########################################## Gestion des notes ###################################################
@@ -62,6 +63,10 @@ urlpatterns = [
     path('ApiLoadFicheVoeuxProspect', ApiLoadFicheVoeuxProspect, name="ApiLoadFicheVoeuxProspect"),
     path('ApiLoadFicheVoeuxDoubleProspect',ApiLoadFicheVoeuxDoubleProspect, name="ApiLoadFicheVoeuxDoubleProspect"),
     path('ApiConfirmeDoubleDiplome', ApiConfirmeDoubleDiplome, name="ApiConfirmeDoubleDiplome"),
+    path('ApiLoadDoubleDiplomations', ApiLoadDoubleDiplomations, name="ApiLoadDoubleDiplomations"),
+    path('ApiLoadDoubleSpecialite', ApiLoadDoubleSpecialite, name="ApiLoadDoubleSpecialite"),
+    path('ApiUpdateDoubleVoeux',ApiUpdateDoubleVoeux, name="ApiUpdateDoubleVoeux"),
+    path('ApiChangeToStandardCursus', ApiChangeToStandardCursus, name="ApiChangeToStandardCursus"),
     ########################################## Fiche des voeux###################################################
     
 
@@ -73,11 +78,12 @@ urlpatterns = [
     path('ApiStoreRappel', ApiStoreRappel, name="ApiStoreRappel"),
     path('ApiDeleteRappel', ApiDeleteRappel, name="ApiDeleteRappel"),
     path('ApiValidateProspect', ApiValidateProspect, name="ApiValidateProspect"),
+    path('ApiValidateProspectDouble', ApiValidateProspectDouble, name="ApiValidateProspectDouble"),
     path('ApiUpdateRappel', ApiUpdateRappel, name="ApiUpdateRappel"),
 
     path('liste-des-preinscrits/', ListeDesPrinscrits, name="ListeDesPrinscrits"),
     path('ApiLoadPrinscrits', ApiLoadPrinscrits, name="ApiLoadPrinscrits"),
-
+    path('ApiLoadPreinscritDoubleVoeux', ApiLoadPreinscritDoubleVoeux, name="ApiLoadPreinscritDoubleVoeux"),
     path('ApiCheckStatutProspect', ApiCheckStatutProspect, name="ApiCheckStatutProspect"),
 
 
@@ -105,15 +111,23 @@ urlpatterns = [
     path('ApiCheckCompletedDoc', ApiCheckCompletedDoc, name="ApiCheckCompletedDoc"),
     path('ApiUpdatePreinscritInfos', ApiUpdatePreinscritInfos, name="ApiUpdatePreinscritInfos"),
     path('ApiLoadRequiredDocs', ApiLoadRequiredDocs, name="ApiLoadRequiredDocs"),
+
     path('add_document', add_document, name="add_document"),
+    path('add_document_double', add_document_double, name="add_document_double"),
+    
     path('LoadPresinscritDocs', LoadPresinscritDocs, name="LoadPresinscritDocs"),
+
     path("DeleteDocumentPreinscrit",DeleteDocumentPreinscrit,name="DeleteDocumentPreinscrit"),
     path('ApiStoreNotePreinscrit', ApiStoreNotePreinscrit, name="ApiStoreNotePreinscrit"),
+    
     path('check_all_required_docs', check_all_required_docs, name="check_all_required_docs"),
+    path('check_all_required_doc_double', check_all_required_doc_double, name="check_all_required_doc_double"),
+
     path('ApiStoreRappelPreinscrit', ApiStoreRappelPreinscrit, name="ApiStoreRappelPreinscrit"),
     ################################################### Gestion des dérogations ##########################################################
     
     path('ApiGetDossierDetails', ApiGetDossierDetails, name="ApiGetDossierDetails"),
+    path('ApiGetDossierDetailsDouble',ApiGetDossierDetailsDouble, name="ApiGetDossierDetailsDouble"),
     
     path('liste-derogations/', liste_derogations, name="liste_derogations"),
     path('ApiLoadDerogation/', LoadDerogations, name="ApiLoadDerogation"),
