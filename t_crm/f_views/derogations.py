@@ -70,6 +70,7 @@ def ApiGetDerogationDetails(request):
         'demandeur' : obj.demandeur.id,
         'demandeur_nom' : obj.demandeur.nom,
         'demandeur_prenom' : obj.demandeur.prenom,
+        'is_double' : obj.demandeur.is_double,
         'type' : obj.type,
         'motif' : obj.motif,
         'date_de_demande' : obj.date_de_demande,

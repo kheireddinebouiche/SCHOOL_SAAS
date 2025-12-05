@@ -507,13 +507,22 @@
       </div>
       <!-- end page title -->
 
-    <!-- Notification banner -->
+    <!-- Notification banners -->
     <div class="container-fluid px-4 mt-3">
       <div class="notification-banner">
         <i class="fas fa-info-circle text-warning"></i>
         <div class="flex-grow-1">
-          <strong>Information Importante:</strong> Pour que l'échéancier soit pris en considération pour les paiements, il doit être mis par défaut. 
+          <strong>Information Importante:</strong> Pour que l'échéancier soit pris en considération pour les paiements, il doit être mis par défaut.
           <span class="d-none d-md-inline">Cliquez sur le bouton "Par default" dans le menu d'options de chaque échéancier.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid px-4 mt-3">
+      <div class="notification-banner" style="background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; border-left: 4px solid #17a2b8;">
+        <i class="fas fa-exclamation-triangle text-info"></i>
+        <div class="flex-grow-1">
+          <strong>Notification Importante:</strong> Les échéanciers doivent être liés à une entité légale afin de permettre l'enregistrement des paiements dans la bonne entreprise.
         </div>
       </div>
     </div>
@@ -635,10 +644,7 @@
                 <label class="form-label fw-medium">Formation</label>
                 <div class="border rounded-3 p-2 bg-light" id="detailEcheancierFormation">-</div>
               </div>
-              <div class="col-lg-6">
-                <label class="form-label fw-medium">Spécialités (Double Diplomation)</label>
-                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierSpecialites">-</div>
-              </div>
+              
               <div class="col-lg-6">
                 <label class="form-label fw-medium">État</label>
                 <div class="border rounded-3 p-2 bg-light" id="detailEcheancierEtat">-</div>
@@ -646,6 +652,10 @@
               <div class="col-lg-6">
                 <label class="form-label fw-medium">Date de création</label>
                 <div class="border rounded-3 p-2 bg-light" id="detailEcheancierDate">-</div>
+              </div>
+              <div class="col-lg-12">
+                <label class="form-label fw-medium">Entite légal</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierEntite">-</div>
               </div>
             </div>
           </div>
@@ -921,6 +931,12 @@
                     <option value="0">Inactif</option>
                   </select>
                 </div>
+                <div class="col-lg-6">
+                  <label class="form-label fw-medium">Entite </label>
+                  <select class="form-select" id="editEcheancierEntite">
+                    
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -1031,7 +1047,7 @@ $(document).ready(function () {
                 
                 row += '<tr class="align-middle">';
                 row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.model_label + "</div></div></td>";
-                row += "<td>" + item.formation_label + "</td>";
+                row += "<td>" + item.formation_label + ""+(item.is_double ? '<p class="text-muted"><i>Formation double diplômation</i></p>' : '') +"</td>";
                 row += "<td>" + item.nombre_tranches + "</td>";
                 row += "<td>" + statusBadge + "</td>";
                 row += "<td>" + defaultBadge + "</td>";
@@ -1044,7 +1060,7 @@ $(document).ready(function () {
                 row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
                 row += '<li><button class="btn-detail-echeancier dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
                 row += '<i class="ri-eye-line text-info me-2"></i>Voir détails</button></li>';
-                row += '<li><button class="btn-edit-echeancier dropdown-item d-flex align-items-center px-3 py-2" data-status="'+item.is_active+'" data-id="'+item.id+'">';
+                row += '<li><button class="btn-edit-echeancier dropdown-item d-flex align-items-center px-3 py-2" data-is_default='+item.is_default+' data-status="'+item.is_active+'" data-id="'+item.id+'">';
                 row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
                 if(!item.is_default) {
                     row += '<li><button class="btn-make-default dropdown-item d-flex align-items-center px-3 py-2" data-id="'+item.id+'">';
@@ -1084,6 +1100,22 @@ $(document).ready(function () {
         
         // Générer les contrôles de pagination
         generatePagination(Math.ceil(totalRecords / recordsPerPage), page);
+    }
+
+
+    function loadEntiteLegal(){
+      $.ajax({
+        url : '{% url "t_tresorerie:ApiLoadEntiteLegal" %}',
+        dataTyep : "GET",
+        type: "GET",
+        success : function(data){
+          var option = "<option value='0'>Sélectionnez une entite</option>";
+          $.each(data, function(index, p){
+            option += "<option value="+p.id+">"+p.designation+"</option>";
+          });
+          $('#editEcheancierEntite').html(option);
+        }
+      })
     }
     
     // Générer les contrôles de pagination
@@ -1179,6 +1211,7 @@ $(document).ready(function () {
                     $('#detailEcheancierEtat').html(statusBadge);
                     
                     $('#detailEcheancierDate').text(data.created_at);
+                    $('#detailEcheancierEntite').text(data.entite_label);
                     
                     // Remplir les tranches
                     var tranchesRow = "";
@@ -1204,7 +1237,7 @@ $(document).ready(function () {
                     // Afficher la modale
                     $('#detailsEcheancierModal').modal('show');
                 } else {
-                    alertify.error("Erreur lors du chargement des détails");
+                    alertify.error(response.message);
                 }
             },
             error: function() {
@@ -1250,7 +1283,8 @@ $(document).ready(function () {
     // Supprimer un échéancier
     $(document).on('click', '.btn-delete-echeancier', function() {
         var echeancierId = $(this).data('id');
-        // Stocker l'ID de l'échéancier à supprimer
+        
+        
         $('#deleteModalLabel').data('echeancierId', echeancierId);
         // Afficher la modale de confirmation
         $('.deleteModal').modal('show');
@@ -1260,9 +1294,28 @@ $(document).ready(function () {
     $('#confirmDeleteBtn').on('click', function() {
         var echeancierId = $('#deleteModalLabel').data('echeancierId');
         // À implémenter : appel AJAX pour supprimer l'échéancier
-        alertify.success("Échéancier supprimé avec succès");
-        $('.deleteModal').modal('hide');
-        loadEcheanciers();
+
+        $.ajax({
+          url : "{% url 't_tresorerie:ApiDeleteEcheancier' %}",
+          dataType : "JSON",
+          type : "POST",
+          data : {
+            'echeancierId' : echeancierId,
+            'csrfmiddlewaretoken': '{{ csrf_token }}',
+             
+          },
+          success: function(response){
+            if (response.status === "success"){
+                alertify.success("Échéancier supprimé avec succès");
+                $('.deleteModal').modal('hide');
+                loadEcheanciers();
+            }else{
+                alertify.error(response.message);
+            }
+          }
+        });
+
+        
     });
 
 
@@ -1308,14 +1361,16 @@ $(document).ready(function () {
     // Modal for active echeancier editing restriction
     $(document).on('click', '.btn-edit-echeancier', function() {
       var echeancierId = $(this).data('id');
+      var is_default = $(this).data('is_default');
 
-        CheckEcheancierState(echeancierId, function(stateEchancier) {
-              if (stateEchancier) {
-                  $('#echeancierActiveModal').modal('show');
-              } else {
-                  loadEcheancierForEdit(echeancierId);
-              }
-          });
+      loadEntiteLegal();
+
+      if(is_default == false){
+        loadEntiteLegal();
+        loadEcheancierForEdit(echeancierId);
+      }else{
+        $('#echeancierActiveModal').modal('show');
+      }
     });
     
     // Function to load echeancier data for editing
@@ -1336,6 +1391,7 @@ $(document).ready(function () {
                     // Display model and formation as read-only
                     $('#editModelLabel').text(data.model_label);
                     $('#editFormationLabel').text(data.formation_label);
+                    $('#editEcheancierEntite').val(data.entite);
                     
                     // Fill the tranches - allow editing libellé and dates
                     var tranchesHtml = '';
@@ -1372,6 +1428,7 @@ $(document).ready(function () {
     $('#saveEcheancierChanges').on('click', function() {
         var echeancierId = $('#editEcheancierId').val();
         var isActive = $('#editEcheancierStatus').val();
+        var entite = $('#editEcheancierEntite').val();
         
         // Collect tranche data (libellé and date)
         var trancheUpdates = [];
@@ -1395,6 +1452,7 @@ $(document).ready(function () {
         var formData = new FormData();
         formData.append('id', echeancierId);
         formData.append('is_active', isActive);
+        formData.append('entite', entite);
         formData.append('tranche_updates', JSON.stringify(trancheUpdates));
         
         // Show loading indicator

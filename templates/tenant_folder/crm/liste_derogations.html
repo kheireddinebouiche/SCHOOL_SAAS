@@ -293,6 +293,12 @@
                       <div id="detail-statut">-</div>
                     </div>
                   </div>
+                  <div class="col-md-6">
+                    <div class="d-flex">
+                      <div class="text-muted fw-medium me-2">Type formation :</div>
+                      <div id="detail-type_formation">-</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -558,6 +564,8 @@
             $('#detail-statut').html(statutBadgeDerogation);
             $('#detail-motif').text(data.motif);
             $('#detail-description').text(data.type);
+            $('#detail-type_formation').text(data.is_double ? 'Cursus Double Diplômation' : 'Cursus Standard');
+            $('#detail-type_formation').data('is_double',data.is_double);
             
             // Stocker l'ID du pré-inscrit dans le bouton
             $('#voirDossiersManquantsBtn').data('id', data.demandeur_id);
@@ -694,9 +702,9 @@
     });
     
     // Fonction pour charger les dossiers manquants
-    function loadDossiersManquants(id_preinscrit) {
+    function loadDossiersManquants(id_preinscrit, api) {
       $.ajax({
-        url: "{% url 't_crm:check_all_required_docs' %}",
+        url: api,
         dataType: "JSON",
         type: 'GET',
         data: {'id_prospect': id_preinscrit},
@@ -736,12 +744,20 @@
     // Gestionnaire d'événements pour le bouton "Voir dossiers manquants"
     $(document).on('click', '#voirDossiersManquantsBtn', function(){
       const preinscritId = $(this).data('id');
-      console.log("Pré-inscrit ID:", preinscritId);
+      
       // Fermer la modale de détails
       $('#detailsDerogationModal').modal('hide');
       
+      var is_double = $('#detail-type_formation').data('is_double');
+
+      if (is_double == true){
+        var url = "{% url 't_crm:check_all_required_doc_double' %}";
+      }else{
+        var url =  "{% url 't_crm:check_all_required_docs' %}";
+      }
+     
       // Charger les dossiers manquants
-      loadDossiersManquants(preinscritId);
+      loadDossiersManquants(preinscritId, url);
       
       // Afficher la modale des dossiers manquants
       $('#dossiersManquantsModal').modal('show');

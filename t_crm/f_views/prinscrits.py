@@ -35,7 +35,7 @@ def ApiLoadPrinscrits(request):
         i['statut_label'] = i_obj.get_statut_display()
     return JsonResponse(list(liste), safe=False)
 
-@login_required(login_url='intitut_app:login')
+@login_required(login_url='institut_app:login')
 def DetailsPrinscrit(request, pk):
     
     context = {
@@ -165,9 +165,13 @@ def ApiLoadNotePr(request):
 def ApiCheckHasCompletedProfile(request):
     id_preinscrit = request.GET.get('id_preinscrit')
     obj = Prospets.objects.get(id = id_preinscrit)
-
+    if not obj.indic1 or not obj.indic2 or not obj.diplome or not obj.lieu_naissance or not obj.pays or not obj.wilaya or not obj.code_zip or not obj.commune or not obj.nom_arabe or not obj.prenom_arabe or not obj.nin or not obj.date_naissance or not obj.groupe_sanguin or not obj.prenom_pere or not obj.prenom_mere or not obj.nom_mere:
+        profile_completed = False
+    else:
+        profile_completed = True
+        
     data = {
-        'profile_completed' : str(obj.profile_completed).lower(),
+        'profile_completed' : str(profile_completed).lower(),
     }
     return JsonResponse({'profile_completed' : data})
 
@@ -239,7 +243,7 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.etablissement = etablissement_diplome
     preinscrit.nin = nin
     preinscrit.nationnalite = nationnalite
-    preinscrit.profile_completed= True
+    #preinscrit.profile_completed= True
     preinscrit.pays = pays
     preinscrit.wilaya = wilaya
     preinscrit.code_zip = code_zip
@@ -252,7 +256,37 @@ def ApiUpdatePreinscritInfos(request):
 
     preinscrit.save()
 
+    obj = Prospets.objects.get(id = id_preinscrit)
+    # Liste des champs obligatoires
+    required_fields = [
+        obj.indic,
+        obj.indic1,
+        obj.indic2,
+        obj.diplome,
+        obj.lieu_naissance,
+        obj.pays,
+        obj.wilaya,
+        obj.code_zip,
+        obj.commune,
+        obj.nom_arabe,
+        obj.prenom_arabe,
+        obj.nin,
+        obj.date_naissance,
+        obj.groupe_sanguin,
+        obj.prenom_pere,
+        obj.prenom_mere,
+        obj.nom_mere,
+    ]
+
+    # Vérifier que tous les champs sont remplis
+    if all(required_fields):
+        obj.profile_completed = True
+    else:
+        obj.profile_completed = False
+    obj.save()
+
     return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mis à jours avec succès"})
+
 
 @login_required(login_url='institut_app:login')
 def ApiLoadRequiredDocs(request):
@@ -654,7 +688,72 @@ def ApiGetDossierDetails(request):
 
 @login_required(login_url="institut_app:login")
 def ApiGetDossierDetailsDouble(request):
-    pass
+    if request.method == "GET":
+        id_prospect = request.GET.get('id_prospect')
+        
+        try:
+            prospect = Prospets.objects.get(id=id_prospect)
+            try:
+                fiche_voeux = FicheVoeuxDouble.objects.get(prospect=prospect)
+            except FicheVoeuxDouble.DoesNotExist:
+                fiche_voeux = None
+                
+            formation = None
+            docs_manquants = []
+            docs_fournis = []
+            total_docs = 0
+            provided_docs = 0
+            progression = 0
+            
+            if fiche_voeux:
+                formation1 = fiche_voeux.specialite.specialite1.formation
+                formation2 = fiche_voeux.specialite.specialite2.formation
+                
+                if formation1 and formation2:
+                   
+                    docs_requis = DossierInscription.objects.filter(Q(formation=formation1)|Q(formation = formation2))
+                    total_docs = docs_requis.count()
+                    
+                    docs_fournis_qs = DocumentsDemandeInscription.objects.filter(
+                        prospect=prospect,
+                        fiche_voeux_double=fiche_voeux,
+                        file__isnull=False
+                    ).values_list("id_document_id", flat=True)
+                    
+                    docs_fournis = list(docs_fournis_qs)
+                    provided_docs = len(docs_fournis)
+                    
+                    docs_manquants_qs = docs_requis.exclude(id__in=docs_fournis)
+                    docs_manquants = list(docs_manquants_qs.values("id", "label"))
+                    
+                    if total_docs > 0:
+                        progression = int((provided_docs / total_docs) * 100)
+            
+            response_data = {
+                'id': prospect.id,
+                'nom': prospect.nom,
+                'prenom': prospect.prenom,
+                'email': prospect.email,
+                'telephone': prospect.telephone,
+                'type_prospect': prospect.type_prospect,
+                'is_double' : prospect.is_double,
+                'entreprise': prospect.entreprise,
+                'created_at': prospect.created_at.strftime('%Y-%m-%d') if prospect.created_at else None,
+                'documents_manquants': docs_manquants,
+                'documents_fournis': docs_fournis,
+                'progression': progression,
+                'total_documents': total_docs,
+                'documents_fournis_count': provided_docs
+            }
+            
+            return JsonResponse({'success': True, 'data': response_data})
+            
+        except Prospets.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Prospect non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({"status":"error"})
 
 def prospects_incomplets_view(request):
     data = get_prospects_incomplets()                  # fiches simples
@@ -682,30 +781,26 @@ def ApiValidatePreinscrit(request):
 
     try:
         preinscrit = Prospets.objects.get(id = id_preinscrit)
-        fiche_voeux = FicheDeVoeux.objects.filter(prospect = preinscrit, is_confirmed = True).first()
 
-        specialite = fiche_voeux.specialite
-        promo = fiche_voeux.promo
-
-      
-        ClientPaiementsRequest.objects.create(
-            client = preinscrit,
-            promo = promo,
-            specialite = specialite,
-            motif = "frais_f"
-        )
-        
+        if preinscrit.is_double:
+            fiche_voeux = FicheVoeuxDouble.objects.get(prospect_id = id_preinscrit, is_confirmed=True)
+            specialite = fiche_voeux.specialite
+            promo = fiche_voeux.promo
+            ClientPaiementsRequest.objects.create(client = preinscrit,promo = promo,specialite_double = specialite,motif = "frais_f")
+        else:
+            fiche_voeux = FicheDeVoeux.objects.filter(prospect = preinscrit, is_confirmed = True).first()
+            specialite = fiche_voeux.specialite
+            promo = fiche_voeux.promo
+            ClientPaiementsRequest.objects.create(client = preinscrit,promo = promo,specialite = specialite,motif = "frais_f")
         
         preinscrit.statut = "instance"
         preinscrit.instance_date = now()
 
         preinscrit.save()
 
-        
-
         return JsonResponse({"status": "success"})
-    except:
-        return JsonResponse({"status":"error",'message' : "Une erreur systeme c'est produite, veuillez contacter l'administrateur"})
+    except Exception as e:
+        return JsonResponse({"status":"error",'message' : str(e)})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadFinancialData(request):

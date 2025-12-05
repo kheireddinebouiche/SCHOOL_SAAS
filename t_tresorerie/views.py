@@ -22,7 +22,7 @@ def AttentesPaiements(request):
 
 @login_required(login_url="insitut_app:login")
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client").filter(client__statut = "instance")
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client",'specialite_double').filter(client__statut = "instance")
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
@@ -36,9 +36,10 @@ def ApiListeDemandePaiement(request):
             "promo_begin" : obj.promo.begin_year,
             "promo_end" : obj.promo.end_year,
             "specialite": obj.specialite.id if obj.specialite else None,
-            "amount" : obj.specialite.formation.prix_formation,
+            "amount" : obj.specialite.formation.prix_formation if obj.specialite else obj.specialite_double.prix,
             "nom": obj.client.nom if obj.client else None,
             "prenom": obj.client.prenom if obj.client else None,
+            "is_double" : obj.client.is_double if obj.client.is_double else None,
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "etat": obj.etat,
             "etat_label": obj.get_etat_display() if hasattr(obj, "get_etat_display") else None,
@@ -49,11 +50,19 @@ def ApiListeDemandePaiement(request):
 
 @login_required(login_url="institut_app:login")
 def PageDetailsDemandePaiement(request, pk):
+
+    obj = ClientPaiementsRequest.objects.get(id = pk)
     context = {
         'tenant' : request.tenant,
         'pk' : pk,
     }
-    return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
+
+    if obj.client.is_double:
+        return render(request,"tenant_folder/comptabilite/tresorerie/details_attente_paiement_double.html", context)
+    else:
+        return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
+
+
 
 @login_required(login_url="institut_app:login")
 @ajax_required
@@ -126,6 +135,8 @@ def ApiGetDetailsDemandePaiement(request):
         voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
         echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+
+        frais_inscription = echeancierId.frais_inscription
     
         special_echeancier_data = []
         has_special_echeancier = False
@@ -310,6 +321,7 @@ def ApiGetDetailsDemandePaiement(request):
         data = {
             'user_data' : user_data,
             'voeux' : voeux_data,
+            'frais_inscription' : frais_inscription,
             'echeancier' : list(echeancier_data),
             'groupe_data': groupe_data,
             'remise' : remiseDatas,
@@ -333,6 +345,221 @@ def ApiGetDetailsDemandePaiement(request):
         }
 
         return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiGetDetailsDemandePaiementDouble(request):
+    if request.method == "GET":
+        special_echeancier_data = []
+        has_special_echeancier = False
+        echeancier_state_approuvel = False
+        due_paiement_data = []
+        paiements_done_data = []
+        has_due_paiement = False
+        has_paiement = False
+        has_pending_refund = False
+        has_processed_refund = False
+        is_appliced = False
+        special_echeancier_validate = False
+
+        id= request.GET.get('id_demande')
+        obj = ClientPaiementsRequest.objects.get(id = id)
+        voeux = FicheVoeuxDouble.objects.filter(prospect=obj.client, is_confirmed=True).first()
+
+        echeancierId = EcheancierPaiement.objects.filter(formation_double_id = voeux.specialite.id , model__promo = voeux.promo).last()
+
+        echeancier = EcheancierPaiement.objects.get(formation_double_id = voeux.specialite.id, is_default=True, model__promo = voeux.promo)
+        liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
+
+        due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
+
+        if due_paiement.count() > 0:
+            has_due_paiement = True
+            total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
+            for i in due_paiement:
+                due_paiement_data.append({
+                    'id_due_paiement' : i.id,
+                    'montant_due'  : i.montant_due,
+                    'montant_restant' : i.montant_restant,
+                    'label' : i.label,
+                    'date_echeance' : i.date_echeance,
+                })
+        else:
+            has_due_paiement = False
+            due_paiement_data = []
+
+        done_paiements = Paiements.objects.filter(prospect = obj.client)
+        if done_paiements.count()>0:
+            has_paiement = True
+            total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
+            for i in done_paiements:
+                paiements_done_data.append({
+                    'montant_paye' : i.montant_paye,
+                    'date_paiement' : i.date_paiement,
+                    'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
+                    'num' : i.num,
+                    'mode_paiement' : i.get_mode_paiement_display(),
+                    'reference_paiement' : i.reference_paiement,
+                    'is_refund' : i.is_refund,
+                })
+
+        else:
+            paiements_done_data = []
+
+        remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj.client).last()
+
+        if remiseObj and remiseObj.remise_appliquer:
+            
+            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            is_approuved_remise = remiseObj.remise_appliquer.is_approuved
+            reduction_type = remiseObj.remise_appliquer.remise.label
+            id_reduction = remiseObj.remise_appliquer.id
+            is_appliced_remise = remiseObj.remise_appliquer.is_applicated
+
+            montant_remise = voeux.specialite.prix - ((remise_appliquer * voeux.specialite.prix ) / 100)
+
+            remiseDatas = {
+                'valeur' : remise_appliquer,
+                'remise_approuver' : is_approuved_remise,
+                'remise_appliquer' : is_appliced_remise,
+                'type_remise' : reduction_type,
+                'montant_remise' : montant_remise,
+                'montant_sans_remise' : voeux.specialite.prix,
+                'id_applied_reduction' : id_reduction,
+            }
+
+        else:
+            remiseDatas = None
+
+        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
+        if obj_echeacncier_speial:
+            line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
+            echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
+            has_special_echeancier = True
+            special_echeancier_validate = obj_echeacncier_speial.is_validate
+
+            special_echeancier_data = []
+            for i in line_echeancier_special:
+                special_echeancier_data.append({
+                    'id_echeancier_special' : i.id,
+                    'taux' : i.taux,
+                    'value' : i.value,
+                    'date_echeancier' : i.date_echeancier,
+                    'montant_tranche' : i.montant_tranche,
+                })
+
+        echeancier_data=[]
+        for i in liste_echeancier:
+            echeancier_data.append({
+                'id': i.id,
+                'taux' : i.taux,
+                'value' : i.value,
+                'montant_tranche' : i.montant_tranche,
+                'date_echeancier' : i.date_echeancier,
+            })
+
+        refund = Rembourssements.objects.filter(client = obj.client).last()
+        refund_data = []
+        if refund:
+            paiements = Paiements.objects.filter(prospect = obj.client, context = "frais_f" ).aggregate(total=Sum('montant_paye'))['total'] or 0
+            if not refund.is_done:
+                has_pending_refund = True
+            else:
+                has_processed_refund = True
+
+            if refund.is_appliced:
+                is_appliced = True
+
+            refund_data = {
+                'id' : refund.id,
+                'motif_rembourssement' : refund.motif_rembourssement,
+                'allowed_amount' : refund.allowed_amount,
+                'etat' : refund.get_etat_display(),
+                'etat_key' : refund.etat,
+                'date_de_demande' : refund.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'date_de_traitement' : refund.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'mode_rembourssement' : refund.mode_rembourssement,
+                "mode_rembourssement_label" : refund.get_mode_rembourssement_display(),
+                'observation' : refund.observation, 
+                'montant_paye' : paiements,
+            }
+        else:
+            has_pending_refund = False
+            refund_data = []
+
+        user_data = {
+            "demandeur_id" : obj.client.id,
+            "demandeur_nom": obj.client.nom,
+            "demandeur_prenom": obj.client.prenom,
+            "demandeur_email" : obj.client.email,
+            "demandeur_telephone" : obj.client.telephone,
+            "demandeur_date_naissance" : obj.client.date_naissance if obj.client.date_naissance else "Non complété",
+            "demandeur_adresse" : obj.client.adresse if obj.client.adresse else "Non complété",
+            "demandeur_lieu_naissance" : obj.client.lieu_naissance if obj.client.date_naissance else "Non complété",
+            "demandeur_date_inscription" : obj.client.created_at.strftime("%Y-%m-%d"),
+            "statut_demandeur": obj.client.statut,
+            "client_id" : obj.client.id,
+            "motif": obj.get_motif_display(),
+            "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "client_id": obj.client.id,  
+        }
+
+        other_data = {
+            'id' : echeancierId.id,
+            'modele' : echeancierId.model.label,
+            'formation' : echeancierId.formation_double.label,
+            'specialite_1' : echeancierId.formation_double.specialite1.label,
+            'specialite_2' : echeancierId.formation_double.specialite2.label,
+        }
+
+        voeux_data = {
+            'specialite_id' : voeux.specialite.id,
+            'specialite_label' : voeux.specialite.label,
+            'formation' : voeux.specialite.label,
+            # 'entite' : voeux.specialite.formation.entite_legal.designation,
+            # 'entite_ville' : voeux.specialite.formation.entite_legal.ville,
+            'promo' : voeux.promo.code,
+            'prix_formation' : voeux.specialite.prix,
+            'frais_inscription' : voeux.specialite.frais_inscription,
+            # 'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
+            # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
+        }
+
+        data = {
+            'user_data' : user_data,
+            'voeux' : voeux_data,
+            'echeancier' : list(echeancier_data),
+            "has_due_paiement" : has_due_paiement,
+            "due_paiement_data" : due_paiement_data,
+            "total_initial" : total_initial if has_due_paiement else 0,
+            "paiements_done_data" : paiements_done_data,
+            "has_paiement" : has_paiement,
+            "total_paiement" : total_paiement if has_paiement else 0,
+            'id_echeancier' : echeancierId.id,
+            "refund_data" : refund_data,
+            "has_pending_refund" : has_pending_refund,
+            'has_processed_refund'  : has_processed_refund,
+            'is_appliced' : is_appliced,
+            'remise' : remiseDatas,
+            'echeancier_special_state_approuvel' : echeancier_state_approuvel,
+            'has_special_echeancier' : has_special_echeancier,
+            'special_echeancier_validate' : special_echeancier_validate,
+
+        }
+
+        return JsonResponse(data ,safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})
+
+
+@login_required(login_url="institut_app:login")
+def ApiLoadDoubleFormation(request):
+    if request.method == "GET":
+        liste = DoubleDiplomation.objects.all().values('id','label','prix')
+        return JsonResponse(list(liste), safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 

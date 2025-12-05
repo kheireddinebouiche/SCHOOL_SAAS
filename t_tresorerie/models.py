@@ -16,6 +16,7 @@ class ClientPaiementsRequest(models.Model):
 
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
+    specialite_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid = models.BooleanField(default=False)
@@ -66,8 +67,9 @@ class DuePaiements(models.Model):
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True, related_name="due_paiement_promo")
     type = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f',"Frais de formation"),('dette','Module en dette'),('autre','Autre')])
     observation = models.CharField(max_length=1000, null=True, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateField(auto_now=True, null=True, blank=True)
 
     def __str__(self):
         return self.label
@@ -103,26 +105,46 @@ class Paiements(models.Model):
         return str(self.montant_paye)
 
     def save(self, *args, **kwargs):
-        if not self.num:  # Générer seulement si vide
-            today = datetime.date.today()
-            year = today.year
-            month = today.strftime("%m")
+        if not self.num:
 
-            prefix = f"{year}/{month}/"
+            # 1. Vérifier chemin : Paiement → DuePaiement → Echeancier → Entreprise
+            if not self.due_paiements or not self.due_paiements.ref_echeancier:
+                raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
 
-            # Chercher le dernier numéro du mois courant
-            last_ref = Paiements.objects.filter(
-                num__startswith=prefix
-            ).aggregate(max_num=Max("num"))["max_num"]
+            echeancier = self.due_paiements.ref_echeancier
+            entite_obj = echeancier.entite
 
-            if last_ref:
-                last_number = int(last_ref.split("/")[-1])
-                new_number = last_number + 1
+            if not entite_obj:
+                raise ValueError("Impossible de générer le numéro : entreprise manquante dans EcheancierPaiement.")
+
+            # 2. Lecture des champs Entreprise
+            entite = entite_obj.designation or "ENTITE"
+            wilaya = str(entite_obj.code_wilaya).zfill(2) if entite_obj.code_wilaya else "00"
+            annexe = str(entite_obj.numero).zfill(2) if entite_obj.numero else "00"
+
+            # 3. Date du paiement
+            date_p = self.date_paiement or datetime.date.today()
+
+            # Conversion si la valeur est une chaîne
+            if isinstance(date_p, str):
+                date_p = datetime.datetime.strptime(date_p, "%Y-%m-%d").date()
+
+            mois = date_p.strftime("%m")
+            annee = date_p.strftime("%y")
+
+            # 4. Génération séquence unique
+            pattern = f"/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
+            last = Paiements.objects.filter(num__endswith=pattern)\
+                                    .aggregate(max_num=Max("num"))["max_num"]
+
+            if last:
+                last_seq = int(last.split("/")[0].replace("N°", ""))
+                seq = str(last_seq + 1).zfill(6)
             else:
-                new_number = 1
+                seq = "000001"
 
-            # Formater en 3 chiffres (001, 002, …)
-            self.num = f"{prefix}{str(new_number).zfill(3)}"
+            # 5. Construction du numéro final
+            self.num = f"N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
 
         super().save(*args, **kwargs)
     
@@ -190,7 +212,13 @@ class ModelEcheancier(models.Model):
 class EcheancierPaiement(models.Model):
     model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
-    specialites = models.ManyToManyField(Specialites, null=True, blank=True)
+    
+    ##Attribution des frais d'inscription
+    frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
+
+    formation_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
+
+    entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
     
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
@@ -244,7 +272,6 @@ class EcheancierPaiementSpecialLine(models.Model):
     def __str__(self):
         return self.echeancier.prospect.nom
 
-
 class Caisse(models.Model):
     pass
 
@@ -253,13 +280,17 @@ class Depenses(models.Model):
     fournisseur = models.ForeignKey(Fournisseur, null=True, blank=True, on_delete=models.CASCADE)
     categorie = models.ForeignKey("TypeDepense", null=True, blank=True, on_delete=models.CASCADE)
     sous_categorie = models.ForeignKey("SousTypeDepense", null=True, blank=True, on_delete=models.CASCADE)
-    date = models.DateField(null=True, blank=True)
+    date_paiement = models.DateField(null=True, blank=True)
     montant_ht = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     tva = models.CharField(max_length=10, null=True, blank=True)
     montant_ttc= models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     piece = models.FileField(upload_to=tenant_directory_path_for_piece_depanse, null=True, blank=True)
     etat = models.BooleanField(default=False)
     description = models.TextField(max_length=1000, null=True, blank=True)
+
+    mode_paiement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
+
+    reference = models.CharField(max_length=100, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
@@ -287,3 +318,34 @@ class SousTypeDepense(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class TypePaiement(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+
+    is_active = models.BooleanField(default=False)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label  
+
+class PlanComptable(models.Model):
+    numero = models.CharField(max_length=20, unique=True)   # ex: "531", "7061"
+    intitule = models.CharField(max_length=255)             # ex: "Caisse", "Prestations de service"
+    classe = models.CharField(max_length=1)                 # ex: "5"
+    type_compte = models.CharField(
+        max_length=20,
+        choices=[
+            ("actif", "Actif"),
+            ("passif", "Passif"),
+            ("charge", "Charge"),
+            ("produit", "Produit"),
+            ("hors_bilan", "Hors bilan"),
+        ],
+        null=True, blank=True
+    )
+
+    def __str__(self):
+        return f"{self.numero} - {self.intitule}"

@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer,FicheDeVoeux
+from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble
 from django.db.models import Q
 from institut_app.decorators import *
 from datetime import datetime
@@ -56,6 +56,54 @@ def ApiGetPaiementRequestDetails(request):
     else:
         
         return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
+    
+@login_required(login_url="institut_app:login")
+def ApiGetPaiementRequestDetailsDouble(request):
+    if request.method == "GET":
+        id_client = request.GET.get('id_client')
+        id_echeancier = request.GET.get('id_echeancier')
+        obj_client = Prospets.objects.get(id= id_client)
+
+        # Récuperer la promo de l etudiant
+        obj_promo  = FicheVoeuxDouble.objects.get(prospect_id = id_client, is_confirmed=True)
+        obj_promo.promo.code
+        
+        # Récupérer les données de l'échéancier depuis la requête
+        echeancier_data = request.GET.get('echeancier_data')
+        
+        if echeancier_data:
+            # Parser les données de l'échéancier
+            echeancier_list = json.loads(echeancier_data)
+            
+            # Calculer les totaux
+            total_initial = sum(Decimal(e['montant']) for e in echeancier_list)
+            total_final = sum(Decimal(e['montant_final']) for e in echeancier_list)
+            
+            # Préparer les données de réponse
+            data = {
+                'client': {
+                    'id': id_client,
+                },
+                'echeancier': echeancier_list,
+                'total_initial': str(total_initial),
+                'total_final': str(total_final),
+                'reduction': request.GET.get('reduction', '0') + '%' if request.GET.get('has_reduction') else '0%',
+                "promo_id" : obj_promo.promo.id
+                
+            }
+            ### Boucle pour enregistrer les paiements
+            for i in echeancier_list:
+                ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier)  
+                
+                
+            return JsonResponse({"status":"success"})
+        
+        else:
+            
+            return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
+
+    else:
+        return JsonResponse({"status" : "error"})
 
 ### Fonction qui stock les echeanciers de paiements
 @transaction.atomic
@@ -94,7 +142,6 @@ def ApiApplyRemiseToPaiement(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
-@ajax_required
 def ApiStoreClientPaiement(request):
     echeance = request.POST.get('echeance')
     datePaiement = request.POST.get('datePaiement')
@@ -105,6 +152,17 @@ def ApiStoreClientPaiement(request):
     clientId = request.POST.get('clientId')
     id_due_paiement = request.POST.get('id_due_paiement')
     promo = request.POST.get('promo')
+
+    print('Echeance', echeance)
+    print('Date paiement', datePaiement)
+    print('montant', montant)
+    print('modePaiement', modePaiement)
+    print('reference', reference)
+    print('observation', observation)
+    print('clientId', clientId)
+    print('id_due_paiement', id_due_paiement)
+    print('promo', promo)
+
 
     try:
         due_paiement = DuePaiements.objects.get(id=id_due_paiement)
@@ -177,7 +235,6 @@ def ApiApplyEcheancierSpecial(request):
         return JsonResponse({"status" : "error"})
 
 
-
 def generate_matricule_interne(promo_code):
     
     today = datetime.now()
@@ -199,7 +256,6 @@ def generate_matricule_interne(promo_code):
         new_seq = 1
 
     return f"{prefix}/{new_seq:04d}"
-
 
 
 @login_required(login_url="institut_app:login")

@@ -26,6 +26,8 @@ def ApiSaveDouble(request):
             specialite2_id = request.POST.get('specialite2_id')
             label = request.POST.get('label', '')  # Le label est maintenant fourni par l'utilisateur
             description = request.POST.get('description', '')
+            montant = request.POST.get('montant')
+            frais = request.POST.get('frais')
 
             # Validation des données
             if not specialite1_id or not specialite2_id:
@@ -74,7 +76,9 @@ def ApiSaveDouble(request):
                 combinaison = DoubleDiplomation.objects.create(
                     specialite1=specialite1,
                     specialite2=specialite2,
-                    label=label
+                    label=label,
+                    prix = montant,
+                    frais_inscription = frais
                 )
 
             # Retourner une réponse de succès
@@ -124,6 +128,8 @@ def ApiLoadDoubleDiplomation(request):
                     'specialite2_label': combinaison.specialite2.label if combinaison.specialite2 else 'N/A',
                     'specialite2_formation': combinaison.specialite2.formation.nom if combinaison.specialite2 and combinaison.specialite2.formation else 'N/A',
                     'specialite2_formation_id': combinaison.specialite2.formation.id if combinaison.specialite2 and combinaison.specialite2.formation else None,
+                    'montant' : combinaison.prix if combinaison.prix else None,
+                    'frais_inscription' : combinaison.frais_inscription if combinaison.frais_inscription else None,
                     'created_at': combinaison.created_at.strftime('%d %b %Y') if combinaison.created_at else 'N/A',
                     'description': getattr(combinaison, 'description', ''),  # In case description field exists in future
                 }
@@ -158,6 +164,8 @@ def ApiUpdateDoubleDiplomation(request):
             specialite2_id = request.POST.get('specialite2_id')
             label = request.POST.get('label', '')
             description = request.POST.get('description', '')
+            montant = request.POST.get('montant')
+            frais = request.POST.get('frais')
 
             # Validation des données
             if not combinaison_id or not specialite1_id or not specialite2_id or not label:
@@ -206,6 +214,8 @@ def ApiUpdateDoubleDiplomation(request):
                 combinaison.specialite1 = specialite1
                 combinaison.specialite2 = specialite2
                 combinaison.label = label
+                combinaison.prix = montant
+                combinaison.frais_inscription = frais
                 # Note: We don't update description in the model since it's not in the model yet
                 combinaison.save()
 

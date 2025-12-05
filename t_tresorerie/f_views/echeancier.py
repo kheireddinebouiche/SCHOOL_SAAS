@@ -37,17 +37,12 @@ def ApiLoadSpecialites(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadEcheancierDetails(request):
     id = request.GET.get("id")
+
+    if not id:
+        return JsonResponse({"status" : "error", "message" : "Informations manquantes"})
     try:
         echeancier = EcheancierPaiement.objects.get(id=id)
         
-        # Gestion des spécialités
-        specialites_list = []
-        if echeancier.model and echeancier.model.is_double_diplomation:
-            # On récupère toutes les spécialités et on les transforme en dict sérialisables
-            specialites_list = list(
-                echeancier.specialites.all().values('id', 'label')
-            )
-
         # Récupérer les tranches associées
         tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).values(
             'id', 'taux', 'value', 'date_echeancier','montant_tranche'
@@ -56,16 +51,19 @@ def ApiLoadEcheancierDetails(request):
         data = {
             'id': echeancier.id,
             'model_label': echeancier.model.label,
-            'formation_label': echeancier.formation.nom if echeancier.formation else None,
-            'specialites': specialites_list,
+            'formation_label': echeancier.formation.nom if echeancier.formation else echeancier.formation_double.label,
             'is_active': echeancier.is_active,
+            'type_model' : echeancier.model.is_double_diplomation if echeancier.model.is_double_diplomation else "Modéle standard",
             'created_at': echeancier.created_at,
-            'tranches': list(tranches)
+            'tranches': list(tranches),
+            'entite' : echeancier.entite.id if echeancier.entite else None,
+            'entite_label' : echeancier.entite.designation if echeancier.entite else None,
+            
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
-    except:
-        return JsonResponse({'status': 'error'})
+    except Exception as e:
+        return JsonResponse({'status': 'error','message' : str(e)})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -76,7 +74,7 @@ def ApiSaveEcheancier(request):
             formation_id = request.POST.get('formation_id')
             tranches_data = request.POST.get('tranches')
             is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
-            specialite_ids = request.POST.get('specialite_ids', '')  # Get the specialite IDs
+            frais_inscription = request.POST.get('frais_inscription')
 
             # Convertir les données JSON en objet Python
             import json
@@ -84,50 +82,30 @@ def ApiSaveEcheancier(request):
             modele = ModelEcheancier.objects.get(id = modele_id)
 
             # Check based on mode - if double diplomation, check against specialites, otherwise formation
-            if is_double_diplomation and specialite_ids:
-                specialite_ids_list = specialite_ids.split(',')
-                # Check if an echeancier already exists for any of these specialites with the same model/promo
-                has_already = EcheancierPaiement.objects.filter(
-                    specialites__id__in=specialite_ids_list,
-                    model__promo=modele.promo
-                ).exists()
+            if is_double_diplomation:
+                has_already = EcheancierPaiement.objects.filter(formation_double_id=formation_id,model__promo=modele.promo).exists()
             else:
                 # Check against formation as before
-                has_already = EcheancierPaiement.objects.filter(
-                    formation_id=formation_id,
-                    model__promo=modele.promo
-                ).exists()
+                has_already = EcheancierPaiement.objects.filter(formation_id=formation_id,model__promo=modele.promo).exists()
 
             if has_already:
                 return JsonResponse({"status": "error-head-already"})
 
             # Créer l'échéancier principal
-            echeancier = EcheancierPaiement.objects.create(
-                model=ModelEcheancier.objects.get(id=modele_id),
-                is_active=True
-            )
+            echeancier = EcheancierPaiement.objects.create(model=ModelEcheancier.objects.get(id=modele_id),is_active=True, frais_inscription=frais_inscription)
 
             # Set formation or specialites based on mode
-            if is_double_diplomation and specialite_ids:
-                # Set specialites if in double diplomation mode
-                specialite_ids_list = [int(id) for id in specialite_ids.split(',') if id.strip()]
-                specialites = Specialites.objects.filter(id__in=specialite_ids_list)
-                echeancier.specialites.set(specialites)
+            if is_double_diplomation :
+                echeancier.formation_double = DoubleDiplomation.objects.get(id = formation_id)
             else:
-                # Set formation as before
                 echeancier.formation = Formation.objects.get(id=formation_id)
 
             echeancier.save()
 
             # Créer les lignes d'échéancier
             for tranche in tranches:
-                EcheancierPaiementLine.objects.create(
-                    echeancier=echeancier,
-                    taux=tranche['pourcentage'],
-                    value=tranche['libelle'],
-                    montant_tranche=tranche['montant_echeance'],
-                    date_echeancier=tranche['date'] if tranche['date'] else None
-                )
+                EcheancierPaiementLine.objects.create(echeancier=echeancier,taux=tranche['pourcentage'],value=tranche['libelle'],montant_tranche=tranche['montant_echeance'],
+                    date_echeancier=tranche['date'] if tranche['date'] else None,)
 
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
         except Exception as e:
@@ -153,12 +131,11 @@ def ApiSaveModeleEcheancier(request):
         nbtranche = request.POST.get('nbtranche')
         doubleDiplomation = request.POST.get('doubleDiplomation')
 
-        if doubleDiplomation == "on":
+        if doubleDiplomation == "true":
             double = True
         else:
             double = False
 
-        print(doubleDiplomation)
 
         try:
             ModelEcheancier.objects.create(
@@ -240,7 +217,7 @@ def ListeEcheanciersConfigures(request):
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
-            'id', 'model__label', 'formation__nom', 'is_active', 'is_archived', 'created_at','is_default',
+            'id', 'model__label', 'formation__nom', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','model__is_double_diplomation'
         )
         
         # Ajouter le nombre de tranches pour chaque échéancier
@@ -252,8 +229,13 @@ def ApiLoadEcheanciersConfigures(request):
             data.append({
                 'id': echeancier['id'],
                 'model_label': echeancier['model__label'],
-                'formation_label': echeancier['formation__nom'],
+                'formation_label': (
+                    echeancier.get('formation__nom')
+                    or echeancier.get('formation_double__label')
+                    or ''
+                ),
                 'is_active': echeancier['is_active'],
+                'is_double' : echeancier['model__is_double_diplomation'],
                 'is_archived': echeancier['is_archived'],
                 'created_at': echeancier['created_at'].strftime('%Y-%m-%d') if echeancier['created_at'] else '',
                 'nombre_tranches': nombre_tranches,
@@ -265,10 +247,31 @@ def ApiLoadEcheanciersConfigures(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+def ApiDeleteEcheancier(request):
+    if request.method == "POST":
+        echeancierId = request.POST.get('echeancierId')
+        obj = EcheancierPaiement.objects.get(id = echeancierId)
+        if obj.is_default:
+            return JsonResponse({"status" : "error",'message' : "La suppréssion ne peux pas etre effectuer."})
+        
+        obj.delete()
+        return JsonResponse({"status" : "success"})
+
+    else:
+        return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+def ApiLoadEntiteLegal(request):
+    if request.method == "GET":
+        liste = Entreprise.objects.all().values('id','designation')
+        return JsonResponse(list(liste), safe=False)
+    else:
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
 def echeancierAppliquer(request):
 
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
-
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -298,6 +301,7 @@ def ApiUpdateEcheancier(request):
         try:
             echeancier_id = request.POST.get('id')
             is_active = request.POST.get('is_active')
+            entite = request.POST.get('entite')
             tranche_updates_data = request.POST.get('tranche_updates')
             
             # Convertir les données JSON en objet Python
@@ -309,7 +313,7 @@ def ApiUpdateEcheancier(request):
             
             # Mettre à jour seulement le statut
             echeancier.is_active = bool(int(is_active))  # Convertir '1'/'0' en booléen
-            
+            echeancier.entite = Entreprise.objects.get(id = entite)
             # Sauvegarder les modifications
             echeancier.save()
             
@@ -336,11 +340,19 @@ def ApiUpdateEcheancier(request):
 
 @login_required(login_url="institut_app:login")
 def ApiCheckEcheancierState(request):
-    id_echeancier = request.GET.get('id_echeancier')
-    due_paiements = DuePaiements.objects.filter(ref_echeancier_id = id_echeancier).exists()
+    if request.method == "GET":
+        id_echeancier = request.GET.get('id_echeancier')
+        try:
+            due_paiements = DuePaiements.objects.filter(ref_echeancier_id = id_echeancier).exists()
+            if due_paiements:
+                return JsonResponse({"status" : "has_due_paiement"})
+            else:
+                return JsonResponse({"stauts" : "success", "message" : "Ne possede pas de paiement en attente"})
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message" : str(e)})
 
-    if due_paiements:
-        return JsonResponse({"status" : "has_due_paiement"})
+    else:
+        return JsonResponse({"status" : "error"})
     
 
 @login_required(login_url="institut_app:login")

@@ -8,6 +8,8 @@ from .f_views.paiements import *
 from .f_views.rembourssement import *
 from .f_views.depenses import *
 from .f_views.fournisseurs import *
+from .f_views.caisse import *
+from .f_views.plan_comptable import *
 
 app_name="t_tresorerie"
 
@@ -18,6 +20,7 @@ urlpatterns = [
     path('ApiDeleteDemandePaiement', ApiDeleteDemandePaiement, name="ApiDeleteDemandePaiement"),
 
     path('ApiGetDetailsDemandePaiement', ApiGetDetailsDemandePaiement, name="ApiGetDetailsDemandePaiement"),
+    path('ApiGetDetailsDemandePaiementDouble', ApiGetDetailsDemandePaiementDouble, name="ApiGetDetailsDemandePaiementDouble"),
 
     path('details-paiement-request/<int:pk>/',PageDetailsDemandePaiement, name="PageDetailsDemandePaiement"),
 
@@ -55,12 +58,15 @@ urlpatterns = [
     path('echeanciers-configures/', ListeEcheanciersConfigures, name="ListeEcheanciersConfigures"),
     path('ApiLoadEcheanciersConfigures', ApiLoadEcheanciersConfigures, name="ApiLoadEcheanciersConfigures"),
     path('echeancier-appliquer/',echeancierAppliquer, name="echeancierAppliquer"),
+    path("ApiLoadDoubleFormation", ApiLoadDoubleFormation, name="ApiLoadDoubleFormation"),
 
     path('ApiLoadPromo', ApiLoadPromo, name="ApiLoadPromo"),
 
     path('ApiGetPaiementRequestDetails', ApiGetPaiementRequestDetails, name="ApiGetPaiementRequestDetails"),
+    path('ApiGetPaiementRequestDetailsDouble', ApiGetPaiementRequestDetailsDouble, name="ApiGetPaiementRequestDetailsDouble"),
     
-
+    path('ApiDeleteEcheancier', ApiDeleteEcheancier, name="ApiDeleteEcheancier"),
+    path('ApiLoadEntiteLegal', ApiLoadEntiteLegal, name="ApiLoadEntiteLegal"),
     
     path("echeanciers-specials/",ListeEcheancierSpecial, name="ListeEcheancierSpecial"),
     path('ApiListEcheancierSpecial', ApiListEcheancierSpecial, name="ApiListEcheancierSpecial"),
@@ -146,6 +152,13 @@ urlpatterns = [
     path('ApiDeleteDepense', ApiDeleteDepense, name="ApiDeleteDepense"),
 
     path('ApiLoadPaiements',ApiLoadPaiements , name="ApiLoadPaiements"),
+
+    path('caisse/brouillard/', PageBrouillardCaisse, name="PageBrouillardCaisse"),
+    path('brouillard_caisse_json', brouillard_caisse_json, name="brouillard_caisse_json"),
+
+    path('plan-comptable/',PagePlanComptable, name="PagePlanComptable"),
+    path('plan-comptable/create-modal/', CreateCompteModal, name="CreateCompteModal"),
+    path('plan-comptable/api/', PlanComptableAPI, name="PlanComptableAPI"),
 
 
 ]

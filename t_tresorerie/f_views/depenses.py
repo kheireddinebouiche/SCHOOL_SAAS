@@ -12,7 +12,7 @@ def PageDepenses(request):
 
 @login_required(login_url="institut_app:ApiListeDepenses")
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label','categorie__label','sous_categorie__label','montant_ht','montant_ttc','tva','date','fournisseur__designation','etat').order_by('id')
+    liste = Depenses.objects.all().values('id','label','categorie__label','sous_categorie__label','montant_ht','montant_ttc','tva','date_paiement','fournisseur__designation','etat').order_by('id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -123,18 +123,22 @@ def ApiStoreDepense(request):
         montant_ttc = request.POST.get('montant_ttc')
         piece = request.FILES.get('piece')
         description = request.POST.get('description')
+        mode_paiement = request.POST.get('mode_paiement')
+        reference_paiement = request.POST.get('reference_paiement')
 
         Depenses.objects.create(
             label = label,
             fournisseur_id = fournisseur,
             categorie_id = categorie,
             sous_categorie_id = sous_categorie,
-            date = date,
+            date_paiement = date,
             montant_ht = montant_ht,
             tva = tva,
             montant_ttc = montant_ttc,
             piece = piece,
             description = description,
+            mode_paiement = mode_paiement,
+            reference = reference_paiement
         )
 
         messages.success(request, 'Les informations ont été enregistrer avec succès')
