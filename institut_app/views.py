@@ -541,3 +541,7 @@ def UpdateMyProfile(request):
     }
 
     return render(request, 'tenant_folder/users/update_profile.html', context)
+
+def Error404(request):
+    return render(request,'tenant_folder/not_authorized.html')
+

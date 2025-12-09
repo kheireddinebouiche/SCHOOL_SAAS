@@ -89,8 +89,9 @@ class Entreprise(models.Model):
 
 class BankAccount(models.Model):
    
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
-    bank_name= models.CharField(max_length=255, null=True, blank=True)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="comptes_entreprise")
+    bank_name = models.CharField(max_length=255, null=True, blank=True)
+    bank_code = models.CharField(max_length=100, null=True, blank=True)
     bank_iban  = models.CharField(max_length=1000, null=True, blank=True)
     bank_currency  = models.CharField(max_length=1000, null=True, blank=True, choices=[('eur','Euro'),('dzd','Dinars'),('usd','USD')])
     bank_observations = models.CharField(max_length=1000, null=True, blank=True)
@@ -105,7 +106,7 @@ class BankAccount(models.Model):
         verbose_name_plural="Labels"
 
     def __str__(self):
-        return self.label
+        return self.bank_code
 
 class Settings(models.Model):
     

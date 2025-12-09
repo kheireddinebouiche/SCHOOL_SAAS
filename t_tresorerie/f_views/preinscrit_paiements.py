@@ -153,17 +153,6 @@ def ApiStoreClientPaiement(request):
     id_due_paiement = request.POST.get('id_due_paiement')
     promo = request.POST.get('promo')
 
-    print('Echeance', echeance)
-    print('Date paiement', datePaiement)
-    print('montant', montant)
-    print('modePaiement', modePaiement)
-    print('reference', reference)
-    print('observation', observation)
-    print('clientId', clientId)
-    print('id_due_paiement', id_due_paiement)
-    print('promo', promo)
-
-
     try:
         due_paiement = DuePaiements.objects.get(id=id_due_paiement)
 
@@ -172,7 +161,7 @@ def ApiStoreClientPaiement(request):
             if previous_due and not previous_due.is_done:
                 return JsonResponse({"status": "error","message": "Le paiement précédent n'est pas encore effectué."})
     
-        Paiements.objects.create(
+        paiement = Paiements.objects.create(
             due_paiements = DuePaiements.objects.get(id = id_due_paiement),
             prospect = Prospets.objects.get(id = clientId),
             montant_paye = montant,
@@ -194,6 +183,14 @@ def ApiStoreClientPaiement(request):
         update_due_paiement.is_done = True
         update_due_paiement.montant_restant = montant_restant
         update_due_paiement.save()
+
+
+        OperationsBancaire.objects.create(
+            operation_type = "entree",
+            paiement = paiement,
+            montant = montant,
+            reference_bancaire = reference,
+        )
 
         return JsonResponse({"status" : "success"})
     

@@ -1,0 +1,579 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% block title %}Détails du client{% endblock title %}
+{% block content %}
+
+<style>
+    .completion-check-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+    }
+
+    .completion-check-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border-color: #dee2e6;
+    }
+
+    .completion-check-card.completed {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: rgba(25, 135, 84, 0.3);
+    }
+
+    .completion-check-card.incomplete {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: rgba(220, 53, 69, 0.3);
+    }
+</style>
+
+<!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-user-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Détails du client</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Comptabilité</a>
+                                    </li>
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Clients</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Détails du client</li>
+                                </ol>
+                            </nav>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-success px-4 py-2">
+                                    <i class="ri-edit-line me-2"></i>Modifier le client
+                                </button>
+
+                                <a href="/comptabilite/liste-des-clients/" class="btn btn-light px-4 py-2">
+                                    <i class="ri-arrow-left-line me-2"></i>Retour à la liste
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Première rangée : Informations personnelles et Informations de contact -->
+            <div class="row mb-4">
+                <!-- Informations personnelles -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-user-line text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-semibold text-primary mb-1">Informations personnelles</h5>
+                                    <p class="text-muted small mb-0">Détails du client</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-user-line text-primary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Nom et Prénom</small>
+                                    <span class="fw-semibold" id="nom_prenom_client">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-id-card-line text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Numéro client</small>
+                                    <span class="fw-semibold" id="numero_client">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-calendar-line text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Date de création</small>
+                                    <span class="fw-semibold" id="date_creation">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-calendar-event-line text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Date de dernière mise à jour</small>
+                                    <span class="fw-semibold" id="date_maj">-</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center gap-2 mt-3">
+                                <button id="viewProfileBtn" type="button" class="btn btn-info btn-sm">
+                                    <i class="ri-eye-line me-1"></i>Voir le profil
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm">
+                                    <i class="ri-edit-line me-1"></i>Modifier le profil
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations de contact -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-contacts-line text-info fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title fw-semibold text-info mb-1">Informations de contact</h5>
+                                    <p class="text-muted small mb-0">Coordonnées du client</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-mail-line text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Email</small>
+                                    <span class="fw-semibold" id="email_client">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-phone-line text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Téléphone</small>
+                                    <span class="fw-semibold" id="telephone_client">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-map-pin-line text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Adresse</small>
+                                    <span class="fw-semibold" id="adresse_client">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex align-items-start">
+                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-building-line text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Ville</small>
+                                    <span class="fw-semibold" id="ville_client">-</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center gap-2 mt-3">
+                                <button type="button" class="btn btn-info btn-sm">
+                                    <i class="ri-send-plane-line me-1"></i>Contacter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situation financière -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-money-euro-circle-line text-success fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-success mb-1">Situation financière</h5>
+                                        <p class="text-muted small mb-0">État des paiements du client</p>
+                                    </div>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-success px-4 py-2">
+                                        <i class="ri-add-line me-2"></i>Ajouter un paiement
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-success bg-opacity-10 text-success rounded-circle">
+                                                    <i class="ri-money-euro-circle-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Montant total</h6>
+                                            <h4 class="mb-0 fw-bold text-success" id="montant-total">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle">
+                                                    <i class="ri-bank-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Montant payé</h6>
+                                            <h4 class="mb-0 fw-bold text-info" id="montant-paye">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle">
+                                                    <i class="ri-alert-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Solde</h6>
+                                            <h4 class="mb-0 fw-bold text-warning" id="solde">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-sm">
+                                                <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle">
+                                                    <i class="ri-exchange-dollar-line fs-5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1">Solde dû</h6>
+                                            <h4 class="mb-0 fw-bold text-danger" id="solde_du">0,00 DZD</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique des paiements -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-history-line text-warning fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-warning mb-1">Historique des paiements</h5>
+                                        <p class="text-muted small mb-0">Paiements effectués par le client</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-warning px-4 py-2">
+                                    <i class="ri-add-line me-2"></i>Ajouter un paiement
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="border-0 rounded-start">Date</th>
+                                            <th class="border-0">Méthode</th>
+                                            <th class="border-0">Montant</th>
+                                            <th class="border-0">Statut</th>
+                                            <th class="border-0 rounded-end text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="listeDesPaiements">
+                                        <!-- Les paiements seront affichés ici dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes & Commentaires -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="ri-sticky-note-line text-info fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title fw-semibold text-info mb-1">Notes & Commentaires</h5>
+                                        <p class="text-muted small mb-0">Historique des interactions</p>
+                                    </div>
+                                </div>
+                                <button id="btnAddNotes" type="button" class="btn btn-info px-4 py-2">
+                                    <i class="ri-add-line me-2"></i>Ajouter une note
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="avatar-xs me-3 flex-shrink-0">
+                                    <div class="avatar-title bg-light rounded-circle text-muted">
+                                        <i class="ri-user-line"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-semibold">Note #1</h6>
+                                    <p class="text-muted mb-1">Description de la note</p>
+                                    <p class="text-muted mb-0 small">Date: 01/01/2022</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="avatar-xs me-3 flex-shrink-0">
+                                    <div class="avatar-title bg-light rounded-circle text-muted">
+                                        <i class="ri-user-line"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-semibold">Note #2</h6>
+                                    <p class="text-muted mb-1">Autre commentaire important</p>
+                                    <p class="text-muted mb-0 small">Date: 02/01/2022</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter un paiement -->
+<div class="modal fade" id="ajouterPaiementModal" tabindex="-1" aria-labelledby="ajouterPaiementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ajouterPaiementModalLabel">Ajouter un paiement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="datePaiement" class="form-label">Date du paiement</label>
+                        <input type="date" class="form-control" id="datePaiement">
+                    </div>
+                    <div class="mb-3">
+                        <label for="montantPaiement" class="form-label">Montant</label>
+                        <input type="number" class="form-control" id="montantPaiement" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="methodePaiement" class="form-label">Méthode de paiement</label>
+                        <select class="form-select" id="methodePaiement">
+                            <option value="espece">Espèce</option>
+                            <option value="cheque">Chèque</option>
+                            <option value="virement">Virement bancaire</option>
+                            <option value="carte">Carte bancaire</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="statutPaiement" class="form-label">Statut</label>
+                        <select class="form-select" id="statutPaiement">
+                            <option value="paye">Payé</option>
+                            <option value="en_attente">En attente</option>
+                            <option value="refuse">Refusé</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descriptionPaiement" class="form-label">Description (optionnel)</label>
+                        <textarea class="form-control" id="descriptionPaiement" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success">Enregistrer le paiement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nouvelle Note -->
+<div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-sticky-note-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="addNoteModalLabel">
+                            Nouvelle note
+                        </h5>
+                        <p class="text-muted small mb-0">Ajouter une nouvelle note ou observation</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <textarea id="content_note" class="form-control border-0 bg-light" rows="4" placeholder="Saisissez votre note ici..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Étiquettes</label>
+                        <select id="note_tags" class="form-select border-0 bg-light py-2">
+                            <option value="important">Important</option>
+                            <option value="a_revoir">A revoir</option>
+                            <option value="a_contacte">A contacter</option>
+                            <option value="a_relancer">A relancer</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-warning px-4 py-2" id="saveNoteBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modification d'une note -->
+<div class="modal fade" id="editNoteModal" tabindex="-1" aria-labelledby="editNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-edit-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="editNoteModalLabel">
+                            Modifier la note
+                        </h5>
+                        <p class="text-muted small mb-0">Modification d'une note existante</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Contenu de la note</label>
+                        <textarea id="edit_content_note" class="form-control border-0 bg-light" rows="4"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium">Étiquettes</label>
+                        <select id="edit_note_tags" class="form-select border-0 bg-light py-2">
+                            <option value="important">Important</option>
+                            <option value="a_revoir">A revoir</option>
+                            <option value="a_contacte">A contacter</option>
+                            <option value="a_relancer">A relancer</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-warning px-4 py-2" id="updateNoteBtn">
+                    <i class="ri-save-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Suppression d'une note -->
+<div class="modal fade" id="deleteNoteModal" tabindex="-1" aria-labelledby="deleteNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-delete-bin-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteNoteModalLabel">
+                            Supprimer la note
+                        </h5>
+                        <p class="text-muted small mb-0">Suppression d'une note</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center">
+                    <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+                            <i class="ri-error-warning-line"></i>
+                        </div>
+                    </div>
+                    <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer cette note ?</h5>
+                    <p class="text-muted">
+                        La suppression de cette note est définitive et ne pourra pas être annulée.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" id='ConfirmDeleteNoteBtn' class="btn btn-danger px-4 py-2">
+                    <i class="ri-delete-bin-line me-2"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function(){
+        $(document).on('click', '#btnAddNotes', function(){
+            $('#addNoteModal').modal('show');
+        })
+    });
+</script>
+
+{% endblock content %}

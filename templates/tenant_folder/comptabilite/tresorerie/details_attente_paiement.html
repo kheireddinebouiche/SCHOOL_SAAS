@@ -1269,7 +1269,7 @@
     </div>
 </div>
 
-<div id="paiementsModal" class="modal fade" tabindex="-1" aria-labelledby="paiementsModalLabel" aria-hidden="true" style="display: none;">
+<!-- <div id="paiementsModal" class="modal fade" tabindex="-1" aria-labelledby="paiementsModalLabel" aria-hidden="true" style="display: none;">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
@@ -1334,9 +1334,9 @@
                 </button>
             </div>
        
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+        </div>
+    </div>
+</div>-->
 
 <div id="paiementsModalDetails" class="modal fade" tabindex="-1" aria-labelledby="paiementsModalDetailsLabel" aria-hidden="true" style="display: none;">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -3388,12 +3388,10 @@
                         document.getElementById('btnConfirmInscription').disabled = true;
 
                     }
-                
+                    
+                    //affichage de la notifcation de rembourssement
                     ShowRefundNotification(data.has_pending_refund, data.has_processed_refund, data.is_appliced);
 
-                    if (data.has_pending_refund){
-                        //DetailsRefund(data.refund_data.date_de_demande, data.refund_data.montant_paye, data.refund_data.allowed_amount, data.refund_data.motif_rembourssement);
-                    }
                     
                     if (data.has_processed_refund && data.refund_data) {
                        
@@ -3413,17 +3411,23 @@
                         $('#_allowed_amount').val(data.refund_data.allowed_amount);
                         $('#_total_paid').val(data.refund_data.montant_paye);
                         $('#_motif_remboursement').val(data.refund_data.motif_rembourssement);
+
                         document.getElementById('btnConfirmInscription').disabled = true;
                         
                     }
 
                     RefundState = data.refund_data.etat_key
-                        if(RefundState === "ref"){
-                            $('#remboursementStatut').text(data.refund_data.etat);
-                            $('#remboursementDateValidation').text(data.refund_data.date_de_traitement);
-                            $('#remboursementMotifDanger').text(data.refund_data.motif_rembourssement);
-                            $('#remboursementObservations').text(data.refund_data.observation);
-                        }
+
+                    if(RefundState === "ref"){
+                        $('#remboursementStatut').text(data.refund_data.etat);
+                        $('#remboursementDateValidation').text(data.refund_data.date_de_traitement);
+                        $('#remboursementMotifDanger').text(data.refund_data.motif_rembourssement);
+                        $('#remboursementObservations').text(data.refund_data.observation);
+
+                        document.getElementById('btnConfirmInscription').disabled = false;
+                        document.getElementById('btnNewPaiementModal').disabled = false;
+                        document.getElementById('btnPrintEngagement').disabled = false;
+                    }
 
                     ShowClientDetails(
                         data.user_data.demandeur_email,
@@ -3445,27 +3449,31 @@
         
         function ShowRefundNotification(has_pending_refund, has_processed_refund = false, is_appliced = false){
             if(has_processed_refund && !is_appliced){
-                
                 // Show the processed refund notification
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('btnNewPaiementModal').disabled = true;
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
+
             } else if(has_pending_refund){
+
                 // Show the pending refund notification
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('btnNewPaiementModal').disabled = true;
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
+                
             }else if(has_processed_refund && is_appliced){
+
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('btnNewPaiementModal').disabled = false;
                 document.getElementById('btnRefundRequestModal').disabled = false;  
                 document.getElementById('btnPrintEngagement').disabled = false;
+
             }else{
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
@@ -4564,6 +4572,14 @@
                 alertify.error("Veuillez remplir tous les champs obligatoires.");
                 return;
             }
+
+            if (["che", "vir"].includes(modePaiement)) {
+
+                if (!reference || reference.trim() === "") {
+                    alertify.error("Veuillez remplir le champ référence");
+                    return;
+                }
+            }
             
             // Remplir la modale de synthèse
             $('#syntheseEcheance').text($('#echeancierSelection option:selected').text());
@@ -4619,7 +4635,7 @@
             var reference = $(this).data('reference');
             var observation = $(this).data('observation');
             var clientIdPaiement = $(this).data('clientIdPaiement');
-            
+
             $.ajax({
                 url : "{% url 't_tresorerie:ApiStoreClientPaiement' %}",
                 dataType : "JSON",

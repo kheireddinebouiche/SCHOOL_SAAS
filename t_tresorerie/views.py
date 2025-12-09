@@ -122,6 +122,7 @@ def ApiRejectRembourssement(request):
     obj = Rembourssements.objects.get(id = id_remboursement)
     obj.etat = 'ref'
     obj.observation = motif
+    obj.is_done = True
     obj.save()
 
     return JsonResponse({'status' : 'success'}) 

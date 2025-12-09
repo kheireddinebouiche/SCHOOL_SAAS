@@ -10,6 +10,7 @@ from .f_views.depenses import *
 from .f_views.fournisseurs import *
 from .f_views.caisse import *
 from .f_views.plan_comptable import *
+from .f_views.facturation import *
 
 app_name="t_tresorerie"
 
@@ -153,12 +154,28 @@ urlpatterns = [
 
     path('ApiLoadPaiements',ApiLoadPaiements , name="ApiLoadPaiements"),
 
-    path('caisse/brouillard/', PageBrouillardCaisse, name="PageBrouillardCaisse"),
+    path('caisse/brouillard/espece/', PageBrouillardCaisse, name="PageBrouillardCaisse"),
+    path('caisse/brouilland/banque/',PageBrouillardBanque, name="PageBrouillardBanque"),
+
     path('brouillard_caisse_json', brouillard_caisse_json, name="brouillard_caisse_json"),
+    path('brouillard_banque', brouillard_banque, name="brouillard_banque"),
+    path('imputation-bancaire/', ImputationBancaire, name="ImputationBancaire"),
+    path('ApiReturnUndonePaiament', ApiReturnUndonePaiament, name="ApiReturnUndonePaiament"),
 
     path('plan-comptable/',PagePlanComptable, name="PagePlanComptable"),
     path('plan-comptable/create-modal/', CreateCompteModal, name="CreateCompteModal"),
     path('plan-comptable/api/', PlanComptableAPI, name="PlanComptableAPI"),
+
+
+    path('ApiLoadEntrepises', ApiLoadEntrepises, name="ApiLoadEntrepises"),
+    path('details/client/<int:pk>/',ClientDetails, name="ClientDetails"),
+    path('ApiDetailsPaiement', ApiDetailsPaiement, name="ApiDetailsPaiement"),
+
+
+    ##### Facturation 
+    path('facturation/liste/', PageFacturation, name="PageFacturation"),
+    path('ApiListeDesFactures', ApiListeDesFactures, name="ApiListeDesFactures"),
+
 
 
 ]

@@ -414,7 +414,7 @@ from django.utils.dateformat import format
 
 @login_required(login_url='institut_app:login')
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.all().values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
+    prospects = Prospets.objects.all().values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
     for l in prospects:
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()
@@ -481,25 +481,30 @@ def ApiLoadSpecialite(request):
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
-def DetailsProspect(request, pk):
-    prospect = Prospets.objects.get(id=pk)
+def DetailsProspect(request, slug):
+    prospect = Prospets.objects.get(slug=slug)
 
     if prospect.is_double and prospect.type_prospect == "particulier":
         context = {
-            'pk' : pk,
+            'pk' : prospect.id,
+            'slug' : prospect.slug,
         }
         return render(request,'tenant_folder/crm/details_prospect_double.html', context)
 
     if prospect.type_prospect == "particulier":
         context = {
             'tenant' : request.tenant,
-            'pk' : pk,
+            'pk' : prospect.id,
+            'slug' : prospect.slug,
+
         }
         return render(request, 'tenant_folder/crm/details_prospect.html', context)
     else:
         context = {
             'tenant' : request.tenant,
-            'pk' : pk,
+            'pk' : prospect.id,
+            'slug' : prospect.slug,
+
         }
         return render(request, 'tenant_folder/crm/details_prospect_ets.html', context)
 

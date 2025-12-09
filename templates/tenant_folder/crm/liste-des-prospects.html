@@ -69,6 +69,190 @@
     z-index: 1050;
     position: absolute;
   }
+
+  /* Card View Styles */
+  .cards-container {
+    display: none; /* Initially hidden */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    padding: 0.75rem 0;
+  }
+
+  .prospect-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+    background: #ffffff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .prospect-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-header-prospect {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf9 100%);
+    padding: 1rem 1rem 0.75rem;
+    position: relative;
+  }
+
+  .card-body-prospect {
+    padding: 1rem 1rem 1rem 1rem;
+    padding-top: 2.5rem; /* Adjusted padding to account for the dropdown */
+    position: relative;
+  }
+
+  .prospect-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+  }
+
+  .prospect-name::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(to bottom, #3498db, #8e44ad);
+    border-radius: 2px;
+    margin-right: 8px;
+  }
+
+  .prospect-company {
+    font-weight: 500;
+    color: #4a90e2;
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .prospect-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    color: #4a5568;
+  }
+
+  .prospect-info i {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-right: 0.6rem;
+    color: #718096;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f7fafc;
+    border-radius: 4px;
+    padding: 0.25rem;
+  }
+
+  .prospect-type-badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .prospect-type-badge.particulier {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+  }
+
+  .prospect-type-badge.entreprise {
+    background-color: #fff2e8;
+    color: #fa8c16;
+    border: 1px solid #ffd591;
+  }
+
+  .prospect-state-badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+  }
+
+  .prospect-state-badge.en_attente {
+    background-color: #fffbe6;
+    color: #d4b106;
+    border: 1px solid #ffe58f;
+  }
+
+  .prospect-state-badge.confirme {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+  }
+
+  .dropdown {
+    z-index: 10;
+  }
+
+  .name-dropdown {
+    vertical-align: middle;
+  }
+
+  .name-dropdown .btn {
+    border: none;
+    padding: 0.25rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+  }
+
+  .view-toggle-btn.active {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+  }
+
+  /* Show appropriate view */
+  #tableView {
+    display: block;
+  }
+
+  #cardView {
+    display: none;
+  }
+
+  #tableView.table-view-hidden {
+    display: none;
+  }
+
+  #cardView.card-view-shown {
+    display: block;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .cards-container {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 
 <div class="main-content">
@@ -198,7 +382,17 @@
                     <option value="-created_at">Date (récent)</option>
                     <option value="created_at">Date (ancien)</option>
                   </select>
-                  
+
+                  <!-- Toggle View Buttons -->
+                  <div class="btn-group" role="group" aria-label="View options">
+                    <button type="button" class="btn btn-outline-secondary" id="tableViewBtn" data-view="table">
+                      <i class="fas fa-table"></i> Table
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="cardViewBtn" data-view="card">
+                      <i class="fas fa-th-large"></i> Carte
+                    </button>
+                  </div>
+
                   <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#newProspectModal">
                     <i class="ri-add-line me-1"></i> Nouveau prospect
                   </button>
@@ -206,22 +400,30 @@
               </div>
             </div>
             <div class="card-body p-3" id="cardContentBody">
-              <div class="table-responsive" style="overflow-x: visible;">
-                <table id="example" class="table table-hover align-middle mb-0">
-                  <thead class="bg-light">
-                    <tr>
-                      <th class="border-0 rounded-start">Nom & Prénom</th>
-                      <th class="border-0">Entreprise</th>
-                      <th class="border-0">Téléphone</th>
-                      <th class="border-0">Email</th>
-                      <th class="border-0">Type client</th>
-                      <th class="border-0">État</th>
-                      <th class="border-0">Crée le</th>
-                      <th class="border-0 rounded-end text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="listeItem" class="border-top-0"></tbody>
-                </table>
+              <!-- Table View -->
+              <div id="tableView">
+                <div class="table-responsive" style="overflow-x: visible;">
+                  <table id="example" class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                      <tr>
+                        <th class="border-0 rounded-start">Nom & Prénom</th>
+                        <th class="border-0">Entreprise</th>
+                        <th class="border-0">Téléphone</th>
+                        <th class="border-0">Email</th>
+                        <th class="border-0">Type client</th>
+                        <th class="border-0">État</th>
+                        <th class="border-0">Crée le</th>
+                        <th class="border-0 rounded-end text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="listeItem" class="border-top-0"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card View -->
+              <div id="cardView">
+                <div id="cardsContainer" class="cards-container"></div>
               </div>
             </div>
           </div>
@@ -683,7 +885,8 @@
       $('#enAttenteCount').text(enAttente);
     }
 
-    function displayProspects(data) {
+    // Function to display prospects in table view
+    function displayProspectsTable(data) {
       var row = "";
       if (data.length === 0) {
         row += '<tr><td colspan="8" class="text-center text-muted"><div class="d-flex flex-column align-items-center justify-content-center py-5">';
@@ -698,15 +901,15 @@
       } else {
         $.each(data, function(index, item) {
           row += "<tr class='align-middle'>";
-          row += "<td><a href='/crm/details-prospect/" + item.id + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
+          row += "<td><a href='/crm/details-prospect/" + item.slug + "/'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
           row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
           row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" +item.indic+'-'+ item.telephone + "</div></td>";
           row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + item.email + "</div></td>";
-          row += "<td>" + (item.type_prospect === 'particulier' ? 
-              "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" : 
+          row += "<td>" + (item.type_prospect === 'particulier' ?
+              "<span class='badge bg-primary-subtle text-primary px-2 py-1'><i class='ri-user-line me-1'></i>"+ item.type_prospect_label +"</span>" :
               "<span class='badge bg-danger-subtle text-danger px-2 py-1'><i class='ri-building-line me-1'></i>"+ item.type_prospect_label +"</span>") +"</td>";
-          row += "<td>" + (item.etat === 'en_attente' ? 
-              "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" : 
+          row += "<td>" + (item.etat === 'en_attente' ?
+              "<span class='badge bg-warning-subtle text-warning px-2 py-1'><i class='ri-time-line me-1'></i>"+ item.etat_label +"</span>" :
               "<span class='badge bg-success-subtle text-success px-2 py-1'><i class='ri-check-line me-1'></i>"+ item.etat_label +"</span>")  + "</td>";
           row +="<td>"+item.created_at+"</td>";
           row += '<td class="text-end">';
@@ -715,7 +918,7 @@
           row += '<i class="ri-more-2-fill"></i>';
           row += '</button>';
           row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-          row += '<li><a href="/crm/details-prospect/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
+          row += '<li><a href="/crm/details-prospect/' + item.slug + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
           row += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
           if(item.type_prospect === "particulier"){
             row += '<li><button id="btnUpdate" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
@@ -741,7 +944,100 @@
         });
       }
       $("#listeItem").html(row);
-      
+    }
+
+    // Function to display prospects in card view
+    function displayProspectsCard(data) {
+      var cards = "";
+      if (data.length === 0) {
+        cards = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100">';
+        cards += '<div class="avatar-sm mb-4">';
+        cards += '<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
+        cards += '<i class="ri-user-unfollow-line"></i>';
+        cards += '</div>';
+        cards += '</div>';
+        cards += '<h5 class="mb-2">Aucun prospect trouvé</h5>';
+        cards += '<p class="text-muted mb-0">Il n\'y a aucun prospect enregistré pour le moment</p>';
+        cards += '</div>';
+      } else {
+        $.each(data, function(index, item) {
+          cards += '<div class="card prospect-card">';
+          cards += '<div class="card-header card-header-prospect">';
+          cards += '<div class="prospect-name">' + item.nom + ' ' + item.prenom;
+
+          // Add dropdown menu for actions next to the name
+          cards += '<div class="name-dropdown dropdown d-inline-block ms-2">';
+          cards += '<button class="btn btn-soft-primary btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+          cards += '<i class="ri-more-2-fill"></i>';
+          cards += '</button>';
+          cards += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
+          cards += '<li><a href="/crm/details-prospect/' + item.slug + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
+          cards += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+
+          if(item.type_prospect === "particulier"){
+            cards += '<li><button id="btnUpdateCard" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+            cards += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          }else{
+            cards += '<li><button id="btnUpdateEntrepriseCard" data-id=' + item.id + ' class="dropdown-item d-flex align-items-center px-3 py-2">';
+            cards += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          }
+
+          cards += '<li><hr class="dropdown-divider my-1"></li>';
+          if(item.etat == "en_attente"){
+            cards += '<li><button id="deleteConfirmationCard" data-id="'+item.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+            cards += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+            cards += '</button></li>';
+          }else{
+             cards += '<li><button id="deleteImpossibleCard" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger">';
+             cards += '<i class="ri-delete-bin-line me-2"></i>Supprimer';
+             cards += '</button></li>';
+          }
+          cards += '</ul>';
+          cards += '</div>'; // Close the name dropdown
+
+          cards += '</div>'; // Close the prospect-name div
+          cards += '<div class="prospect-company">' + (item.entreprise ? item.entreprise : 'N/A') + '</div>';
+          cards += '</div>';
+          cards += '<div class="card-body card-body-prospect">';
+
+          // Type badge
+          cards += '<span class="prospect-type-badge ' + item.type_prospect + '">';
+          cards += '<i class="ri-' + (item.type_prospect === 'particulier' ? 'user' : 'building') + '-line me-1"></i>';
+          cards += item.type_prospect_label;
+          cards += '</span><br>';
+
+          // State badge
+          cards += '<span class="prospect-state-badge ' + item.etat + '">';
+          cards += '<i class="ri-' + (item.etat === 'en_attente' ? 'time' : 'check') + '-line me-1"></i>';
+          cards += item.etat_label;
+          cards += '</span><br>';
+
+          // Contact info
+          cards += '<div class="prospect-info"><i class="ri-phone-line"></i> ' + item.indic + '-' + item.telephone + '</div>';
+          cards += '<div class="prospect-info"><i class="ri-mail-line"></i> ' + item.email + '</div>';
+          cards += '<div class="prospect-info"><i class="ri-calendar-line"></i> ' + item.created_at + '</div>';
+
+          cards += '</div>';
+          cards += '</div>';
+        });
+      }
+      $("#cardsContainer").html(cards);
+    }
+
+    // Main function to display prospects based on current view
+    function displayProspects(data) {
+      const currentView = localStorage.getItem('prospectView') || 'table';
+
+      if(currentView === 'table') {
+        displayProspectsTable(data);
+        $('#tableView').show();
+        $('#cardView').hide();
+      } else {
+        displayProspectsCard(data);
+        $('#tableView').hide();
+        $('#cardView').show();
+      }
+
       // Update KPIs
       updateKPIs(data);
     }
@@ -1100,13 +1396,72 @@
     // Handle prospect type selection
     $(document).on('click', '.prospect-type-card', function() {
       var prospectType = $(this).data('type');
-     
+
       $('#newProspectModal').modal('hide');
       if(prospectType === "particulier"){
         window.location = "{% url 't_crm:inscription_particulier' %}";
       }else{
         window.location = "{% url 't_crm:inscription_entreprise' %}";
       }
+    });
+
+    // Toggle between table and card views
+    $(document).on('click', '#tableViewBtn', function() {
+      localStorage.setItem('prospectView', 'table');
+      $('#tableViewBtn').addClass('active').removeClass('btn-outline-secondary');
+      $('#cardViewBtn').removeClass('active').addClass('btn-outline-secondary');
+      $('#tableView').show();
+      $('#cardView').hide();
+      displayProspects(allProspectsData); // Refresh display with current filter
+    });
+
+    $(document).on('click', '#cardViewBtn', function() {
+      localStorage.setItem('prospectView', 'card');
+      $('#cardViewBtn').addClass('active').removeClass('btn-outline-secondary');
+      $('#tableViewBtn').removeClass('active').addClass('btn-outline-secondary');
+      $('#cardView').show();
+      $('#tableView').hide();
+      displayProspects(allProspectsData); // Refresh display with current filter
+    });
+
+    // Initialize the view based on stored preference
+    $(document).ready(function() {
+      const savedView = localStorage.getItem('prospectView') || 'table';
+      if(savedView === 'card') {
+        $('#cardViewBtn').addClass('active').removeClass('btn-outline-secondary');
+        $('#tableViewBtn').removeClass('active').addClass('btn-outline-secondary');
+        $('#tableView').hide();
+        $('#cardView').show();
+      } else {
+        $('#tableViewBtn').addClass('active').removeClass('btn-outline-secondary');
+        $('#cardViewBtn').removeClass('active').addClass('btn-outline-secondary');
+        $('#cardView').hide();
+        $('#tableView').show();
+      }
+    });
+
+    // Handle card view actions (update, delete, etc.)
+    $(document).on('click', '#btnUpdateCard', function(){
+      var id_prospect = $(this).data('id');
+      loadProspectDetails(id_prospect);
+    });
+
+    $(document).on('click', '#btnUpdateEntrepriseCard', function(){
+      var id_prospect = $(this).data('id');
+      loadProspectEntrepriseDetails(id_prospect);
+    });
+
+    $(document).on('click', '#deleteConfirmationCard', function(){
+      var id_prospect = $(this).data('id');
+      var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id='+id_prospect+' class="btn btn-danger">Confirmer</a>';
+
+      $('.hstack').html(row);
+      $('.deleteModal').modal('show');
+    });
+
+    $(document).on('click', '#deleteImpossibleCard', function(){
+      $('.deleteImpossibleModal').modal('show');
     });
   });
 </script>

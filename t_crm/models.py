@@ -6,6 +6,7 @@ from t_formations.models import DossierInscription, DoubleDiplomation
 from .tenant_path import *
 from t_remise.models import *
 from phonenumber_field.modelfields import PhoneNumberField
+from django.utils.text import slugify
 
 INDICATIF = {
     '+1': '🇺🇸 +1 États-Unis / Canada',
@@ -249,12 +250,36 @@ class Prospets(models.Model):
 
     is_double = models.BooleanField(default=False)
 
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Prospect"
         verbose_name_plural = "Prospects"
+
+    def save(self, *args, **kwargs):
+        # 1ère sauvegarde : obtenir un ID si l'objet n'en a pas
+        if not self.id:
+            super().save(*args, **kwargs)
+
+        # Génération du slug si vide
+        if not self.slug:
+            base = f"{self.nom}-{self.prenom}"
+            base_slug = slugify(base)
+            slug = base_slug
+            counter = 1
+
+            # Vérifier l’unicité
+            while Prospets.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            self.slug = slug
+
+        # 2ème sauvegarde réelle
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"

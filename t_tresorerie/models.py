@@ -96,8 +96,6 @@ class Paiements(models.Model):
     is_refund = models.BooleanField(default=False)
     refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.SET_NULL)
 
-    
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -319,7 +317,6 @@ class SousTypeDepense(models.Model):
     def __str__(self):
         return self.label
 
-
 class TypePaiement(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
 
@@ -349,3 +346,30 @@ class PlanComptable(models.Model):
 
     def __str__(self):
         return f"{self.numero} - {self.intitule}"
+    
+
+class OperationsBancaire(models.Model):
+    compte_bancaire = models.ForeignKey(BankAccount, on_delete=models.CASCADE, null=True, blank=True)
+
+    operation_type = models.CharField(max_length=10,choices=[('entree', 'Encaissement'), ('sortie', 'Décaissement')])
+
+    paiement = models.ForeignKey(Paiements,null=True, blank=True,on_delete=models.SET_NULL,related_name='lettrages')
+
+    depense = models.ForeignKey(Depenses,null=True, blank=True,on_delete=models.SET_NULL,related_name='lettrages')
+
+    montant = models.DecimalField(max_digits=20, decimal_places=2)
+
+    date_operation = models.DateField(auto_now_add=True)
+
+    reference_bancaire = models.CharField(max_length=255, null=True, blank=True)
+    justification = models.TextField(null=True, blank=True)
+
+    is_rapproche = models.BooleanField(default=False)
+    is_paid = models.BooleanField(default=False)
+    date_paiement = models.DateField(null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Lettrage {self.id} - {self.compte_bancaire}"
