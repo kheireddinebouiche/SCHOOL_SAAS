@@ -96,6 +96,10 @@ class DoubleDiplomation(models.Model):
     specialite1 = models.ForeignKey(Specialites, related_name="double_spec1", on_delete = models.DO_NOTHING, null=True, blank=True)
     specialite2 = models.ForeignKey(Specialites, related_name="double_spec2", on_delete = models.DO_NOTHING, null=True, blank=True)
     frais_inscription = models.DecimalField(max_digits=100, decimal_places=2 ,null=True, blank=True)
+
+    prix_spec1 = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)
+    prix_spec2 = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)
+
     prix = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)

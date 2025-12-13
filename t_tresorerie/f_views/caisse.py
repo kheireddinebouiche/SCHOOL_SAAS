@@ -121,6 +121,7 @@ def ApiReturnUndonePaiament(request):
                 'date_operation' : i.date_operation,
                 'is_approche' : i.is_rapproche,
                 'compte' : i.compte_bancaire.bank_name if i.compte_bancaire else None,
+                
             })
 
         data = {
@@ -180,3 +181,14 @@ def ApiDetailsPaiement(request):
     else:
         return JsonResponse({"status" : "error"})
 
+
+@login_required(login_url="institut_app:login")
+@ajax_required
+def ApiListBankAccount(request):
+    if request.method == "GET":
+        liste = BankAccount.objects.all().values('id','entreprise__designation','bank_name','bank_code')
+
+        return JsonResponse(list(liste),safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})

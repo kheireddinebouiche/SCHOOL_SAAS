@@ -170,6 +170,7 @@ urlpatterns = [
     path('ApiLoadEntrepises', ApiLoadEntrepises, name="ApiLoadEntrepises"),
     path('details/client/<int:pk>/',ClientDetails, name="ClientDetails"),
     path('ApiDetailsPaiement', ApiDetailsPaiement, name="ApiDetailsPaiement"),
+    path('ApiListBankAccount', ApiListBankAccount, name="ApiListBankAccount"),
 
 
     ##### Facturation 
