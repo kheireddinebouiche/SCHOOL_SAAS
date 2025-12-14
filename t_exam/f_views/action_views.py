@@ -106,36 +106,10 @@ def rachat_action(request):
             selected_modules = data.get('modules', [])
             comment = data.get('comment', '')
 
-            # Validate required parameters
-            if not student_id:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Student ID is required'
-                }, status=400)
-
-            if not commission_id:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Commission ID is required'
-                }, status=400)
-
-            # Get the Prospets object directly since the CommisionResult model references Prospets
-            try:
-                student = Prospets.objects.get(id=student_id)
-            except Prospets.DoesNotExist:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'Prospets with ID {student_id} does not exist'
-                }, status=400)
-
-            # Get commission
-            try:
-                commission = Commissions.objects.get(id=commission_id)
-            except Commissions.DoesNotExist:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'Commission with ID {commission_id} does not exist'
-                }, status=400)
+            
+            student = Prospets.objects.get(id=student_id)
+            commission = Commissions.objects.get(id=commission_id)
+            
 
             # Get module objects
             modules = list(Modules.objects.filter(id__in=selected_modules))
