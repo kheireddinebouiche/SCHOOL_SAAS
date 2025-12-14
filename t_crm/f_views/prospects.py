@@ -122,6 +122,9 @@ def ApiLoadFicheVoeuxDoubleProspect(request):
                 'id': fiche.id,
                 'specialite1_code': fiche.specialite.specialite1.code,
                 'specialite1_label': fiche.specialite.specialite1.label,
+                'formation_1' : fiche.specialite.specialite1.formation.nom,
+
+                'formation_2' : fiche.specialite.specialite1.formation.nom,
 
                 'specialite2_code': fiche.specialite.specialite2.code,
                 'specialite2_label': fiche.specialite.specialite2.label,

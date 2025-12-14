@@ -126,9 +126,11 @@ def ApiLoadPreinscritDoubleVoeux(request):
             fiche_voeux_list.append({
                 'id': fiche.id,
                 'specialite1_code': fiche.specialite.specialite1.code,
+                'formation_1' : fiche.specialite.specialite1.formation.nom,
                 'specialite1_label': fiche.specialite.specialite1.label,
 
                 'specialite2_code': fiche.specialite.specialite2.code,
+                'formation_2' : fiche.specialite.specialite2.formation.nom,
                 'specialite2_label': fiche.specialite.specialite2.label,
 
                 'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,

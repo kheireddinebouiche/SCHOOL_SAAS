@@ -556,7 +556,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadDoubleFormation(request):
     if request.method == "GET":
-        liste = DoubleDiplomation.objects.all().values('id','label','prix')
+        liste = DoubleDiplomation.objects.all().values('id','label','prix','specialite1__label','specialite1__formation__entite_legal__id','prix_spec1','specialite2__label','specialite2__formation__entite_legal__id','prix_spec2')
         return JsonResponse(list(liste), safe=False)
 
     else:

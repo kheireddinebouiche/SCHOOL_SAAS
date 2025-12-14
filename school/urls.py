@@ -27,6 +27,7 @@ urlpatterns = [
     path('', include('institut_app.urls')),
     path('dashboard/', include('t_dashboard.urls')),
     path('crm/', include('t_crm.urls')),
+    path('exam/', include('t_exam.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

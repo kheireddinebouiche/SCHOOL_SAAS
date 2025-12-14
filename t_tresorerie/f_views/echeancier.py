@@ -104,8 +104,14 @@ def ApiSaveEcheancier(request):
 
             # Créer les lignes d'échéancier
             for tranche in tranches:
-                EcheancierPaiementLine.objects.create(echeancier=echeancier,taux=tranche['pourcentage'],value=tranche['libelle'],montant_tranche=tranche['montant_echeance'],
-                    date_echeancier=tranche['date'] if tranche['date'] else None,)
+                EcheancierPaiementLine.objects.create(
+                    echeancier=echeancier,
+                    taux=tranche['pourcentage'],
+                    value=tranche['libelle'],
+                    montant_tranche=tranche['montant_echeance'],
+                    date_echeancier=tranche['date'] if tranche['date'] else None,
+                    entite_id = tranche['specialite_id'],
+                )
 
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
         except Exception as e:

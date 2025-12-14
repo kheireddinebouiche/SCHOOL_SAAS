@@ -68,6 +68,15 @@
         </div>
       </div>
       <!-- end page title -->
+
+      <!-- Notification message about menu changes -->
+      <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+        <i class="ri-information-line me-2"></i>
+        <strong>Information importante : </strong>
+        La configuration des prix de la double diplomation doit être effectuée après avoir créé les correspondances. 
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+
       <div class="row">
         <div class="col-lg-12">
           <div class="card shadow border-0 rounded-3">
@@ -184,7 +193,7 @@
                 <input type="text" class="form-control" id="label" placeholder="Saisissez le libellé de la combinaison" required>
               </div>
               <div class="mb-3">
-                <label for="montant" class="form-label">Prix de la double diplomation</label>
+                <label for="montant" class="form-label">Montant</label>
                 <input type="number" step="0.1" class="form-control" id="montant" placeholder="Veuillez saisir le montant à appliquer" required>
               </div>
               <div class="mb-3">
@@ -345,8 +354,8 @@
                   </div>
                   <div class="col-md-12">
                     <label for="montantModif" class="form-label fw-semibold">Montant</label>
-                    <input type="text" class="form-control form-control-sm" id="montantModif" placeholder="Saisissez le montant" required>
-                    <div class="form-text">Ce montant sera utilisé comme prix de réference pour les écheanciers</div>
+                    <input type="text" class="form-control form-control-sm" id="montantModif" placeholder="Calculé automatiquement" readonly required>
+                    <div class="form-text">Ce montant est calculé automatiquement comme la somme des prix des spécialités</div>
                   </div>
                   <div class="col-md-12">
                     <label for="montantFraisInscriptionModif" class="form-label fw-semibold">Frais d'inscription</label>
@@ -404,11 +413,8 @@
   <!-- End Page-content -->
 </div>
 
-
 <script>
   
-   
- 
 $(document).ready(function(){
     // Variables pour stocker les données chargées
     let formationsData = [];
@@ -762,8 +768,8 @@ $(document).ready(function(){
             data: dataToSend,
             success: function(response) {
                 if (response.success) {
-                    // Afficher un message de succès
-                    alertify.success('La combinaison a été enregistrée avec succès.');
+                    // Afficher un message de succès avec une information importante
+                    alertify.success('La combinaison a été enregistrée avec succès. Veuillez noter que vous devez maintenant configurer les prix à appliquer pour cette association dans la section Échéanciers.');
 
                     // Fermer le modal
                     $('#ajouterCombinaisonModal').modal('hide');
@@ -928,7 +934,7 @@ $(document).ready(function(){
                                 // Remplir le champ caché avec l'ID
                                 $('#combinaisonIdModif').val(combinaisonId);
 
-                                // Remplir les données de la combinaison
+                                // Remplir les données de la combinaison sans formatage des nombres
                                 $('#labelModif').val(combinaison.label);
                                 $('#montantModif').val(combinaison.montant);
                                 $('#montantFraisInscriptionModif').val(combinaison.frais_inscription);
@@ -956,6 +962,9 @@ $(document).ready(function(){
 
                                         $('#specialite1Modif').html(specialite1Option);
                                         $('#specialite2Modif').html(specialite2Option);
+
+                                        $('#prixSpec1Modif').val(combinaison.prix_spec1);
+                                        $('#prixSpec2Modif').val(combinaison.prix_spec2);
 
                                         // Sélectionner les formations correspondantes
                                         $('#formation1Modif').val(combinaison.specialite1_formation_id || '');
@@ -1038,9 +1047,13 @@ $(document).ready(function(){
         const combinaisonId = $('#combinaisonIdModif').val();
         const specialite1Id = $('#specialite1Modif').val();
         const specialite2Id = $('#specialite2Modif').val();
+
+        const prixSpec1Modif = $('#prixSpec1Modif').val();
+        const prixSpec2Modif = $('#prixSpec2Modif').val();
+
         const label = $('#labelModif').val();
-        const montant = $('#montantModif').val();
-        const frais = $('#montantFraisInscriptionModif').val();
+        const montant = parseFloat($('#montantModif').val()) || 0;
+        const frais = parseFloat($('#montantFraisInscriptionModif').val()) || 0;
         const description = $('#descriptionModif').val();
 
         // Validation des champs
@@ -1062,6 +1075,10 @@ $(document).ready(function(){
             combinaison_id: combinaisonId,
             specialite1_id: specialite1Id,
             specialite2_id: specialite2Id,
+
+            prixSpec1Modif : prixSpec1Modif,
+            prixSpec2Modif : prixSpec2Modif,
+
             label: label.toUpperCase(), // Convertir le label en majuscule
             description: description,
             frais : frais,
@@ -1076,8 +1093,8 @@ $(document).ready(function(){
             data: dataToSend,
             success: function(response) {
                 if (response.success) {
-                    // Afficher un message de succès
-                    alertify.success('La combinaison a été modifiée avec succès.');
+                    // Afficher un message de succès avec une information importante
+                    alertify.success('La combinaison a été modifiée avec succès. Veuillez noter que vous devez maintenant configurer les prix à appliquer pour cette association dans la section Échéanciers.');
 
                     // Fermer le modal
                     $('#modifierCombinaisonModal').modal('hide');
@@ -1108,6 +1125,46 @@ $(document).ready(function(){
                 $('#enregistrerModifBtn').prop('disabled', false).text('Enregistrer');
             }
         });
+    });
+
+    // Les fonctions de formatage comptable ont été supprimées
+
+    // Variables pour éviter les boucles infinies
+    let prix1Updating = false;
+    let prix2Updating = false;
+    let totalUpdating = false;
+
+    // Fonction pour calculer le montant total à partir des prix des spécialités
+    function calculateTotalAmount() {
+        if (totalUpdating) return; // Éviter les calculs pendant la mise à jour du total
+
+        totalUpdating = true;
+        const prixSpec1 = parseFloat($('#prixSpec1Modif').val()) || 0;
+        const prixSpec2 = parseFloat($('#prixSpec2Modif').val()) || 0;
+        const total = prixSpec1 + prixSpec2;
+        $('#montantModif').val(total);
+        totalUpdating = false;
+    }
+
+    // Écouter les changements sur les champs de prix des spécialités
+    $(document).on('blur', '#prixSpec1Modif, #prixSpec2Modif', function() {
+        // Recalculer le total
+        if (!totalUpdating) {
+            calculateTotalAmount();
+        }
+    });
+
+    // Écouter les changements pour recalculer le total
+    $(document).on('input', '#prixSpec1Modif, #prixSpec2Modif', function() {
+        // Recalculer le total en temps réel, mais éviter les boucles
+        if (!totalUpdating) {
+            calculateTotalAmount();
+        }
+    });
+
+    // Réinitialiser le montant quand le modal est fermé
+    $('#modifierCombinaisonModal').on('hidden.bs.modal', function() {
+        $('#montantModif').val('');
     });
 
   });

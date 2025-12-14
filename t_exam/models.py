@@ -95,3 +95,36 @@ class Note(models.Model):
     class Meta:
         unique_together = ('etudiant', 'note_type', 'pv')
 
+class Commissions(models.Model):
+    label = models.CharField(max_length=100, null=True, blank=True)
+    promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
+    criters = models.TextField(null=True, blank=True)
+    date_commission = models.DateField(null=True, blank=True)
+    is_validated = models.BooleanField(default=False)
+    comment = models.TextField(null=True, blank=True)
+    
+    participant = models.ManyToManyField(Employees)
+    formateurs = models.ManyToManyField(Formateurs)
+    groupes = models.ManyToManyField(Groupe)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.label
+
+class CommisionResult(models.Model):
+    commission = models.ForeignKey(Commissions, on_delete=models.CASCADE, null=True, blank=True)
+    etudiants = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    result = models.CharField(max_length=100, null=True, blank=True, choices=[('exam','Examen'),('rach','Rachat'),('ajou','Ajourné(e)')])
+    modules = models.ManyToManyField(Modules)
+    commentaire = models.TextField(null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.commission.label}'
+
+
+
+

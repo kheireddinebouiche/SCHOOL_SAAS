@@ -18,6 +18,7 @@ def PageAssociation(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiSaveDouble(request):
     if request.method == 'POST':
         try:
@@ -26,7 +27,6 @@ def ApiSaveDouble(request):
             specialite2_id = request.POST.get('specialite2_id')
             label = request.POST.get('label', '')  # Le label est maintenant fourni par l'utilisateur
             description = request.POST.get('description', '')
-            montant = request.POST.get('montant')
             frais = request.POST.get('frais')
 
             # Validation des données
@@ -77,7 +77,6 @@ def ApiSaveDouble(request):
                     specialite1=specialite1,
                     specialite2=specialite2,
                     label=label,
-                    prix = montant,
                     frais_inscription = frais
                 )
 
@@ -124,6 +123,8 @@ def ApiLoadDoubleDiplomation(request):
                     'specialite1_label': combinaison.specialite1.label if combinaison.specialite1 else 'N/A',
                     'specialite1_formation': combinaison.specialite1.formation.nom if combinaison.specialite1 and combinaison.specialite1.formation else 'N/A',
                     'specialite1_formation_id': combinaison.specialite1.formation.id if combinaison.specialite1 and combinaison.specialite1.formation else None,
+                    'prix_spec1' : combinaison.prix_spec1 if combinaison.prix_spec1 else None,
+                    'prix_spec2' : combinaison.prix_spec2 if combinaison.prix_spec2 else None,
                     'specialite2_id': combinaison.specialite2.id if combinaison.specialite2 else None,
                     'specialite2_label': combinaison.specialite2.label if combinaison.specialite2 else 'N/A',
                     'specialite2_formation': combinaison.specialite2.formation.nom if combinaison.specialite2 and combinaison.specialite2.formation else 'N/A',
@@ -155,6 +156,7 @@ def ApiLoadDoubleDiplomation(request):
 
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiUpdateDoubleDiplomation(request):
     if request.method == 'POST':
         try:
@@ -162,6 +164,10 @@ def ApiUpdateDoubleDiplomation(request):
             combinaison_id = request.POST.get('combinaison_id')
             specialite1_id = request.POST.get('specialite1_id')
             specialite2_id = request.POST.get('specialite2_id')
+
+            prixSpec1Modif = request.POST.get('prixSpec1Modif')
+            prixSpec2Modif = request.POST.get('prixSpec2Modif')
+
             label = request.POST.get('label', '')
             description = request.POST.get('description', '')
             montant = request.POST.get('montant')
@@ -216,6 +222,8 @@ def ApiUpdateDoubleDiplomation(request):
                 combinaison.label = label
                 combinaison.prix = montant
                 combinaison.frais_inscription = frais
+                combinaison.prix_spec1 = prixSpec1Modif
+                combinaison.prix_spec2 = prixSpec2Modif
                 # Note: We don't update description in the model since it's not in the model yet
                 combinaison.save()
 
@@ -276,10 +284,10 @@ def ApiDeleteDoubleDiplomation(request):
 
         except Exception as e:
             # En cas d'erreur serveur
-            print(f"Erreur dans ApiDeleteDoubleDiplomation: {str(e)}")  # Pour le débogage
+           
             return JsonResponse({
                 'success': False,
-                'message': 'Une erreur est survenue lors de la suppression de la combinaison.'
+                'message': str(e)
             }, status=500)
 
     else:

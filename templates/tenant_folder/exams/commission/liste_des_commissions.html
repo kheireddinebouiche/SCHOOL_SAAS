@@ -1,0 +1,478 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Examens - Liste des commissions{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="ri-group-line text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Liste des commissions</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Examens</a>
+                  </li>
+                  <li class="breadcrumb-item active">Liste des commissions</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="ri-filter-line text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <a href="{% url 't_exam:NouvelleCommission' %}" class="btn btn-info">
+                    <i class="ri-add-line me-1"></i> Nouvelle commission
+                  </a>
+                  <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Rechercher une commission..." class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="ri-search-line text-muted search-icon"></i>
+                  </div>
+                  <select id="promoFilter" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="">Toutes les promotions</option>
+                    {% for promo in all_promotions %}
+                    <option value="{{ promo.id }}">{{ promo.label }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <select id="statusFilter" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="">Tous les statuts</option>
+                    <option value="validated">Validées</option>
+                    <option value="pending">En attente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3">
+              <div class="table-responsive">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Nom</th>
+                      <th class="border-0">Promotion</th>
+                      <th class="border-0">Participants</th>
+                      <th class="border-0">Formateurs</th>
+                      <th class="border-0">Groupes</th>
+                      <th class="border-0">Date</th>
+                      <th class="border-0">Statut</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="border-top-0">
+                    {% if commissions %}
+                      {% for commission in commissions %}
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <div class="flex-grow-1">
+                                <a href="#" class="text-decoration-none">
+                                  {{ commission.label }}
+                                </a>
+                                <br>
+                                <small class="text-muted">ID: #{{ commission.id }}</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div class="text-body">
+                              {% if commission.promo %}
+                                <span class="fw-semibold text-info promo-id" style="display:none;">{{ commission.promo.id }}</span>
+                                <span class="fw-semibold text-info">{{ commission.promo.label }}</span>
+                              {% else %}
+                                <span class="text-muted promo-id" style="display:none;"></span>
+                                <span class="text-muted">--</span>
+                              {% endif %}
+                            </div>
+                          </td>
+                          <td>
+                            <div class="text-body">
+                              <i class="ri-user-line text-muted me-2"></i>{{ commission.participant.count }} participants
+                            </div>
+                          </td>
+                          <td>
+                            <div class="text-body">
+                              <i class="ri-graduation-cap-line text-muted me-2"></i>{{ commission.formateurs.count }} formateurs
+                            </div>
+                          </td>
+                          <td>
+                            <div class="text-body">
+                              <i class="ri-team-line text-muted me-2"></i>{{ commission.groupes.count }} groupes
+                            </div>
+                          </td>
+                          <td>
+                            <div class="text-body">
+                              {% if commission.date_commission %}
+                                <i class="ri-calendar-line text-muted me-2"></i>{{ commission.date_commission|date:"d M Y" }}
+                              {% else %}
+                                <span class="text-muted">--</span>
+                              {% endif %}
+                            </div>
+                          </td>
+                          <td>
+                            <div class="fw-medium">
+                              {% if commission.is_validated %}
+                                <span class="text-success fw-semibold status-indicator">
+                                  <i class="ri-checkbox-circle-fill me-1"></i> Validée
+                                </span>
+                              {% else %}
+                                <span class="text-warning status-indicator">
+                                  <i class="ri-time-line me-1"></i> En attente
+                                </span>
+                              {% endif %}
+                            </div>
+                          </td>
+                          <td class="text-end">
+                            <div class="dropdown d-inline-block">
+                              <button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri-more-2-fill"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                                <li>
+                                  <a href="{% url 't_exam:DetailsCommission' pk=commission.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
+                                    <i class="ri-eye-line text-info me-2"></i>Consulter
+                                  </a>
+                                </li>
+                                {% if not commission.is_validated %}
+                                <li>
+                                  <a href="{% url 't_exam:UpdateCommission' pk=commission.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
+                                    <i class="ri-edit-line text-primary me-2"></i>Modifier
+                                  </a>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item d-flex align-items-center px-3 py-2 text-success validate-commission-btn" data-commission-id="{{ commission.id }}">
+                                    <i class="ri-checkbox-circle-line me-2"></i>Valider
+                                  </button>
+                                </li>
+                                {% else %}
+                                <li>
+                                  <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-muted" disabled>
+                                    <i class="ri-edit-line text-muted me-2"></i>Modifier
+                                  </a>
+                                </li>
+                                {% endif %}
+                                <li>
+                                  <hr class="dropdown-divider my-1">
+                                </li>
+                                {% if not commission.is_validated %}
+                                <li>
+                                  <button class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-commission-btn" data-commission-id="{{ commission.id }}" data-commission-label="{{ commission.label }}">
+                                    <i class="ri-delete-bin-line me-2"></i>Supprimer
+                                  </button>
+                                </li>
+                                {% else %}
+                                <li>
+                                  <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-muted" disabled>
+                                    <i class="ri-delete-bin-line text-muted me-2"></i>Supprimer
+                                  </a>
+                                </li>
+                                {% endif %}
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="8" class="text-center text-muted">
+                          <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                              <div class="avatar-sm mb-4">
+                                  <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                      <i class="ri-group-line"></i>
+                                  </div>
+                              </div>
+                              <h5 class="mb-2">Aucune commission trouvée</h5>
+                              <p class="text-muted mb-0">Il n'y a aucune commission enregistrée pour le moment</p>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!-- Modal de validation de commission -->
+<div class="modal fade" id="validateCommissionModal" tabindex="-1" aria-labelledby="validateCommissionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-checkbox-circle-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="validateCommissionModalLabel">
+              Validation de la commission
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la validation de la commission</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+              <i class="ri-checkbox-circle-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir valider cette commission ?</h5>
+          <p class="text-muted mb-4">
+            La validation de la commission permettra de finaliser les attributions et de procéder aux actions liées.
+          </p>
+          <div class="alert alert-warning">
+            <i class="ri-alert-line fs-4 me-2"></i>
+            <strong>Attention :</strong> Une fois la commission validée, certaines modifications ne seront plus possibles.
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-medium">Commentaire de validation (optionnel)</label>
+            <textarea id="validationComment" class="form-control border-0 bg-light" rows="3" placeholder="Ajoutez un commentaire..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <input type="hidden" id="commissionToValidate" value="">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" id="confirmValidateCommissionBtn" class="btn btn-success px-4 py-2">
+          <i class="ri-check-line me-2"></i>Valider la commission
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de suppression de commission -->
+<div class="modal fade" id="deleteCommissionModal" tabindex="-1" aria-labelledby="deleteCommissionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteCommissionModalLabel">
+              Suppression de la commission
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la suppression de la commission</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+              <i class="ri-delete-bin-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer cette commission ?</h5>
+          <p class="text-muted mb-4">
+            <strong id="commissionToDeleteLabel"></strong>
+          </p>
+          <div class="alert alert-danger">
+            <i class="ri-alert-line fs-4 me-2"></i>
+            <strong>Attention :</strong> Cette action est irréversible et supprimera définitivement la commission et toutes ses données associées.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <input type="hidden" id="commissionToDelete" value="">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" id="confirmDeleteCommissionBtn" class="btn btn-danger px-4 py-2">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer la commission
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function(){
+    // Fonction pour filtrer les lignes du tableau
+    function filterTable() {
+      var searchTerm = $('#searchInput').val().toLowerCase();
+      var promoFilter = $('#promoFilter').val();
+      var statusFilter = $('#statusFilter').val();
+
+      $('#example tbody tr').each(function() {
+        var $row = $(this);
+        var rowText = $row.text().toLowerCase();
+        var promoId = $row.find('.promo-id').text();
+        var status = $row.find('.status-indicator').hasClass('text-success') ? 'validated' : 'pending';
+
+        var matchesSearch = rowText.indexOf(searchTerm) > -1;
+        var matchesPromo = promoFilter === '' || promoId === promoFilter;
+        var matchesStatus = statusFilter === '' || status === statusFilter;
+
+        if (matchesSearch && matchesPromo && matchesStatus) {
+          $row.show();
+        } else {
+          $row.hide();
+        }
+      });
+    }
+
+    // Écouter les changements sur les filtres
+    $('#searchInput, #promoFilter, #statusFilter').on('input change', filterTable);
+
+    // Gestion du bouton Valider dans le dropdown
+    $('.validate-commission-btn').on('click', function(){
+      var commissionId = $(this).data('commission-id');
+      $('#commissionToValidate').val(commissionId);
+      $('#validateCommissionModal').modal('show');
+    });
+
+    // Gestion de la validation de la commission
+    $('#confirmValidateCommissionBtn').on('click', function(){
+      var commissionId = $('#commissionToValidate').val();
+      var comment = $('#validationComment').val();
+
+      // Disable the button during request to prevent duplicate submissions
+      $(this).prop('disabled', true).text('Validation...');
+
+      if(commissionId) {
+        $.ajax({
+          url: '{% url "t_exam:validate_commission" pk=0 %}'.replace('0', commissionId),
+          type: 'POST',
+          data: {
+            'comment': comment,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+          },
+          success: function(response) {
+            if(response.status === 'success') {
+              $('#validateCommissionModal').modal('hide');
+              // Show success message and reload page to update the UI
+              alert(response.message);
+              location.reload();
+            } else {
+              alert(response.message || 'Une erreur est survenue lors de la validation.');
+            }
+          },
+          error: function() {
+            alert('Une erreur est survenue lors de la validation.');
+          },
+          complete: function() {
+            // Re-enable the button after request completes
+            $('#confirmValidateCommissionBtn').prop('disabled', false).html('<i class="ri-check-line me-2"></i>Valider la commission');
+          }
+        });
+      }
+    });
+
+    // Gestion du bouton Supprimer dans le dropdown
+    $('.delete-commission-btn').on('click', function(){
+      var commissionId = $(this).data('commission-id');
+      var commissionLabel = $(this).data('commission-label');
+      $('#commissionToDelete').val(commissionId);
+      $('#commissionToDeleteLabel').text(commissionLabel);
+      $('#deleteCommissionModal').modal('show');
+    });
+
+    // Gestion de la suppression de la commission
+    $('#confirmDeleteCommissionBtn').on('click', function(){
+      var commissionId = $('#commissionToDelete').val();
+
+      // Disable the button during request to prevent duplicate submissions
+      $(this).prop('disabled', true).text('Suppression...');
+
+      if(commissionId) {
+        $.ajax({
+          url: '{% url "t_exam:delete_commission" pk=0 %}'.replace('0', commissionId),
+          type: 'POST',
+          data: {
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+          },
+          success: function(response) {
+            if(response.status === 'success') {
+              $('#deleteCommissionModal').modal('hide');
+              // Show success message and reload page to update the UI
+              location.reload();
+            } else {
+              alert(response.message || 'Une erreur est survenue lors de la suppression.');
+            }
+          },
+          error: function() {
+            alert('Une erreur est survenue lors de la suppression.');
+          },
+          complete: function() {
+            // Re-enable the button after request completes
+            $('#confirmDeleteCommissionBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-2"></i>Supprimer la commission');
+          }
+        });
+      }
+    });
+  });
+</script>
+
+{% endblock content %}

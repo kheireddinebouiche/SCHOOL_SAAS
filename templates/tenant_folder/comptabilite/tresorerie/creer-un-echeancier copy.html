@@ -491,14 +491,35 @@
                           </select>
                           <div class="form-text">Sélectionnez un modèle d'échéancier existant</div>
                         </div>
-                        
+
                         <div class="col-lg-12">
+                          <label class="form-label fw-medium" for="modeleEcheancier">Frais d'inscription</label>
+                          <input type="number" step="0.1" class="form-control" id="frais_inscription">
+                          <div class="form-text">Veuillez donner le montant des frais d'inscription a appliquer pour cette promotion</div>
+                        </div>
+                        
+                        <div class="col-lg-12" id="formationField">
                           <label class="form-label fw-medium" for="formationEcheancier">Formation</label>
                           <select class="form-select py-2" id="formationEcheancier" name="formation_echeancier">
                             <option value="">Sélectionnez une formation</option>
                             <!-- Options à charger dynamiquement -->
                           </select>
                           <div class="form-text">Sélectionnez la formation associée à cet échéancier</div>
+                        </div>
+
+                        <div class="col-lg-12" id="doubleFormationSection" style="display: none;">
+                          <div class="row g-3 align-items-end">
+                            <div class="col-md-12">
+                              <label class="form-label fw-medium" for="doubleSpecialiteEchancier">Formation (double diplômation)</label>
+                              <select class="form-select py-2" id="doubleSpecialiteEchancier" name="formation_double">
+                                <option value="0">Sélectionnez une spécialité</option>
+                                <!-- Options à charger dynamiquement -->
+                              </select>
+                             
+                            </div>
+                          </div>
+
+                          
                         </div>
                         
                         <div class="col-lg-12">
@@ -696,7 +717,7 @@ $(document).ready(function () {
             success: function(data) {
                 var option = "<option value=''>Sélectionnez un modèle d'échéancier</option>";
                 $.each(data, function(index, item) {
-                    option += "<option value='"+item.id+"'>"+item.label+"</option>";
+                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"'>"+item.label+"</option>";
                 });
                 $('#modeleEcheancier').html(option);
             },
@@ -724,29 +745,53 @@ $(document).ready(function () {
             }
         });
     }
-    
+
     // Initialiser les données
+    // Variable globale pour suivre l'état du mode double diplomation
+    var isDoubleDiplomationMode = false;
+
     loadModelesEcheanciers();
-    loadFormations();
     
     // Mettre à jour les montants lorsque le pourcentage change
     $(document).on('input', '.tranche-pourcentage', function() {
         var pourcentage = parseFloat($(this).val()) || 0;
-        var selectedFormation = $('#formationEcheancier option:selected');
-        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+
+        var prixFormation = 0;
+        if (isDoubleDiplomationMode) {
+            var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
+            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        } else {
+            var selectedFormation = $('#formationEcheancier option:selected');
+            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        }
+
         var montant = (prixFormation * pourcentage / 100).toFixed(2);
-        
+
         // Mettre à jour le champ montant correspondant
         $(this).closest('.row').find('.montant-echeance').val(montant);
     });
-    
-    // Mettre à jour les montants lorsque la formation change
+
+    // Mettre à jour les montants lorsque la formation ou spécialités changent
     $('#formationEcheancier').on('change', function() {
+
         // Si les tranches sont déjà générées, mettre à jour tous les montants
         if($('#tranchesContainer').is(':visible')) {
-            var selectedFormation = $('#formationEcheancier option:selected');
-            var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-            
+            var prixFormation = 0;
+            if (isDoubleDiplomationMode) {
+                // For double diplomation mode, get the total price from selected specialites in the list
+                var specialitePrixTotal = 0;
+
+                $('#listSpecialitesContainer .specialite-item').each(function() {
+                    var specialitePrix = parseFloat($(this).find('.specialite-prix').val()) || 0;
+                    specialitePrixTotal += specialitePrix;
+                });
+
+                prixFormation = specialitePrixTotal;
+            } else {
+                var selectedFormation = $('#formationEcheancier option:selected');
+                prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+            }
+
             $('.tranche-pourcentage').each(function() {
                 var pourcentage = parseFloat($(this).val()) || 0;
                 var montant = (prixFormation * pourcentage / 100).toFixed(2);
@@ -755,19 +800,45 @@ $(document).ready(function () {
         }
     });
     
+    // Show/hide formation or specialite fields based on model selection
+    $('#modeleEcheancier').on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        var isDoubleDiplomation = selectedOption.data('is-double-diplomation');
+
+        // Mettre à jour la variable globale
+        isDoubleDiplomationMode = isDoubleDiplomation;
+
+        if (isDoubleDiplomation) {
+            $('#formationField').hide();
+            $('#doubleFormationSection').show();
+        } else {
+            loadFormations();
+            $('#formationField').show();
+            $('#doubleFormationSection').hide();
+        }
+    });
+
     // Charger les tranches lorsque le bouton est cliqué
     $('#btnChargerTranches').on('click', function() {
         var modeleId = $('#modeleEcheancier').val();
         var formationId = $('#formationEcheancier').val();
-        
+
         if(!modeleId) {
             alertify.error("Veuillez sélectionner un modèle d'échéancier");
             return;
         }
-        
-        if(!formationId) {
-            alertify.error("Veuillez sélectionner une formation");
+
+        if (isDoubleDiplomationMode) {
+           var doubleSpecialiteEchancier = $('#doubleSpecialiteEchancier').val()
+           if (doubleSpecialiteEchancier === "0"){
+            alertify.error("Veuillez sélectionner une formation double")
             return;
+           }
+        } else {
+            if(!formationId) {
+                alertify.error("Veuillez sélectionner une formation");
+                return;
+            }
         }
         
         // Charger les détails du modèle
@@ -779,21 +850,34 @@ $(document).ready(function () {
             success: function(response) {
                 if(response.status === 'success') {
                     var data = response.data;
-                    
-                    // Récupérer le prix de la formation sélectionnée
-                    var selectedFormation = $('#formationEcheancier option:selected');
-                    var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-                    
+
+                    var prixFormation = 0;
+                    var selectedText = "";
+
+                    if (isDoubleDiplomationMode) {
+                       
+
+                        // Récupérer le prix de la formation sélectionnée
+                        var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
+                        prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+                        selectedText = selectedFormation.text();
+                        
+
+                    } else {
+                        // Récupérer le prix de la formation sélectionnée
+                        var selectedFormation = $('#formationEcheancier option:selected');
+                        prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+                        selectedText = selectedFormation.text();
+                    }
+
                     // Mettre à jour le résumé
                     $('#resumeModele').text(data.label);
                     $('#resumeTranches').text(data.nombre_tranche + " tranches");
-                    $('#resumePrix').text(prixFormation.toFixed(2) + " €");
-                    $('#resumeTotal').text(prixFormation.toFixed(2) + " €");
-                    
-                    // Mettre à jour la formation dans le résumé
-                    $('#formationEcheancier option:selected').each(function() {
-                        $('#resumeFormation').text($(this).text());
-                    });
+                    $('#resumePrix').text(prixFormation.toFixed(2) + " DA");
+                    $('#resumeTotal').text(prixFormation.toFixed(2) + " DA");
+
+                    // Mettre à jour la formation/spécialités dans le résumé
+                    $('#resumeFormation').text(selectedText);
                     
                     // Afficher les conteneurs
                     $('#tranchesContainer').show();
@@ -816,10 +900,21 @@ $(document).ready(function () {
     
     // Générer les tranches dynamiquement
     function generateTranches(tranches, nombreTranches) {
-        // Récupérer le prix de la formation sélectionnée
-        var selectedFormation = $('#formationEcheancier option:selected');
-        var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-        
+        var prixFormation = 0;
+
+        if (isDoubleDiplomationMode) {
+            // For double diplomation mode, get the total price from selected specialites in the list
+            
+
+            var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
+            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+
+        } else {
+            // Récupérer le prix de la formation sélectionnée
+            var selectedFormation = $('#formationEcheancier option:selected');
+            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+        }
+
         var container = $('#listeTranchesContainer');
         container.empty();
         
@@ -909,15 +1004,23 @@ $(document).ready(function () {
     $('#btnEnregistrerEcheancier').on('click', function() {
         var modeleId = $('#modeleEcheancier').val();
         var formationId = $('#formationEcheancier').val();
-        
+        var doubleFormation = $('#doubleSpecialiteEchancier').val();
+        var frais_inscription = $('#frais_inscription').val();
+
         if(!modeleId) {
             alertify.error("Veuillez sélectionner un modèle d'échéancier");
             return;
         }
-        
-        if(!formationId) {
+
+        // Vérifier la formation seulement si ce n'est pas un mode double diplomation
+        if (!isDoubleDiplomationMode && !formationId) {
             alertify.error("Veuillez sélectionner une formation");
             return;
+        }
+
+        if (!frais_inscription){
+          alertify.error("Veuillez donner le montant des frais d'inscription");
+          return;
         }
         
         // Récupérer les données des tranches
@@ -957,10 +1060,13 @@ $(document).ready(function () {
             type: 'POST',
             data: {
                 'modele_id': modeleId,
-                'formation_id': formationId,
+                'formation_id': isDoubleDiplomationMode ? doubleFormation : formationId,  // Send null if double diplomation mode
                 'tranches': JSON.stringify(tranchesData),
+                'is_double_diplomation': isDoubleDiplomationMode,
+                'frais_inscription' : frais_inscription,
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
+            
             dataType: 'JSON',
             success: function(response) {
                 if(response.status === 'success') {
@@ -990,6 +1096,28 @@ $(document).ready(function () {
             }
         });
     });
+  
+
+    function loadDoubleDiplomation(){
+      $.ajax({
+        url : "{% url 't_tresorerie:ApiLoadDoubleFormation' %}",
+        dataType : "JSON",
+        type : "GET",
+        success : function(data){
+            var option = "<option value='0'>Sélectionnez une formation</option>";
+                $.each(data, function(index, item) {
+                    option += "<option value='"+item.id+"' data-prix='"+item.prix+"'>"+item.label+"</option>";
+                });
+                $('#doubleSpecialiteEchancier').html(option);
+        },
+        error: function() {
+            alertify.error("Erreur lors du chargement des spécialités");
+        }
+      })
+    }
+
+    loadDoubleDiplomation();
+
 });
 </script>
 {% endblock content %}

@@ -138,10 +138,10 @@ def ApiAjouterHistoriqueAbsence(request):
                 )
 
                 module_label = ligne.module.label if ligne.module else "N/A"
-               
+                module_code  = ligne.module.code if ligne.module.code else "N/A"
 
                 # Appel de la méthode du modèle
-                historique.ajouter_entree(date_obj, module_label, status)
+                historique.ajouter_entree(date_obj, module_label, module_code, status)
 
             return JsonResponse({"status": "success", "message": "Historique mis à jour avec succès"})
         

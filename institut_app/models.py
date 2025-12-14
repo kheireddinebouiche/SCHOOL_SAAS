@@ -4,6 +4,7 @@ from app.models import Institut
 from django_countries.fields import CountryField
 from t_crm.tenant_path import *
 from django.contrib.auth.models import User
+from django.utils.translation import gettext_lazy as _
 
 class UserSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="session_info")
@@ -170,4 +171,28 @@ class Fournisseur(models.Model):
     def __str__(self):
         return self.designation
 
-   
+
+class Modules(models.Model):
+    MODULES = [
+        ('crm',_('CRM')),
+        ('ped',_('Pédagogie')),
+        ('eva',_('Evaluation')),
+        ('con',_('Conseil')),
+        ('crm',_('CRM')),
+        ('adm',_('Administration')),
+    ]
+
+    name = models.CharField(max_length=50, null=True, blank=True, choices=MODULES, unique=True, verbose_name=_("Module"))
+    description = models.TextField(max_length=50, blank=True, verbose_name=_('Description'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Actif'))
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+
+    class Meta:
+        verbose_name=_('Module')
+        verbose_name_plural = _('Modules')
+        ordering = ['name']
+
+    def __str__(self):
+        return self.get_name_display()

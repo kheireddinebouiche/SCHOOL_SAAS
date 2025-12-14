@@ -50,7 +50,7 @@ class RegistrePresence(models.Model):
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
     context = models.CharField(max_length=100, null=True, blank=True)
-    status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')])
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')], default="enc")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -72,6 +72,7 @@ class HistoriqueAbsence(models.Model):
     ligne_presence = models.ForeignKey("LigneRegistrePresence", on_delete=models.CASCADE, null=True, blank=True, related_name="historique_absence")
     etudiant = models.ForeignKey(Prospets, null=True, blank=True, on_delete=models.CASCADE)
     historique = models.JSONField(default=list, blank=True, null=True)
+    etat = models.BooleanField(default=False)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -79,8 +80,7 @@ class HistoriqueAbsence(models.Model):
     def __str__(self):
         return f"{self.etudiant.nom} - {self.ligne_presence.module.label}" if self.etudiant and self.ligne_presence else "Historique Absence"
 
-    def ajouter_entree(self, date, module, etat):
-        """Ajoute ou met à jour une entrée dans le champ JSON"""
+    def ajouter_entree(self, date, module, code, etat):
         if not date:
             date = timezone.now().date()
 
@@ -89,19 +89,21 @@ class HistoriqueAbsence(models.Model):
         if self.historique is None:
             self.historique = []
 
-        new_entry = {"module": module, "etat": etat}
+        new_entry = {"module": module, "code" : code , "etat": etat}
 
-        # Cherche si cette date existe déjà
-        existing_date = next((item for item in self.historique if item["date"] == date_str), None)
+        existing_date = next(
+            (item for item in self.historique if item["date"] == date_str),
+            None
+        )
 
         if existing_date:
-            existing_module = next((m for m in existing_date["data"] if m["module"] == module), None)
-            if existing_module:
-                existing_module.update(new_entry)
-            else:
-                existing_date["data"].append(new_entry)
+            
+            existing_date["data"].append(new_entry)
         else:
-            self.historique.append({"date": date_str,"data": [new_entry]})
+            self.historique.append({
+                "date": date_str,
+                "data": [new_entry]
+            })
 
         self.save()
 

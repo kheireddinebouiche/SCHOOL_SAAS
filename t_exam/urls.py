@@ -1,12 +1,13 @@
-from django.contrib import admin
 from django.urls import path
 from .views import *
+# Utilise un chemin relatif
+from .f_views.commission import *
+from .f_views.action_views import examen_action, rachat_action, ajourne_action
 
 app_name="t_exam"
 
 urlpatterns = [
-
-   path('liste-des-sessions/', ListeSession, name="ListeSession"),
+    path('liste-des-sessions/', ListeSession, name="ListeSession"),
    path('NewSession', NewSession, name="NewSession"),
    path('ApiListSession', ApiListSession, name="ApiListSession"),
    path('ApiDeleteSession', ApiDeleteSession, name="ApiDeleteSession"),
@@ -33,11 +34,25 @@ urlpatterns = [
    path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
 
    path('ApiGetTypeNoteDetails',ApiGetTypeNoteDetails, name="ApiGetTypeNoteDetails"),
-   path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),  
+   path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),
 
    path('pv-note/<int:pk>/', ApiExamResult, name="ApiExamResult"),
    path('SaveNoteAjax', SaveNoteAjax , name="SaveNoteAjax"),
 
    path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
+
+
+   path('commission/liste/', PageCommission, name="PageCommission"),
+   path('commission/nouvelle/', NouvelleCommission, name="NouvelleCommission"),
+   path('commission/modification/<int:pk>/', UpdateCommission, name="UpdateCommission"),
+   path('commission/details/<int:pk>/', DetailsCommission, name="DetailsCommission"),
+   path('validate_commission/<int:pk>/', validate_commission, name="validate_commission"),
+
+   path('delete_commission/<int:pk>/', delete_commission, name="delete_commission"),
+   path('ApiGetGroupeDetails', ApiGetGroupeDetails, name="ApiGetGroupeDetails"),
+
+   path('examen_action', examen_action, name="examen_action"),
+   path('rachat_action', rachat_action, name="rachat_action"),
+   path('ajourne_action', ajourne_action, name="ajourne_action"),
 
 ]
