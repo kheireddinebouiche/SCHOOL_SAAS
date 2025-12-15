@@ -3,6 +3,12 @@
 {% block title %}Commission d'Examen - Détails{% endblock title %}
 
 {% block content %}
+<!-- Load Remix Icons CSS -->
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<!-- Load jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <input type="hidden" id="commissionId" value="{{ commission.id }}">
 <div class="main-content">
   <div class="page-content bg-light">
@@ -54,6 +60,24 @@
                   <a href="{% url 't_exam:PageCommission' %}" class="btn btn-secondary">
                     <i class="ri-arrow-left-line me-1"></i>Retour
                   </a>
+
+                  <!-- Bouton Afficher les résultats de commission -->
+                  <button class="btn btn-info btn-label waves-effect waves-light" type="button" id="showResultsBtn">
+                    <i class="ri-file-chart-line label-icon align-middle fs-16 me-2"></i>
+                    Afficher les résultats
+                  </button>
+
+                  <!-- Bouton Imprimer -->
+                  <button class="btn btn-secondary btn-label waves-effect waves-light" type="button" id="printBtn">
+                    <i class="ri-printer-line label-icon align-middle fs-16 me-2"></i>
+                    Imprimer
+                  </button>
+
+                  <!-- Bouton Clôturer la commission -->
+                  <button class="btn btn-danger btn-label waves-effect waves-light" type="button" id="closeCommissionBtn">
+                    <i class="ri-lock-line label-icon align-middle fs-16 me-2"></i>
+                    Clôturer la commission
+                  </button>
                 </div>
               </div>
             </div>
@@ -636,8 +660,91 @@
   </div>
 </div>
 
+<!-- Modal des résultats de commission -->
+<div class="modal fade" id="commissionResultsModal" tabindex="-1" aria-labelledby="commissionResultsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-full-width">
+    <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
+      <div class="modal-header border-0 bg-gradient bg-info text-white px-4 py-4" style="background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);">
+        <div class="d-flex align-items-center w-100">
+          <div class="me-3">
+            <div class="avatar-lg rounded-circle bg-white bg-opacity-20 d-flex align-items-center justify-content-center">
+              <i class="ri-file-chart-line fs-2"></i>
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <h4 class="modal-title fw-bold mb-1 text-white" id="commissionResultsModalLabel">Résultats de la Commission</h4>
+            <p class="text-white text-opacity-75 mb-0">Détails des résultats pour la commission d'examen</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="container-fluid p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0 fw-semibold"><i class="ri-bar-chart-line text-info me-2"></i>Synthèse des Résultats</h5>
+            <div class="d-flex gap-2">
+              <div class="input-group" style="max-width: 300px;">
+                <span class="input-group-text"><i class="ri-search-line"></i></span>
+                <input type="text" class="form-control" id="resultsSearch" placeholder="Rechercher un étudiant...">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                      <thead class="bg-light">
+                        <tr>
+                          <th class="px-4" scope="col">Étudiant</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Statut</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Moyenne Générale</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Rang</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Décision</th>
+                          <th class="text-center" scope="col" style="width: 180px;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="listResults">
+                        <tr>
+                          <td class="text-center" colspan="6">
+                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                              <div class="avatar-sm mb-4">
+                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                  <i class="ri-file-chart-line"></i>
+                                </div>
+                              </div>
+                              <h5 class="mb-2">Chargement des résultats</h5>
+                              <p class="text-muted mb-0">Les résultats de la commission sont en cours de chargement...</p>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light btn-hover-primary" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+        <button type="button" class="btn btn-info" id="exportResultsBtn">
+          <i class="ri-download-line me-2"></i>Exporter les Résultats
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function(){
+
+
     // Gestion du bouton Valider
     $('.validate-commission-btn').on('click', function(){
       var commissionId = $(this).data('commission-id');
@@ -734,8 +841,12 @@
 
       $('.groupe-modal-header').html(label);
       $('#groupeModal').modal('show');
+      window.GroupeId = id;
+
+      console.log(window.GroupeId);
     });
 
+    
     function loadStudents(groupeId){
       $.ajax({
         url : "{% url 't_exam:ApiGetGroupeDetails' %}",
@@ -745,7 +856,7 @@
         success : function(data){
           // Store the loaded data globally so we can access it from other functions
           window.loadedStudentData = data;
-
+          
           var tbody = $('#listStudent');
           tbody.empty();
 
@@ -756,6 +867,8 @@
               var totalA = 0;
               var totalJ = 0;
 
+              const historiqueAbsence = JSON.stringify(etudiant.historique_ids);
+              
               // Create a module stats object like in the presence section
               var modulesStats = {};
               if (etudiant.historique && Array.isArray(etudiant.historique) && etudiant.historique.length > 0) {
@@ -790,7 +903,7 @@
                 progressBarClass = 'bg-warning';
               }
 
-              var etudiantRow = '<tr class="etudiant-row" data-etudiant-id="' + etudiant.etudiant.id + '">' +
+              var etudiantRow = '<tr class="etudiant-row"  data-etudiant-id="' + etudiant.etudiant.id + '">' +
                 '<td class="text-center"><a href="javascript:void(0);" class="toggle-presence text-decoration-none d-inline-flex align-items-center justify-content-center rounded" style="width: 36px; height: 36px;" title="Afficher/Masquer les détails"><i class="ri-arrow-down-s-line fs-5"></i></a></td>' +
                 '<td class="px-4">' +
                   '<div class="d-flex align-items-center">' +
@@ -799,7 +912,7 @@
                     '</div>' +
                     '<div>' +
                       '<h6 class="mb-0 fw-semibold">' + etudiant.etudiant.nom + ' ' + etudiant.etudiant.prenom + '</h6>' +
-                      '<small class="text-muted">ID: ' + etudiant.etudiant.id + '</small>' +
+                      '<small class="text-muted">ID: ' + etudiant.etudiant.matricule + '</small>' +
                     '</div>' +
                   '</div>' +
                 '</td>' +
@@ -836,9 +949,9 @@
                 '</td>' +
                 '<td class="text-center">' +
                   '<div class="d-flex justify-content-center gap-2">' +
-                    '<button type="button" class="btn btn-sm btn-outline-primary btn-action" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="examens"><i class="ri-file-text-line me-1"></i>Examens</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-warning btn-action" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="rachat"><i class="ri-refund-line me-1"></i>Rachat</button>' +
-                    '<button type="button" class="btn btn-sm btn-outline-secondary btn-action" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="ajourne"><i class="ri-timer-line me-1"></i>Ajourné</button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-primary btn-action" data-historique="'+historiqueAbsence+'" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="examens"><i class="ri-file-text-line me-1"></i>Examens</button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-warning btn-action" data-historique="'+historiqueAbsence+'" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="rachat"><i class="ri-refund-line me-1"></i>Rachat</button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary btn-action" data-historique="'+historiqueAbsence+'" data-etudiant-id="' + etudiant.etudiant.id + '" data-action="ajourne"><i class="ri-timer-line me-1"></i>Ajourné</button>' +
                   '</div>' +
                 '</td>' +
                 '</tr>';
@@ -943,7 +1056,7 @@
                           '<div class="d-flex justify-content-between align-items-start mb-3">' +
                             '<div>' +
                               '<h6 class="card-title mb-1 fw-bold text-dark">' + stats.module + '</h6>' +
-                              (stats.code ? '<span class="badge bg-light text-muted fw-medium">' + stats.code + '</span>' : '') +
+                              (stats.code ? '<span class="code-module badge bg-dark text-white fw-medium">' + stats.code + '</span>' : '') +
                             '</div>' +
                             '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle border-opacity-25 px-3 py-2" style="font-size: 0.875rem;">' + (stats.P + stats.A + stats.J) + ' Total</span>' +
                           '</div>' +
@@ -993,7 +1106,15 @@
               tbody.append(presenceRow);
             });
           } else {
-            tbody.append('<tr><td colspan="7" class="text-center text-muted py-5">Aucun étudiant trouvé dans ce groupe</td></tr>');
+            tbody.append('<tr><td colspan="7" class="text-center text-muted py-5"><div class="d-flex flex-column align-items-center justify-content-center py-5">\
+                                                                                      <div class="avatar-sm mb-4">\
+                                                                                          <div class="avatar-title bg-light text-muted rounded-circle fs-1">\
+                                                                                              <i class="ri-pass-valid-line"></i>\
+                                                                                          </div>\
+                                                                                      </div>\
+                                                                                      <h5 class="mb-2">Toutes les données ont été traiter</h5>\
+                                                                                      <p class="text-muted mb-0">Il n\'y a aucun étudiant enregistré pour le moment</p>\
+                                                                                  </div></td></tr>');
           }
         },
         error: function() {
@@ -1004,371 +1125,393 @@
       });
     }
 
-  });
+    // Gestion du déroulement des lignes d'historique - maintenant applicable au clic sur la ligne entière ou le toggle
+    $(document).on('click', '.etudiant-row .toggle-presence, .etudiant-row .toggle-presence *, .presence-row .toggle-presence', function(e){
+      e.stopPropagation();
 
-  // Gestion du déroulement des lignes d'historique - maintenant applicable au clic sur la ligne entière ou le toggle
-  $(document).on('click', '.etudiant-row .toggle-presence, .etudiant-row .toggle-presence *, .presence-row .toggle-presence', function(e){
-    e.stopPropagation();
+      var toggleElement = $(this).hasClass('toggle-presence') ? $(this) : $(this).closest('.toggle-presence');
+      var etudiantRow = toggleElement.closest('tr.etudiant-row');
+      var etudiantId = etudiantRow.data('etudiant-id');
 
-    var toggleElement = $(this).hasClass('toggle-presence') ? $(this) : $(this).closest('.toggle-presence');
-    var etudiantRow = toggleElement.closest('tr.etudiant-row');
-    var etudiantId = etudiantRow.data('etudiant-id');
+      if(etudiantId) {
+        console.log('Toggle clicked');
+        console.log('Etudiant ID:', etudiantId);
 
-    if(etudiantId) {
-      console.log('Toggle clicked');
-      console.log('Etudiant ID:', etudiantId);
-
-      // Trouver la ligne de présence associée en utilisant l'ID de l'étudiant
-      var presenceRow = $('tr.presence-row[data-etudiant-id="' + etudiantId + '"]');
-      console.log('Found presence rows:', presenceRow.length);
-
-      // Basculer l'affichage de la ligne d'historique
-      presenceRow.toggleClass('d-none');
-      console.log('Toggled presence row visibility');
-
-      // Inverser l'icône dans la ligne d'étudiant
-      var icon = etudiantRow.find('.toggle-presence i');
-      if(presenceRow.hasClass('d-none')) {
-        icon.removeClass('ri-arrow-up-s-line').addClass('ri-arrow-down-s-line');
-      } else {
-        icon.removeClass('ri-arrow-down-s-line').addClass('ri-arrow-up-s-line');
-      }
-    }
-  });
-
-  // Gestion de la recherche d'étudiants
-  $(document).on('input', '#studentSearch', function() {
-    var searchValue = $(this).val().toLowerCase();
-    $('#listStudent tr.etudiant-row').each(function() {
-      var rowText = $(this).text().toLowerCase();
-      var etudiantId = $(this).data('etudiant-id');
-
-      if (rowText.indexOf(searchValue) > -1) {
-        $(this).show();
-        // If the presence row for this student is open, keep it visible
+        // Trouver la ligne de présence associée en utilisant l'ID de l'étudiant
         var presenceRow = $('tr.presence-row[data-etudiant-id="' + etudiantId + '"]');
-        if (!presenceRow.hasClass('d-none')) {
-          presenceRow.show();
+        console.log('Found presence rows:', presenceRow.length);
+
+        // Basculer l'affichage de la ligne d'historique
+        presenceRow.toggleClass('d-none');
+        console.log('Toggled presence row visibility');
+
+        // Inverser l'icône dans la ligne d'étudiant
+        var icon = etudiantRow.find('.toggle-presence i');
+        if(presenceRow.hasClass('d-none')) {
+          icon.removeClass('ri-arrow-up-s-line').addClass('ri-arrow-down-s-line');
+        } else {
+          icon.removeClass('ri-arrow-down-s-line').addClass('ri-arrow-up-s-line');
         }
-      } else {
-        $(this).hide();
-        // Hide the presence row when student is hidden
-        $('tr.presence-row[data-etudiant-id="' + etudiantId + '"]').hide();
       }
     });
-  });
 
-  // Add CSS for the modern design
-  var style = document.createElement('style');
-  style.textContent = `
-    .presence-card .card {
-      transition: all 0.2s ease;
-    }
+    // Gestion de la recherche d'étudiants
+    $(document).on('input', '#studentSearch', function() {
+      var searchValue = $(this).val().toLowerCase();
+      $('#listStudent tr.etudiant-row').each(function() {
+        var rowText = $(this).text().toLowerCase();
+        var etudiantId = $(this).data('etudiant-id');
 
-    .presence-card .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.1) !important;
-    }
+        if (rowText.indexOf(searchValue) > -1) {
+          $(this).show();
+          // If the presence row for this student is open, keep it visible
+          var presenceRow = $('tr.presence-row[data-etudiant-id="' + etudiantId + '"]');
+          if (!presenceRow.hasClass('d-none')) {
+            presenceRow.show();
+          }
+        } else {
+          $(this).hide();
+          // Hide the presence row when student is hidden
+          $('tr.presence-row[data-etudiant-id="' + etudiantId + '"]').hide();
+        }
+      });
+    });
 
-    .presence-container {
-      max-height: 400px;
-      overflow-y: auto;
-      padding-right: 5px;
-    }
+    // Add CSS for the modern design
+    var style = document.createElement('style');
+    style.textContent = `
+      .presence-card .card {
+        transition: all 0.2s ease;
+      }
 
-    .presence-container::-webkit-scrollbar {
-      width: 8px;
-    }
+      .presence-card .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1) !important;
+      }
 
-    .presence-container::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 10px;
-    }
+      .presence-container {
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 5px;
+      }
 
-    .presence-container::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
-      border-radius: 10px;
-    }
+      .presence-container::-webkit-scrollbar {
+        width: 8px;
+      }
 
-    .presence-container::-webkit-scrollbar-thumb:hover {
-      background: #a8a8a8;
-    }
+      .presence-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
 
-    .stat-badge-container {
-      transition: transform 0.2s ease;
-    }
+      .presence-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+      }
 
-    .stat-badge-container:hover {
-      transform: scale(1.05);
-    }
+      .presence-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
 
-    .etudiant-row {
-      transition: background-color 0.2s ease;
-    }
+      .stat-badge-container {
+        transition: transform 0.2s ease;
+      }
 
-    .etudiant-row:hover {
-      background-color: #f8f9fa !important;
-    }
+      .stat-badge-container:hover {
+        transform: scale(1.05);
+      }
 
-    .toggle-presence {
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-    }
+      .etudiant-row {
+        transition: background-color 0.2s ease;
+      }
 
-    .toggle-presence:hover {
-      background-color: #e9ecef;
-      transform: scale(1.1);
-    }
-  `;
-  document.head.appendChild(style);
+      .etudiant-row:hover {
+        background-color: #f8f9fa !important;
+      }
 
-  // Add the confirmation modals
-  var modalsHtml = `
-    <!-- Modal de confirmation pour Examens -->
-    <div class="modal fade" id="confirmExamensModal" tabindex="-1" aria-labelledby="confirmExamensModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-          <div class="modal-header bg-primary bg-opacity-10 border-0 px-4 py-3">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3">
-                <i class="ri-file-text-line fs-5"></i>
-              </div>
-              <div>
-                <h5 class="modal-title fw-semibold text-dark" id="confirmExamensModalLabel">Confirmer l'action</h5>
-              </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body px-4 py-4">
-            <div class="text-center mb-4">
-              <div class="avatar-lg mx-auto mb-3">
-                <div class="avatar-title bg-primary bg-opacity-10 text-primary display-5 rounded-circle">
-                  <i class="ri-file-text-line"></i>
+      .toggle-presence {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .toggle-presence:hover {
+        background-color: #e9ecef;
+        transform: scale(1.1);
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Add the confirmation modals
+    var modalsHtml = `
+      <!-- Modal de confirmation pour Examens -->
+      <div class="modal fade" id="confirmExamensModal" tabindex="-1" aria-labelledby="confirmExamensModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary bg-opacity-10 border-0 px-4 py-3">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3">
+                  <i class="ri-file-text-line fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="modal-title fw-semibold text-dark" id="confirmExamensModalLabel">Confirmer l'action</h5>
                 </div>
               </div>
-              <h5 class="mb-3">Confirmer l'action "Examens"</h5>
-              <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Examens</strong> pour <span id="examensStudentName"></span>?</p>
-              <div class="alert alert-info">
-                <i class="ri-information-line fs-5 me-2"></i>
-                Cette action affectera les résultats et les évaluations de l'étudiant.
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-4">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                  <div class="avatar-title bg-primary bg-opacity-10 text-primary display-5 rounded-circle">
+                    <i class="ri-file-text-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">Confirmer l'action "Examens"</h5>
+                <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Examens</strong> pour <span id="examensStudentName"></span>?</p>
+                <div class="alert alert-info">
+                  <i class="ri-information-line fs-5 me-2"></i>
+                  Cette action affectera les résultats et les évaluations de l'étudiant.
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="examensComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
+                <textarea class="form-control" id="examensComment" rows="3" placeholder="Ajoutez un commentaire concernant l'examen..."></textarea>
               </div>
             </div>
-
-            <div class="mb-4">
-              <label for="examensComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
-              <textarea class="form-control" id="examensComment" rows="3" placeholder="Ajoutez un commentaire concernant l'examen..."></textarea>
+            <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
+              <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                <i class="ri-close-line me-2"></i>Annuler
+              </button>
+              <button type="button" class="btn btn-primary px-4" id="confirmExamensBtn">
+                <i class="ri-check-line me-2"></i>Confirmer
+              </button>
             </div>
-          </div>
-          <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
-            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
-              <i class="ri-close-line me-2"></i>Annuler
-            </button>
-            <button type="button" class="btn btn-primary px-4" id="confirmExamensBtn">
-              <i class="ri-check-line me-2"></i>Confirmer
-            </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal de confirmation pour Rachat de crédit -->
-    <div class="modal fade" id="confirmRachatModal" tabindex="-1" aria-labelledby="confirmRachatModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-          <div class="modal-header bg-warning bg-opacity-10 border-0 px-4 py-3">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center me-3">
-                <i class="ri-refund-line fs-5"></i>
-              </div>
-              <div>
-                <h5 class="modal-title fw-semibold text-dark" id="confirmRachatModalLabel">Confirmer l'action</h5>
-              </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body px-4 py-4">
-            <div class="text-center mb-4">
-              <div class="avatar-lg mx-auto mb-3">
-                <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
-                  <i class="ri-refund-line"></i>
+      <!-- Modal de confirmation pour Rachat de crédit -->
+      <div class="modal fade" id="confirmRachatModal" tabindex="-1" aria-labelledby="confirmRachatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-warning bg-opacity-10 border-0 px-4 py-3">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center me-3">
+                  <i class="ri-refund-line fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="modal-title fw-semibold text-dark" id="confirmRachatModalLabel">Confirmer l'action</h5>
                 </div>
               </div>
-              <h5 class="mb-3">Confirmer l'action "Rachat de crédit"</h5>
-              <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Rachat de crédit</strong> pour <span id="rachatStudentName"></span>?</p>
-              <div class="alert alert-info">
-                <i class="ri-information-line fs-5 me-2"></i>
-                Cette action permettra à l'étudiant de racheter des crédits pour valider ses modules.
-              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body px-4 py-4">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                  <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
+                    <i class="ri-refund-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">Confirmer l'action "Rachat de crédit"</h5>
+                <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Rachat de crédit</strong> pour <span id="rachatStudentName"></span>?</p>
+                <div class="alert alert-info">
+                  <i class="ri-information-line fs-5 me-2"></i>
+                  Cette action permettra à l'étudiant de racheter des crédits pour valider ses modules.
+                </div>
+              </div>
 
-            <div class="mb-4">
-              <h6 class="mb-3 fw-semibold">Sélectionnez les modules à racheter :</h6>
-              <div class="alert alert-light border mb-0" id="rachatModulesList">
-                <div class="form-check mb-2">
-                  <input class="form-check-input module-checkbox" type="checkbox" value="module_1" id="module1">
-                  <label class="form-check-label" for="module1">
-                    Mathématiques Financières (MF101)
+              <div class="mb-4">
+                <h6 class="mb-3 fw-semibold">Sélectionnez les modules à racheter :</h6>
+                <div class="alert alert-light border mb-0" id="rachatModulesList">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input module-checkbox" type="checkbox" value="module_1" id="module1">
+                    <label class="form-check-label" for="module1">
+                      Mathématiques Financières (MF101)
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input module-checkbox" type="checkbox" value="module_2" id="module2">
+                    <label class="form-check-label" for="module2">
+                      Analyse Commerciale (AC201)
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input module-checkbox" type="checkbox" value="module_3" id="module3">
+                    <label class="form-check-label" for="module3">
+                      Gestion de Projet (GP301)
+                    </label>
+                  </div>
+                  <div class="form-check mb-0">
+                    <input class="form-check-input module-checkbox" type="checkbox" value="module_4" id="module4">
+                    <label class="form-check-label" for="module4">
+                      Marketing Stratégique (MS401)
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAllModules">
+                  <label class="form-check-label" for="selectAllModules">
+                    Sélectionner tous les modules
                   </label>
                 </div>
-                <div class="form-check mb-2">
-                  <input class="form-check-input module-checkbox" type="checkbox" value="module_2" id="module2">
-                  <label class="form-check-label" for="module2">
-                    Analyse Commerciale (AC201)
-                  </label>
-                </div>
-                <div class="form-check mb-2">
-                  <input class="form-check-input module-checkbox" type="checkbox" value="module_3" id="module3">
-                  <label class="form-check-label" for="module3">
-                    Gestion de Projet (GP301)
-                  </label>
-                </div>
-                <div class="form-check mb-0">
-                  <input class="form-check-input module-checkbox" type="checkbox" value="module_4" id="module4">
-                  <label class="form-check-label" for="module4">
-                    Marketing Stratégique (MS401)
-                  </label>
-                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle border-opacity-25" id="selectedModulesCount">0 module(s) sélectionné(s)</span>
+              </div>
+
+              <div class="mb-4">
+                <label for="rachatComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
+                <textarea class="form-control" id="rachatComment" rows="3" placeholder="Ajoutez un commentaire concernant le rachat..."></textarea>
               </div>
             </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="selectAllModules">
-                <label class="form-check-label" for="selectAllModules">
-                  Sélectionner tous les modules
-                </label>
-              </div>
-              <span class="badge bg-primary-subtle text-primary border border-primary-subtle border-opacity-25" id="selectedModulesCount">0 module(s) sélectionné(s)</span>
+            <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
+              <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                <i class="ri-close-line me-2"></i>Annuler
+              </button>
+              <button type="button" class="btn btn-warning px-4" id="confirmRachatBtn">
+                <i class="ri-check-line me-2"></i>Confirmer
+              </button>
             </div>
-
-            <div class="mb-4">
-              <label for="rachatComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
-              <textarea class="form-control" id="rachatComment" rows="3" placeholder="Ajoutez un commentaire concernant le rachat..."></textarea>
-            </div>
-          </div>
-          <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
-            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
-              <i class="ri-close-line me-2"></i>Annuler
-            </button>
-            <button type="button" class="btn btn-warning px-4" id="confirmRachatBtn">
-              <i class="ri-check-line me-2"></i>Confirmer
-            </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal de confirmation pour Ajourné -->
-    <div class="modal fade" id="confirmAjourneModal" tabindex="-1" aria-labelledby="confirmAjourneModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-          <div class="modal-header bg-secondary bg-opacity-10 border-0 px-4 py-3">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center me-3">
-                <i class="ri-timer-line fs-5"></i>
-              </div>
-              <div>
-                <h5 class="modal-title fw-semibold text-dark" id="confirmAjourneModalLabel">Confirmer l'action</h5>
-              </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body px-4 py-4">
-            <div class="text-center mb-4">
-              <div class="avatar-lg mx-auto mb-3">
-                <div class="avatar-title bg-secondary bg-opacity-10 text-secondary display-5 rounded-circle">
-                  <i class="ri-timer-line"></i>
+      <!-- Modal de confirmation pour Ajourné -->
+      <div class="modal fade" id="confirmAjourneModal" tabindex="-1" aria-labelledby="confirmAjourneModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-secondary bg-opacity-10 border-0 px-4 py-3">
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center me-3">
+                  <i class="ri-timer-line fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="modal-title fw-semibold text-dark" id="confirmAjourneModalLabel">Confirmer l'action</h5>
                 </div>
               </div>
-              <h5 class="mb-3">Confirmer l'action "Ajourné"</h5>
-              <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Ajourné</strong> pour <span id="ajourneStudentName"></span>?</p>
-              <div class="alert alert-info">
-                <i class="ri-information-line fs-5 me-2"></i>
-                Cette action placera l'étudiant en statut d'ajournement.
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-4">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                  <div class="avatar-title bg-secondary bg-opacity-10 text-secondary display-5 rounded-circle">
+                    <i class="ri-timer-line"></i>
+                  </div>
+                </div>
+                <h5 class="mb-3">Confirmer l'action "Ajourné"</h5>
+                <p class="text-muted mb-4">Êtes-vous sûr de vouloir effectuer l'action <strong>Ajourné</strong> pour <span id="ajourneStudentName"></span>?</p>
+                <div class="alert alert-info">
+                  <i class="ri-information-line fs-5 me-2"></i>
+                  Cette action placera l'étudiant en statut d'ajournement.
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="ajourneComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
+                <textarea class="form-control" id="ajourneComment" rows="3" placeholder="Ajoutez un commentaire concernant l'ajournement..."></textarea>
               </div>
             </div>
-
-            <div class="mb-4">
-              <label for="ajourneComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
-              <textarea class="form-control" id="ajourneComment" rows="3" placeholder="Ajoutez un commentaire concernant l'ajournement..."></textarea>
+            <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
+              <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                <i class="ri-close-line me-2"></i>Annuler
+              </button>
+              <button type="button" class="btn btn-secondary px-4" id="confirmAjourneBtn">
+                <i class="ri-check-line me-2"></i>Confirmer
+              </button>
             </div>
-          </div>
-          <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
-            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
-              <i class="ri-close-line me-2"></i>Annuler
-            </button>
-            <button type="button" class="btn btn-secondary px-4" id="confirmAjourneBtn">
-              <i class="ri-check-line me-2"></i>Confirmer
-            </button>
           </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
 
-  // Add the modals to the body
-  document.body.insertAdjacentHTML('beforeend', modalsHtml);
+    // Add the modals to the body
+    document.body.insertAdjacentHTML('beforeend', modalsHtml);
 
-  // Add variables to store the selected student info
-  var selectedStudentId = null;
-  var selectedStudentName = null;
-  var selectedAction = null;
+    // Add variables to store the selected student info
+    var selectedStudentId = null;
+    var selectedStudentName = null;
+    var selectedAction = null;
 
-  // Function to load modules for rachat based on the student's presence history
-  function loadRachatModules(studentId, studentName) {
-    // Find the student's presence data in the current table
-    var studentRow = $('tr.etudiant-row[data-etudiant-id="' + studentId + '"]');
-    var presenceRow = $('tr.presence-row[data-etudiant-id="' + studentId + '"]');
+    // Function to load modules for rachat based on the student's presence history
+    function loadRachatModules(studentId, studentName) {
+      // Find the student's presence data in the current table
+      var studentRow = $('tr.etudiant-row[data-etudiant-id="' + studentId + '"]');
+      var presenceRow = $('tr.presence-row[data-etudiant-id="' + studentId + '"]');
 
-    // Check if presence details are already loaded
-    if (presenceRow.length > 0 && !presenceRow.hasClass('d-none')) {
-      // If details are already expanded, use the existing data
-      buildModuleListFromPresenceData(studentId, studentName);
-    } else {
-      // If details are not expanded, temporarily expand them to collect module data
-      // but don't change their current visibility state
-      var wasVisible = !presenceRow.hasClass('d-none');
+      // Check if presence details are already loaded
+      if (presenceRow.length > 0 && !presenceRow.hasClass('d-none')) {
+        // If details are already expanded, use the existing data
+        buildModuleListFromPresenceData(studentId, studentName);
+      } else {
+        // If details are not expanded, temporarily expand them to collect module data
+        // but don't change their current visibility state
+        var wasVisible = !presenceRow.hasClass('d-none');
 
-      // Temporarily show the presence row to access its content
-      presenceRow.removeClass('d-none');
+        // Temporarily show the presence row to access its content
+        presenceRow.removeClass('d-none');
 
-      // Get module data from the presence details
-      buildModuleListFromPresenceData(studentId, studentName);
+        // Get module data from the presence details
+        buildModuleListFromPresenceData(studentId, studentName);
 
-      // Restore the original visibility state
-      if (!wasVisible) {
-        presenceRow.addClass('d-none');
+        // Restore the original visibility state
+        if (!wasVisible) {
+          presenceRow.addClass('d-none');
+        }
       }
     }
-  }
 
-  // Helper function to build the module list from presence data
-  function buildModuleListFromPresenceData(studentId, studentName) {
-    var moduleListHtml = '';
+    // Helper function to build the module list from presence data
+    function buildModuleListFromPresenceData(studentId, studentName) {
+      var moduleListHtml = '';
 
-    // Find the presence container for this student in the presence row
-    var presenceRow = $('tr.presence-row[data-etudiant-id="' + studentId + '"]');
-    var modulesStats = {};
+      // Find the presence container for this student in the presence row
+      var presenceRow = $('tr.presence-row[data-etudiant-id="' + studentId + '"]');
+      var modulesStats = {};
 
-    // This would need to access the original data used to create the presence cards
-    // For now, I'll retrieve the module information from the presence rows in the DOM
+      // This would need to access the original data used to create the presence cards
+      // For now, I'll retrieve the module information from the presence rows in the DOM
 
-    // We'll need to get the module information from the original data
-    // First, let me update the way we store and access student data
-    var studentData = getStudentDataById(studentId);
+      // We'll need to get the module information from the original data
+      // First, let me update the way we store and access student data
+      var studentData = getStudentDataById(studentId);
 
-    if (studentData && studentData.historique && Array.isArray(studentData.historique) && studentData.historique.length > 0) {
-      // Process the historique data to extract unique modules
-      studentData.historique.forEach(function(historique) {
-        if (historique && typeof historique === 'object' && historique.data && Array.isArray(historique.data)) {
-          // For the new data format
-          historique.data.forEach(function(data) {
-            var moduleLabel = data.module || data.label || data.libelle || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.label) || 'Module inconnu';
-            var moduleCode = data.code || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.code) || '';
-            var moduleId = (data.id || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.id) || moduleLabel).toString();
+      if (studentData && studentData.historique && Array.isArray(studentData.historique) && studentData.historique.length > 0) {
+        // Process the historique data to extract unique modules
+        studentData.historique.forEach(function(historique) {
+          if (historique && typeof historique === 'object' && historique.data && Array.isArray(historique.data)) {
+            // For the new data format
+            historique.data.forEach(function(data) {
+              var moduleLabel = data.module || data.label || data.libelle || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.label) || 'Module inconnu';
+              var moduleCode = data.code || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.code) || '';
+              var moduleId = (data.id || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.id) || moduleLabel).toString();
+
+              // Add to modules if not already present
+              if (!modulesStats[moduleId]) {
+                modulesStats[moduleId] = {
+                  id: moduleId,
+                  label: moduleLabel,
+                  code: moduleCode
+                };
+              }
+            });
+          } else {
+            // For the old data format
+            var moduleLabel = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__label || historique.module__label || historique.module || historique.label || historique.libelle || 'Module inconnu') :
+              (typeof historique === 'string' ? historique : 'Module inconnu');
+
+            var moduleCode = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__code || historique.module__code || '') :
+              '';
+
+            var moduleId = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__id || historique.module__id || moduleLabel) : moduleLabel;
+
+            moduleId = moduleId.toString();
 
             // Add to modules if not already present
             if (!modulesStats[moduleId]) {
@@ -1378,266 +1521,578 @@
                 code: moduleCode
               };
             }
-          });
-        } else {
-          // For the old data format
-          var moduleLabel = (historique && typeof historique === 'object') ?
-            (historique.ligne_presence__module__label || historique.module__label || historique.module || historique.label || historique.libelle || 'Module inconnu') :
-            (typeof historique === 'string' ? historique : 'Module inconnu');
+          }
+        });
+      }
 
-          var moduleCode = (historique && typeof historique === 'object') ?
-            (historique.ligne_presence__module__code || historique.module__code || '') :
-            '';
+      // Build the HTML for module selection
+      for (var moduleId in modulesStats) {
+        if (modulesStats.hasOwnProperty(moduleId)) {
+          var module = modulesStats[moduleId];
+          var uniqueId = 'module_' + moduleId + '_' + Date.now(); // Ensure unique ID
 
-          var moduleId = (historique && typeof historique === 'object') ?
-            (historique.ligne_presence__module__id || historique.module__id || moduleLabel) : moduleLabel;
+          moduleListHtml += '<div class="form-check mb-2">' +
+            '<input class="form-check-input module-checkbox" type="checkbox" value="' + module.code + '" id="' + uniqueId + '">' +
+            '<label class="form-check-label" for="' + uniqueId + '">' +
+              module.label + (module.code ? ' (' + module.code + ')' : '') +
+            '</label>' +
+          '</div>';
+        }
+      }
 
-          moduleId = moduleId.toString();
+      // If no modules were found, show a message
+      if (moduleListHtml === '') {
+        moduleListHtml = '<div class="text-center text-muted py-3">Aucun module disponible pour le rachat</div>';
+      }
 
-          // Add to modules if not already present
-          if (!modulesStats[moduleId]) {
-            modulesStats[moduleId] = {
-              id: moduleId,
-              label: moduleLabel,
-              code: moduleCode
-            };
+      $('#rachatModulesList').html(moduleListHtml);
+      updateSelectedModulesCount();
+      $('#confirmRachatModal').modal('show');
+    }
+
+    // Helper function to get student data by ID from the loaded data
+    function getStudentDataById(studentId) {
+      // We need to maintain the original data loaded by loadStudents function
+      // Since we can't directly access the data variable from there,
+      // we'll need to modify the approach
+      // For now, let's store the loaded data in a global variable
+      if (window.loadedStudentData) {
+        for (var i = 0; i < window.loadedStudentData.length; i++) {
+          if (window.loadedStudentData[i].etudiant.id == studentId) {
+            return window.loadedStudentData[i];
           }
         }
-      });
-    }
-
-    // Build the HTML for module selection
-    for (var moduleId in modulesStats) {
-      if (modulesStats.hasOwnProperty(moduleId)) {
-        var module = modulesStats[moduleId];
-        var uniqueId = 'module_' + moduleId + '_' + Date.now(); // Ensure unique ID
-
-        moduleListHtml += '<div class="form-check mb-2">' +
-          '<input class="form-check-input module-checkbox" type="checkbox" value="' + module.id + '" id="' + uniqueId + '">' +
-          '<label class="form-check-label" for="' + uniqueId + '">' +
-            module.label + (module.code ? ' (' + module.code + ')' : '') +
-          '</label>' +
-        '</div>';
       }
+      return null;
     }
 
-    // If no modules were found, show a message
-    if (moduleListHtml === '') {
-      moduleListHtml = '<div class="text-center text-muted py-3">Aucun module disponible pour le rachat</div>';
-    }
+    // Separate event listener for Examens button
+    $(document).on('click', '.btn-action[data-action="examens"]', function() {
+      selectedStudentId = $(this).data('etudiant-id');
+      selectedAction = 'examens';
 
-    $('#rachatModulesList').html(moduleListHtml);
-    updateSelectedModulesCount();
-    $('#confirmRachatModal').modal('show');
-  }
+      var historiqueAbss = $(this).data('historique');
+      $('#confirmExamensBtn').data('historique', historiqueAbss);
 
-  // Helper function to get student data by ID from the loaded data
-  function getStudentDataById(studentId) {
-    // We need to maintain the original data loaded by loadStudents function
-    // Since we can't directly access the data variable from there,
-    // we'll need to modify the approach
-    // For now, let's store the loaded data in a global variable
-    if (window.loadedStudentData) {
-      for (var i = 0; i < window.loadedStudentData.length; i++) {
-        if (window.loadedStudentData[i].etudiant.id == studentId) {
-          return window.loadedStudentData[i];
+      // Find the student name by traversing to the student row
+      var studentRow = $(this).closest('tr.etudiant-row');
+      var studentName = studentRow.find('h6').text();
+      selectedStudentName = studentName;
+
+      // Get the commission ID from the page context (assuming it's available as a data attribute or global variable)
+      // For now, we'll assume it's available in a hidden element or from the page context
+      var commissionId = $('#commissionId').val() || window.commissionId || $('[name="commission_id"]').val();
+      if (!commissionId) {
+        // Try to get commission ID from the URL if it's a details page
+        var path = window.location.pathname;
+        var pathParts = path.split('/');
+        // Assuming URL pattern is /commission/details/{id}/
+        if (pathParts.includes('details') && pathParts[pathParts.indexOf('details') + 1]) {
+          commissionId = pathParts[pathParts.indexOf('details') + 1];
         }
       }
-    }
-    return null;
-  }
+      window.commissionId = commissionId;
 
-  // Handle clicks on action buttons
-  $(document).on('click', '.btn-action', function() {
-    selectedStudentId = $(this).data('etudiant-id');
-    selectedAction = $(this).data('action');
-
-    // Find the student name by traversing to the student row
-    var studentRow = $(this).closest('tr.etudiant-row');
-    var studentName = studentRow.find('h6').text();
-    selectedStudentName = studentName;
-
-    // Get the commission ID from the page context (assuming it's available as a data attribute or global variable)
-    // For now, we'll assume it's available in a hidden element or from the page context
-    var commissionId = $('#commissionId').val() || window.commissionId || $('[name="commission_id"]').val();
-    if (!commissionId) {
-      // Try to get commission ID from the URL if it's a details page
-      var path = window.location.pathname;
-      var pathParts = path.split('/');
-      // Assuming URL pattern is /commission/details/{id}/
-      if (pathParts.includes('details') && pathParts[pathParts.indexOf('details') + 1]) {
-        commissionId = pathParts[pathParts.indexOf('details') + 1];
-      }
-    }
-    window.commissionId = commissionId;
-
-    // Show the appropriate modal based on the action
-    if (selectedAction === 'examens') {
+      // Show the examens modal
       $('#examensStudentName').text(studentName);
       $('#confirmExamensModal').modal('show');
-    } else if (selectedAction === 'rachat') {
+    });
+
+    // Separate event listener for Rachat button
+    $(document).on('click', '.btn-action[data-action="rachat"]', function() {
+      selectedStudentId = $(this).data('etudiant-id');
+      var historiqueAbsence = $(this).data('historique');
+      selectedAction = 'rachat';
+
+      $('#confirmRachatBtn').data('historique', historiqueAbsence);
+      
+      // Find the student name by traversing to the student row
+      var studentRow = $(this).closest('tr.etudiant-row');
+      var studentName = studentRow.find('h6').text();
+      selectedStudentName = studentName;
+
+      // Get the commission ID from the page context (assuming it's available as a data attribute or global variable)
+      // For now, we'll assume it's available in a hidden element or from the page context
+      var commissionId = $('#commissionId').val() || window.commissionId || $('[name="commission_id"]').val();
+      if (!commissionId) {
+        // Try to get commission ID from the URL if it's a details page
+        var path = window.location.pathname;
+        var pathParts = path.split('/');
+        // Assuming URL pattern is /commission/details/{id}/
+        if (pathParts.includes('details') && pathParts[pathParts.indexOf('details') + 1]) {
+          commissionId = pathParts[pathParts.indexOf('details') + 1];
+        }
+      }
+      window.commissionId = commissionId;
+
+      // Show the rachat modal and load modules
       $('#rachatStudentName').text(studentName);
       // Load modules for rachat before showing the modal
       loadRachatModules(selectedStudentId, studentName);
-    } else if (selectedAction === 'ajourne') {
+    });
+
+    // Separate event listener for Ajourné button
+    $(document).on('click', '.btn-action[data-action="ajourne"]', function() {
+      selectedStudentId = $(this).data('etudiant-id');
+      selectedAction = 'ajourne';
+      var historiqueAbs = $(this).data('historique');
+      $('#confirmAjourneBtn').data('historique', historiqueAbs);
+
+      // Find the student name by traversing to the student row
+      var studentRow = $(this).closest('tr.etudiant-row');
+      var studentName = studentRow.find('h6').text();
+      selectedStudentName = studentName;
+
+      // Get the commission ID from the page context (assuming it's available as a data attribute or global variable)
+      // For now, we'll assume it's available in a hidden element or from the page context
+      var commissionId = $('#commissionId').val() || window.commissionId || $('[name="commission_id"]').val();
+      if (!commissionId) {
+        // Try to get commission ID from the URL if it's a details page
+        var path = window.location.pathname;
+        var pathParts = path.split('/');
+        // Assuming URL pattern is /commission/details/{id}/
+        if (pathParts.includes('details') && pathParts[pathParts.indexOf('details') + 1]) {
+          commissionId = pathParts[pathParts.indexOf('details') + 1];
+        }
+      }
+      window.commissionId = commissionId;
+
+      // Show the ajourne modal
       $('#ajourneStudentName').text(studentName);
       $('#confirmAjourneModal').modal('show');
+    });
+
+    // Handle module selection in Rachat modal
+    $(document).on('change', '.module-checkbox', function() {
+      updateSelectedModulesCount();
+    });
+
+    $(document).on('change', '#selectAllModules', function() {
+      var isChecked = $(this).is(':checked');
+      $('.module-checkbox').prop('checked', isChecked);
+      updateSelectedModulesCount();
+    });
+
+    function updateSelectedModulesCount() {
+      var count = $('.module-checkbox:checked').length;
+      $('#selectedModulesCount').text(count + ' module(s) sélectionné(s)');
+
+      // Update the select all checkbox state
+      var totalCheckboxes = $('.module-checkbox').length;
+      var allChecked = (count === totalCheckboxes && totalCheckboxes > 0);
+      $('#selectAllModules').prop('checked', allChecked);
     }
-  });
+    
+    const VarCommission = "{{commission.id}}";
+    
+    // Handle confirmation for each action
+    $('#confirmExamensBtn').on('click', function() {
+      // Get the comment
+      var comment = $('#examensComment').val().trim();
+      var historiqueAbsence = $(this).data('historique');
+      
+      // Perform the examens action via API
+      $.ajax({
+        url: '{% url "t_exam:examen_action" %}',
+        type: 'POST',
+        headers: {
+          'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: JSON.stringify({
+          student_id: selectedStudentId,
+          commission_id: VarCommission,
+          historiqueAbsence : historiqueAbsence,
+          comment: comment
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+          if (response.status === 'success') {
+            // Close the modal
+            $('#confirmExamensModal').modal('hide');
 
-  // Handle confirmation for each action
-  $('#confirmExamensBtn').on('click', function() {
-    // Get the comment
-    var comment = $('#examensComment').val().trim();
+            // Clear the comment field for next use
+            $('#examensComment').val('');
 
-    // Perform the examens action via API
-    $.ajax({
-      url: '{% url "t_exam:examen_action" %}',
-      type: 'POST',
-      headers: {
-        'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-      },
-      data: JSON.stringify({
-        student_id: selectedStudentId,
-        commission_id: window.commissionId,
-        comment: comment
-      }),
-      contentType: 'application/json',
-      success: function(response) {
-        if (response.status === 'success') {
-          // Close the modal
-          $('#confirmExamensModal').modal('hide');
+            loadStudents(window.GroupeId);
 
-          // Clear the comment field for next use
-          $('#examensComment').val('');
-
-          // Show success feedback
-          alert(response.message);
-        } else {
-          alert('Erreur: ' + response.message);
+            // Show success feedback
+            alertify.success(response.message);
+          } else {
+            alertify.error('Erreur: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          alertify.error('Une erreur est survenue lors de l\'enregistrement de l\'action examen.');
         }
-      },
-      error: function(xhr, status, error) {
-        console.error('Error in examen action:', error);
-        alert('Une erreur est survenue lors de l\'enregistrement de l\'action examen.');
+      });
+    });
+
+    $('#confirmRachatBtn').on('click', function() {
+      var historiqueAbs = $(this).data('historique');
+      // Get the selected modules
+      var selectedModules = [];
+      $('.module-checkbox:checked').each(function() {
+        selectedModules.push($(this).val());
+      });
+
+      // Get the comment
+      var comment = $('#rachatComment').val().trim();
+
+      if (selectedModules.length === 0) {
+        alertify.error('Veuillez sélectionner au moins un module à racheter.');
+        return;
+      }
+
+      // // Perform the rachat action via API
+      $.ajax({
+        url: '{% url "t_exam:rachat_action" %}',
+        type: 'POST',
+        headers: {
+          'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: JSON.stringify({
+          student_id: selectedStudentId,
+          commission_id: window.commissionId,
+          modules: selectedModules,
+          historiqueIds : historiqueAbs,
+          comment: comment
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+          if (response.status === 'success') {
+            // Close the modal
+            $('#confirmRachatModal').modal('hide');
+
+            // Clear the comment field for next use
+            $('#rachatComment').val('');
+            loadStudents(window.GroupeId);
+
+            // Show success feedback
+            alertify.success(response.message);
+          } else {
+            alertify.error('Erreur: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          alertify.error('Une erreur est survenue lors de l\'enregistrement de l\'action rachat.');
+        }
+      });
+    });
+
+    $('#confirmAjourneBtn').on('click', function() {
+      // Get the comment
+      var comment = $('#ajourneComment').val().trim();
+      var historiqueAbss = $(this).data('historique');
+
+      // Perform the ajourne action via API
+      $.ajax({
+        url: '{% url "t_exam:ajourne_action" %}',
+        type: 'POST',
+        headers: {
+          'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: JSON.stringify({
+          student_id: selectedStudentId,
+          commission_id: window.commissionId,
+          historiqueAbs : historiqueAbss,
+          comment: comment
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+          if (response.status === 'success') {
+            // Close the modal
+            $('#confirmAjourneModal').modal('hide');
+
+            // Clear the comment field for next use
+            $('#ajourneComment').val('');
+            loadStudents(window.GroupeId);
+            // Show success feedback
+            alertify.success(response.message);
+          } else {
+            alertify.error('Erreur: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error('Error in ajourne action:', error);
+          alertify.error('Une erreur est survenue lors de l\'enregistrement de l\'action ajourné.');
+        }
+      });
+    });
+
+    // Bouton Afficher les résultats de commission
+    $('#showResultsBtn').on('click', function() {
+      var commissionId = $('#commissionId').val();
+      // Open the results modal
+      $('#commissionResultsModal').modal('show');
+    });
+
+    // Bouton Imprimer - Generate PDF using jsPDF
+    $('#printBtn').on('click', function() {
+      // Include jsPDF library if not already included
+      if (typeof jsPDF === 'undefined') {
+        // Load jsPDF dynamically if not available
+        var script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = function() {
+          generateCommissionPDF();
+        };
+        document.head.appendChild(script);
+      } else {
+        generateCommissionPDF();
       }
     });
-  });
 
-  // Handle module selection in Rachat modal
-  $(document).on('change', '.module-checkbox', function() {
-    updateSelectedModulesCount();
-  });
+    function generateCommissionPDF() {
+      // Get commission details from the page
+      var commissionLabel = $('h5.card-title.mb-0.text-info').text().trim();
+      var commissionDescription = $('.bg-light.p-3.rounded-3:has(p)').eq(1).find('p').text().trim();
+      var commissionDate = $('p.mb-0.text-dark').eq(3).text().trim();
+      var commissionPromo = $('p.mb-0.text-dark').eq(2).text().trim();
 
-  $(document).on('change', '#selectAllModules', function() {
-    var isChecked = $(this).is(':checked');
-    $('.module-checkbox').prop('checked', isChecked);
-    updateSelectedModulesCount();
-  });
+      // Get participants and formateurs data (without email, with combined name)
+      var participants = [];
+      $('#participantsModal tbody tr').each(function() {
+        var nom = $(this).find('td').eq(0).text().trim();
+        var prenom = $(this).find('td').eq(1).text().trim();
+        var poste = $(this).find('td').eq(3).text().trim(); // Skip email column (was index 2)
+        if (nom && nom !== '-') {
+          participants.push({
+            nom: nom,
+            prenom: prenom,
+            poste: poste,
+            type: 'participant'
+          });
+        }
+      });
 
-  function updateSelectedModulesCount() {
-    var count = $('.module-checkbox:checked').length;
-    $('#selectedModulesCount').text(count + ' module(s) sélectionné(s)');
+      var formateurs = [];
+      $('#formateursModal tbody tr').each(function() {
+        var nom = $(this).find('td').eq(0).text().trim();
+        var prenom = $(this).find('td').eq(1).text().trim();
+        var specialite = $(this).find('td').eq(3).text().trim(); // Skip email column (was index 2)
+        if (nom && nom !== '-') {
+          formateurs.push({
+            nom: nom,
+            prenom: prenom,
+            specialite: specialite,
+            type: 'formateur'
+          });
+        }
+      });
 
-    // Update the select all checkbox state
-    var totalCheckboxes = $('.module-checkbox').length;
-    var allChecked = (count === totalCheckboxes && totalCheckboxes > 0);
-    $('#selectAllModules').prop('checked', allChecked);
-  }
-  
-  
-  const VarCommission = "{{commission.id}}";
-  
-  $('#confirmRachatBtn').on('click', function() {
-    // Get the selected modules
-    var selectedModules = [];
-    $('.module-checkbox:checked').each(function() {
-      selectedModules.push($(this).val());
-    });
+      // Combine participants and formateurs
+      var allPeople = [...participants, ...formateurs];
 
-    // Get the comment
-    var comment = $('#rachatComment').val().trim();
+      // Create a new instance of jsPDF
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
 
-    if (selectedModules.length === 0) {
-      alert('Veuillez sélectionner au moins un module à racheter.');
-      return;
+      // Add title
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('COMMISSION D\'EXAMEN', 105, 20, null, null, 'center');
+
+      // Add commission details
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text('Nom de la commission : ' + commissionLabel, 20, 35);
+      doc.text('Date : ' + commissionDate, 20, 45);
+      doc.text('Promotion : ' + commissionPromo, 20, 55);
+
+      // Add description
+      doc.text('Résolution / Description :', 20, 65);
+      // Add multi-line description with proper width
+      var descriptionLines = doc.splitTextToSize(commissionDescription, 170);
+      doc.text(descriptionLines, 20, 75);
+
+      // Calculate starting Y position for the table based on description length
+      var startY = 75 + (descriptionLines.length * 7) + 10;
+
+      // Define table headers (without separate name columns)
+      var headers = ['Nom complet', 'Fonction', 'Signature'];
+
+      // Prepare table data (with combined name column)
+      var tableData = [];
+      allPeople.forEach(function(person) {
+        tableData.push([
+          (person.nom || '') + ' ' + (person.prenom || ''), // Combined name column
+          person.type === 'participant' ? person.poste || '' : person.specialite || '',
+          '' // Signature column
+        ]);
+      });
+
+      // Draw the table with better formatting
+      if (tableData.length > 0) {
+        // Column widths for better formatting (with combined name column), total 170mm to allow 20mm right margin
+        var colWidths = [70, 65, 35]; // Total = 170mm (starting from x=20, ending at x=190, leaving 20mm margin)
+
+        // Calculate table dimensions
+        var tableTop = startY + 10;
+        var headerHeight = 10;
+        var rowHeight = 10;
+        var tableHeight = headerHeight + (tableData.length * rowHeight);
+
+        // Draw table header background
+        doc.setFillColor(240, 240, 240); // Light gray background
+        doc.rect(20, tableTop, 170, headerHeight, 'F');
+
+        // Draw table header text
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0);
+        for (var col = 0; col < headers.length; col++) {
+          var x = 20 + colWidths.slice(0, col).reduce((a, b) => a + b, 0);
+          doc.text(headers[col], x + 2, tableTop + 6);
+        }
+
+        // Draw table rows
+        doc.setFont(undefined, 'normal');
+        for (var row = 0; row < tableData.length; row++) {
+          var y = tableTop + headerHeight + (row * rowHeight);
+
+          // Draw row background (alternating)
+          if (row % 2 === 0) {
+            doc.setFillColor(250, 250, 250); // Very light gray
+            doc.rect(20, y, 170, rowHeight, 'F');
+          }
+
+          // Draw cell content
+          for (var col = 0; col < tableData[row].length; col++) {
+            var x = 20 + colWidths.slice(0, col).reduce((a, b) => a + b, 0);
+            doc.text(tableData[row][col], x + 2, y + 6);
+          }
+        }
+
+        // Draw table borders
+        doc.setDrawColor(0); // Black border
+        doc.setLineWidth(0.2);
+
+        // Draw outer border
+        doc.rect(20, tableTop, 170, tableHeight);
+
+        // Draw vertical lines (column separators)
+        var x = 20;
+        for (var i = 0; i <= headers.length; i++) {
+          if (i < headers.length) {
+            x += colWidths[i];
+          }
+          doc.line(x, tableTop, x, tableTop + tableHeight);
+        }
+
+        // Draw horizontal lines (row separators)
+        doc.line(20, tableTop, 190, tableTop); // Top header line (20+170=190)
+        doc.line(20, tableTop + headerHeight, 190, tableTop + headerHeight); // Bottom header line
+
+        for (var row = 1; row <= tableData.length; row++) {
+          var y = tableTop + headerHeight + (row * rowHeight);
+          doc.line(20, y, 190, y);
+        }
+      } else {
+        doc.text('Aucune donnée à afficher', 20, startY + 10);
+      }
+
+      // Add note about signatures
+      var noteY = startY + 10 + tableHeight + 15;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'italic');
+      doc.setTextColor(100, 100, 100); // Gray text
+      doc.text('* Veuillez laisser la colonne "Signature" vide pour la signature manuscrite.', 20, noteY);
+
+      // Save the PDF
+      doc.save('commission_' + commissionLabel.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
     }
 
-    console.log('Etudiant:',selectedStudentId);
-    console.log('Modules :',selectedModules);
-    console.log('Commentaire :',comment);
-    console.log("Commission :", VarCommission);
-
-    // // Perform the rachat action via API
-    $.ajax({
-      url: '{% url "t_exam:rachat_action" %}',
-      type: 'POST',
-      headers: {
-        'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-      },
-      data: JSON.stringify({
-        student_id: selectedStudentId,
-        commission_id: window.commissionId,
-        modules: selectedModules,
-        comment: comment
-      }),
-      contentType: 'application/json',
-      success: function(response) {
-        if (response.status === 'success') {
-          // Close the modal
-          $('#confirmRachatModal').modal('hide');
-
-          // Clear the comment field for next use
-          $('#rachatComment').val('');
-
-          // Show success feedback
-          alertify.success(response.message);
-        } else {
-          alertify.error('Erreur: ' + response.message);
-        }
-      },
-      error: function(xhr, status, error) {
-        alertify.error('Une erreur est survenue lors de l\'enregistrement de l\'action rachat.');
-      }
+    // Bouton Clôturer la commission - Opens confirmation modal
+    $('#closeCommissionBtn').on('click', function() {
+      $('#closeCommissionModal').modal('show');
     });
-  });
 
-  $('#confirmAjourneBtn').on('click', function() {
-    // Get the comment
-    var comment = $('#ajourneComment').val().trim();
+    // Handle the confirmation for closing the commission
+    $('#confirmCloseCommissionBtn').on('click', function() {
+      var commissionId = $('#commissionId').val();
 
-    // Perform the ajourne action via API
-    $.ajax({
-      url: '{% url "t_exam:ajourne_action" %}',
-      type: 'POST',
-      headers: {
-        'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-      },
-      data: JSON.stringify({
-        student_id: selectedStudentId,
-        commission_id: window.commissionId,
-        comment: comment
-      }),
-      contentType: 'application/json',
-      success: function(response) {
-        if (response.status === 'success') {
-          // Close the modal
-          $('#confirmAjourneModal').modal('hide');
+      // Disable the button during request to prevent duplicate submissions
+      $(this).prop('disabled', true).text('Clôture en cours...');
 
-          // Clear the comment field for next use
-          $('#ajourneComment').val('');
-
-          // Show success feedback
-          alert(response.message);
-        } else {
-          alert('Erreur: ' + response.message);
+      // Make AJAX request to close the commission
+      $.ajax({
+        url: '{% url "t_exam:close_commission" pk=0 %}'.replace('0', commissionId),
+        type: 'POST',
+        data: {
+          'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+          if(response.status === 'success') {
+            $('#closeCommissionModal').modal('hide');
+            alert(response.message);
+            location.reload();
+          } else {
+            alert(response.message || 'Une erreur est survenue lors de la clôture de la commission.');
+          }
+        },
+        error: function() {
+          alert('Une erreur est survenue lors de la clôture de la commission.');
+        },
+        complete: function() {
+          // Re-enable the button after request completes
+          $('#confirmCloseCommissionBtn').prop('disabled', false).html('<i class="ri-check-line me-2"></i>Confirmer la clôture');
         }
-      },
-      error: function(xhr, status, error) {
-        console.error('Error in ajourne action:', error);
-        alert('Une erreur est survenue lors de l\'enregistrement de l\'action ajourné.');
-      }
+      });
     });
-  });
+
+
+
+
+});
+
+    
 </script>
+
+<!-- Modal de confirmation pour la clôture de commission -->
+<div class="modal fade" id="closeCommissionModal" tabindex="-1" aria-labelledby="closeCommissionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-lock-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="closeCommissionModalLabel">
+              Clôture de la commission
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la clôture de la commission</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+              <i class="ri-error-warning-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir clôturer cette commission ?</h5>
+          <p class="text-muted mb-4">
+            Une fois la commission clôturée, <strong>les données ne peuvent plus être modifiées</strong>.
+          </p>
+          <div class="alert alert-warning">
+            <i class="ri-alert-line fs-4 me-2"></i>
+            <strong>Attention :</strong> Cette action est irréversible et verrouillera définitivement la commission.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <input type="hidden" id="commissionToClose" value="">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" id="confirmCloseCommissionBtn" class="btn btn-danger px-4 py-2">
+          <i class="ri-check-line me-2"></i>Confirmer la clôture
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock content %}

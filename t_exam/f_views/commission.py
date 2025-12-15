@@ -163,33 +163,51 @@ def ApiGetGroupeDetails(request):
 
         historiques = (
             HistoriqueAbsence.objects
-            .filter(ligne_presence__registre__groupe_id=groupe_id)
+            .filter(ligne_presence__registre__groupe_id=groupe_id, etat=False)
             .select_related(
                 'etudiant',
                 'ligne_presence__module',
                 'ligne_presence__registre'
             )
         )
-
+        
         result = {}
 
         for h in historiques:
             etudiant_id = h.etudiant.id
-
+            
             if etudiant_id not in result:
                 result[etudiant_id] = {
                     "etudiant": {
                         "id": h.etudiant.id,
                         "nom": h.etudiant.nom,
                         "prenom": h.etudiant.prenom,
-                        "etat": h.etat
+                        "matricule" : h.etudiant.matricule_interne,
+                        "etat": h.etat,
+                        
                     },
-                    "historique": []
+                    "historique": [],
+                    "historique_ids": [],
                 }
 
             # Fusion de l'historique JSON
+            result[etudiant_id]["historique_ids"].append(h.id)
             result[etudiant_id]["historique"].extend(h.historique)
 
         return JsonResponse(list(result.values()), safe=False)
 
     return JsonResponse({"status": "error"})
+
+@login_required(login_url="institut_app:login")
+def ApiGetCommissionResults(request):
+    if request.method == "GET":
+        id_commission = request.GET.get('idCommission')
+
+    else:
+        return JsonResponse({"status":"error"})
+    
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def close_commission(request, pk):
+    obj = Commissions.objects.get(id = pk)
+    pass

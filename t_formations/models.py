@@ -135,7 +135,7 @@ class Modules(models.Model):
         verbose_name_plural="Modules"
 
     def __str__(self):
-        return self.label
+        return self.code
     
 class Formateurs(models.Model):
     nom = models.CharField(max_length=100, null=True, blank=True)

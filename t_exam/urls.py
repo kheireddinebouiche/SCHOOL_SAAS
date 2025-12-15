@@ -55,4 +55,7 @@ urlpatterns = [
    path('rachat_action', rachat_action, name="rachat_action"),
    path('ajourne_action', ajourne_action, name="ajourne_action"),
 
+   path('ApiGetCommissionResults', ApiGetCommissionResults, name="ApiGetCommissionResults"),
+   path('close_commission/<int:pk>', close_commission, name="close_commission"),
+
 ]
