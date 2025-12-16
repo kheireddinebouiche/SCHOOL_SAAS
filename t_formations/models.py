@@ -152,7 +152,6 @@ class Formateurs(models.Model):
     def __str__(self):
         return f"{self.nom} - {self.prenom}"
     
-
 class EnseignantModule(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="affect_module")
     formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
@@ -163,7 +162,6 @@ class EnseignantModule(models.Model):
     def __str__(self):
         return f"{self.module.label}"
         
-
 class PlansCadre(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
     titre = models.CharField(max_length=255,null=True, blank=True)
