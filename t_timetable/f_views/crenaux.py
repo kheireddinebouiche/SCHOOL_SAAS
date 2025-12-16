@@ -86,13 +86,15 @@ def model_creneau_edit(request, pk):
     
     # Jours de la semaine
     jours_semaine = [
+        
+        {"jour_semaine": "dimanche", "nom": "Dimanche"},
         {"jour_semaine": "lundi", "nom": "Lundi"},
         {"jour_semaine": "mardi", "nom": "Mardi"},
         {"jour_semaine": "mercredi", "nom": "Mercredi"},
         {"jour_semaine": "jeudi", "nom": "Jeudi"},
         {"jour_semaine": "vendredi", "nom": "Vendredi"},
         {"jour_semaine": "samedi", "nom": "Samedi"},
-        {"jour_semaine": "dimanche", "nom": "Dimanche"},
+        
     ]
     
     # Déterminer quels jours sont sélectionnés
@@ -112,14 +114,16 @@ def model_creneau_edit(request, pk):
         'jours': jours_semaine,
         'jours_selectionnes': jours_selectionnes,
         'plages_horaires': plages_horaires,
+        
         # Variables pour chaque jour pour faciliter l'affichage dans le template
+        'jour_dimanche_selectionne': 'dimanche' in jours_selectionnes,
         'jour_lundi_selectionne': 'lundi' in jours_selectionnes,
         'jour_mardi_selectionne': 'mardi' in jours_selectionnes,
         'jour_mercredi_selectionne': 'mercredi' in jours_selectionnes,
         'jour_jeudi_selectionne': 'jeudi' in jours_selectionnes,
         'jour_vendredi_selectionne': 'vendredi' in jours_selectionnes,
         'jour_samedi_selectionne': 'samedi' in jours_selectionnes,
-        'jour_dimanche_selectionne': 'dimanche' in jours_selectionnes,
+        
     }
     
     return render(request, 'tenant_folder/timetable/crenaux/edit_model_crenau.html', context)

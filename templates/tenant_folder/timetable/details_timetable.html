@@ -1,227 +1,333 @@
-{% load custom_filters %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détails de l'Emploi du Temps</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .timetable-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px 10px 0 0;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .timetable-card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .time-slot {
-            border-bottom: 1px solid #dee2e6;
-            padding: 0.2rem;
-            min-height: 50px;
-            position: relative;
-        }
-        .course-item {
-            background: #e3f2fd;
-            border-left: 3px solid #2196f3;
-            padding: 0.3rem;
-            margin-bottom: 0.15rem;
-            border-radius: 3px;
-            font-size: 0.7rem;
-        }
-        .course-item.math {
-            background: #fff3e0;
-            border-left-color: #ff9800;
-        }
-        .course-item.physics {
-            background: #f3e5f5;
-            border-left-color: #9c27b0;
-        }
-        .course-item.chemistry {
-            background: #e8f5e8;
-            border-left-color: #4caf50;
-        }
-        .course-item.history {
-            background: #ffebee;
-            border-left-color: #f44336;
-        }
-        .course-time {
-            font-weight: bold;
-            color: #666;
-            font-size: 0.75rem;
-        }
-        .course-item .small {
-            font-size: 0.6rem;
-        }
-        .course-item strong {
-            font-size: 0.75rem;
-        }
-        .actions-bar {
-            background: #f8f9fa;
-            padding: 0.75rem;
-            border-top: 1px solid #dee2e6;
-            border-radius: 0 0 10px 10px;
-        }
-        .btn-group-sm .btn {
-            padding: 0.2rem 0.4rem;
-            font-size: 0.8rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="container mt-3">
-        <!-- Header -->
-        <div class="timetable-header text-center">
-            <h1 class="mb-1">
-                <i class="fas fa-calendar-alt me-2"></i>
-                Emploi du Temps
-            </h1>
-            <p class="lead mb-0" style="font-size: 0.9rem;">
-                {{ timetable.label|default:"Classe A" }} - Semaine du {{ timetable.week_start|date:"d/m/Y"|default:"01/01/2024" }}
-            </p>
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Emploi du Temps - Détails{% endblock title %}
+
+{% block content %}
+<!-- Load Remix Icons CSS -->
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<!-- Load jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="ri-calendar-2-line text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Détails de l'Emploi du Temps</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Emploi du Temps</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="{% url 't_timetable:ListeDesEmploie' %}">Emplois du Temps</a>
+                  </li>
+                  <li class="breadcrumb-item active">Détails</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
         </div>
+      </div>
+      <!-- end page title -->
 
-        <!-- Action Bar -->
-        <div class="actions-bar d-flex justify-content-between align-items-center">
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-primary">
-                    <i class="fas fa-print"></i> Imprimer
-                </button>
-                <button type="button" class="btn btn-outline-success">
-                    <i class="fas fa-download"></i> Exporter
-                </button>
-            </div>
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-info">
-                    <i class="fas fa-edit"></i> Modifier
-                </button>
-                <button type="button" class="btn btn-outline-secondary">
-                    <i class="fas fa-history"></i> Historique
-                </button>
-            </div>
-        </div>
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="ri-calendar-2-line text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Informations de l'Emploi du Temps</h5>
+                </div>
 
-        <!-- Main Timetable -->
-        <div class="timetable-card">
-            <!-- Header Row with Times -->
-            <div class="row g-0 bg-light">
-                <div class="col-2 text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">Jours</h6>
+                <div class="d-flex align-items-center gap-2">
+                  <a href="#" class="btn btn-primary">
+                    <i class="ri-edit-line me-1"></i>Modifier
+                  </a>
+                  <a href="{% url 't_timetable:ListeDesEmploie' %}" class="btn btn-secondary">
+                    <i class="ri-arrow-left-line me-1"></i>Retour
+                  </a>
+
+                  <!-- Bouton Imprimer -->
+                  <button class="btn btn-secondary btn-label waves-effect waves-light" type="button">
+                    <i class="ri-printer-line label-icon align-middle fs-16 me-2"></i>
+                    Imprimer
+                  </button>
+
+                  <!-- Bouton Exporter -->
+                  <button class="btn btn-success btn-label waves-effect waves-light" type="button">
+                    <i class="ri-download-line label-icon align-middle fs-16 me-2"></i>
+                    Exporter
+                  </button>
                 </div>
-                {% for time_slot in time_slots %}
-                <div class="col text-center p-0">
-                    <h6 class="mb-0" style="font-size: 0.7rem; padding: 0.2rem 0;">{{ time_slot }}</h6>
-                </div>
-                {% endfor %}
+              </div>
             </div>
 
-            <!-- Dynamic content based on actual sessions -->
-            {% for day in unique_days %}
-            <div class="row g-0">
-                <div class="col-2 bg-light text-center p-0">
-                    <div class="course-time" style="font-size: 0.75rem; padding: 0.2rem 0;">{{ day_names|get_item:day|default:day|title }}</div>
+            <div class="card-body p-4">
+              <div class="row mb-4">
+                <div class="col-md-12">
+                  <div class="d-flex flex-wrap gap-4">
+                    <div style="min-width: 200px;">
+                      <div class="d-flex align-items-center mb-1">
+                        <i class="ri-shield-check-line text-primary fs-5 me-2"></i>
+                        <label class="form-label fw-bold text-dark mb-0">Nom</label>
+                      </div>
+                      <div class="bg-light p-2 rounded">
+                        <p class="mb-0 fw-semibold text-dark">{{ timetable.label|default:"Emploi du Temps" }}</p>
+                      </div>
+                    </div>
+
+                    <div style="min-width: 200px;">
+                      <div class="d-flex align-items-center mb-1">
+                        <i class="ri-team-line text-secondary fs-5 me-2"></i>
+                        <label class="form-label fw-bold text-dark mb-0">Groupe</label>
+                      </div>
+                      <div class="bg-light p-2 rounded">
+                        <p class="mb-0 text-dark">
+                          {% if timetable.groupe %}
+                            {{ timetable.groupe.nom }}
+                          {% else %}
+                            <em class="text-muted">Non spécifié</em>
+                          {% endif %}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style="min-width: 150px;">
+                      <div class="d-flex align-items-center mb-1">
+                        <i class="ri-calendar-2-line text-secondary fs-5 me-2"></i>
+                        <label class="form-label fw-bold text-dark mb-0">Semestre</label>
+                      </div>
+                      <div class="bg-light p-2 rounded">
+                        <p class="mb-0 text-dark">
+                          {% if timetable.semestre %}
+                            {{ timetable.get_semestre_display }}
+                          {% else %}
+                            <em class="text-muted">Non spécifié</em>
+                          {% endif %}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style="min-width: 150px;">
+                      <div class="d-flex align-items-center mb-1">
+                        <i class="ri-toggle-line text-success fs-5 me-2"></i>
+                        <label class="form-label fw-bold text-dark mb-0">Etat</label>
+                      </div>
+                      <div class="bg-light p-2 rounded">
+                        <div class="d-flex align-items-center">
+                          {% if timetable.extraordinary_timetable %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle border-opacity-25">
+                              <i class="ri-file-add-line me-1"></i>Extraordinaire
+                            </span>
+                          {% else %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle border-opacity-25">
+                              <i class="ri-file-line me-1"></i>Ordinaire
+                            </span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                {% for time_slot in time_slots %}
-                    <div class="col time-slot text-left">
-                        {% for session in sessions %}
-                            <!-- Check if session day matches and time slot matches -->
-                            {% if session.jour|lower == day %}
-                                <!-- Extract hour:minute from session start time -->
-                                {% with session_start=session.heure_debut|time:"H:i" %}
-                                    {% if session_start == time_slot|slice:":5" %}
-                                        <div class="course-item" style="background: #e3f2fd; border-left: 3px solid #2196f3;">
+              </div>
+
+              <!-- Section de l'emploi du temps -->
+              <div class="row mt-5">
+                <div class="col-12">
+                  <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0">
+                      <i class="ri-time-line text-info me-2"></i>
+                      Planning de l'Emploi du Temps
+                    </h5>
+                    <span class="badge bg-info-subtle text-info border border-info-subtle border-opacity-25">
+                      {{ sessions|length }} séances
+                    </span>
+                  </div>
+
+                  <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                      <!-- Main Timetable -->
+                      <div class="table-responsive">
+                        <!-- Header Row with Times -->
+                        <table class="table table-bordered mb-0">
+                          <thead class="bg-light">
+                            <tr>
+                              <th class="text-center" style="width: 15%;">Jours</th>
+                              {% for time_slot in time_slots %}
+                                <th class="text-center">{{ time_slot }}</th>
+                              {% endfor %}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for day in unique_days %}
+                            <tr>
+                              <td class="bg-light text-center align-middle" style="font-weight: bold; font-size: 0.9rem;">{{ day|title }}</td>
+                              {% for time_slot in time_slots %}
+                                <td class="align-top p-1" style="min-height: 80px;">
+                                  {% for session in sessions %}
+                                    <!-- Check if session day matches and time slot matches -->
+                                    {% if session.jour|lower == day %}
+                                      <!-- Extract hour:minute from session start time -->
+                                      {% with session_start=session.heure_debut|time:"H:i" %}
+                                        {% if session_start == time_slot|slice:":5" %}
+                                          <div class="course-item bg-info bg-opacity-10 border-start border-info border-3 rounded p-2 mb-1" style="font-size: 0.75rem;">
                                             <strong>{{ session.cours.label }}</strong>
-                                            <div class="small mt-0">
-                                                <i class="fas fa-user me-1" style="font-size: 0.55rem;"></i> 
-                                                {% if session.formateur %}
-                                                    {{ session.formateur.nom}}
-                                                    {{ session.formateur.prenom}}
-                                                {% else %}
-                                                    N/A
-                                                {% endif %}
+                                            <div class="small mt-1">
+                                              <i class="ri-user-line text-info me-1"></i>
+                                              {% if session.formateur %}
+                                                {{ session.formateur.nom}} {{ session.formateur.prenom}}
+                                              {% else %}
+                                                N/A
+                                              {% endif %}
                                             </div>
-                                            <div class="small mt-0">
-                                                <i class="fas fa-map-marker-alt me-1" style="font-size: 0.55rem;"></i> 
-                                                {{session.salle.nom}}
+                                            <div class="small mt-1">
+                                              <i class="ri-map-pin-line text-info me-1"></i>
+                                              {{session.salle.nom}}
                                             </div>
-                                        </div>
+                                          </div>
+                                        {% endif %}
+                                      {% endwith %}
                                     {% endif %}
-                                {% endwith %}
-                            {% endif %}
-                        {% endfor %}
+                                  {% endfor %}
+                                </td>
+                              {% endfor %}
+                            </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
+                  </div>
+                </div>
+              </div>
 
-        <!-- Additional Information -->
-        <div class="row mt-3">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0" style="font-size: 0.9rem;">Informations Complémentaires</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled">
-                            <li class="mb-1">
-                                <i class="fas fa-calendar-check text-success me-2"></i>
-                                <strong>Groupe:</strong> {{ timetable.groupe.nom }}
-                            </li>
-                            <li class="mb-1">
-                                <i class="fas fa-calendar-day text-info me-2"></i>
-                                <strong>Semestre:</strong> {{ timetable.get_semestre_display }}
-                            </li>
-                            <li class="mb-1">
-                                <i class="fas fa-chalkboard-teacher text-info me-2"></i>
-                                <strong>Nombre d'enseignants:</strong> 
+              <!-- Section des statistiques -->
+              <div class="row mt-5">
+                <div class="col-12">
+                  <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0">
+                      <i class="ri-bar-chart-line text-success me-2"></i>
+                      Statistiques
+                    </h5>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <div class="card border border-success-subtle bg-success-subtle">
+                        <div class="card-body p-3">
+                          <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                              <div class="avatar-sm rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center">
+                                <i class="ri-user-line fs-4"></i>
+                              </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                              <p class="text-success mb-1">Enseignants</p>
+                              <h5 class="mb-0">
                                 {% regroup sessions by formateur as formateur_groups %}
                                 {{ formateur_groups|length|default:0 }}
-                            </li>
-                            <li class="mb-1">
-                                <i class="fas fa-book text-warning me-2"></i>
-                                <strong>Nombre de cours:</strong> {{ sessions|length }}
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0" style="font-size: 0.9rem;">Légende</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="d-flex align-items-center mb-1">
-                                    <div class="course-item me-2" style="width: 15px; height: 15px; background: #e3f2fd; border-left: 3px solid #2196f3; font-size: 0.5rem;"></div>
-                                    <span style="font-size: 0.8rem;">Cours Général</span>
-                                </div>
+                              </h5>
                             </div>
+                          </div>
                         </div>
+                      </div>
                     </div>
+
+                    <div class="col-md-4">
+                      <div class="card border border-primary-subtle bg-primary-subtle">
+                        <div class="card-body p-3">
+                          <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                              <div class="avatar-sm rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center">
+                                <i class="ri-book-line fs-4"></i>
+                              </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                              <p class="text-primary mb-1">Cours</p>
+                              <h5 class="mb-0">{{ sessions|length }}</h5>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-md-4">
+                      <div class="card border border-warning-subtle bg-warning-subtle">
+                        <div class="card-body p-3">
+                          <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                              <div class="avatar-sm rounded-circle bg-warning-subtle text-warning d-flex align-items-center justify-content-center">
+                                <i class="ri-calendar-2-line fs-4"></i>
+                              </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                              <p class="text-warning mb-1">Jours de cours</p>
+                              <h5 class="mb-0">{{ unique_days|length }}</h5>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
             </div>
-        </div>
 
-        <div class="mt-3 text-center">
-            <small class="text-muted">
-                <i class="fas fa-info-circle me-1"></i>
-                Dernière mise à jour: {{ timetable.date_modification|date:"d/m/Y H:i"|default:"01/01/2024 00:00" }}
-            </small>
+            <div class="card-footer bg-light p-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center">
+                  <i class="ri-information-line text-muted fs-5 me-2"></i>
+                  <small class="text-muted">
+                    <span class="text-success">Dernière mise à jour le {{ timetable.date_modification|date:"d M Y" }}</span>
+                  </small>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <button class="btn btn-success btn-label waves-effect waves-light" type="button">
+                    <i class="ri-checkbox-circle-line label-icon align-middle fs-16 me-2"></i>
+                    Valider
+                  </button>
+                  <button class="btn btn-danger btn-label waves-effect waves-light" type="button">
+                    <i class="ri-delete-bin-line label-icon align-middle fs-16 me-2"></i>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<script>
+  // Ajouter une fonctionnalité pour imprimer l'emploi du temps
+  document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du bouton d'impression
+    document.querySelector('.btn.btn-secondary.btn-label[type="button"]').addEventListener('click', function() {
+      window.print();
+    });
+
+    // Gestion du bouton d'export
+    const exportBtn = document.querySelectorAll('.btn.btn-success.btn-label[type="button"]')[0];
+    if(exportBtn) {
+      exportBtn.addEventListener('click', function() {
+        alert('Fonctionnalité d\'export en développement');
+      });
+    }
+  });
+</script>
+
+{% endblock content %}

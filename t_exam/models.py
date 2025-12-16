@@ -101,6 +101,7 @@ class Commissions(models.Model):
     criters = models.TextField(null=True, blank=True)
     date_commission = models.DateField(null=True, blank=True)
     is_validated = models.BooleanField(default=False)
+    is_closed = models.BooleanField(default=False)
     comment = models.TextField(null=True, blank=True)
     
     participant = models.ManyToManyField(Employees)

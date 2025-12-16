@@ -209,5 +209,16 @@ def ApiGetCommissionResults(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def close_commission(request, pk):
+    
     obj = Commissions.objects.get(id = pk)
-    pass
+
+    if not pk:
+        return JsonResponse({"status" : "error",'message' : "Information manquante"})
+    
+    obj.is_closed = True
+
+    try:
+        obj.save()
+        return JsonResponse({"status" : "success",'message' : "La commission a été close avec succès."})
+    except Exception as e:
+        return JsonResponse({"status" : "error",'message' : str(e)})
