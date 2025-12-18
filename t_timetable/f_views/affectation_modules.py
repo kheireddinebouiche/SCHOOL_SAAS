@@ -29,6 +29,24 @@ def PageAffectation(request):
     }
     return render(request, 'tenant_folder/formateur/affectation_modules.html', context)
 
+
+@login_required(login_url="institut_app:login")
+def LoadFormateurs(request):
+    if request.method == "GET":
+        formateur = Formateurs.objects.all().values('id','nom','prenom','email','telephone')
+        return JsonResponse(list(formateur), safe=False)
+    else:
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+def ApiLoadFormation(request):
+    if request.method == "GET":
+        formations = Formation.objects.all().values('id','code','nom')
+
+        return JsonResponse(list(formations), safe=False)
+
+    return JsonResponse({"status":"error"})
+
 @login_required(login_url="institut_app:login")
 def ApiGetAffectations(request):
     affectations = list(EnseignantModule.objects.values('id', 'formateur_id', 'module_id'))

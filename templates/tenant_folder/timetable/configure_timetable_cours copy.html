@@ -67,157 +67,22 @@
     gap: 10px;
     flex-wrap: wrap;
   }
-
+  
   .config-actions .btn {
     margin-bottom: 5px;
   }
-
+  
   .time-input {
     width: 120px;
     display: inline-block;
     margin: 0 5px;
   }
-
+  
   /* Course session specific styles */
   .session-card {
     margin-bottom: 15px;
     border-left: 4px solid #007bff;
   }
-
-  /* Styles for available rooms cards */
-  .room-card {
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-  }
-
-  .room-card:hover {
-    border-color: #0d6efd;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-
-  .room-card.selected {
-    border-color: #0d6efd;
-    background-color: #e7f1ff;
-  }
-
-  .room-card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    padding: 12px 15px;
-    border-radius: 6px 6px 0 0 !important;
-  }
-
-  .room-card-body {
-    padding: 15px;
-  }
-
-  .room-card.selected .room-card-header {
-    background-color: #0d6efd;
-    color: white;
-  }
-
-  .room-card.selected .room-card-header h6,
-  .room-card.selected .room-card-header i {
-    color: white !important;
-  }
-
-  /* Styles for session cards - Larger layout */
-  .session-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    width: 240px; /* Increased width */
-  }
-
-  .session-card:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-  }
-
-  .session-card-header {
-    background-color: #f8f9fa;
-    padding: 10px 12px;
-    border-radius: 5px 5px 0 0 !important;
-    flex-shrink: 0;
-  }
-
-  .session-card-body {
-    padding: 12px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .session-card-footer {
-    background-color: #f8f9fa;
-    padding: 8px 12px;
-    border-radius: 0 0 5px 5px !important;
-    flex-shrink: 0;
-  }
-
-  .session-info-item {
-    margin-bottom: 4px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-  }
-
-  .session-info-label {
-    font-weight: 600;
-    color: #6c757d;
-    font-size: 0.75rem;
-    margin-right: 3px;
-  }
-
-  .session-info-value {
-    font-weight: 500;
-    color: #212529;
-    font-size: 0.8rem;
-  }
-
-  .session-card-title {
-    font-size: 0.9rem;
-    margin: 0;
-    word-break: break-word;
-    line-height: 1.3;
-  }
-
-  .session-card-title i {
-    font-size: 0.9rem;
-    margin-right: 3px;
-  }
-
-  .session-card-footer small {
-    font-size: 0.75rem;
-  }
-
-  .session-card-footer button {
-    padding: 3px 8px;
-    font-size: 0.75rem;
-  }
-
-  /* Session cards container */
-  .sessions-cards-container {
-    max-height: 700px;
-    overflow-y: auto;
-    padding-right: 10px;
-  }
-
-  .sessions-cards-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .sessions-cards-container::-webkit-scrollbar-thumb {
-    background-color: #c0c0c0;
-    border-radius: 3px;
-  }
-
 </style>
 
 <div class="main-content">
@@ -362,12 +227,24 @@
               </div>
             </div>
             <div class="card-body p-3 config-body">
-              <div id="sessionsContainer">
-                <div class="sessions-cards-container">
-                  <div id="sessionsCardsBody" class="d-flex flex-wrap justify-content-start gap-3">
-                    <!-- Session cards will be loaded here -->
-                  </div>
-                </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Module</th>
+                      <th class="border-0">Jour</th>
+                      <th class="border-0">Horaire</th>
+                      <th class="border-0">Professeur</th>
+                      <th class="border-0">Salle</th>
+                      {% if not timetable.is_validated %}
+                        <th class="border-0 rounded-end text-center">Actions</th>
+                      {% endif %}
+                    </tr>
+                  </thead>
+                  <tbody id="sessionsTableBody">
+                    
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -487,20 +364,12 @@
           <div class="row g-3 mt-2">
             <div class="col-lg-12">
               <label class="form-label fw-medium" for="session_salle">Salle <span class="text-danger">*</span></label>
-              <input type="hidden" id="session_salle" name="salle" value="" required>
-              <div id="salles_disponibles_container">
-                <div id="salle_loader" class="d-none text-center mt-3">
-                  <div class="spinner-border spinner-border-sm text-primary" role="status">
-                    <span class="visually-hidden">Chargement...</span>
-                  </div>
-                  <small class="text-muted ms-2">Chargement des salles disponibles...</small>
-                </div>
-                <div id="salles_cards" class="row g-3">
-                  <div class="col-12">
-                    <div class="alert alert-info">Veuillez sélectionner un horaire pour voir les salles disponibles</div>
-                  </div>
-                </div>
-              </div>
+              <select class="form-select border-0 bg-light py-2" id="session_salle" name="salle" required>
+                <option value="">Sélectionnez une salle</option>
+                {% for salle in salles %}
+                  <option value="{{ salle.id }}">{{ salle.nom }} ({{ salle.code }}) - {{ salle.capacite }} places</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           
@@ -695,57 +564,40 @@
           'timetable' : timetable,
         },
         success : function(data){
-          var cardsHtml = "";
+          var row = "";
           if(data.length > 0){
               $.each(data, function(index, p){
-                cardsHtml += '<div class="card session-card">';
-                cardsHtml += '  <div class="card-header session-card-header">';
-                cardsHtml += '    <h6 class="card-title mb-0 session-card-title"><i class="ri-book-line text-primary"></i> '+p.cours__code+' - '+p.cours__label+'</h6>';
-                cardsHtml += '  </div>';
-                cardsHtml += '  <div class="card-body session-card-body">';
-                cardsHtml += '    <div class="session-info-item">';
-                cardsHtml += '      <span class="session-info-label">Jour:</span>';
-                cardsHtml += '      <span class="session-info-value">'+p.jour+'</span>';
-                cardsHtml += '    </div>';
-                cardsHtml += '    <div class="session-info-item">';
-                cardsHtml += '      <span class="session-info-label">Horaire:</span>';
-                cardsHtml += '      <span class="session-info-value">'+p.heure_debut+' - '+p.heure_fin+'</span>';
-                cardsHtml += '    </div>';
-                cardsHtml += '    <div class="session-info-item">';
-                cardsHtml += '      <span class="session-info-label">Professeur:</span>';
-                cardsHtml += '      <span class="session-info-value">'+p.formateur__nom+' '+p.formateur__prenom+'</span>';
-                cardsHtml += '    </div>';
-                cardsHtml += '    <div class="session-info-item">';
-                cardsHtml += '      <span class="session-info-label">Salle:</span>';
-                cardsHtml += '      <span class="session-info-value">'+p.salle__nom+' ('+p.salle__code+')</span>';
-                cardsHtml += '    </div>';
-                cardsHtml += '  </div>';
-                cardsHtml += '  <div class="card-footer session-card-footer">';
-                cardsHtml += '    <div class="d-flex justify-content-between">';
-                cardsHtml += '      <small class="text-muted"><i class="ri-time-line me-1"></i> Séance</small>';
-                cardsHtml += '      <button type="button" '+(p.timetable__is_validated ? 'hidden' : '')+' class="btn btn-danger btn-sm delete-session" data-session-id="'+p.id+'">';
-                cardsHtml += '        <i class="ri-delete-bin-line"></i>';
-                cardsHtml += '      </button>';
-                cardsHtml += '    </div>';
-                cardsHtml += '  </div>';
-                cardsHtml += '</div>';
+                row +='<tr><td><div class="d-flex align-items-center">';
+                row +=' <div class="flex-grow-1"><h6 class="mb-0 fw-semibold">'+p.cours__code+'-'+p.cours__label+'</h6></div></div></td>';
+                row +=' <td><div class="fw-medium">'+p.jour+'</div></td>';
+                row +='<td><div class="text-body">'+p.heure_debut+'-'+p.heure_fin+'</div></td>';
+                row +='<td><div class="text-body">'+p.formateur__nom+' '+p.formateur__prenom+'</div></td>';
+                row +='<td><div class="text-body">'+p.salle__nom+'('+p.salle__code+')'+'</div></td>';
+                row +='<td class="text-end">';
+                row +=' <button type="button" '+(p.timetable__is_validated ? 'hidden' : '')+' class="btn btn-danger btn-sm delete-session" data-session-id="'+p.id+'">';
+                row +=' <i class="ri-delete-bin-line"></i>';
+                row +='</button>';
+                row +='</td>';
+                row +=' </tr>';
             });
           }else{
-            cardsHtml += '<div class="w-100">';  // Full width for empty state
-            cardsHtml += '  <div class="text-center py-5">';
-            cardsHtml += '    <div class="avatar-sm mb-4 mx-auto">';
-            cardsHtml += '      <div class="avatar-title bg-light text-muted rounded-circle fs-1">';
-            cardsHtml += '        <i class="ri-book-line"></i>';
-            cardsHtml += '      </div>';
-            cardsHtml += '    </div>';
-            cardsHtml += '    <h5 class="mb-2">Aucune séance de cours trouvée</h5>';
-            cardsHtml += '    <p class="text-muted mb-0">Il n\'y a aucune séance de cours programmée pour le moment</p>';
-            cardsHtml += '  </div>';
-            cardsHtml += '</div>';
+            row+='<tr>';
+              row+='<td colspan="6" class="text-center text-muted">';
+                row+='<div class="d-flex flex-column align-items-center justify-content-center py-5">';
+                    row+='<div class="avatar-sm mb-4">';
+                        row+='<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
+                            row+='<i class="ri-book-line"></i>';
+                        row+='</div>';
+                    row+='</div>';
+                    row+='<h5 class="mb-2">Aucune séance de cours trouvée</h5>';
+                    row+='<p class="text-muted mb-0">Il n\'y a aucune séance de cours programmée pour le moment</p>';
+                row+='</div>';
+              row+='</td>';
+            row+='</tr>';
           }
 
-          $('#sessionsCardsBody').html(cardsHtml);
-
+          $('#sessionsTableBody').html(row);
+          
         },
       });
     }
@@ -771,12 +623,6 @@
       // Hide any previous error messages
       $('#addSessionError').addClass('d-none');
 
-      // Validate that a room has been selected
-      if (!session_salle) {
-        $('#addSessionError').removeClass('d-none').text('Veuillez sélectionner une salle pour la séance.');
-        return;
-      }
-
       $.ajax({
         url: '{% url "t_timetable:save_session" %}',
         type: 'POST',
@@ -799,7 +645,6 @@
             $('#session_jour').val("");
             $('#session_horaire').val("");
             $('#session_salle').val("");
-            $('#salles_cards').html('<div class="col-12"><div class="alert alert-info">Veuillez sélectionner un horaire pour voir les salles disponibles</div></div>');
             $('#teacherAvailabilitySection').hide();
 
             $('#addSessionModal').modal('hide');
@@ -816,7 +661,7 @@
           }
           $('#addSessionError').removeClass('d-none').text(errorMessage);
         },
-
+        
       });
     });
 
@@ -1342,7 +1187,7 @@
                         margin-bottom: 10px;">
                         <i class="ri-check-line" style="font-size: 24px; margin-right: 8px;"></i>Enregistrement en cours ...
                     </div>
-
+                    
                 </div>
                 <style>
                     @keyframes spin {
@@ -1375,107 +1220,9 @@
       })
     });
 
-    // Handle day change to clear room selection
-    $(document).on('change', '#session_jour', function() {
-      $('#session_horaire').val('');
-      $('#session_salle').val(''); // Clear the hidden input
-      $('#salles_cards').html('<div class="col-12"><div class="alert alert-info">Veuillez sélectionner un horaire pour voir les salles disponibles</div></div>');
-    });
-
-    
-    $(document).on('change','#session_horaire', function(){
-
-       var selectedOption = $('#session_horaire option:selected');
-
-      var heur_debut = selectedOption.data('heure-debut');
-      var heur_fin = selectedOption.data('heure-fin');
-
-      var jour= $('#session_jour').val();
-
-      if (!jour) {
-        alertify.error("Veuillez d'abord sélectionner un jour");
-        return;
-      }
-
-      // Show loader and hide cards
-      $('#salle_loader').removeClass('d-none');
-      $('#salles_cards').html('');
-      $('#session_salle').val(''); // Clear the hidden input
-
-      $.ajax({
-        url : "{% url 't_timetable:ApiGetSallesDispo' %}",
-        dataType : "JSON",
-        type: "GET",
-        data : {
-          'heur_debut' : heur_debut,
-          'heur_fin' : heur_fin,
-          'jour' : jour
-        },
-        success : function(response){
-
-          if (response.status == "error") {
-            alertify.error(response.message || "Aucune salle disponible pour cet horaire");
-            $('#salles_cards').html('<div class="col-12"><div class="alert alert-warning">Aucune salle disponible pour cet horaire</div></div>');
-          } else {
-            // Display rooms as cards
-            var cardsHtml = '';
-
-            if (response.salles && response.salles.length > 0) {
-              $.each(response.salles, function(index, salle) {
-                cardsHtml += '<div class="col-md-6 col-lg-4">' +
-                             '<div class="card room-card" data-room-id="' + salle.id + '">' +
-                               '<div class="card-header room-card-header">' +
-                                 '<div class="d-flex justify-content-between align-items-center">' +
-                                   '<h6 class="card-title mb-0">' + salle.nom + '</h6>' +
-                                   '<span class="badge bg-primary">' + salle.type + '</span>' +
-                                 '</div>' +
-                               '</div>' +
-                               '<div class="card-body room-card-body p-3">' +
-                                 '<div class="d-flex justify-content-between mb-2">' +
-                                   '<span class="text-muted">Code:</span>' +
-                                   '<strong>' + salle.code + '</strong>' +
-                                 '</div>' +
-                                 '<div class="d-flex justify-content-between mb-2">' +
-                                   '<span class="text-muted">Capacité:</span>' +
-                                   '<strong>' + salle.capacite + ' places</strong>' +
-                                 '</div>' +
-                               '</div>' +
-                             '</div>' +
-                           '</div>';
-              });
-            } else {
-              cardsHtml = '<div class="col-12"><div class="alert alert-warning">Aucune salle disponible pour cet horaire</div></div>';
-            }
-
-            $('#salles_cards').html(cardsHtml);
-
-            // Add click event to room cards
-            $('.room-card').on('click', function() {
-              // Remove selected class from all cards
-              $('.room-card').removeClass('selected');
-              // Add selected class to clicked card
-              $(this).addClass('selected');
-              // Update hidden input with selected room ID
-              var roomId = $(this).data('room-id');
-              $('#session_salle').val(roomId);
-            });
-          }
-        },
-        error: function(xhr, status, error) {
-          alertify.error("Erreur lors du chargement des salles disponibles");
-          $('#salles_cards').html('<div class="col-12"><div class="alert alert-danger">Erreur de chargement des salles disponibles</div></div>');
-        },
-        complete: function() {
-          // Hide loader after completion
-          $('#salle_loader').addClass('d-none');
-        }
-      });
-    });
-  
-  
   });
   
   
 </script>
 
-{% endblock content %} 
+{% endblock content %}

@@ -188,9 +188,9 @@
                 <table id="example" class="table table-hover align-middle mb-0">
                   <thead class="bg-light">
                     <tr>
-                      <th class="border-0 rounded-start">Modules</th>
-                      <th class="border-0 rounded-start">Spécialité</th>
-                      <th class="border-0">Enseignants</th>
+                      <th class="border-0 rounded-start">Nom & Prénom</th>
+                      <th class="border-0 rounded-start">Télphone</th>
+                      <th class="border-0">Email</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
                   </thead>
@@ -315,471 +315,193 @@
   </div>
 </div>
 
-<script>
-  // Fix dropdown positioning
-  $(document).ready(function () {
-    // Ensure table responsive container doesn't hide dropdowns
-    $('.table-responsive').css('overflow-x', 'visible');
-    
-    function loadItems(){
-      $.ajax({
-        url : "{% url 't_timetable:ApiLoadModules' %}",
-        dataType : "JSON",
-        type : "GET",
-        success : function(data){
-            var row = "";
-            if (data.length >0){
-              $.each(data, function(index, p){
-                  row += '<tr>';
-                    row += '<td><strong>'+p.code+'-'+p.label+'</td>';
-                    row += '<td>'+p.specialite__label+'</td>';
-                    row += '<td>'+p.nombre_formateur+'</td>';
-                    row += '<td class="text-end">';
-                      row += '<div class="dropdown">';
-                        row += '<button class="btn btn-light btn-sm rounded-pill shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                          row += '<i class="ri-more-2-line"></i>';
-                        row += '</button>';
-                        row += '<ul class="dropdown-menu dropdown-menu-end shadow-none">';
-                          row += '<li><a class="dropdown-item d-flex align-items-center px-3 py-2 view-modules" href="#" data-module-id="'+p.id+'" data-module-code="'+p.code+'" data-module-label="'+p.label+'">';
-                            row += '<i class="ri-eye-line text-info me-2"></i> Voir les détails';
-                          row += '</a></li>';
-                          row += '<li><a class="dropdown-item d-flex align-items-center px-3 py-2 assign-modules" href="#" data-module-id="'+p.id+'" data-module-code="'+p.code+'" data-module-label="'+p.label+'">';
-                            row += '<i class="ri-user-add-line text-primary me-2"></i> Affecter des formateurs';
-                          row += '</a></li>';
-                        row += '</ul>';
-                      row += '</div>';
-                    row += '</td>';
-                  row += '</tr>';
-              });
+<!-- Modal for assigning modules to a formateur -->
+<div class="modal fade" id="moduleAssignmentModal" tabindex="-1" aria-labelledby="moduleAssignmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-user-add-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="moduleAssignmentModalLabel">
+              Affectation de modules au formateur
+            </h5>
+            <p class="text-muted small mb-0">Sélectionnez les modules à affecter à ce formateur</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row mb-4">
+          <div class="col-lg-3">
+            <label class="form-label fw-medium" for="selectFormation">Formation</label>
+            <select class="form-select border-0 bg-light" id="selectFormation">
+              <option value="">Veuiller sélectionner une formation</option>
               
-            }else{
-              row += '<tr>';
-                row += '<td colspan="4">';
-                  row += '<div class="d-flex flex-column align-items-center justify-content-center py-5">';
-                      row += '<div class="avatar-sm mb-4">';
-                          row += '<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
-                              row += '<i class="ri-book-unfolded-line"></i>';
-                          row += '</div>';
-                      row += '</div>';
-                      row += '<h5 class="mb-2">Aucun module trouvé</h5>';
-                      row += '<p class="text-muted mb-0">Il n\'y a aucun module enregistré pour le moment</p>';
-                  row += '</div>';
-                row += '</td>';
-              row += '</tr>';
-            }
-            $('#listeItem').html(row);
-        }
-      }); 
+            </select>
+          </div>
+          <div class="col-lg-3">
+            <label class="form-label fw-medium" for="selectSpecialite">Spécialité</label>
+            <select class="form-select border-0 bg-light" id="selectSpecialite">
+              <option value="">Sélectionnez une spécialité</option>
+              <option value="1">Développement</option>
+              <option value="2">Réseau</option>
+              <option value="3">Sécurité</option>
+            </select>
+          </div>
+          <div class="col-lg-3">
+            <label class="form-label fw-medium" for="selectModules">Modules</label>
+            <select class="form-select border-0 bg-light" id="selectModules">
+              <option value="">Sélectionnez un module</option>
+              <option value="1">Algorithmique</option>
+              <option value="2">Base de données</option>
+              <option value="3">Système d'exploitation</option>
+            </select>
+          </div>
+          <div class="col-lg-3 d-flex align-items-end">
+            <button type="button" class="btn btn-primary w-100" id="addModuleBtn">
+              <i class="ri-add-line me-1"></i>Ajouter le module
+            </button>
+          </div>
+        </div>
 
-
-    }
-    
-    loadItems();
-
-    // Handle dropdown show events
-    $(document).on('show.bs.dropdown', function(e) {
-      var dropdownMenu = $(e.target).find('.dropdown-menu');
-      if (dropdownMenu.length) {
-        dropdownMenu.css({
-          'z-index': '1050',
-          'position': 'absolute'
-        });
-      }
-    });
-
-    // Initialize search functionality
-    $('#table-filter').prop('disabled', false);
-    $('#table-filter').on('keyup', function() {
-      var value = $(this).val().toLowerCase();
-      var found = false;
-      
-      $('#listeItem tr').filter(function() {
-        var isVisible = $(this).text().toLowerCase().indexOf(value) > -1;
-        $(this).toggle(isVisible);
-        if(isVisible) found = true;
-      });
-      
-      // Show/hide the "no results" message
-      if(value !== '') {
-        if(!found) {
-          // Show no results message if it doesn't already exist
-          if($('#noResultsMessage').length === 0) {
-            $('#listeItem').append(`
-              <tr id="noResultsMessage">
-                <td colspan="5" class="text-center text-muted py-4">
-                  <div class="d-flex flex-column align-items-center justify-content-center">
-                    <div class="avatar-sm mb-3">
-                      <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                        <i class="ri-search-line"></i>
+        <div class="table-responsive">
+          <table class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+            <thead class="bg-light">
+              <tr>
+                <th class="border-0 rounded-start">Formation</th>
+                <th class="border-0">Spécialité</th>
+                <th class="border-0">Module</th>
+                <th class="border-0 rounded-end text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="assignedModulesTable">
+              <!-- Added modules will be displayed here -->
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                      <div class="avatar-sm mb-4">
+                          <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                              <i class="ri-list-check-3"></i>
+                          </div>
                       </div>
-                    </div>
-                    <h5 class="mb-1">Aucun résultat trouvé</h5>
-                    <p class="text-muted mb-0">Aucun module ne correspond à votre recherche</p>
+                      <h5 class="mb-2">Aucune affectation trouvée</h5>
+                      <p class="text-muted mb-0">Il n'y a aucune affectation enregistrée pour le moment</p>
                   </div>
                 </td>
               </tr>
-            `);
-          } else {
-            $('#noResultsMessage').show();
-          }
-        } else {
-          // Hide the no results message if it exists
-          $('#noResultsMessage').hide();
-        }
-      } else {
-        // If search is empty, hide the no results message
-        $('#noResultsMessage').hide();
-      }
-    });
-    
-    // Ensure the input field is always enabled
-    $('#table-filter').on('focus', function() {
-      $(this).prop('disabled', false);
-    });
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-success px-4 py-2">
+          <i class="ri-check-line me-2"></i>Enregistrer les affectations
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // Handle specialty filter
-    $('#filter-specialite').on('change', function() {
-      applyFilters();
-    });
+<script>
+  // Fix dropdown positioning
+  $(document).ready(function () {
 
-    // Handle table search
-    $('#table-filter').on('keyup', function() {
-      applyFilters();
-    });
 
-    // Function to apply both search and specialty filters
-    function applyFilters() {
-      var searchValue = $('#table-filter').val().toLowerCase();
-      var selectedSpecialite = $('#filter-specialite').val().toLowerCase();
-      
-      var visibleCount = 0;
-      
-      $('#listeItem tr').each(function() {
-        var rowText = $(this).text().toLowerCase();
-        var rowSpecialite = $(this).find('td:eq(1)').text().toLowerCase(); // Specialty is in the 2nd column (index 1)
-        
-        var showRow = true;
-        
-        // Apply search filter
-        if (searchValue !== '') {
-          if (rowText.indexOf(searchValue) === -1) {
-            showRow = false;
-          }
-        }
-        
-        // Apply specialty filter
-        if (selectedSpecialite !== '0') {
-          if (rowSpecialite.indexOf(selectedSpecialite) === -1) {
-            showRow = false;
-          }
-        }
-        
-        if (showRow) {
-          visibleCount++;
-        }
-        
-        $(this).toggle(showRow);
-      });
-      
-      // Show/hide the "no results" message
-      if (visibleCount === 0) {
-        if ($('#noResultsMessage').length === 0) {
-          $('#listeItem').append(`
-            <tr id="noResultsMessage">
-              <td colspan="4" class="text-center text-muted py-4">
-                <div class="d-flex flex-column align-items-center justify-content-center">
-                  <div class="avatar-sm mb-3">
-                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                      <i class="ri-search-line"></i>
-                    </div>
-                  </div>
-                  <h5 class="mb-1">Aucun résultat trouvé</h5>
-                  <p class="text-muted mb-0">Aucun module ne correspond à vos critères de recherche</p>
-                </div>
-              </td>
-            </tr>
-          `);
-        } else {
-          $('#noResultsMessage').show();
-        }
-      } else {
-        $('#noResultsMessage').hide();
-      }
-    }
-
-    // Handle view modules action
-    $(document).on('click', '.view-modules', function(e) {
-      e.preventDefault();
-      var moduleId = $(this).data('module-id');
-      var moduleCode = $(this).data('module-code');
-      var moduleLabel = $(this).data('module-label');
-      
-      // Set module info in modal title
-      $('#viewModuleName').text(moduleCode + ' - ' + moduleLabel);
-      
-      // Load assigned trainers (mock data for now)
-      loadAssignedTrainers(moduleId);
-      
-      // Show the modal
-      $('#viewModulesModal').modal('show');
-    });
-    
-    // Handle assign modules action
-    $(document).on('click', '.assign-modules', function(e) {
-      e.preventDefault();
-      var moduleId = $(this).data('module-id');
-      var moduleCode = $(this).data('module-code');
-      var moduleLabel = $(this).data('module-label');
-     
-      // Store module ID for later use
-      $('#assignModulesModal').data('module-id', moduleId);
-      
-      // Set module info in modal title
-      $('#assignModuleName').text(moduleCode + ' - ' + moduleLabel);
-      
-      // Load available trainers (mock data for now)
-      loadAvailableTrainers(moduleId);
-      
-      // Show the modal
-      $('#assignModulesModal').modal('show');
-    });
-    
-    // Handle select all checkbox
-    $(document).on('change', '#selectAllCheckbox', function() {
-      var isChecked = $(this).is(':checked');
-      $('.module-checkbox').prop('checked', isChecked);
-    });
-    
-    // Mock function to load assigned trainers
-    function loadAssignedTrainers(moduleId) {
-      
-      $('#assignedModulesList').empty();
-      
+    function loadFormateur(){
       $.ajax({
-        url : "{% url 't_timetable:LoadAssignedProf' %}",
+        url : "{% url 't_timetable:LoadFormateurs' %}",
         dataType: "JSON",
-        type : "GET",
-        data : {
-          'moduleId' : moduleId,
-        },
-        success : function(data){
-          var html = '';
-          if (data.length > 0){
-            $.each(data, function(index, trainer) {
-              html += '<tr>';
-              html += '<td><span class="fw-semibold">' + trainer.formateur__nom + '</span></td>';
-              html += '<td>' + trainer.formateur__prenom + '</td>';
-              html += '<td>' + trainer.formateur__email + '</td>';
-              html += '</tr>';
-            });
-          }else{
-            html += '<tr>';
-              html += '<td colspan="4">';
-                html +='<div class="d-flex flex-column align-items-center justify-content-center py-5"> ';
-                    html +='<div class="avatar-sm mb-4"> ';
-                        html +='<div class="avatar-title bg-light text-muted rounded-circle fs-1"> ';
-                            html +='<i class="ri-user-unfollow-line"></i> ';
-                        html +='</div> ';
-                    html +='</div>';
-                    html +='<h5 class="mb-2">Aucun formateur trouvé</h5> ';
-                  html += '<p class="text-muted mb-0">Il n\'y a aucun formateur enregistré pour le moment</p> ';
-                html +='</div>';
-              html += '</td>';
-            html += '</tr>';
-          }
-          
-          $('#assignedModulesList').html(html);
-        }
-      });
-      
-    }
-    
-    // // Mock function to load available trainers
-    // function loadAvailableTrainers(currentModuleId) {
-    //   // Clear current list
-    //   $('#modulesList').empty(); 
+        type: "GET",
+        success: function(data){
+          var row = "";
+          $.each(data, function(index, p){
+            row += "<tr>";
+              row += "<td>"+p.nom+' '+p.prenom+ "</td>";
+              row += "<td>"+p.telephone+"</td>";
+              row += "<td>"+p.email+"</td>";
+              row += "<td class='text-end'>";
+                row += "<div class='dropdown'>";
+                  row += "<button class='btn btn-soft-secondary btn-sm dropdown-toggle' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
+                    row += "<i class='ri-more-fill align-middle'></i>";
+                  row += "</button>";
+                  row += "<ul class='dropdown-menu dropdown-menu-end'>";
+                    row += "<li><a class='dropdown-item details-formateur' href='javascript:void(0);' data-id='"+p.id+"'><i class='ri-file-user-line text-muted me-2 align-bottom'></i> Détails</a></li>";
+                    row += "<li><a class='dropdown-item affectation-module' href='javascript:void(0);' data-id='"+p.id+"'><i class='ri-user-add-line text-muted me-2 align-bottom'></i> Affectation de module</a></li>";
+                  row += "</ul>";
+                row += "</div>";
+              row += "</td>";
 
-    //   var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');;
-    //   var affectations = JSON.parse('{{ affectations_json|escapejs }}');
+            row += "</tr>";
 
-    //   var html = '';
-    //   $.each(mockTrainers, function(index, trainer) {
 
-    //     var isAssigned = affectations.some(function(a) {
-    //       return a.formateur_id === trainer.id && a.module_id === currentModuleId;
-    //     });
-
-    //     html += '<tr>';
-    //     html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
-    //     html += '<td>' + trainer.prenom + '</td>';
-    //     html += '<td>' + trainer.email + '</td>';
-    //     html += '<td class="text-center">';
-    //     html += '<div class="btn-group" role="group">';
-    //     if (isAssigned) {
-    //       html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
-    //       html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
-    //     } else {
-    //       html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
-    //       html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
-    //     }
-    //     html += '</div>';
-    //     html += '</td>';
-    //     html += '</tr>';
-    //   });
-      
-    //   $('#modulesList').html(html);
-    // }
-    
-    function loadAvailableTrainers(currentModuleId) {
-      $('#modulesList').empty();
-
-      // Les formateurs sont statiques (pas besoin de recharger à chaque fois)
-      var mockTrainers = JSON.parse('{{ formateurs_json|escapejs }}');
-
-      // Requête AJAX pour récupérer les affectations à jour
-      $.getJSON("{% url 't_timetable:ApiGetAffectations' %}", function(data) {
-        var affectations = data.affectations;
-        var html = '';
-
-        $.each(mockTrainers, function(index, trainer) {
-          var isAssigned = affectations.some(function(a) {
-            return a.formateur_id === trainer.id && a.module_id === currentModuleId;
           });
 
-          html += '<tr>';
-          html += '<td><span class="fw-semibold">' + trainer.nom + '</span></td>';
-          html += '<td>' + trainer.prenom + '</td>';
-          html += '<td>' + trainer.email + '</td>';
-          html += '<td class="text-center">';
-          html += '<div class="btn-group" role="group">';
-          if (isAssigned) {
-            html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Affecter</button>';
-            html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '">Supprimer</button>';
-          } else {
-            html += '<button type="button" class="btn btn-sm btn-success assign-trainer" data-trainer-id="' + trainer.id + '">Affecter</button>';
-            html += '<button type="button" class="btn btn-sm btn-danger remove-trainer" data-trainer-id="' + trainer.id + '" style="display:none;">Supprimer</button>';
-          }
-          html += '</div></td></tr>';
-        });
-
-        $('#modulesList').html(html);
+          $('#listeItem').html(row);
+        },
       });
     }
 
 
-    // Function to update statistics
-    function updateStatistics() {
-      var totalModules = $('#listeItem tr').length - ($('#noResultsMessage').length > 0 ? 1 : 0); // Exclude the "no results" row if present
-      var modulesSansAffectation = 0;
-      var modulesAvecAffectation = 0;
-      
-      // Count modules based on the number of assignments
-      $('#listeItem tr').each(function() {
-        if (!$(this).is('#noResultsMessage')) { // Don't count the "no results" row
-          var assignmentCount = parseInt($(this).find('td:eq(2)').text()); // Assignment count is in the 3rd column (index 2)
-          if (assignmentCount === 0 || isNaN(assignmentCount)) {
-            modulesSansAffectation++;
-          } else {
-            modulesAvecAffectation++;
-          }
+    loadFormateur();
+
+    // Event handler for details button
+    $(document).on('click', '.details-formateur', function() {
+      var formateurId = $(this).data('id');
+      alert('Détails du formateur ID: ' + formateurId);
+      // In a real implementation, you would open a modal or navigate to a details page
+      // Example: loadFormateurDetails(formateurId);
+    });
+
+    function loadFormation(){
+      $.ajax({
+        url : "{% url 't_timetable:ApiLoadFormation' %}",
+        dataType : "JSON",
+        type : "GET",
+        success: function(data){
+          var option = "<option value=''>Veuillez sélectionner une formation</option>";
+          $.each(data, function(indes, p){
+            option= "<option value=''>"+p.code+' - '+p.nom+"</option>";
+          });
+          $('#selectFormation').append(option);
         }
       });
-      
-      $('#totalModules').text(totalModules);
-      $('#modulesSansAffectation').text(modulesSansAffectation);
-      $('#modulesAvecAffectation').text(modulesAvecAffectation);
     }
-       
-    // Gestionnaire pour le bouton Affecter
-    $(document).on('click', '.assign-trainer', function() {
-      var btn = $(this); // référence du bouton
-      btn.prop('disabled', true); // désactive le bouton
 
-      // Optionnel : afficher un spinner pour indiquer le chargement
-      var originalText = btn.html();
-      btn.html(`
-          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-          Envoi en cours...
-      `);
-      var trainerId = $(this).data('trainer-id');
-      var moduleId = $('#assignModulesModal').data('module-id');
+    // Event handler for module assignment button
+    $(document).on('click', '.affectation-module', function() {
+      var formateurId = $(this).data('id');
+      // In a real implementation, you would load formateur data and open the modal
+      // Example: loadFormateurModules(formateurId);
+
+      loadFormation();
+
+      $('#moduleAssignmentModalLabel').text('Affectation de modules au formateur');
+      $('#moduleAssignmentModal').modal('show');
+    });
+
+    
+
+    $(document).on('change','#selectFormation', function(){
       
-      $.ajax({
-        url : "{% url 't_timetable:ApiAffectTrainer' %}",
-        dataType: "JSON",
-        type: 'POST',
-        data : {
-          'trainerId' : trainerId,
-          'moduleId'  : moduleId,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success : function(response){
-          if(response.status === "success"){
-            alertify.success(response.message);
-            loadItems();
-            loadAvailableTrainers(moduleId);
-          }else{
-            alertify.error(response.message);
-          }
-        },
-        error : function(xhr){
-          alert("Erreur : " + xhr.responseText);
-        },
-        complete: function() {
-            // Réactiver le bouton et restaurer son texte après la requête
-            btn.prop('disabled', false);
-            btn.html(originalText);
-        }
-      })
+      
+
       
     });
- 
-    // Gestionnaire pour le bouton Supprimer
-    $(document).on('click', '.remove-trainer', function() {
-      var btn = $(this); // référence du bouton
-      btn.prop('disabled', true); // désactive le bouton
 
-      // Optionnel : afficher un spinner pour indiquer le chargement
-      var originalText = btn.html();
-      btn.html(`
-          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-          Envoi en cours...
-      `);
-      var trainerId = $(this).data('trainer-id');
-      var moduleId = $('#assignModulesModal').data('module-id');
-      
-      $.ajax({
-        url : "{% url 't_timetable:ApiDeaffectTrainer' %}",
-        dataType: "JSON",
-        type: 'POST',
-        data : {
-          'trainerId' : trainerId,
-          'moduleId'  : moduleId,
-          'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        success : function(response){
-          if(response.status === "success"){
-            alertify.success(response.message);
-            loadItems();
-            loadAvailableTrainers(moduleId);
-          }else{
-            alertify.error(response.message);
-          }
-        },
-        error : function(xhr){
-          alert("Erreur : " + xhr.responseText);
-        },
-        complete: function() {
-            // Réactiver le bouton et restaurer son texte après la requête
-            btn.prop('disabled', false);
-            btn.html(originalText);
-        }
-      })
+    $(document).on('change','#selectSpecialite', function(){
+
     });
+
 
   });
-    
-    
+
+
 
 </script>
 

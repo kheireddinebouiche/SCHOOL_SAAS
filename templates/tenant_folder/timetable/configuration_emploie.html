@@ -123,6 +123,26 @@
       </div>
       <!-- end page title -->
 
+      <!-- Notification about attendance registers -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="alert alert-info border-0 bg-info bg-opacity-10 rounded-3">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0">
+                <i class="ri-information-line text-info fs-4 me-3"></i>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="alert-heading text-info fw-semibold">Génération des registres de présences</h5>
+                <p class="mb-0">
+                  Pour créer les registres de présences comportant les modules planifiés afin de suivre les présences des étudiants,
+                  veuillez cliquer sur <strong>"Voir"</strong> dans la liste des emplois du temps, puis confirmer la génération des registres de présences.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {% if messages %}
         {% for message in messages %}
           <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -299,7 +319,7 @@
         
         <div class="d-flex flex-column align-items-center gap-3">
           <button type="button" class="btn btn-primary btn-lg w-100 py-3" id="configureCoursesBtn">
-            <i class="ri-settings-3-line me-2"></i>Configurer les cours maintenant
+            <i class="ri-settings-3-line me-2"></i>Activer et configurer les cours maintenant
           </button>
           <button type="button" class="btn btn-outline-secondary btn-lg w-100 py-3" id="returnLaterBtn">
             <i class="ri-timer-line me-2"></i>Revenir plus tard
@@ -464,9 +484,21 @@
   
     // Handle configure courses button
     $('#configureCoursesBtn').on('click', function() {
+      $.ajax({
+        url : "{% url 't_timetable:ApiActivateTimeTable' %}",
+        dataType : "JSON",
+        type : "GET",
+        data : {'id' : '{{timetable.id}}'},
+        success: function(response){
+          if(response.status == "success"){
+            window.location.href = "/emploie-du-temps/modifications/emploie/{{timetable.id}}";
+            $('#courseConfigurationModal').modal('hide');
+          }else{
+            alertify.error("Une erreur c'est produite lors du tratement de la requete.")
+          }
+        }
+      })
       
-      window.location.href = "/emploie-du-temps/modifications/emploie/{{timetable.id}}";
-      $('#courseConfigurationModal').modal('hide');
     });
     
     // Handle return later button

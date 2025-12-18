@@ -23,6 +23,8 @@ class Timetable(models.Model):
     description = models.TextField(blank=True, null=True, verbose_name="Description")
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
+
+    annee_scolaire = models.CharField(max_length=100, null=True, blank=True)
    
     is_configured = models.BooleanField(default=False)
 

@@ -65,11 +65,14 @@ def ApiCreateTimeTable(request):
         if Timetable.objects.filter(groupe_id = groupe, status="enc").exists():
             return JsonResponse({"status":"error","message":"Veuillez d'abord cloturer l'ancienne emploie du temps"})
 
+        promo = Groupe.objects.get(id = groupe)
+
         Timetable.objects.create(
             label = label,
             groupe_id = groupe,
             semestre = semestre,
-            description = description
+            description = description,
+            annee_scolaire = promo.promotion.annee_academique,
         )
         messages.success(request,"L'emploie du temps à été crée avec succès")
         return JsonResponse({"status" : "success"})
@@ -77,6 +80,7 @@ def ApiCreateTimeTable(request):
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiDeleteTimeTable(request):
     if request.method == 'GET':
         id = request.GET.get('id')
@@ -85,8 +89,15 @@ def ApiDeleteTimeTable(request):
             return JsonResponse({"status": "error","message":"Informations manquantes"})
         
         obj = Timetable.objects.get(id = id)
+
+        if obj.is_validated:
+            return JsonResponse({"status":"error","message" : "L'emploie du temps ne peux pas être supprimer."})
+        
         obj.delete()
-        return JsonResponse({"status": "error","message":"Informations manquantes"})
+        messages.success(request, "L'emploie du temps à été supprimer avec succès")
+        return JsonResponse({"status": "success","message":"L'emploie du temps à été supprimer avec succès"})
+    else:
+        return JsonResponse({'status':'error'})
 
 @login_required(login_url="institut_app:login")
 def timetable_view(request, pk):
@@ -252,7 +263,7 @@ def ApiDeleteCoursSession(request):
 @login_required(login_url="institut_app:login")
 def timetable_configure(request, pk):
     timetable = Timetable.objects.get(id = pk)
-    crenau = ModelCrenau.objects.all()
+    crenau = ModelCrenau.objects.filter(is_active=True)
     context = {
         'timetable' : timetable,
         'crenau' : crenau,
@@ -296,29 +307,52 @@ def ApiMakeTimetableDone(request):
 def ApiValidateTimetable(request):
     id_emploie = request.GET.get('id_emploie')
     obj = Timetable.objects.get(id = id_emploie)
-    entries = TimetableEntry.objects.filter(timetable = obj)
     obj.is_validated = True
     obj.save()
-
-    registre = CreateRegistre(obj.groupe.id,obj.semestre)
-
-    for i in entries:
-        CreateRegisterLine(i.cours.id, i.formateur.id,i.salle.nom,registre.id)
 
     messages.success(request, "Opération effectuer avec succès")
     return JsonResponse({"status" : "success"})
 
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiGenerateRegistre(request):
+    if request.method == "POST":
+        id = request.POST.get('id_emploie')
+        obj = Timetable.objects.get(id = id)
+
+        try:
+            entries = TimetableEntry.objects.filter(timetable = obj)
+            registre = CreateRegistre(obj.groupe.id,obj.semestre)
+
+            for i in entries:
+                CreateRegisterLine(i.cours.id, i.formateur.id,i.salle.nom,registre.id)
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message" : str(e)})
+
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+from django.db.models import Q
+
+
 @transaction.atomic
 def CreateRegistre(groupe,semestre):
+    groupe_obj = Groupe.objects.get(id=groupe)
     registre, created = RegistrePresence.objects.update_or_create(
-        label=Groupe.objects.get(id=groupe),
+        label= groupe_obj,
         context="Génération automatique",
         defaults={
             'groupe_id': groupe,
-            'semestre': semestre
+            'semestre': semestre,
+            'etat' : "enc",
+            'annee_academique' : groupe_obj.promotion.annee_academique,
         }
     )
     return registre  # <-- retourne seulement l’objet, pas le tuple
+
+
 
 @transaction.atomic
 def CreateRegisterLine(module, teacher, salle, registre):
@@ -376,47 +410,48 @@ def checkSalleDispo(salle , jour, heure_debut, heure_fin):
 def checkFormateurDispoByStoredAvailability(formateur_id, jour, heure_debut, heure_fin):
     try:
         formateur = Formateurs.objects.get(id=formateur_id)
+
         if not formateur.dispo or 'disponibilites' not in formateur.dispo:
-            # Aucune disponibilité enregistrée, le formateur n'est pas disponible
-            return False, f"Le formateur n'a aucune disponibilité enregistrée."
-        
+            return False, "Le formateur n'a aucune disponibilité enregistrée."
+
         disponibilites = formateur.dispo['disponibilites']
-        
-        # Vérifie si le jour demandé existe dans les disponibilités
-        jour_dispo = None
-        for dispo in disponibilites:
-            if dispo.get('jour', '').lower() == jour.lower():
-                jour_dispo = dispo
-                break
-        
-        if not jour_dispo:
-            # Le formateur n'est pas disponible ce jour-là
+
+        # Récupérer toutes les plages du jour
+        plages_du_jour = [
+            d for d in disponibilites
+            if d.get('jour', '').lower() == jour.lower()
+        ]
+
+        if not plages_du_jour:
             return False, f"Le formateur n'est pas disponible le {jour}."
-        
-        # Compare les horaires
-        dispo_heure_debut = jour_dispo.get('heure_debut')
-        dispo_heure_fin = jour_dispo.get('heure_fin')
-        
-        if not dispo_heure_debut or not dispo_heure_fin:
-            return False, f"Les heures de disponibilité du formateur sont incomplètes pour le {jour}."
-        
-        # Si les heures demandées sont en dehors de la plage disponible
-        if heure_debut < dispo_heure_debut or heure_fin > dispo_heure_fin:
-            return False, f"Le formateur est disponible le {jour} de {dispo_heure_debut} à {dispo_heure_fin}, mais la session demandée est de {heure_debut} à {heure_fin}."
-        
-        # Vérifie si la plage horaire demandée est incluse dans la plage disponible
-        # Convertir les heures en format comparable (sous forme de chaînes pour comparaison)
-        if heure_debut >= dispo_heure_debut and heure_fin <= dispo_heure_fin and heure_debut < heure_fin:
-            return True, "Le formateur est disponible."
-        else:
-            return False, f"Le formateur est disponible le {jour} de {dispo_heure_debut} à {dispo_heure_fin}, mais la session demandée est de {heure_debut} à {heure_fin}."
+
+        # Tester chaque plage
+        for plage in plages_du_jour:
+            dispo_debut = plage.get('heure_debut')
+            dispo_fin = plage.get('heure_fin')
+
+            if not dispo_debut or not dispo_fin:
+                continue  # on ignore les plages mal formées
+
+            # Comparaison (heures sous forme HH:MM)
+            if heure_debut >= dispo_debut and heure_fin <= dispo_fin:
+                return True, (
+                    f"Disponible le {jour} de {dispo_debut} à {dispo_fin}"
+                )
+
+        # Si aucune plage ne correspond
+        plages_txt = ", ".join(
+            [f"{p.get('heure_debut')}–{p.get('heure_fin')}" for p in plages_du_jour]
+        )
+
+        return False, (
+            f"Le formateur est disponible le {jour} uniquement sur les plages : {plages_txt}."
+        )
 
     except Formateurs.DoesNotExist:
-        # Le formateur n'existe pas
         return False, "Le formateur spécifié n'existe pas."
     except Exception as e:
-        # En cas d'erreur, on considère que le formateur n'est pas disponible
-        return False, f"Erreur lors de la vérification de la disponibilité: {str(e)}"
+        return False, f"Erreur lors de la vérification de la disponibilité : {str(e)}"
 
 def CheckAssignedCours(timetable, teacher, cours):
     return TimetableEntry.objects.filter(
@@ -545,5 +580,57 @@ def save_session(request):
         heure_debut = heure_debut,
         heure_fin = heure_fin
     )
-    
+
     return JsonResponse({"status" : "success", "message" : "Cours plannifier avec succès"})
+
+
+from django.db.models import Q
+
+def get_salles_disponibles(jour, heure_debut, heure_fin):
+    """
+    Retourne les salles disponibles pour un jour et un créneau donné
+    """
+
+    # Salles occupées
+    salles_occupees = TimetableEntry.objects.filter(
+        jour=jour,
+    ).exclude(
+        timetable__status='ter'
+    ).filter(
+        Q(heure_debut__lt=heure_fin) &
+        Q(heure_fin__gt=heure_debut)
+    ).values_list('salle_id', flat=True)
+
+    # Salles disponibles
+    salles_disponibles = Salle.objects.exclude(
+        id__in=salles_occupees
+    )
+
+    return salles_disponibles
+
+
+from datetime import time
+
+def salles_disponibles_view(request):
+    
+    heure_debut = request.GET.get('heur_debut')
+    heure_fin = request.GET.get('heur_fin')
+    jour = request.GET.get('jour')
+
+    if not  heure_debut or not heure_fin or not jour:
+        return JsonResponse({"status": "error", "message" : "Informations manquantes"})
+
+    salles = get_salles_disponibles(jour, heure_debut, heure_fin)
+
+    return JsonResponse({
+        "salles": [
+            {
+                "id": salle.id,
+                "nom": salle.nom,
+                "code": salle.code,
+                "capacite": salle.capacite,
+                "type": salle.type_salle
+            }
+            for salle in salles
+        ]
+    })

@@ -49,6 +49,7 @@ class RegistrePresence(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4')])
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
+    annee_academique = models.CharField(max_length=100, null=True, blank=True)
     context = models.CharField(max_length=100, null=True, blank=True)
     status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')], default="enc")
     

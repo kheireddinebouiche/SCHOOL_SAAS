@@ -92,7 +92,7 @@
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
                   <p class="text-muted mb-1">Total</p>
-                  <h4 class="mb-0" id="totalCount">0</h4>
+                  <h4 class="mb-0" id="totalCount">{{ registres|length }}</h4>
                 </div>
                 <div class="flex-shrink-0">
                   <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center">
@@ -103,14 +103,14 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6">
           <div class="card">
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
                   <p class="text-muted mb-1">En cours</p>
-                  <h4 class="mb-0" id="inProgressCount">0</h4>
+                  <h4 class="mb-0" id="inProgressCount">{{ in_progress_count }}</h4>
                 </div>
                 <div class="flex-shrink-0">
                   <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center">
@@ -121,14 +121,14 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6">
           <div class="card">
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
                   <p class="text-muted mb-1">Archivés</p>
-                  <h4 class="mb-0" id="archivedCount">0</h4>
+                  <h4 class="mb-0" id="archivedCount">{{ archived_count }}</h4>
                 </div>
                 <div class="flex-shrink-0">
                   <div class="avatar-sm rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center">
@@ -139,14 +139,14 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6">
           <div class="card">
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
                   <p class="text-muted mb-1">Taux moyen</p>
-                  <h4 class="mb-0" id="averageRate">0%</h4>
+                  <h4 class="mb-0" id="averageRate">{% if registres %}{{ average_attendance_rate|floatformat:1 }}%{% else %}0%{% endif %}</h4>
                 </div>
                 <div class="flex-shrink-0">
                   <div class="avatar-sm rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center">
@@ -217,12 +217,12 @@
                   <tbody id="listeItem" class="border-top-0">
                     {% if registres %}
                       {% for registre in registres %}
-                        <tr>
-                        
+                        <tr data-status="{{ registre.status }}">
+
                           <td><b>{{registre.label}}</b></td>
                           <td>{{registre.groupe.nom}}</td>
                           <td><span class="badge bg-info">{{registre.get_semestre_display}}</span></td>
-                          <td>{{registre.groupe.promotion.annee_academique}}</td>
+                          <td>{{ registre.annee_academique|default:"N/A" }}</td>
                           <td><span class="badge bg-success">{{registre.context}}</span></td>
                           <td><span class="badge bg-success">{{registre.get_status_display}}</span></td>
                           <td class="text-end">
@@ -256,7 +256,7 @@
                       {% endfor %}
                     {% else %}
                         <tr>
-                          <td colspan="6">
+                          <td colspan="7">
                              <div class="d-flex flex-column align-items-center justify-content-center py-5">
                                 <div class="avatar-sm mb-4">
                                     <div class="avatar-title bg-light text-muted rounded-circle fs-1">
@@ -615,20 +615,24 @@
     function updateStatistics(data) {
       // Count total records
       const totalCount = data.length;
-      
-      // Count by status - Since we don't have explicit status in the template data,
-      // we'll count based on the rate of attendance or other criteria if available
+
+      // Initialize counters
       let inProgressCount = 0;
       let archivedCount = 0;
       let averageRate = 0;
       let totalRate = 0;
       let validRecords = 0;
-      
+
+      // Since the data from template may not contain all necessary fields,
+      // we'll extract the status from the HTML elements if possible
       $.each(data, function(index, item) {
-        // For now, we'll consider all records as "in progress"
-        // In a real application, this would be determined by a status field
-        inProgressCount++;
-        
+        // Try to determine status from the item or check the HTML
+        if(item.status === 'enc' || item.status === 'En cours') {
+          inProgressCount++;
+        } else if(item.status === 'ter' || item.status === 'Cloturer') {
+          archivedCount++;
+        }
+
         if (item.taux) {
           // Extract numeric value from rate string (e.g., "88%" to 88)
           let rateValue = parseInt(item.taux.replace('%', ''));
@@ -638,14 +642,18 @@
           }
         }
       });
-      
+
       // Calculate average rate
       averageRate = validRecords > 0 ? Math.round(totalRate / validRecords) : 0;
-      
-      $('#totalCount').text(totalCount);
-      $('#inProgressCount').text(inProgressCount);
-      $('#archivedCount').text(archivedCount);
-      $('#averageRate').text(averageRate + '%');
+
+      // Only update the displayed values if we have client-side data
+      // Otherwise use the values from the Django template
+      if(data.length > 0) {
+        $('#totalCount').text(totalCount);
+        $('#inProgressCount').text(inProgressCount);
+        $('#archivedCount').text(archivedCount);
+        $('#averageRate').text(averageRate + '%');
+      }
     }
 
     // Load initial data - use the data passed from the template or make an API call
@@ -659,20 +667,26 @@
         if (cells.length > 0) { // Check if this is not the "no data" row
           var nomRegistre = cells.eq(0).text().trim();
           if (nomRegistre !== '' && nomRegistre !== 'Aucun registre trouvé') {
+            // Extract status from the data attribute
+            var statusValue = $row.data('status');
+            var statusText = cells.eq(5).find('span').text().trim(); // Status display text
+
             templateData.push({
               nom: nomRegistre,
               groupe: cells.eq(1).text().trim(),
               semestre: cells.eq(2).find('span').text().trim(), // Get the text from the badge
-              presents: cells.eq(3).find('span').text().trim(),
-              absents: cells.eq(4).find('span').text().trim(),
-              taux: cells.eq(5).find('span').text().trim(),
+              annee: cells.eq(3).text().trim(), // Année académique
+              context: cells.eq(4).find('span').text().trim(), // Source/context
+              status: statusValue,
+              statusDisplay: statusText,
               id: cells.eq(6).find('button').data('id') || 0 // Use a placeholder ID for now
             });
           }
         }
       });
-      
+
       originalData = templateData;
+      // Initialize statistics
       updateStatistics(originalData);
       populateGroupFilter(originalData);
     }

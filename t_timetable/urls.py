@@ -62,4 +62,12 @@ urlpatterns = [
 
     path('ApiGetCours',ApiGetCours, name="ApiGetCours"),
 
+    path('ApiGenerateRegistre', ApiGenerateRegistre, name="ApiGenerateRegistre"),
+
+    path('ApiGetSallesDispo/', salles_disponibles_view, name="ApiGetSallesDispo"),
+
+
+    path('LoadFormateurs', LoadFormateurs, name="LoadFormateurs"),
+    path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
+
 ]

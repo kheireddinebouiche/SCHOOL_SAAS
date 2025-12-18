@@ -20,9 +20,73 @@ def RegistrePage(request):
     groupes = Groupe.objects.all()
     registres = RegistrePresence.objects.all()
 
+    # Calcul des statistiques
+    total_count = registres.count()
+    in_progress_count = registres.filter(status='enc').count()
+    archived_count = registres.filter(status='ter').count()
+
+    # Calcul du taux moyen de présence
+    # Le calcul exact dépend de la structure du modèle, mais nous pouvons estimer en fonction
+    # des séances effectuées et du nombre d'absences
+    total_sessions = 0
+    total_absences = 0
+
+    for registre in registres:
+        # Pour chaque registre, on va compter les séances et les absences
+        lignes_registre = LigneRegistrePresence.objects.filter(registre=registre)
+        for ligne in lignes_registre:
+            # Compter les séances effectuées pour cette ligne
+            suivi_cours_list = SuiviCours.objects.filter(ligne_presence=ligne, is_done=True)
+            for seance in suivi_cours_list:
+                # Utiliser la méthode nombre_absents du modèle SuiviCours
+                absences_dans_seance = seance.nombre_absents()
+                total_absences += absences_dans_seance
+                total_sessions += 1  # Une séance peut impliquer plusieurs étudiants
+
+    # Pour calculer le taux de présence, nous avons besoin d'avoir plus d'informations
+    # Pour l'instant, nous allons estimer basé sur les données disponibles
+    # Si nous avons des données d'historique d'absences, comptons le total
+    historiques = HistoriqueAbsence.objects.all()
+    total_records = 0
+    total_presences = 0
+
+    for historique in historiques:
+        for entry in historique.historique:
+            for data in entry.get("data", []):
+                total_records += 1
+                etat = data.get("etat", "")
+                if etat.upper() == "P":  # Présent
+                    total_presences += 1
+                # "A" pour absent, "J" pour justifié, etc.
+
+    # Calcul du taux moyen de présence si nous avons des données d'historique
+    if total_records > 0:
+        average_attendance_rate = (total_presences / total_records) * 100
+    else:
+        # Si aucune donnée d'historique n'est disponible, nous ne pouvons pas calculer avec précision
+        # Utilisons une estimation basée sur les séances effectuées
+        total_students_in_registres = 0
+        for registre in registres:
+            groupe_lines = GroupeLine.objects.filter(groupe=registre.groupe)
+            total_students_in_registres += groupe_lines.count()
+
+        if total_sessions > 0 and total_students_in_registres > 0:
+            # Estimation: nombre total d'étudiants * nombre de séances - absences
+            total_possible_attendances = total_sessions * total_students_in_registres
+            if total_possible_attendances > total_absences:
+                average_attendance_rate = ((total_possible_attendances - total_absences) / total_possible_attendances) * 100
+            else:
+                average_attendance_rate = 0
+        else:
+            average_attendance_rate = 0
+
     context = {
-        'groupes' : groupes,
-        'registres' : registres,
+        'groupes': groupes,
+        'registres': registres,
+        'total_count': total_count,
+        'in_progress_count': in_progress_count,
+        'archived_count': archived_count,
+        'average_attendance_rate': average_attendance_rate,
     }
     return render(request, 'tenant_folder/presences/registres.html', context)
 
