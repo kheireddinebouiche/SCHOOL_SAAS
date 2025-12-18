@@ -51,6 +51,7 @@ class RegistrePresence(models.Model):
     groupe = models.ForeignKey(Groupe, null=True, blank=True, on_delete=models.CASCADE)
     annee_academique = models.CharField(max_length=100, null=True, blank=True)
     context = models.CharField(max_length=100, null=True, blank=True)
+    is_validate = models.BooleanField(default=False)
     status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')], default="enc")
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -62,6 +63,9 @@ class RegistrePresence(models.Model):
 class LigneRegistrePresence(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_presence")
     teacher = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
+    heure_debut = models.CharField(max_length=100, null=True, blank=True)
+    heure_fin = models.CharField(max_length=100, null=True, blank=True)
+    jour = models.CharField(max_length=100, null=True, blank=True)
     type = models.CharField(max_length=100, null=True, blank=True)
     room = models.CharField(max_length=100, null=True, blank=True)
     registre = models.ForeignKey(RegistrePresence, on_delete=models.CASCADE, null=True, blank=True)

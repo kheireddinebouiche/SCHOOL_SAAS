@@ -210,6 +210,7 @@
                       <th class="border-0">Semestre</th>
                       <th class="border-0">Année Scolaire</th>
                       <th class="border-0">Source</th>
+                      <th class="border-0">Est validé ?</th>
                       <th class="border-0">Etat</th>
                       <th class="border-0 text-end">Actions</th>
                     </tr>
@@ -224,6 +225,7 @@
                           <td><span class="badge bg-info">{{registre.get_semestre_display}}</span></td>
                           <td>{{ registre.annee_academique|default:"N/A" }}</td>
                           <td><span class="badge bg-success">{{registre.context}}</span></td>
+                          <td> {% if registre.is_validate %} <span class='badge bg-success'>Valider</span> {% else %} <span class='badge bg-warning'>En attente de validation {% endif %}</span></td>
                           <td><span class="badge bg-success">{{registre.get_status_display}}</span></td>
                           <td class="text-end">
                             <div class="dropdown d-inline-block">
@@ -246,8 +248,8 @@
                                     <i class="ri-close-circle-fill me-2"></i> Cloturer
                                   </a></li>
                                 {% endif %}
-                                <li><a class="dropdown-item text-danger" href="#">
-                                  <i class="ri-delete-bin-line align-bottom me-2 "></i> Supprimer
+                                <li><a class="dropdown-item text-danger delete-item-btn" href="#" data-id="{{ registre.id }}">
+                                  <i class="ri-delete-bin-line align-bottom me-2"></i> Supprimer
                                 </a></li>
                               </ul>
                             </div>
@@ -583,7 +585,14 @@
         </div>
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3">
-        <div class="hstack gap-2 justify-content-center w-100"></div>
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i> Annuler
+          </button>
+          <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn">
+            <i class="ri-check-line me-1"></i> Confirmer la suppression
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -798,11 +807,84 @@
       }
     });
     
+    // Gestion du clic sur le bouton de suppression
+    $(document).on('click', '.delete-item-btn', function(e) {
+      e.preventDefault(); // Empêche le comportement par défaut du lien
+      var registreId = $(this).data('id');
+      var registreLabel = $(this).closest('tr').find('td:first').text().trim();
+
+      // Stocker l'ID du registre à supprimer
+      $('#confirmDeleteBtn').data('id', registreId);
+
+      // Afficher la modal de confirmation
+      $('.deleteModal').modal('show');
+    });
+
     $(document).on('click', '#confirmDeleteBtn', function() {
-      var id = $(this).data('id');
-      alertify.success("Registre supprimé avec succès");
-      // Close the modal after action
-      $('.deleteModal').modal('hide');
+      var registreId = $(this).data('id');
+
+      // Désactiver le bouton pendant la requête
+      var btn = $(this);
+      btn.prop('disabled', true);
+      var originalText = btn.html();
+      btn.html(`
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          Suppression en cours...
+      `);
+
+      // Effectuer la requête de suppression
+      $.ajax({
+        url: "{% url 't_timetable:ApiDeleteRegistre' %}",  // URL à adapter selon votre configuration
+        type: 'GET',
+        dataType : "JSON",
+        data : {
+          'registreId' : registreId,
+        },
+        
+        success: function(response) {
+          // Fermer la modal
+          $('.deleteModal').modal('hide');
+
+          // Afficher un message de succès
+          alertify.success("Registre supprimé avec succès");
+
+          // Retirer la ligne du tableau
+          $('.delete-item-btn[data-id="' + registreId + '"]').closest('tr').remove();
+
+          // Mettre à jour les statistiques
+          var currentCount = parseInt($('#totalCount').text());
+          $('#totalCount').text(currentCount - 1);
+
+          // Afficher un message si la table est vide
+          var remainingRows = $('#listeItem tr').length;
+          if(remainingRows === 0) {
+            var emptyRow = `<tr>
+              <td colspan="7">
+                 <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                    <div class="avatar-sm mb-4">
+                        <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                            <i class="ri-calendar-check-fill"></i>
+                        </div>
+                    </div>
+                    <h5 class="mb-2">Aucun registre trouvé</h5>
+                    <p class="text-muted mb-0">Il n'y a aucun registre enregistré pour le moment</p>
+                </div>
+              </td>
+            </tr>`;
+            $('#listeItem').html(emptyRow);
+          }
+        },
+        error: function(xhr, status, error) {
+          // Afficher un message d'erreur
+          alertify.error("Une erreur est survenue lors de la suppression du registre");
+          console.error('Erreur lors de la suppression:', error);
+        },
+        complete: function() {
+          // Réactiver le bouton et restaurer son texte
+          btn.prop('disabled', false);
+          btn.html(originalText);
+        }
+      });
     });
     
     // Generate attendance form when button is clicked

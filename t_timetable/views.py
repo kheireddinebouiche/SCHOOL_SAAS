@@ -317,8 +317,8 @@ def ApiValidateTimetable(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiGenerateRegistre(request):
-    if request.method == "POST":
-        id = request.POST.get('id_emploie')
+    if request.method == "GET":
+        id = request.GET.get('id_emploie')
         obj = Timetable.objects.get(id = id)
 
         try:
@@ -326,7 +326,10 @@ def ApiGenerateRegistre(request):
             registre = CreateRegistre(obj.groupe.id,obj.semestre)
 
             for i in entries:
-                CreateRegisterLine(i.cours.id, i.formateur.id,i.salle.nom,registre.id)
+                CreateRegisterLine(i.cours.id, i.formateur.id, i.salle.nom, registre.id, i.heure_debut, i.heure_fin, i.jour)
+
+            return JsonResponse({"status" : "success"})
+
         except Exception as e:
             return JsonResponse({"status" : "error", "message" : str(e)})
 
@@ -346,20 +349,22 @@ def CreateRegistre(groupe,semestre):
         defaults={
             'groupe_id': groupe,
             'semestre': semestre,
-            'etat' : "enc",
+            'status' : "enc",
             'annee_academique' : groupe_obj.promotion.annee_academique,
         }
     )
     return registre  # <-- retourne seulement l’objet, pas le tuple
 
 
-
 @transaction.atomic
-def CreateRegisterLine(module, teacher, salle, registre):
+def CreateRegisterLine(module, teacher, salle, registre, heure_debut, heure_fin, jour):
     ligne, created = LigneRegistrePresence.objects.update_or_create(
         module_id=module,
         teacher_id=teacher,
         room = salle,
+        heure_debut = heure_debut,
+        heure_fin = heure_fin,
+        jour = jour,
         defaults={
             'type': "",
             'registre_id': registre
@@ -367,6 +372,25 @@ def CreateRegisterLine(module, teacher, salle, registre):
     )
     return ligne
     
+
+@login_required(login_url="institut_app:login")
+def ApiDeleteRegistre(request):
+    if request.method == "GET":
+        registreId = request.GET.get('registreId')
+        if not registreId:
+            return JsonResponse({"status" : "error",'message' : "Informations manquantes"})
+        
+        obj = RegistrePresence.objects.get(id = registreId)
+        
+        if obj.is_validate:
+            return JsonResponse({"status":"error", 'message' : "Impossible de supprimer le registre"})
+        
+        obj.delete()
+
+        return JsonResponse({"status" : "success",'message' : "La suppréssion à été effectuer avec succès"})
+
+    else:
+        return JsonResponse({"status" : "error"})
 
 @login_required(login_url="insitut_app:login")
 @transaction.atomic

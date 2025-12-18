@@ -48,6 +48,41 @@ def ApiLoadFormation(request):
     return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+def ApiFilterSpecialite(request):
+    if request.method == "GET":
+        formation = request.GET.get('id')
+
+        specialite = Specialites.objects.filter(formation__code = formation).values('id','code','version','label')
+
+        return JsonResponse(list(specialite), safe=False)
+    else:
+        return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+def ApiFilterModules(request):
+    if request.method == "GET":
+        specialite = request.GET.get('id')
+
+        liste_module = Modules.objects.filter(specialite__code = specialite).values('id','code','label')
+        return JsonResponse(list(liste_module), safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiLoaAffectation(request):
+    if request.method == "GET":
+        formateurId = request.GET.get('formateurId')
+
+        modules = EnseignantModule.objects.filter(formateur_id = formateurId).values('id','module__id','module__label','module__code')
+
+        return JsonResponse(list(modules), safe=False)
+    else:
+
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
 def ApiGetAffectations(request):
     affectations = list(EnseignantModule.objects.values('id', 'formateur_id', 'module_id'))
     return JsonResponse({'affectations': affectations})
@@ -65,12 +100,55 @@ def LoadAssignedProf(request):
         moduleId = request.GET.get('moduleId')
         if not moduleId:
             return JsonResponse({"status" : "error" , "messages" : "Erreur ! ID module indisponible"})
-        
+
         liste = EnseignantModule.objects.filter(module_id = moduleId).values('id','formateur__nom','formateur__prenom','formateur__email')
 
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+def LoadAffectation(request):
+    """
+    Vue pour charger les affectations avec le bouton de suppression
+    """
+    if request.method == "GET":
+        # Charger toutes les affectations avec les informations du formateur et du module
+        affectations = EnseignantModule.objects.select_related('formateur', 'module').values(
+            'id',
+            'formateur__id',
+            'formateur__nom',
+            'formateur__prenom',
+            'formateur__email',
+            'module__id',
+            'module__code',
+            'module__label'
+        )
+
+        # Ajouter les boutons d'action à chaque affectation
+        affectations_avec_boutons = []
+        for affectation in affectations:
+            affectation_avec_bouton = {
+                'id': affectation['id'],
+                'formateur_id': affectation['formateur__id'],
+                'formateur_nom': f"{affectation['formateur__nom']} {affectation['formateur__prenom']}",
+                'formateur_email': affectation['formateur__email'],
+                'module_id': affectation['module__id'],
+                'module_code': affectation['module__code'],
+                'module_label': affectation['module__label'],
+                'actions': f"""
+                    <button type="button" class="btn btn-danger btn-sm supprimer-affectation"
+                            data-affectation-id="{affectation['id']}"
+                            title="Supprimer cette affectation">
+                        <i class="ri-delete-bin-line"></i> Supprimer
+                    </button>
+                """
+            }
+            affectations_avec_boutons.append(affectation_avec_bouton)
+
+        return JsonResponse(list(affectations_avec_boutons), safe=False)
+    else:
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
     
 @login_required(login_url="insitut_app:login")
 @transaction.atomic
@@ -96,12 +174,41 @@ def ApiDeaffectTrainer(request):
         trainerId = request.POST.get('trainerId')
         moduleId = request.POST.get('moduleId')
 
-        if not trainerId and not moduleId:
+        if not trainerId or not moduleId:
             return JsonResponse({"status" : "error", "message" : "Des données sont manquante lors du traitement de la requete"})
-        
-        object = EnseignantModule.objects.get(module_id=moduleId, formateur_id=trainerId)
-        object.delete()
 
-        return JsonResponse({"status" : "success", "message" : "L'affectation a été supprimer avec succès"})
+        try:
+            object = EnseignantModule.objects.get(module_id=moduleId, formateur_id=trainerId)
+            object.delete()
+            return JsonResponse({"status" : "success", "message" : "L'affectation a été supprimée avec succès"})
+        except EnseignantModule.DoesNotExist:
+            return JsonResponse({"status" : "error", "message" : "L'affectation n'existe pas"})
     else:
-        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+        return JsonResponse({"status" : "error", "message" : "Methode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def ApiDeleteAffectation(request):
+    """
+    Vue pour supprimer une affectation spécifique via une action dans une fenêtre modale
+    """
+    if request.method == "POST":
+        affectation_id = request.POST.get('affectation_id')
+
+        if not affectation_id:
+            return JsonResponse({"status" : "error", "message" : "ID d'affectation manquant"})
+
+        try:
+            affectation = EnseignantModule.objects.get(id=affectation_id)
+            formateur_nom = f"{affectation.formateur.nom} {affectation.formateur.prenom}"
+            module_label = affectation.module.label
+
+            affectation.delete()
+
+            return JsonResponse({
+                "status" : "success",
+                "message" : f"L'affectation de {formateur_nom} au module {module_label} a été supprimée avec succès"
+            })
+        except EnseignantModule.DoesNotExist:
+            return JsonResponse({"status" : "error", "message" : "L'affectation n'existe pas"})
+    else:
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})

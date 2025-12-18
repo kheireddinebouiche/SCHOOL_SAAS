@@ -138,7 +138,6 @@ def liste_registres(request):
         room = request.POST.get('room')
         registre_id = request.POST.get('registre_id')
 
-        print(module_id,teacher_id,hours,type,room,registre_id)
         try:
             LigneRegistrePresence.objects.create(
                 module_id = module_id,
@@ -170,6 +169,47 @@ def DetailsListePresence(request, pk):
         'pk' : pk,
     }
     return render(request, 'tenant_folder/presences/details_ligne_presence.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadDatas(request):
+    if request.method == "GET":
+        id_ligne_presence = request.GET.get('id_ligne_presence')
+
+        if not id_ligne_presence:
+            return JsonResponse({"status" : "error","message":"Informations manquantes"})
+        
+        obj = LigneRegistrePresence.objects.get(id = id_ligne_presence)
+        student = GroupeLine.objects.filter(groupe = obj.registre.groupe)
+
+        liste = []
+        for i in student:
+            liste.append({
+                "nom" : i.student.nom,
+                "prenom" : i.student.prenom,
+                "id_student" : i.student.id,
+                "matricule_interne" : i.student.matricule_interne,
+                "id" : i.id,
+            })
+
+        infos = []
+        infos.append({
+            "module" : obj.module.label,
+            "code_module" : obj.module.code,
+            "nom_formateur" : obj.teacher.nom,
+            "prenom_formateur" : obj.teacher.prenom,
+            
+        })
+
+        data = {
+            'liste' : liste,
+            'infos' : infos,
+        }
+
+        return JsonResponse(data, safe=False)
+
+
+    else:
+        return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
 @csrf_exempt
@@ -222,7 +262,6 @@ def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
         return JsonResponse({"status": "success", "historique": data})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
-
 
 @login_required(login_url="institut_app:login")
 def ListeDesEtudiants(request):

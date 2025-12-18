@@ -69,5 +69,8 @@ urlpatterns = [
 
     path('LoadFormateurs', LoadFormateurs, name="LoadFormateurs"),
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
-
+    path('ApiFilterSpecialite', ApiFilterSpecialite, name="ApiFilterSpecialite"),
+    path('ApiFilterModules', ApiFilterModules, name="ApiFilterModules"),
+    path('ApiLoaAffectation', ApiLoaAffectation,name="ApiLoaAffectation"),
+    path('ApiDeleteRegistre', ApiDeleteRegistre, name="ApiDeleteRegistre"),
 ]

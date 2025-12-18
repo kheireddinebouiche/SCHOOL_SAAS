@@ -346,18 +346,14 @@
             <label class="form-label fw-medium" for="selectSpecialite">Spécialité</label>
             <select class="form-select border-0 bg-light" id="selectSpecialite">
               <option value="">Sélectionnez une spécialité</option>
-              <option value="1">Développement</option>
-              <option value="2">Réseau</option>
-              <option value="3">Sécurité</option>
+              
             </select>
           </div>
           <div class="col-lg-3">
             <label class="form-label fw-medium" for="selectModules">Modules</label>
             <select class="form-select border-0 bg-light" id="selectModules">
               <option value="">Sélectionnez un module</option>
-              <option value="1">Algorithmique</option>
-              <option value="2">Base de données</option>
-              <option value="3">Système d'exploitation</option>
+             
             </select>
           </div>
           <div class="col-lg-3 d-flex align-items-end">
@@ -431,7 +427,7 @@
                     row += "<i class='ri-more-fill align-middle'></i>";
                   row += "</button>";
                   row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                    row += "<li><a class='dropdown-item details-formateur' href='javascript:void(0);' data-id='"+p.id+"'><i class='ri-file-user-line text-muted me-2 align-bottom'></i> Détails</a></li>";
+                    row += "<li><a class='dropdown-item details-formateur' href='javascript:void(0);' data-winu='"+p.id+"'><i class='ri-file-user-line text-muted me-2 align-bottom'></i> Détails</a></li>";
                     row += "<li><a class='dropdown-item affectation-module' href='javascript:void(0);' data-id='"+p.id+"'><i class='ri-user-add-line text-muted me-2 align-bottom'></i> Affectation de module</a></li>";
                   row += "</ul>";
                 row += "</div>";
@@ -450,6 +446,32 @@
 
     loadFormateur();
 
+
+    function loaAffectation(id_formateur){
+      $.ajax({
+        url : "{% url 't_timetable:ApiLoaAffectation' %}",
+        dataType : "JSON",
+        type : "GET",
+        data : {
+          'formateurId' : id_formateur,
+        },
+        success : function(data){
+          var row = "";
+
+          $.each(data, function(index, i){
+              row += "<tr>";
+                row += "<td>"+i.module__code+"</tr>";
+                row += "<td>"+i.module__labe+"</tr>";
+              row += "</tr>";
+          });
+
+          $('#assignedModulesTable').html(row);
+        }
+      });
+    }
+
+
+
     // Event handler for details button
     $(document).on('click', '.details-formateur', function() {
       var formateurId = $(this).data('id');
@@ -466,9 +488,9 @@
         success: function(data){
           var option = "<option value=''>Veuillez sélectionner une formation</option>";
           $.each(data, function(indes, p){
-            option= "<option value=''>"+p.code+' - '+p.nom+"</option>";
+            option += "<option value="+p.code+">"+p.code+' - '+p.nom+"</option>";
           });
-          $('#selectFormation').append(option);
+          $('#selectFormation').html(option);
         }
       });
     }
@@ -480,8 +502,11 @@
       // Example: loadFormateurModules(formateurId);
 
       loadFormation();
+      
 
       $('#moduleAssignmentModalLabel').text('Affectation de modules au formateur');
+      $('#moduleAssignmentModal').data('formateur', formateurId);
+
       $('#moduleAssignmentModal').modal('show');
     });
 
@@ -489,15 +514,73 @@
 
     $(document).on('change','#selectFormation', function(){
       
-      
+      var selected = $(this).val();
+
+      $.ajax({
+        url : "{% url 't_timetable:ApiFilterSpecialite' %}",
+        dataType : "JSON",
+        type : "GET",
+        data : {
+          'id' : selected,
+        },
+        success : function(data){
+          var option = "<option value=''>Veuillez sélectionner une spécialité</option>";
+          $.each(data, function(index, p){
+            option += "<option value="+p.code+">"+p.label+"</option>";
+          });
+
+          $('#selectSpecialite').html(option);
+
+        }
+      });
 
       
     });
 
     $(document).on('change','#selectSpecialite', function(){
+      var selected = $(this).val();
 
+      $.ajax({
+        url : "{% url 't_timetable:ApiFilterModules' %}",
+        dataType : "JSON",
+        type : "GET",
+        data : {
+          'id' : selected,
+        },
+        success : function(data){
+          var option = "<option value=''>Veuillez sélectionner un module</option>";
+          $.each(data, function(index, p){
+            option += "<option value="+p.id+">"+p.code+' '+p.label+"</option>";
+          });
+
+          $('#selectModules').html(option);
+        }
+      });
     });
 
+    $(document).on('click','#addModuleBtn', function(){
+       var module_id = $('#selectModules').val();
+       var formateur_id = $('#moduleAssignmentModal').data('formateur');
+
+       $.ajax({
+          url : "{% url 't_timetable:ApiAffectTrainer' %}",
+          dataType : "JSON",
+          type : "POST",
+          data : {
+            'module_id' : module_id,
+            'formateur_id' : formateur_id,
+            'csrfmiddlewaretoken': '{{ csrf_token }}',
+          },
+          success: function(response){
+            if (response.status === "success"){
+              alertify.success(response.message);
+
+            }else{
+              alertify.error(response.message);
+            }
+          },
+       });
+    });
 
   });
 
