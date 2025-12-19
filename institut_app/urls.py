@@ -65,8 +65,24 @@ urlpatterns = [
     path('ApiFinanceKPIs', ApiFinanceKPIs, name="ApiFinanceKPIs"),
     path('error-404/', Error404, name="Error404"),
 
-    
+    path('administration/modules/liste/', ModulesPages, name="ModulesPages"),
+    path('ApiListeModules', ApiListeModules, name="ApiListeModules"),
+    path('ApiGetModuleDetails',ApiGetModuleDetails, name="ApiGetModuleDetails"),
+    path('ApiDeleteModule', ApiDeleteModule, name="ApiDeleteModule"),
+    path('ApiAddModule', ApiAddModule, name="ApiAddModule"),
+    path('ApiChangeModuleStatus', ApiChangeModuleStatus, name="ApiChangeModuleStatus"),
+    path('ApiUpdateModule', ApiUpdateModule, name="ApiUpdateModule"),
+
+    path('administration/roles/liste', roles_page, name="roles_page"),
+    path('ApiListeRoles',ApiListeRoles, name="ApiListeRoles"),
+    path('ApiDeleteRole', ApiDeleteRole, name="ApiDeleteRole"),
+    path('ApiChangeRoleStatus', ApiChangeRoleStatus, name="ApiChangeRoleStatus"),
+    path('ApiAddRole', ApiAddRole, name="ApiAddRole"),
+    path('ApiUpdateRole', ApiUpdateRole, name="ApiUpdateRole"),
+    path('ApiGetRoleDetails', ApiGetRoleDetails, name="ApiGetRoleDetails"),
+
 ]
+
 
 
 if settings.DEBUG:

@@ -13,8 +13,6 @@ from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
-    
-
     return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html')
 
 @login_required(login_url="institut_app:login")

@@ -54,17 +54,19 @@
                                         <h5 class="text-info mb-0">Identification</h5>
                                     </div>
                                     <div class="row g-3">
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-6">
+                                            <label class="form-label">{{ form.date_commission.label }}</label>
+                                            {{ form.date_commission }}
+                                        </div>
+                                        <div class="col-lg-6">
                                             <label class="form-label">{{ form.label.label }}</label>
                                             {{ form.label }}
                                         </div>
-                                        <div class="col-lg-4">
+                                    </div>
+                                    <div class="row g-3 mt-2">
+                                        <div class="col-lg-12">
                                             <label class="form-label">{{ form.promo.label }}</label>
                                             {{ form.promo }}
-                                        </div>
-                                        <div class="col-lg-4">
-                                            <label class="form-label">{{ form.date_commission.label }}</label>
-                                            {{ form.date_commission }}
                                         </div>
                                     </div>
                                 </div>
@@ -202,13 +204,63 @@
                 });
             });
 
-            // Conversion automatique en majuscules pour le champ label
-            const labelInput = document.querySelector('input[name="label"]');
-            if (labelInput) {
-                labelInput.addEventListener('input', function() {
-                    this.value = this.value.toUpperCase();
-                });
+            // Fonction pour formater la date au format français
+            function formatDate(dateString) {
+                if (!dateString) return '';
+
+                // Convertir la date ISO en objet Date
+                const date = new Date(dateString);
+
+                // Vérifier si la date est valide
+                if (isNaN(date.getTime())) return '';
+
+                // Options pour formater la date en français
+                const options = {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                };
+
+                // Retourner la date formatée en français
+                return date.toLocaleDateString('fr-FR', options);
             }
+
+            // Auto-population du champ label avec "Commission du " + date
+            const dateInput = document.querySelector('input[name="date_commission"]');
+            const labelInput = document.querySelector('input[name="label"]');
+
+            if (dateInput && labelInput) {
+                // Écouter les changements sur le champ date
+                dateInput.addEventListener('change', function() {
+                    const selectedDate = this.value;
+
+                    if (selectedDate) {
+                        const formattedDate = formatDate(selectedDate);
+                        labelInput.value = 'Commission du ' + formattedDate;
+                    } else {
+                        labelInput.value = '';
+                    }
+                });
+
+                // Appliquer un style gris pour indiquer que le champ est pré-rempli
+                labelInput.classList.add('bg-light');
+                labelInput.style.opacity = '0.7';
+
+                // S'assurer que le style est appliqué même après que les classes Bootstrap soient ajoutées
+                setTimeout(function() {
+                    labelInput.classList.add('bg-light');
+                    labelInput.style.opacity = '0.7';
+                }, 100);
+            }
+
+            // Conversion automatique en majuscules pour le champ label (si ce n'est pas le comportement souhaité par défaut)
+            // On désactive cette fonctionnalité car le nom de la commission doit être saisi manuellement selon les exigences
+            // const labelInput = document.querySelector('input[name="label"]');
+            // if (labelInput) {
+            //     labelInput.addEventListener('input', function() {
+            //         this.value = this.value.toUpperCase();
+            //     });
+            // }
         });
     </script>
 </div>

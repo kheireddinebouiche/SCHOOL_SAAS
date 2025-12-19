@@ -1,0 +1,901 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Administration - Rôles{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+
+  /* Role level badges */
+  .level-user {
+    background-color: #d1ecf1;
+    color: #0c5460;
+  }
+  .level-supervisor {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  .level-manager {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+  .level-admin {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  /* Status badges */
+  .status-active {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  .status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  /* Fix dropdown z-index issue */
+  .table-responsive {
+    overflow-x: visible;
+  }
+
+  .table td.text-end {
+    position: relative;
+    overflow: visible;
+  }
+
+  .table .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="fas fa-users text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Gestion des Rôles</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Configuration</a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Administration</a>
+                  </li>
+                  <li class="breadcrumb-item active">Rôles</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+      
+      <div class="row">
+        <!-- KPIs Section -->
+        <div class="col-12 mb-4">
+          <div class="row g-3">
+            <!-- Total Rôles -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-user-star-line text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Total Rôles</h5>
+                      <h3 class="mb-0 fw-bold" id="totalRoles">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rôles Actifs -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-check-line text-success fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Actifs</h5>
+                      <h3 class="mb-0 fw-bold" id="activeRoles">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rôles Inactifs -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-close-line text-warning fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Inactifs</h5>
+                      <h3 class="mb-0 fw-bold" id="inactiveRoles">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Niveaux -->
+            <div class="col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                      <i class="ri-bar-chart-line text-info fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="mb-1 text-muted">Niveaux</h5>
+                      <h3 class="mb-0 fw-bold" id="roleLevels">0</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-filter text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Filtres</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="fas fa-search text-muted search-icon"></i>
+                  </div>
+                  <select id="filter-role-status" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="">Tous les statuts</option>
+                    <option value="active">Actifs</option>
+                    <option value="inactive">Inactifs</option>
+                  </select>
+
+                  <select id="filter-role-level" class="form-select rounded-pill" style="width: 220px;">
+                    <option value="">Tous les niveaux</option>
+                    <option value="1">Utilisateur</option>
+                    <option value="2">Superviseur</option>
+                    <option value="3">Manager</option>
+                    <option value="4">Administrateur</option>
+                  </select>
+
+                  <button id="addRoleBtn" type="button" class="btn btn-primary rounded-pill">
+                    <i class="ri-add-line me-1"></i> Nouveau rôle
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3" id="cardContentBody">
+              <div class="table-responsive" style="overflow-x: visible;">
+                <table id="example" class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Nom</th>
+                      <th class="border-0">Niveau</th>
+                      <th class="border-0">Description</th>
+                      <th class="border-0">Statut</th>
+                      <th class="border-0">Date de création</th>
+                      <th class="border-0">Dernière modification</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeRoles" class="border-top-0">
+                    <!-- Role rows will be populated by JavaScript -->
+                  </tbody>
+                </table>
+
+                <!-- Empty state -->
+                <div id="noRolesMessage" class="text-center py-5" style="display: none;">
+                  <div class="avatar-lg mx-auto mb-4 bg-light-subtle rounded-circle d-flex align-items-center justify-content-center">
+                    <i class="ri-user-star-line text-muted fs-1"></i>
+                  </div>
+                  <h5 class="mb-2">Aucun rôle trouvé</h5>
+                  <p class="text-muted mb-4">Il n'y a aucun rôle enregistré pour le moment</p>
+                  <button id="addRoleEmptyStateBtn" class="btn btn-primary">
+                    <i class="ri-add-line me-1"></i> Créer un rôle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade deleteRoleModal" tabindex="-1" role="dialog" aria-labelledby="deleteRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteRoleModalLabel">
+              Confirmation de suppression
+            </h5>
+            <p class="text-muted small mb-0">Cette action ne peut pas être annulée</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-delete-bin-line text-danger" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-danger mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0" id="deleteModalMessage">
+            Vous êtes sur le point de supprimer ce rôle. Cette action est irréversible.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-danger px-4 py-2" id="confirmDeleteRoleBtn">
+            <i class="ri-delete-bin-line me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation de changement de statut -->
+<div class="modal fade changeStatusRoleModal" tabindex="-1" role="dialog" aria-labelledby="changeStatusRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-toggle-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="changeStatusRoleModalLabel">
+              Confirmation de changement de statut
+            </h5>
+            <p class="text-muted small mb-0">Cette action modifiera le statut du rôle</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="ri-toggle-line text-warning" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-warning mb-3">Êtes-vous sûr(e) ?</h4>
+          <p class="text-muted mb-0" id="statusChangeMessage">
+            Vous êtes sur le point de changer le statut de ce rôle.
+          </p>
+          <div class="mt-3">
+            <span id="currentRoleStatus" class="badge bg-info">Statut actuel</span>
+            <i class="fas fa-arrow-right mx-2"></i>
+            <span id="newRoleStatus" class="badge bg-success">Nouveau statut</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-warning px-4 py-2" id="confirmStatusChangeRoleBtn">
+            <i class="ri-check-line me-2"></i>Confirmer le changement
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour modification de rôle -->
+<div id="updateRoleModal" class="modal fade" tabindex="-1" aria-labelledby="updateRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-user-star-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="updateRoleModalLabel">
+              Modification du rôle
+            </h5>
+            <p class="text-muted small mb-0">Mise à jour des informations du rôle</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="updateRoleForm">
+          <input type="hidden" id="roleId" name="id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="updateRoleName">Nom du rôle</label>
+              <input type="text" class="form-control border-0 bg-light py-2" id="updateRoleName" name="name" placeholder="Nom du rôle" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="updateRoleLevel">Niveau</label>
+              <select class="form-select border-0 bg-light py-2" id="updateRoleLevel" name="level" required>
+                <option value="">Sélectionner un niveau</option>
+                <option value="1">Utilisateur</option>
+                <option value="2">Superviseur</option>
+                <option value="3">Manager</option>
+                <option value="4">Administrateur</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="updateRoleStatus">Statut</label>
+              <select class="form-select border-0 bg-light py-2" id="updateRoleStatus" name="is_active" required>
+                <option value="1">Actif</option>
+                <option value="0">Inactif</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium" for="updateRoleDescription">Description</label>
+              <textarea class="form-control border-0 bg-light" id="updateRoleDescription" name="description" rows="3"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-primary px-4 py-2" id="updateRoleBtn">
+          <i class="ri-save-line me-2"></i>Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour ajout de rôle -->
+<div id="addRoleModal" class="modal fade" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-add-box-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="addRoleModalLabel">
+              Nouveau rôle
+            </h5>
+            <p class="text-muted small mb-0">Ajouter un nouveau rôle au système</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="addRoleForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="addRoleName">Nom du rôle</label>
+              <input type="text" class="form-control border-0 bg-light py-2" id="addRoleName" name="name" placeholder="Nom du rôle" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="addRoleLevel">Niveau</label>
+              <select class="form-select border-0 bg-light py-2" id="addRoleLevel" name="level" required>
+                <option value="">Sélectionner un niveau</option>
+                <option value="1">Utilisateur</option>
+                <option value="2">Superviseur</option>
+                <option value="3">Manager</option>
+                <option value="4">Administrateur</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" for="addRoleStatus">Statut</label>
+              <select class="form-select border-0 bg-light py-2" id="addRoleStatus" name="is_active" required>
+                <option value="1">Actif</option>
+                <option value="0">Inactif</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium" for="addRoleDescription">Description</label>
+              <textarea class="form-control border-0 bg-light" id="addRoleDescription" name="description" rows="3" placeholder="Description du rôle (optionnelle)"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="button" class="btn btn-success px-4 py-2" id="saveNewRoleBtn">
+          <i class="ri-add-line me-2"></i>Ajouter le rôle
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function(){
+    // Load initial roles data (this would typically come from an API)
+    function loadRoles() {
+      // Show loading state while fetching data
+      $('#listeRoles').empty();
+      $('#noRolesMessage').hide();
+
+      $.ajax({
+        url: "{% url 'institut_app:ApiListeRoles' %}",
+        dataType: "JSON",
+        type: "GET",
+        success: function(data) {
+          var roles = data;
+
+          var tbody = $('#listeRoles');
+          tbody.empty();
+
+          var activeCount = 0;
+          var inactiveCount = 0;
+          var levelCount = {};
+
+          if (roles.length === 0) {
+            // Show empty state message
+            $('#listeRoles').hide();
+            $('#noRolesMessage').show();
+          } else {
+            // Hide empty state message and show table
+            $('#noRolesMessage').hide();
+            $('#listeRoles').show();
+
+            roles.forEach(function(role) {
+              if (role.is_active) {
+                activeCount++;
+              } else {
+                inactiveCount++;
+              }
+              
+              // Count levels
+              if (levelCount[role.level]) {
+                levelCount[role.level]++;
+              } else {
+                levelCount[role.level] = 1;
+              }
+
+              var statusClass = role.is_active ? 'status-active' : 'status-inactive';
+              var statusText = role.is_active ? 'Actif' : 'Inactif';
+              var statusIcon = role.is_active ? 'ri-check-line' : 'ri-close-line';
+              
+              // Level label and badge class
+              var levelLabels = {
+                1: 'Utilisateur',
+                2: 'Superviseur', 
+                3: 'Manager',
+                4: 'Administrateur'
+              };
+              var levelLabel = levelLabels[role.level] || 'Inconnu';
+              var levelBadgeClass = 'level-' + levelLabel.toLowerCase();
+
+              var row = `
+                <tr data-role-id="${role.id}">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <i class="ri-user-star-line text-primary me-2"></i>
+                      <div>
+                        <span class="fw-semibold">${role.name}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-info">
+                      ${levelLabel}
+                    </span>
+                  </td>
+                  <td>${role.description || '--'}</td>
+                  <td>
+                    <span class="badge ${statusClass}">
+                      <i class="${statusIcon} me-1"></i>
+                      ${statusText}
+                    </span>
+                  </td>
+                  <td>${role.created_at}</td>
+                  <td>${role.updated_at}</td>
+                  <td class="text-end">
+                    <div class="dropdown d-inline-block">
+                      <button class="btn btn-soft-primary btn-sm dropdown-toggle shadow-none" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
+                        <i class="ri-more-2-fill"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">
+                        <li>
+                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 edit-role" data-role-id="${role.id}">
+                            <i class="ri-edit-line text-primary me-2"></i>Modifier
+                          </a>
+                        </li>
+                        <li>
+                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 toggle-status" data-role-id="${role.id}">
+                            <i class="ri-toggle-line text-info me-2"></i>Changer statut
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-role" data-role-id="${role.id}">
+                            <i class="ri-delete-bin-line me-2"></i>Supprimer
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+              `;
+              tbody.append(row);
+            });
+          }
+
+          // Update KPIs
+          $('#totalRoles').text(roles.length);
+          $('#activeRoles').text(activeCount);
+          $('#inactiveRoles').text(inactiveCount);
+          $('#roleLevels').text(Object.keys(levelCount).length);
+        },
+        error: function(xhr, status, error) {
+          // In case of error, show empty state
+          $('#listeRoles').hide();
+          $('#noRolesMessage').show();
+          console.error("Error loading roles: " + error);
+        }
+      });
+    }
+
+    // Load roles on page load
+    loadRoles();
+
+    // Handle table filtering
+    $('#table-filter').on('input', function() {
+      var searchTerm = $(this).val().toLowerCase();
+      $('#listeRoles tr').each(function() {
+        var $row = $(this);
+        var rowText = $row.text().toLowerCase();
+
+        if (rowText.indexOf(searchTerm) > -1) {
+          $row.show();
+        } else {
+          $row.hide();
+        }
+      });
+    });
+
+    // Handle status filter
+    $('#filter-role-status').on('change', function() {
+      var statusFilter = $(this).val();
+      $('#listeRoles tr').each(function() {
+        var $row = $(this);
+        var isActive = $row.find('span.status-active').length > 0;
+        var isInactive = $row.find('span.status-inactive').length > 0;
+
+        if (statusFilter === 'active') {
+          if (isActive) {
+            $row.show();
+          } else {
+            $row.hide();
+          }
+        } else if (statusFilter === 'inactive') {
+          if (isInactive) {
+            $row.show();
+          } else {
+            $row.hide();
+          }
+        } else {
+          $row.show();
+        }
+      });
+    });
+
+    // Handle level filter
+    $('#filter-role-level').on('change', function() {
+      var levelFilter = $(this).val();
+      $('#listeRoles tr').each(function() {
+        var $row = $(this);
+        var roleLevel = parseInt($row.find('td:nth-child(2) span').text());
+
+        if (levelFilter === '') {
+          $row.show();
+        } else {
+          var levelLabels = {
+            1: 'Utilisateur',
+            2: 'Superviseur', 
+            3: 'Manager',
+            4: 'Administrateur'
+          };
+          if (levelLabels[parseInt(levelFilter)] === $row.find('td:nth-child(2) span').text()) {
+            $row.show();
+          } else {
+            $row.hide();
+          }
+        }
+      });
+    });
+
+    // Handle add role button click
+    $('#addRoleBtn, #addRoleEmptyStateBtn').on('click', function() {
+      $('#addRoleForm')[0].reset();
+      $('#addRoleModal').modal('show');
+    });
+
+    // Handle edit role
+    $(document).on('click', '.edit-role', function(e) {
+      e.preventDefault();
+      var roleId = $(this).data('role-id');
+
+      // Fetch role details from API
+      $.ajax({
+        url: "{% url 'institut_app:ApiGetRoleDetails' %}",
+        type: "GET",
+        dataType: "JSON",
+        data: {
+          'id': roleId
+        },
+        success: function(response) {
+          if (response.id) {
+            // Populate the modal form with the retrieved data
+            $('#roleId').val(response.id);
+            $('#updateRoleName').val(response.name);
+
+            // Ensure level is properly formatted as a string for the select dropdown
+            var levelValue = response.level ? response.level.toString() : '';
+            $('#updateRoleLevel').val(levelValue);
+
+            $('#updateRoleStatus').val(response.is_active ? '1' : '0');
+            $('#updateRoleDescription').val(response.description);
+
+            $('#updateRoleModal').modal('show');
+          } else {
+            alertify.error(response.message || "Erreur lors de la récupération des détails du rôle");
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Error fetching role details:", error);
+          alertify.error("Une erreur est survenue lors de la récupération des détails du rôle");
+        }
+      });
+    });
+
+    // Handle delete role
+    $(document).on('click', '.delete-role', function(e) {
+      e.preventDefault();
+      var roleId = $(this).data('role-id');
+      var $row = $(this).closest('tr');
+      var roleName = $row.find('span.fw-semibold').text();
+      var roleStatus = $row.find('span.status-active').length > 0 ? 'Actif' : 'Inactif';
+
+      // Store the role ID for deletion confirmation
+      $('.deleteRoleModal').data('role-id', roleId);
+
+      // Update the modal content based on role status
+      if (roleStatus === 'Actif') {
+        $('#deleteModalMessage').html(`
+          <p>Vous êtes sur le point de supprimer ce rôle <strong>"${roleName}"</strong>.</p>
+          <div class="alert alert-warning d-flex align-items-center mt-3">
+            <i class="ri-error-warning-line fs-4 me-2"></i>
+            <div>
+              <strong>Attention!</strong> Ce rôle est actuellement <strong>actif</strong>.<br>
+              Il est impossible de supprimer un rôle actif. Veuillez désactiver le rôle avant de le supprimer.
+            </div>
+          </div>
+        `);
+        $('#confirmDeleteRoleBtn').prop('disabled', true);
+        $('#confirmDeleteRoleBtn').addClass('btn-disabled');
+      } else {
+        $('#deleteModalMessage').html(`
+          <p>Vous êtes sur le point de supprimer ce rôle <strong>"${roleName}"</strong>.</p>
+          <p class="text-muted">Cette action est irréversible.</p>
+        `);
+        $('#confirmDeleteRoleBtn').prop('disabled', false);
+        $('#confirmDeleteRoleBtn').removeClass('btn-disabled');
+      }
+
+      $('.deleteRoleModal').modal('show');
+    });
+
+    // Confirm delete role
+    $('#confirmDeleteRoleBtn').on('click', function() {
+      var roleId = $('.deleteRoleModal').data('role-id');
+
+      if ($('#confirmDeleteRoleBtn').prop('disabled')) {
+        // If button is disabled, it means the role is active
+        alertify.error("Ce rôle est actif et ne peut pas être supprimé.");
+        return;
+      }
+
+      $.ajax({
+        url: "{% url 'institut_app:ApiDeleteRole' %}",
+        type: "POST",
+        dataType: "JSON",
+        data: {
+          'id': roleId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            $('.deleteRoleModal').modal('hide');
+            loadRoles();
+          } else {
+            alertify.error(response.message || "Erreur lors de la suppression du rôle");
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Error deleting role:", error);
+          alertify.error("Une erreur est survenue lors de la suppression du rôle");
+        }
+      });
+    });
+
+    // Handle toggle status - Open confirmation modal
+    $(document).on('click', '.toggle-status', function(e) {
+      e.preventDefault();
+      var roleId = $(this).data('role-id');
+      var $row = $(this).closest('tr');
+      var currentStatus = $row.find('span.status-active, span.status-inactive').text().includes('Actif');
+      var newStatus = currentStatus ? 'Inactif' : 'Actif';
+      var newStatusValue = currentStatus ? '0' : '1';
+      var roleName = $row.find('span.fw-semibold').text();
+
+      // Store the role info for the confirmation
+      $('.changeStatusRoleModal').data('role-id', roleId);
+      $('.changeStatusRoleModal').data('new-status', newStatusValue);
+
+      // Update the modal content
+      $('#currentRoleStatus').attr('class', currentStatus ? 'badge bg-success' : 'badge bg-danger')
+                           .text(currentStatus ? 'Actif' : 'Inactif');
+      $('#newRoleStatus').attr('class', currentStatus ? 'badge bg-danger' : 'badge bg-success')
+                        .text(currentStatus ? 'Inactif' : 'Actif');
+      $('#statusChangeMessage').text(`Vous êtes sur le point de changer le statut du rôle "${roleName}".`);
+
+      // Show the modal
+      $('.changeStatusRoleModal').modal('show');
+    });
+
+    // Confirm status change
+    $('#confirmStatusChangeRoleBtn').on('click', function() {
+      var roleId = $('.changeStatusRoleModal').data('role-id');
+      var newStatus = $('.changeStatusRoleModal').data('new-status');
+
+      // Perform the status change via API
+      $.ajax({
+        url: "{% url 'institut_app:ApiChangeRoleStatus' %}",
+        type: "POST",
+        dataType: "JSON",
+        data: {
+          'id': roleId,
+          'is_active': newStatus,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            $('.changeStatusRoleModal').modal('hide');
+            loadRoles(); // Reload the roles list to reflect changes
+          } else {
+            alertify.error(response.message || "Erreur lors de la mise à jour du statut");
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Error changing role status:", error);
+          alertify.error("Une erreur est survenue lors de la mise à jour du statut");
+        }
+      });
+    });
+
+    // Handle add role form submission
+    $('#saveNewRoleBtn').on('click', function() {
+      var formData = $('#addRoleForm').serialize();
+      formData += '&csrfmiddlewaretoken=' + '{{ csrf_token }}';
+
+      $.ajax({
+        url: "{% url 'institut_app:ApiAddRole' %}",
+        type: "POST",
+        dataType: "JSON",
+        data: formData,
+        success: function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            $('#addRoleModal').modal('hide');
+            loadRoles();
+          } else {
+            alertify.error(response.message || "Erreur lors de l'ajout du rôle");
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Error adding role:", error);
+          alertify.error("Une erreur est survenue lors de l'ajout du rôle");
+        }
+      });
+    });
+
+    // Handle update role form submission
+    $('#updateRoleBtn').on('click', function() {
+      var formData = $('#updateRoleForm').serialize();
+      formData += '&csrfmiddlewaretoken=' + '{{ csrf_token }}';
+
+      $.ajax({
+        url: "{% url 'institut_app:ApiUpdateRole' %}",
+        type: "POST",
+        dataType: "JSON",
+        data: formData,
+        success: function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            $('#updateRoleModal').modal('hide');
+            loadRoles();
+          } else {
+            alertify.error(response.message || "Erreur lors de la mise à jour du rôle");
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Error updating role:", error);
+          alertify.error("Une erreur est survenue lors de la mise à jour du rôle");
+        }
+      });
+    });
+  });
+</script>
+
+{% endblock content %}

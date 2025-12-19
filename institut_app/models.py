@@ -5,6 +5,7 @@ from django_countries.fields import CountryField
 from t_crm.tenant_path import *
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
 
 class UserSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="session_info")
@@ -173,14 +174,12 @@ class Fournisseur(models.Model):
     def __str__(self):
         return self.designation
 
-
-class Modules(models.Model):
+class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
         ('ped',_('Pédagogie')),
         ('eva',_('Evaluation')),
         ('con',_('Conseil')),
-        ('crm',_('CRM')),
         ('adm',_('Administration')),
     ]
 
@@ -198,3 +197,95 @@ class Modules(models.Model):
 
     def __str__(self):
         return self.get_name_display()
+    
+class Role(models.Model):
+    ROLE_LEVEL = [
+        (1, _('Utilisateur')),
+        (2, _('Superviseur')),
+        (3, _('Manager')),
+        (4, _('Administrateur')),
+    ]
+
+    name = models.CharField(max_length=50, unique=True, verbose_name=_('Nom du Rôle'))
+
+    level = models.IntegerField(choices=ROLE_LEVEL, verbose_name=_('Niveau'))
+    description = models.TextField(blank=True, verbose_name=_('Description'))
+    is_active = models.BooleanField(default=True, verbose_name=_('Actif'))
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    class Meta:
+        verbose_name=_('Role')
+        verbose_name_plural=_('Roles')
+        ordering = ['-level', 'name']
+
+
+    def __str__(self):
+        return self.name
+
+class ModulePermission(models.Model):
+    PERMISSION_TYPE = [
+        ('view', _('Visualiser')),
+        ('add', _('Ajouter')),
+        ('change', _('Modifier')),
+        ('delete', _('Supprimer')),
+        ('export', _('Exporter')),
+        ('approuv', _('Approuver')),
+    ]
+
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="permissions", verbose_name=_('Module'))
+    permission_type = models.CharField(max_length=20, choices=PERMISSION_TYPE, verbose_name=_('Type de permission'))
+    description = models.TextField(blank=True, verbose_name=_('Description'))
+
+    class Meta:
+        verbose_name=_('Permission de Module')
+        verbose_name_plural= _('Permissions de module')
+        unique_together = ('module','permission_type')
+        ordering = ['module','permission_type']
+
+    def __str__(self):
+        return f"{self.module.get_name_display()} - {self.get_permission_type_display()}"
+    
+class RolePermission(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='permissions', verbose_name=_('Role'))
+    module_permission = models.ForeignKey(ModulePermission, on_delete=models.CASCADE, related_name='roles', verbose_name=_('Permission'))
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    class Meta:
+        verbose_name=_('Permission de Role')
+        verbose_name_plural = _('Permissions de Role')
+        unique_together = ('role', 'module_permission')
+        ordering = ['role','module_permission__module']
+
+
+    def __str__(self):
+        return f"{self.role.name} - {self.module_permission}"
+    
+class UserModuleRole(models.Model):
+
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='module_roles', verbose_name=_('Utilisateur'))
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="user_roles", verbose_name=_('Module'))
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, verbose_name=_('Role'))
+    assigned_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, related_name="assigned_roles", verbose_name=_('Assigné par'))
+    assigned_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    class Meta:
+        verbose_name=_('Role Utilisateur-Module')
+        verbose_name_plural = _('Roles Utilisteur-Module')
+        unique_together = ('user','module')
+        ordering = ['user','module','-role__level']
+        indexes = [
+            models.Index(fields=['user','module']),
+            models.Index(fields=['module','role']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.module.get_name_display()} - {self.role.name}"
+    
+    def has_permission(self, permission_type):
+        return self.role.permissions.filter(
+            module_permission__module = self.module,
+            module_permission__permission_type = permission_type
+        ).exists()
