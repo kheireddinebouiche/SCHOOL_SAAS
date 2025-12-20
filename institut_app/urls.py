@@ -5,6 +5,7 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.conf.urls.static import static
 from .f_views.entreprise import *
+from .f_views.permissions import *
 
 app_name="institut_app"
 
@@ -80,6 +81,19 @@ urlpatterns = [
     path('ApiAddRole', ApiAddRole, name="ApiAddRole"),
     path('ApiUpdateRole', ApiUpdateRole, name="ApiUpdateRole"),
     path('ApiGetRoleDetails', ApiGetRoleDetails, name="ApiGetRoleDetails"),
+    path('ApiGetModulePermissions', ApiGetModulePermissions, name="ApiGetModulePermissions"),
+    path('ApiAddModulePermission', ApiAddModulePermission, name="ApiAddModulePermission"),
+    path('ApiUpdateModulePermission',ApiUpdateModulePermission, name="ApiUpdateModulePermission"),
+    path('ApiDeleteModulePermission',ApiDeleteModulePermission, name="ApiDeleteModulePermission"),
+    
+
+    path('ApiGetRolePermissions', ApiGetRolePermissions, name="ApiGetRolePermissions"),
+    path('ApiSaveRolePermissions', ApiSaveRolePermissions, name="ApiSaveRolePermissions"),
+    path('ApiAddRolePermission',ApiAddRolePermission, name="ApiAddRolePermission"),
+    path('ApiUpdateRolePermission',ApiUpdateRolePermission, name="ApiUpdateRolePermission"),
+    path('ApiDeleteRolePermission',ApiDeleteRolePermission, name="ApiDeleteRolePermission"),
+
+    path('administration/attribution-role/', Role_Attribution, name="Role_Attribution"),
 
 ]
 
