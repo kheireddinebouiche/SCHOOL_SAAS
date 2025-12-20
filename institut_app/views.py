@@ -314,6 +314,7 @@ def UsersListePage(request):
     }
     return render(request, 'tenant_folder/users/liste_users.html', context)
 
+@login_required(login_url="institut_app:login")
 def ApiListeUsers(request):
     users = User.objects.all().values('id','is_staff','email','username','date_joined','is_active')
     return JsonResponse(list(users), safe=False)

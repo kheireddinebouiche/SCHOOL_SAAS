@@ -12,6 +12,7 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
+from institut_app.decorators import *
 
 
 @login_required(login_url="institut_app:login")
@@ -481,6 +482,7 @@ def ApiLoadSpecialite(request):
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('crm','view')
 def DetailsProspect(request, slug):
     prospect = Prospets.objects.get(slug=slug)
 

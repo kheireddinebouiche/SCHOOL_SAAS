@@ -22,7 +22,8 @@ def ApiListeModules(request):
         for i in liste:
             data.append({
                 'id' : i.id,
-                'name' : i.get_name_display(),
+                'name' : i.name,  # This is the code value (crm, ped, etc.)
+                'name_display' : i.get_name_display(),  # This is the display value (CRM, Pédagogie, etc.)
                 'description' : i.description,
                 'is_active' : i.is_active,
                 'created_at' : i.created_at,
@@ -549,30 +550,19 @@ def ApiGetRolePermissions(request):
     try:
         role = Role.objects.get(id=role_id)
 
-        # Récupérer toutes les permissions du rôle
+        # Récupérer seulement les permissions du rôle qui sont actuellement attribuées
         role_permissions = RolePermission.objects.filter(role=role).select_related('module_permission', 'module_permission__module')
 
         permissions_data = []
         for rp in role_permissions:
             permissions_data.append({
-                'id': rp.module_permission.id,
+                'id': rp.id,  # Use RolePermission ID for editing/deleting
+                'module_permission_id': rp.module_permission.id,  # Include the ModulePermission ID
                 'module_name': rp.module_permission.module.get_name_display(),
                 'permission_name': rp.module_permission.get_permission_type_display(),
-                'is_granted': True  # Toutes les permissions liées au rôle sont accordées
+                'permission_type': rp.module_permission.permission_type,  # Include permission type for editing
+                'is_granted': True
             })
-
-        # Ajouter également les permissions qui ne sont pas encore attribuées au rôle
-        all_module_permissions = ModulePermission.objects.all()
-        for mp in all_module_permissions:
-            # Vérifier si cette permission est déjà attribuée au rôle
-            existing_rp = role_permissions.filter(module_permission=mp).first()
-            if not existing_rp:
-                permissions_data.append({
-                    'id': mp.id,
-                    'module_name': mp.module.get_name_display(),
-                    'permission_name': mp.get_permission_type_display(),
-                    'is_granted': False
-                })
 
         return JsonResponse({
             "status": "success",
@@ -721,9 +711,21 @@ def ApiUpdateRolePermission(request):
                 permission_type=permission_type
             )
 
-            # Mettre à jour la relation
-            old_role_permission.module_permission = new_module_permission
-            old_role_permission.save()
+            # Vérifier si cette combinaison existe déjà pour ce rôle
+            if RolePermission.objects.filter(role=role, module_permission=new_module_permission).exists():
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Cette permission existe déjà pour ce rôle"
+                })
+
+            # Supprimer l'ancienne relation
+            old_role_permission.delete()
+
+            # Créer la nouvelle relation
+            RolePermission.objects.create(
+                role=role,
+                module_permission=new_module_permission
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -804,3 +806,456 @@ def ApiDeleteModule(request):
         return JsonResponse({"status":"error"})
 
  
+ 
+ 
+@login_required(login_url="institut_app:login")
+def ApiListeAttributions(request):
+    if request.method == "GET":
+        try:
+            # Récupérer toutes les attributions avec les relations nécessaires
+            attributions = UserModuleRole.objects.select_related('user', 'module', 'role', 'assigned_by').all()
+            
+            data = []
+            for attribution in attributions:
+                data.append({
+                    'id': attribution.id,
+                    'user': {
+                        'id': attribution.user.id,
+                        'username': attribution.user.username,
+                        'first_name': attribution.user.first_name,
+                        'last_name': attribution.user.last_name,
+                    },
+                    'module': {
+                        'id': attribution.module.id,
+                        'name': attribution.module.get_name_display(),
+                        'name_code': attribution.module.name,
+                    },
+                    'role': {
+                        'id': attribution.role.id,
+                        'name': attribution.role.name,
+                        'level': attribution.role.level,
+                    },
+                    'assigned_by': {
+                        'id': attribution.assigned_by.id if attribution.assigned_by else None,
+                        'username': attribution.assigned_by.username if attribution.assigned_by else 'Système',
+                        'first_name': attribution.assigned_by.first_name if attribution.assigned_by else 'Système',
+                        'last_name': attribution.assigned_by.last_name if attribution.assigned_by else '',
+                    } if attribution.assigned_by else {
+                        'id': None,
+                        'username': 'Système',
+                        'first_name': 'Système',
+                        'last_name': '',
+                    },
+                    'assigned_at': attribution.assigned_at.strftime('%Y-%m-%d'),
+                    'updated_at': attribution.updated_at.strftime('%Y-%m-%d'),
+                })
+            
+            return JsonResponse({
+                'status': 'success',
+                'data': data
+            }, safe=False)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAddAttribution(request):
+    if request.method == "POST":
+        user_id = request.POST.get('user_id')
+        module_id = request.POST.get('module_id')
+        role_id = request.POST.get('role_id')
+        
+        if not user_id or not module_id or not role_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Tous les champs sont requis: utilisateur, module et rôle'
+            })
+        
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            user = User.objects.get(id=user_id)
+            module = Module.objects.get(id=module_id)
+            role = Role.objects.get(id=role_id)
+            
+            # Vérifier si une attribution existe déjà pour cet utilisateur et ce module
+            existing_attribution = UserModuleRole.objects.filter(user=user, module=module).first()
+            if existing_attribution:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Cet utilisateur a déjà un rôle attribué pour ce module ({existing_attribution.role.name})'
+                })
+            
+            # Créer l'attribution
+            attribution = UserModuleRole.objects.create(
+                user=user,
+                module=module,
+                role=role,
+                assigned_by=request.user
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Attribution créée avec succès',
+                'id': attribution.id
+            })
+            
+        except User.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Utilisateur non trouvé'
+            })
+        except Module.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Module non trouvé'
+            })
+        except Role.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Rôle non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateAttribution(request):
+    if request.method == "POST":
+        attribution_id = request.POST.get('id')
+        user_id = request.POST.get('user_id')
+        module_id = request.POST.get('module_id')
+        role_id = request.POST.get('role_id')
+        
+        if not attribution_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'ID de l\'attribution manquant'
+            })
+        
+        if not user_id or not module_id or not role_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Tous les champs sont requis: utilisateur, module et rôle'
+            })
+        
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            attribution = UserModuleRole.objects.get(id=attribution_id)
+            user = User.objects.get(id=user_id)
+            module = Module.objects.get(id=module_id)
+            role = Role.objects.get(id=role_id)
+            
+            # Vérifier si une autre attribution existe déjà pour cet utilisateur et ce module (sauf celle en cours de modification)
+            existing_attribution = UserModuleRole.objects.filter(user=user, module=module).exclude(id=attribution_id).first()
+            if existing_attribution:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Cet utilisateur a déjà un rôle attribué pour ce module ({existing_attribution.role.name})'
+                })
+            
+            # Mettre à jour l'attribution
+            attribution.user = user
+            attribution.module = module
+            attribution.role = role
+            attribution.assigned_by = request.user
+            attribution.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Attribution mise à jour avec succès'
+            })
+            
+        except UserModuleRole.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Attribution non trouvée'
+            })
+        except User.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Utilisateur non trouvé'
+            })
+        except Module.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Module non trouvé'
+            })
+        except Role.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Rôle non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteAttribution(request):
+    if request.method == "POST":
+        attribution_id = request.POST.get('id')
+
+        if not attribution_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'ID de l\'attribution manquant'
+            })
+
+        try:
+            attribution = UserModuleRole.objects.get(id=attribution_id)
+            attribution.delete()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Attribution supprimée avec succès'
+            })
+
+        except UserModuleRole.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Attribution non trouvée'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetAttributionDetails(request):
+    """
+    API pour récupérer les détails d'une attribution spécifique
+    """
+    attribution_id = request.GET.get('id')
+
+    if not attribution_id:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'ID de l\'attribution manquant'
+        })
+
+    try:
+        attribution = UserModuleRole.objects.select_related('user', 'module', 'role', 'assigned_by').get(id=attribution_id)
+
+        data = {
+            'id': attribution.id,
+            'user_id': attribution.user.id,
+            'user_username': attribution.user.username,
+            'user_first_name': attribution.user.first_name,
+            'user_last_name': attribution.user.last_name,
+            'module_id': attribution.module.id,
+            'module_name': attribution.module.name,
+            'module_display_name': attribution.module.get_name_display(),
+            'role_id': attribution.role.id,
+            'role_name': attribution.role.name,
+            'role_level': attribution.role.level,
+            'assigned_by_id': attribution.assigned_by.id if attribution.assigned_by else None,
+            'assigned_by_username': attribution.assigned_by.username if attribution.assigned_by else '',
+            'assigned_by_first_name': attribution.assigned_by.first_name if attribution.assigned_by else '',
+            'assigned_by_last_name': attribution.assigned_by.last_name if attribution.assigned_by else '',
+            'assigned_at': attribution.assigned_at.strftime('%Y-%m-%d') if attribution.assigned_at else '',
+            'updated_at': attribution.updated_at.strftime('%Y-%m-%d') if attribution.updated_at else '',
+        }
+
+        return JsonResponse({
+            'status': 'success',
+            'data': data
+        })
+
+    except UserModuleRole.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Attribution non trouvée'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateAttribution(request):
+    """
+    API pour mettre à jour une attribution spécifique
+    """
+    if request.method == "POST":
+        attribution_id = request.POST.get('id')
+        user_id = request.POST.get('user_id')
+        module_id = request.POST.get('module_id')
+        role_id = request.POST.get('role_id')
+
+        if not attribution_id or not user_id or not module_id or not role_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Tous les champs sont requis: id, user_id, module_id et role_id'
+            })
+
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            attribution = UserModuleRole.objects.get(id=attribution_id)
+            user = User.objects.get(id=user_id)
+            module = Module.objects.get(id=module_id)
+            role = Role.objects.get(id=role_id)
+
+            # Vérifier si une autre attribution existe déjà pour cet utilisateur et ce module (sauf celle en cours de modification)
+            existing_attribution = UserModuleRole.objects.filter(user=user, module=module).exclude(id=attribution_id).first()
+            if existing_attribution:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Cet utilisateur a déjà un rôle attribué pour ce module ({existing_attribution.role.name})'
+                })
+
+            # Mettre à jour l'attribution
+            attribution.user = user
+            attribution.module = module
+            attribution.role = role
+            attribution.assigned_by = request.user  # L'utilisateur connecté effectue la modification
+            attribution.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Attribution mise à jour avec succès'
+            })
+
+        except UserModuleRole.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Attribution non trouvée'
+            })
+        except User.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Utilisateur non trouvé'
+            })
+        except Module.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Module non trouvé'
+            })
+        except Role.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Rôle non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+def ApiListeUsersPermission(request):
+    """
+    API pour lister tous les utilisateurs
+    """
+    if request.method == "GET":
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            # Récupérer tous les utilisateurs
+            users = User.objects.all().order_by('username')
+
+            data = []
+            for user in users:
+                user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S') if user.date_joined else ''
+                }
+                data.append(user_data)
+
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetRolePermissionsByRoleId(request):
+    """
+    API pour récupérer toutes les permissions du rôle pour un module spécifique
+    Cette API renvoie toutes les permissions possibles pour le module, en indiquant celles accordées au rôle
+    """
+    role_id = request.GET.get('role_id')
+    module_id = request.GET.get('module_id')  # Obligatoire : on veut voir les permissions du rôle pour un module spécifique
+
+    if not role_id or not module_id:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'ID du rôle et ID du module sont requis'
+        })
+
+    try:
+        role = Role.objects.get(id=role_id)
+        module = Module.objects.get(id=module_id)
+
+        # Récupérer toutes les permissions possibles pour ce module
+        all_module_permissions = ModulePermission.objects.filter(module=module)
+
+        # Récupérer les permissions qui sont accordées à ce rôle pour ce module
+        role_granted_permissions = RolePermission.objects.filter(
+            role=role,
+            module_permission__module=module
+        ).values_list('module_permission_id', flat=True)
+
+        permissions_data = []
+        for mp in all_module_permissions:
+            is_granted = mp.id in role_granted_permissions
+            permissions_data.append({
+                'id': mp.id,
+                'permission_type': mp.get_permission_type_display(),
+                'description': mp.description,
+                'module_name': mp.module.get_name_display(),
+                'full_permission_name': f"{mp.module.get_name_display()} - {mp.get_permission_type_display()}",
+                'module_permission_id': mp.id,
+                'is_granted': is_granted  # Indique si cette permission est accordée à ce rôle
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'permissions': permissions_data
+        }, safe=False)
+
+    except Role.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Rôle non trouvé'
+        })
+    except Module.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Module non trouvé'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        })

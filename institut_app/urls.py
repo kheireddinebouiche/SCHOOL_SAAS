@@ -94,6 +94,16 @@ urlpatterns = [
     path('ApiDeleteRolePermission',ApiDeleteRolePermission, name="ApiDeleteRolePermission"),
 
     path('administration/attribution-role/', Role_Attribution, name="Role_Attribution"),
+    path('ApiListeAttributions', ApiListeAttributions,name="ApiListeAttributions"),
+    path('ApiAddAttribution', ApiAddAttribution,name="ApiAddAttribution"),
+    path('ApiUpdateAttribution', ApiUpdateAttribution,name="ApiUpdateAttribution"),
+    path('ApiDeleteAttribution', ApiDeleteAttribution,name="ApiDeleteAttribution"),
+    path('ApiListeDesUtilisateurs',ApiListeUsersPermission, name="ApiListeDesUtilisateurs"),
+    path('ApiGetAttributionDetails',ApiGetAttributionDetails, name="ApiGetAttributionDetails"),
+    path('ApiGetRolePermissionsByRoleId', ApiGetRolePermissionsByRoleId, name="ApiGetRolePermissionsByRoleId"),
+
+
+
 
 ]
 
