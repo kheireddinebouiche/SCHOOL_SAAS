@@ -181,6 +181,13 @@ class Module(models.Model):
         ('eva',_('Evaluation')),
         ('con',_('Conseil')),
         ('adm',_('Administration')),
+        ('tre',_('Trésorerie')),
+        ('daf',_('DAF')),
+        ('scol',_('Scolarité')),
+        ('rh',_('Ressources Humaines')),
+        ('rem',_('Remise')),
+        
+        
     ]
 
     name = models.CharField(max_length=50, null=True, blank=True, choices=MODULES, unique=True, verbose_name=_("Module"))

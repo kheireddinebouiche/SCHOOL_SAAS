@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
+from .f_views.users import *
 
 app_name="institut_app"
 
@@ -101,6 +102,21 @@ urlpatterns = [
     path('ApiListeDesUtilisateurs',ApiListeUsersPermission, name="ApiListeDesUtilisateurs"),
     path('ApiGetAttributionDetails',ApiGetAttributionDetails, name="ApiGetAttributionDetails"),
     path('ApiGetRolePermissionsByRoleId', ApiGetRolePermissionsByRoleId, name="ApiGetRolePermissionsByRoleId"),
+
+    path('ApiListeUtilisateurs', ApiListeUtilisateurs, name="ApiListeUtilisateurs"),
+    path('ApiShowUserDetails', ApiShowUserDetails, name="ApiShowUserDetails"),
+    path('ApiUpdateUser', ApiUpdateUser, name="ApiUpdateUser"),
+    path('ApiDeleteUser', ApiDeleteUser, name="ApiDeleteUser"),
+    path('ApiChangeUserStatus', ApiChangeUserStatus, name="ApiChangeUserStatus"),
+    path('ApiChangeUserPassword', ApiChangeUserPassword, name="ApiChangeUserPassword"),
+    path('ApiCreateUser', ApiCreateUser, name="ApiCreateUser"),
+
+    
+
+
+
+
+
 
 
 

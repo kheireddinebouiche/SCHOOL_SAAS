@@ -16,6 +16,7 @@ from institut_app.decorators import *
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm','view')
 def listeVisiteurs(request):
     context = {
         'tenant' : request.tenant,
@@ -165,6 +166,7 @@ def ApiGetListeDemandeInscription(request):
         
     return JsonResponse(list(demandes), safe=False)
 
+@login_required(login_url="institut_app:login")
 def ApiGetGrideDemandeInscription(request):
     specialites = Specialites.objects.all()
 
@@ -194,6 +196,7 @@ def ApiGetGrideDemandeInscription(request):
 
     return JsonResponse({'specialites_demandes': specialites_demandes})
 
+@login_required(login_url="institut_app:login")
 def ApiAddNewDemandeInscription(request):
 
     promo = request.POST.get('_promo')
@@ -223,6 +226,7 @@ def ApiAddNewDemandeInscription(request):
     else:
         return JsonResponse({'status': "error", 'message': 'Veuillez remplir tous les champs obligatoires'})
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiConfirmDemandeInscription(request):
 
@@ -405,6 +409,7 @@ def InscriptionEntreprise(request):
     return render(request, 'tenant_folder/crm/inscription_entreprise.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('crm','view')
 def ListeDesProspects(request):
     context = {
         'tenant' : request.tenant,
