@@ -154,29 +154,45 @@ def LoadAffectation(request):
 @transaction.atomic
 def ApiAffectTrainer(request):
     if request.method == "POST":
-        trainerId = request.POST.get('trainerId')
-        moduleId = request.POST.get('moduleId')
+        moduleId = request.POST.get('module_id')
+        trainerId = request.POST.get('formateur_id')
 
         if not trainerId and not moduleId:
             return JsonResponse({"status" : "error", "message" : "Des données sont manquante lors du traitement de la requete"})
-        
-        EnseignantModule.objects.create(
-            module_id=moduleId,
-            formateur_id = trainerId
-        )
-        return JsonResponse({"status" : "success", "message" : "L'enseignant à été affecter avec succès"})
+        try:
+            EnseignantModule.objects.get_or_create(
+                module_id=moduleId,
+                formateur_id = trainerId
+            )
+            return JsonResponse({"status" : "success", "message" : "L'enseignant à été affecter avec succès"})
+        except Exception as e:
+            return JsonResponse({"status":"error",'message' : "Le module a été déja affecter a l'enseignant."})
     else:
         return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
     
+
+
+##### Fonction qui permet de verifier si un module affecter a un enseignant enseigne deja ####
+def CheckIfModuleIsPlanned(moduleId, trainerId):
+    return TimetableEntry.objects.filter(
+        cours_id = moduleId,
+        formateur_id = trainerId,
+    ).exclude(
+        timetable__status="ter" 
+    ).exists()
+
 @login_required(login_url="institut_app:login")
 def ApiDeaffectTrainer(request):
     if request.method == "POST":
-        trainerId = request.POST.get('trainerId')
-        moduleId = request.POST.get('moduleId')
+        moduleId = request.POST.get('module_id')
+        trainerId = request.POST.get('formateur_id')
 
         if not trainerId or not moduleId:
             return JsonResponse({"status" : "error", "message" : "Des données sont manquante lors du traitement de la requete"})
-
+        
+        if CheckIfModuleIsPlanned(moduleId, trainerId):
+            return JsonResponse({"status":"error-suppress"})
+        
         try:
             object = EnseignantModule.objects.get(module_id=moduleId, formateur_id=trainerId)
             object.delete()

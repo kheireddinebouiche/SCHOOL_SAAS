@@ -300,6 +300,8 @@ class Depenses(models.Model):
         return self.label
 
 
+
+
 ####################### GESTION DES CATEGORIES DE DEPENSES #############################################
  
 class TypeDepense(models.Model):
@@ -393,3 +395,15 @@ class OperationsBancaire(models.Model):
 
     def __str__(self):
         return f"Lettrage {self.id} - {self.compte_bancaire}"
+    
+
+class SpecialiteCompte(models.Model):
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
+    compte = models.ForeignKey(PaymentCategory, on_delete=models.CASCADE, null=True)
+
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.specialite.label} - {self.compte.label}"

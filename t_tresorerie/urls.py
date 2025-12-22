@@ -12,6 +12,7 @@ from .f_views.caisse import *
 from .f_views.plan_comptable import *
 from .f_views.facturation import *
 from .f_views.produits import *
+from .f_views.imputation_comptable_specialite import *
 
 app_name="t_tresorerie"
 
@@ -193,6 +194,16 @@ urlpatterns = [
     path('ApiModifierCategorieProduit', ApiModifierCategorieProduit, name="ApiModifierCategorieProduit"),
     path('ApiSupprimerCategorieProduit', ApiSupprimerCategorieProduit, name="ApiSupprimerCategorieProduit"),
     path('ApiGetCategorieProduit/<int:pk>/', ApiGetCategorieProduit, name="ApiGetCategorieProduit"),
+
+
+    path('imputation-comptable/specialite/liste/', PageImputationComptable, name="PageImputationComptable"),
+
+    path('LoadSpecialiteComptes',LoadSpecialiteComptes, name="LoadSpecialiteComptes"),
+    path('LoadSpecialites',LoadSpecialites, name="LoadSpecialites"),
+    path('LoadComptes',LoadComptes, name="LoadComptes"),
+    path('UpdateSpecialiteCompte',UpdateSpecialiteCompte , name="UpdateSpecialiteCompte"),
+    path('CreateSpecialiteCompte',CreateSpecialiteCompte, name="CreateSpecialiteCompte"),
+    path('DeleteSpecialiteCompte',DeleteSpecialiteCompte,name="DeleteSpecialiteCompte"),
 
 
 
