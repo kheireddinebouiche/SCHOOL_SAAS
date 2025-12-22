@@ -2157,7 +2157,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="datePaiement">Date de paiement <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #f8f9fa !important;" />
+                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #e9ecef !important; cursor: not-allowed;" readonly />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="montantPaiement">Montant <span class="text-danger">*</span></label>
@@ -2969,8 +2969,8 @@
                             duePaiementHtml += '<td hidden>' + item.id_due_paiement + '</td>';
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + formatComptable(item.montant_due) + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + formatComptable(item.montant_restant) + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + item.montant_due + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + item.montant_restant + ' DA</span></td>';
                             duePaiementHtml += '</td>';
                             duePaiementHtml += '</tr>';
                         });
@@ -3724,7 +3724,7 @@
         $('#nouveauPaiementModal').on('show.bs.modal', function () {
             // Charger les échéances dans le dropdown
             var echeancesOptions = '<option value="">Sélectionnez une échéance</option>';
-            
+
             // Parcourir les lignes du tableau des échéances dues
             $('#ListePaiementRequestLine tr').each(function() {
                 var id_due_paiement = $(this).find('td:eq(0)').text().trim();
@@ -3732,7 +3732,7 @@
                 var date = $(this).find('td:eq(2)').text().trim();
                 var montant = $(this).find('td:eq(3)').text().trim();
                 var restant = $(this).find('td:eq(4)').text().trim();
-                
+
                 // Vérifier que la ligne n'est pas vide
                 if (label && montant) {
                     var optionText = label + " - " + restant;
@@ -3742,15 +3742,21 @@
                     echeancesOptions += '<option data-id_due_paiement = "'+ id_due_paiement +'" value="' + label + '" data-montant="' + restant.replace(" DA", "") + '">' + optionText + '</option>';
                 }
             });
-            
+
             $('#echeancierSelection').html(echeancesOptions);
-            
+
             // Réinitialiser le résumé
             $('#resumeEcheance').text('-');
             $('#resumeDate').text('-');
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
+
+            // Set the date field to the current date
+            var today = new Date().toISOString().split('T')[0];
+            $('#datePaiement').val(today);
+            // Update the summary with today's date
+            $('#resumeDate').text(new Date(today).toLocaleDateString('fr-FR'));
         });
         
         // Mettre à jour le montant quand une échéance est sélectionnée
@@ -3768,16 +3774,8 @@
             }
         });
         
-        // Mettre à jour le résumé en temps réel
-        $(document).on('change keyup', '#datePaiement', function(){
-            var date = $(this).val();
-            if (date) {
-                var formattedDate = new Date(date).toLocaleDateString('fr-FR');
-                $('#resumeDate').text(formattedDate);
-            } else {
-                $('#resumeDate').text('-');
-            }
-        });
+        // Mettre à jour le résumé en temps réel (date is frozen to current date)
+        // The date field is readonly and will always show the current date
         
         $(document).on('change keyup', '#montantPaiement', function(){
             var montant = $(this).val();
@@ -3821,6 +3819,12 @@
             // Validation simple
             if (!echeance || !datePaiement || !montant || !modePaiement) {
                 alertify.error("Veuillez remplir tous les champs obligatoires.");
+                return;
+            }
+
+            // Validation spécifique pour les modes de paiement qui nécessitent une référence
+            if ((modePaiement === 'che' || modePaiement === 'vir') && !reference) {
+                alertify.error("Veuillez indiquer la référence du paiement pour les modes Chèque et Virement.");
                 return;
             }
             

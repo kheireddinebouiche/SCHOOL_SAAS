@@ -369,18 +369,22 @@ def ApiGetClientEcheancierDouble(request):
 
         obj = Prospets.objects.get(id = id_client)
         
-        voeux = FicheDeVoeux.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
+        voeux = FicheVoeuxDouble.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
         
 
-        echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+        echeancierId = EcheancierPaiement.objects.get(formation_double_id = voeux.specialite.id, model__promo = voeux.promo)
 
         groupe = GroupeLine.objects.filter(student_id = id_client).first()
+
+        groupe_data = {}
         
-        groupe_data = {
-            'id' : groupe.groupe.id,
-            'nom' : groupe.groupe.nom,
-            'semestre' : groupe.groupe.semestre,
-        }
+        if groupe:
+            groupe_data = {
+                'id' : groupe.groupe.id,
+                'nom' : groupe.groupe.nom,
+                'semestre' : groupe.groupe.semestre,
+            }
+
 
         special_echeancier_data = []
         has_special_echeancier = False
@@ -444,7 +448,7 @@ def ApiGetClientEcheancierDouble(request):
                     'montant_tranche' : i.montant_tranche,
                 })
 
-        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True, model__promo = voeux.promo)
+        echeancier = EcheancierPaiement.objects.get(formation_double = voeux.specialite, is_default=True, model__promo = voeux.promo)
         liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
         
         remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj).last()
@@ -530,10 +534,10 @@ def ApiGetClientEcheancierDouble(request):
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
             'promo' : voeux.promo.code,
-            'prix_formation' : voeux.specialite.formation.prix_formation,
-            'frais_inscription' : voeux.specialite.formation.frais_inscription,
-            'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
-            'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
+            'prix_formation' : voeux.specialite.prix,
+            'frais_inscription' : voeux.specialite.frais_inscription,
+            # 'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
+            # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0

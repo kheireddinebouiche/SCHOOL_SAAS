@@ -328,7 +328,27 @@ class SousTypeDepense(models.Model):
 ####################### FIN GESTION DES CATEGORIES DE PRODUIT ##########################################
 
 
-####################### GESTION DES CATEGORIES DE PRODUIT ##############################################
+####################### GESTION DES CATEGORIES DE PRODUIT ET DE DEPENSES ##############################################
+
+class DepensesCategory(models.Model):
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Depense category"
+        verbose_name_plural = "Depenses categories"
+
+    def __str__(self):
+        return self.name
+   
 
 class PaymentCategory(models.Model):
     name = models.CharField(max_length=100)
@@ -349,7 +369,7 @@ class PaymentCategory(models.Model):
     def __str__(self):
         return self.name
    
-####################### GESTION DES CATEGORIES DE PRODUIT ##############################################
+####################### GESTION DES CATEGORIES DE PRODUIT ET DE DEPENSES ##############################################
 
 class PlanComptable(models.Model):
     numero = models.CharField(max_length=20, unique=True)   # ex: "531", "7061"

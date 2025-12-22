@@ -455,8 +455,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
                 'value' : i.value,
                 'montant_tranche' : i.montant_tranche,
                 'date_echeancier' : i.date_echeancier,
-                'entite' : i.entite.id,
-                "entite_nom" : i.entite.designation,
+                'entite' : i.entite.id if i.entite else None,
+                "entite_nom" : i.entite.designation if i.entite else None,
             })
 
         refund = Rembourssements.objects.filter(client = obj.client).last()
