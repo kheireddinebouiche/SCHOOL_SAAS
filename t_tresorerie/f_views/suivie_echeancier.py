@@ -80,6 +80,15 @@ def DetailsEcheancierClient(request, pk):
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
 
 @login_required(login_url="institut_app:login")
+def DetailsEcheancierClientDouble(request, pk):
+    context = {
+        'pk' : pk,
+    }
+    return render(request,'tenant_folder/comptabilite/echeancier/details-suivie-echeancier-double.html', context)
+
+
+
+@login_required(login_url="institut_app:login")
 def ApiGetLunchedSpec(request):
     if request.method == "GET":
         id_promo = request.GET.get("id_promo")

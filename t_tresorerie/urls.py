@@ -97,6 +97,7 @@ urlpatterns = [
     path('ApiLoadConvertedProspects', ApiLoadConvertedProspects, name="ApiLoadConvertedProspects"),
 
     path('details-suivie-echeancier/<int:pk>/', DetailsEcheancierClient, name="DetailsEcheancierClient"),
+    path('detauls-suivie-echeancier/double-diplomation/<int:pk>/', DetailsEcheancierClientDouble, name="DetailsEcheancierClientDouble"),
 
     path('liste-des-paiements/', ListeDesPaiements, name="ListeDesPaiements"),
     path('ApiListePaiements', ApiListePaiements, name="ApiListePaiements"),
