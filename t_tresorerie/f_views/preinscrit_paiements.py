@@ -93,7 +93,7 @@ def ApiGetPaiementRequestDetailsDouble(request):
             }
             ### Boucle pour enregistrer les paiements
             for i in echeancier_list:
-                ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier)  
+                ApiStorePaiementsDouble(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier,i['entite'])  
                 
                 
             return JsonResponse({"status":"success"})
@@ -122,6 +122,28 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
             promo_id = promo,
             type = "frais_f",
             ref_echeancier_id = echeancier,
+        )
+        return JsonResponse({"status": "success"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+    
+@transaction.atomic
+def ApiStorePaiementsDouble(client,label,date_echeance,montant,promo,echeancier,entite):
+    try:
+        last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
+        ordre = (last.ordre + 1) if last else 1
+
+        DuePaiements.objects.create(
+            client=client,
+            label=label,
+            ordre=ordre,
+            montant_due=montant,
+            montant_restant=montant,
+            date_echeance=date_echeance,
+            promo_id = promo,
+            type = "frais_f",
+            ref_echeancier_id = echeancier,
+            entite_id = entite if entite else None,
         )
         return JsonResponse({"status": "success"})
     except Exception as e:
@@ -262,6 +284,26 @@ def ApiConfirmInscription(request):
         id_client = request.POST.get('id_preinscrit')
 
         promoObj = FicheDeVoeux.objects.get(prospect_id = id_client, is_confirmed=True)
+        promo = promoObj.promo.code
+        
+        matricule = generate_matricule_interne(promo)
+      
+        client = Prospets.objects.get(id = id_client)
+        client.matricule_interne = matricule
+        client.statut = 'convertit'
+        client.save()
+
+        return JsonResponse({"status" : "success"})
+    else:   
+        return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiConfirmInscriptionDouble(request):
+    if request.method == "POST":
+        id_client = request.POST.get('id_preinscrit')
+
+        promoObj = FicheVoeuxDouble.objects.get(prospect_id = id_client, is_confirmed=True)
         promo = promoObj.promo.code
         
         matricule = generate_matricule_interne(promo)

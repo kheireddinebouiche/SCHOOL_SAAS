@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer, Prospets,FicheDeVoeux
+from t_crm.models import RemiseAppliquer, Prospets,FicheDeVoeux, FicheVoeuxDouble
 from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 
@@ -25,8 +25,10 @@ def ApiListePaiements(request):
             fiche = FicheDeVoeux.objects.get(prospect_id=i.prospect_id)
             specialite = fiche.specialite.label if fiche.specialite else None
         except FicheDeVoeux.DoesNotExist:
-            specialite = None
-        
+            
+            fiche = FicheVoeuxDouble.objects.get(prospect_id=i.prospect_id)
+            specialite = fiche.specialite.label
+
         data.append({
             'id': i.id,
             'num': i.num,
@@ -41,4 +43,11 @@ def ApiListePaiements(request):
         })
 
     return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def PageCategoriesProduits(request):
+    """Page to manage payment categories"""
+    return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
+
+
     

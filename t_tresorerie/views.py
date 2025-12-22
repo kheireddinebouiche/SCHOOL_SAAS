@@ -63,7 +63,6 @@ def PageDetailsDemandePaiement(request, pk):
         return render(request, "tenant_folder/comptabilite/tresorerie/details_attente_paiement.html", context)
 
 
-
 @login_required(login_url="institut_app:login")
 @ajax_required
 def ApiLoadRefundData(request):
@@ -456,6 +455,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
                 'value' : i.value,
                 'montant_tranche' : i.montant_tranche,
                 'date_echeancier' : i.date_echeancier,
+                'entite' : i.entite.id,
+                "entite_nom" : i.entite.designation,
             })
 
         refund = Rembourssements.objects.filter(client = obj.client).last()

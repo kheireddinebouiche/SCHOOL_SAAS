@@ -11,6 +11,7 @@ from .f_views.fournisseurs import *
 from .f_views.caisse import *
 from .f_views.plan_comptable import *
 from .f_views.facturation import *
+from .f_views.produits import *
 
 app_name="t_tresorerie"
 
@@ -83,6 +84,8 @@ urlpatterns = [
     path('ApiLoadSpecialites', ApiLoadSpecialites, name="ApiLoadSpecialites"),
 
     path('ApiConfirmInscription', ApiConfirmInscription, name="ApiConfirmInscription"),
+    path('ApiConfirmInscriptionDouble', ApiConfirmInscriptionDouble, name="ApiConfirmInscriptionDouble"),
+
     path('ApiRequestRefundPaiement', ApiRequestRefundPaiement, name="ApiRequestRefundPaiement"),
     path('ApiLoadRefundData', ApiLoadRefundData, name="ApiLoadRefundData"),
     path('ApiLoadRefundDetails', ApiLoadRefundDetails, name="ApiLoadRefundDetails"),
@@ -101,6 +104,7 @@ urlpatterns = [
     path('ApiGetLunchedSpec', ApiGetLunchedSpec, name="ApiGetLunchedSpec"),
 
     path('ApiGetClientEcheancier', ApiGetClientEcheancier, name="ApiGetClientEcheancier"),
+    path('ApiGetClientEcheancierDouble',ApiGetClientEcheancierDouble, name="ApiGetClientEcheancierDouble"),
 
     path('ApiSaveRefundOperation', ApiSaveRefundOperation, name="ApiSaveRefundOperation"),
     path('ApiStats', ApiStats, name="ApiStats"),
@@ -176,6 +180,18 @@ urlpatterns = [
     ##### Facturation 
     path('facturation/liste/', PageFacturation, name="PageFacturation"),
     path('ApiListeDesFactures', ApiListeDesFactures, name="ApiListeDesFactures"),
+
+
+
+    path('categorie-produits/liste/', PageProduits, name="PageProduits"),
+
+    ##### Gestion des categories de produits (PaymentCategory)
+    path('categories-produits/liste/', PageCategoriesProduits, name="PageCategoriesProduits"),
+    path('ApiListeCategoriesProduits', ApiListeCategoriesProduits, name="ApiListeCategoriesProduits"),
+    path('ApiCreerCategorieProduit', ApiCreerCategorieProduit, name="ApiCreerCategorieProduit"),
+    path('ApiModifierCategorieProduit', ApiModifierCategorieProduit, name="ApiModifierCategorieProduit"),
+    path('ApiSupprimerCategorieProduit', ApiSupprimerCategorieProduit, name="ApiSupprimerCategorieProduit"),
+    path('ApiGetCategorieProduit/<int:pk>/', ApiGetCategorieProduit, name="ApiGetCategorieProduit"),
 
 
 

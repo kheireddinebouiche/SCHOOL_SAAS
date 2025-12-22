@@ -361,7 +361,6 @@
                                                 <th class="border-0">Type de paiement</th>
                                                 <th class="border-0">Montant payé</th>
                                                 <th class="border-0">Statut</th>
-                                                <th class="border-0">Dernière mise à jour</th>
                                                 <th class="border-0 rounded-end text-center">Action</th>
                                             </tr>
                                         </thead>
@@ -632,18 +631,17 @@
             if (data.length > 0) {
                 $.each(data, function(index, client) {
                     html += '<tr>';
-                    html += '<td><strong><a href="/comptabilite/tresorerie/details-suivie-echeancier/'+client.id+'">' + (client.nom || '') + " " + (client.prenom || '') + '</a></strong></td>';
+                    html += '<td><strong>' + (client.nom || '') + " " + (client.prenom || '') + '</strong></td>';
                     html += '<td><strong>Frais de formation</strong></td>'; // Using a default value since context isn't in the response
                     html += '<td><strong>' + (client.total_paye ? parseFloat(client.total_paye).toLocaleString('fr-FR') : '0') + ' DA</strong></td>';
                     html += '<td><strong><span class="badge bg-success">Payé</span></strong></td>'; // Assuming paid since they have payment records
-                    html += '<td></td>';
                     
                     var actions = '<div class="dropdown d-inline-block">'+
                         '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">'+
                         '<i class="ri-more-fill align-middle"></i>'+
                         '</button>'+
                         '<ul class="dropdown-menu dropdown-menu-end">'+
-                        '<li><a href="/comptabilite/tresorerie/details-suivie-echeancier/'+client.id+'" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
+                        '<li><a href="#" id="detailsEcheancierBtn" data-is_double='+client.is_double+' data-id-client='+client.id+' class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails</a></li>'+
                         '<li><a href="/comptabilite/tresorerie/paiements-prospect/'+client.id+'" class="dropdown-item"><i class="ri-money-dollar-circle-line align-bottom me-2 text-muted"></i> Paiements</a></li>'+
                         '</ul>'+
                         '</div>';
@@ -788,12 +786,18 @@
                 },
                 success: function(data){
                     var html = '';
+                    var badge = '';
+
                     if (data.length > 0) {
                         $.each(data, function(index, i) {
-                            html += '<tr data-specialite-id="' + i.specialite__id + '">';
-                            html += '<td>' + i.specialite__label + '</td>';
+                            if (i.type === "double") {
+                                badge = "🎓 Double diplomation"
+                            }
+                            html += '<tr data-specialite-id="' + i.id + '">';
+                            html += '<td>' + i.label +'<p class="text-muted">'+badge+'</p></td>';
+                            
                             html += '<td>'+ i.total_student+ '</td>';
-                            html += '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-specialite-prospects" data-promo="'+p+'" data-specialite-id="' + i.specialite__id + '"><i class="ri-user-line me-1"></i>Afficher les prospects</button></td>';
+                            html += '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-specialite-prospects" data-type='+i.type+' data-promo="'+p+'" data-specialite-id="' + i.id + '"><i class="ri-user-line me-1"></i>Afficher les prospects</button></td>';
                             html += '</tr>';
                         });
                     } else {
@@ -857,7 +861,7 @@
                             html += '<td>' + prospect.email + '</td>';
                             html += '<td>' + prospect.telephone + '</td>';
                             html += '<td>' + prospect.created_at + '</td>';
-                            html += '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-consulter-prospect" data-prospect-id="' + prospect.id + '"><i class="ri-eye-line me-1"></i>Consulter</button></td>';
+                            html += '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-consulter-prospect" data-is_double='+prospect.is_double+' data-prospect-id="' + prospect.id + '"><i class="ri-eye-line me-1"></i>Consulter</button></td>';
                             html += '</tr>';
                         });
                     } else {
@@ -877,17 +881,18 @@
         $(document).on('click', '.btn-specialite-prospects', function() {
             var specialiteId = $(this).data('specialite-id');
             var currentPromoId = $(this).data('promo');
+            var type = $(this).data('type');
+
             
-            console.log(specialiteId, currentPromoId);
             // Load the prospects for this specialty within the promotion
-            loadProspectsForSpecialite(currentPromoId, specialiteId);
+            loadProspectsForSpecialite(currentPromoId, specialiteId, type);
             // Show the modal
             $('#prospectListModal').modal('show');
             
         });
 
         // Function to load prospects for a specific specialty within a promotion
-        function loadProspectsForSpecialite(promoId, specialiteId) {
+        function loadProspectsForSpecialite(promoId, specialiteId,type) {
             // Show loading message
             $('#prospectListTableBody').html('<tr><td colspan="5" class="text-center text-muted">Chargement des prospects...</td></tr>');
            
@@ -897,7 +902,8 @@
                 type: 'GET',
                 data: {
                     'promo_id': promoId,
-                    'specialite_id': specialiteId
+                    'specialite_id': specialiteId,
+                    'type' : type,
                 },
                 success: function(data) {
                     var html = '';
@@ -908,7 +914,7 @@
                             html += '<td>' + prospect.email + '</td>';
                             html += '<td>' + prospect.telephone + '</td>';
                             html += '<td>' + prospect.created_at + '</td>';
-                            html += '<td class="text-center"><a href="/comptabilite/tresorerie/details-suivie-echeancier/'+prospect.id+'" type="button" class="btn btn-outline-primary btn-sm btn-consulter-prospect" data-prospect-id="' + prospect.id + '"><i class="ri-eye-line me-1"></i>Consulter</a></td>';
+                            html += '<td class="text-center"><a href="#" type="button" class="btn btn-outline-primary btn-sm btn-consulter-prospect" data-is_double='+prospect.is_double+' data-prospect-id="' + prospect.id + '"><i class="ri-eye-line me-1"></i>Consulter</a></td>';
                             html += '</tr>';
                         });
                     } else {
@@ -925,7 +931,19 @@
         }
 
        
+        $(document).on('click','.btn-consulter-prospect', function(){
+            var is_double = $(this).data('is_double');
+            var id_client = $(this).data('prospect-id');
 
+            console.log(is_double, id_client);
+        });
+
+        $(document).on('click','#detailsEcheancierBtn', function(){
+            var id_client= $(this).data('id-client');
+            var is_double = $(this).data('is_double');
+
+            console.log(is_double, id_client);
+        });
         
     });
 </script>

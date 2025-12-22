@@ -68,6 +68,8 @@ class DuePaiements(models.Model):
     type = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f',"Frais de formation"),('dette','Module en dette'),('autre','Autre')])
     observation = models.CharField(max_length=1000, null=True, blank=True)
 
+    entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
+
     created_at = models.DateField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateField(auto_now=True, null=True, blank=True)
 
@@ -106,14 +108,13 @@ class Paiements(models.Model):
         if not self.num:
 
             # 1. Vérifier chemin : Paiement → DuePaiement → Echeancier → Entreprise
-            if not self.due_paiements or not self.due_paiements.ref_echeancier:
-                raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
+            # if not self.due_paiements or not self.due_paiements.entite or not self.due_paiements.ref_echeancier:
+            #     raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
 
-            echeancier = self.due_paiements.ref_echeancier
-            entite_obj = echeancier.entite
-
+            entite_obj = self.due_paiements.entite
+            
             if not entite_obj:
-                raise ValueError("Impossible de générer le numéro : entreprise manquante dans EcheancierPaiement.")
+                entite_obj = self.due_paiements.ref_echeancier.entite
 
             # 2. Lecture des champs Entreprise
             entite = entite_obj.designation or "ENTITE"
@@ -297,7 +298,10 @@ class Depenses(models.Model):
 
     def __str__(self):
         return self.label
-    
+
+
+####################### GESTION DES CATEGORIES DE DEPENSES #############################################
+ 
 class TypeDepense(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=100, null=True, blank=True)
@@ -319,16 +323,31 @@ class SousTypeDepense(models.Model):
     def __str__(self):
         return self.label
 
-class TypePaiement(models.Model):
-    label = models.CharField(max_length=100, null=True, blank=True)
+####################### FIN GESTION DES CATEGORIES DE PRODUIT ##########################################
 
-    is_active = models.BooleanField(default=False)
 
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now=True)
+####################### GESTION DES CATEGORIES DE PRODUIT ##############################################
+
+class PaymentCategory(models.Model):
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Payment category"
+        verbose_name_plural = "Payment categories"
 
     def __str__(self):
-        return self.label  
+        return self.name
+   
+####################### GESTION DES CATEGORIES DE PRODUIT ##############################################
 
 class PlanComptable(models.Model):
     numero = models.CharField(max_length=20, unique=True)   # ex: "531", "7061"
@@ -349,7 +368,6 @@ class PlanComptable(models.Model):
     def __str__(self):
         return f"{self.numero} - {self.intitule}"
     
-
 class OperationsBancaire(models.Model):
     compte_bancaire = models.ForeignKey(BankAccount, on_delete=models.CASCADE, null=True, blank=True)
 

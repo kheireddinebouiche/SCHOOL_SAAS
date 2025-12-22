@@ -1,6 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
-{% block title %} Trésorerie - Détails demande de paiement {% endblock title %}
+{% block title %} Trésorerie - Suivie des echeanciers {% endblock title %}
 
 {% block content %}
 <style>
@@ -434,49 +434,66 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-<!-- Modal pour avertir que la confirmation de l'échéancier nécessite la confirmation de la remise -->
-<div class="modal fade" id="echeancierConfirmationModal" tabindex="-1" aria-labelledby="echeancierConfirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-md">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-error-warning-line text-warning fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-warning mb-1" id="echeancierConfirmationModalLabel">Prérequis de confirmation</h5>
-                        <p class="text-muted small mb-0">Échéancier de paiement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center mb-4">
-                    <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
-                            <i class="ri-error-warning-line"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mb-4">
-                    <h5>Confirmation requise</h5>
-                    <p class="text-muted">Avant de confirmer l'échéancier, vous devez d'abord confirmer la remise.</p>
-                </div>
-                <div class="alert alert-warning d-flex align-items-center" role="alert">
-                    <i class="ri-alert-line me-2"></i>
-                    <div>
-                        Veuillez vous assurer que la remise a été correctement enregistrée avant de procéder à la confirmation de l'échéancier.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+    // Function to load special schedule details into the modal
+    function loadSpecialEcheancierDetails() {
+        // Get client ID from the hidden field
+        const clientId = document.getElementById('clientIdInput').value;
+        
+        if (!clientId) {
+            console.error('Client ID not found');
+            return;
+        }
+        
+        // Make API call to get client echeancier data
+        fetch(`/t_tresorerie/api-get-client-echeancier/?id=${clientId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.special_echeancier_line && data.special_echeancier_line.length > 0) {
+                    const tableBody = document.querySelector('#echeancierSpecialLinesTable');
+                    tableBody.innerHTML = ''; // Clear existing content
+                    
+                    // Populate the table with special schedule lines
+                    data.special_echeancier_line.forEach(line => {
+                        const row = document.createElement('tr');
+                        
+                        row.innerHTML = `
+                            <td>${line.id_echeancier_special}</td>
+                            <td>${line.taux}%</td>
+                            <td>${parseFloat(line.montant_tranche).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2})} DA</td>
+                            <td>${line.date_echeancier}</td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    // Show a message if no special schedule lines are available
+                    const tableBody = document.querySelector('#echeancierSpecialLinesTable');
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                <i class="ri-information-line me-2"></i>
+                                Aucun échéancier spécial disponible
+                            </td>
+                        </tr>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading special echeancier details:', error);
+            });
+    }
+
+    // Add event listener to the modal when it's shown
+    document.addEventListener('DOMContentLoaded', function() {
+        const specialEcheancierModal = document.getElementById('echeancierSpecialDetailsModal');
+        if (specialEcheancierModal) {
+            specialEcheancierModal.addEventListener('shown.bs.modal', function() {
+                loadSpecialEcheancierDetails();
+            });
+        }
+    });
+</script>
 
 <!-- ============================================================== -->
 <!-- Start right Content here -->
@@ -494,7 +511,7 @@
                             <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
                                 <i class="ri-money-dollar-circle-line text-info"></i>
                             </div>
-                            <h4 class="mb-0 text-info">Détails demande de paiement</h4>
+                            <h4 class="mb-0 text-info">Suivie des echéanciers</h4>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#aideTraitementPaiementModal">
@@ -505,7 +522,8 @@
                                     <li class="breadcrumb-item">
                                         <a href="javascript: void(0);">Trésorerie</a>
                                     </li>
-                                    <li class="breadcrumb-item active">Détails demande de paiement</li>
+                                    <li class="breadcrumb-item active">Suivie des echéanciers</li>
+                                    
                                 </ol>
                             </nav>
                         </div>
@@ -517,46 +535,22 @@
             <!-- Notifications -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="row">
-                        <!-- Notification d'instructions d'utilisation -->
-                        <div class="col-md-6">
-                            <div class="alert alert-primary d-flex align-items-center notification-banner" role="alert">
-                                <i class="ri-information-line me-3 fs-4"></i>
-                                <div class="flex-grow-1">
-                                    <strong>Instructions d'utilisation des échéanciers :</strong>
-                                    <p class="mb-0 text-muted small">1. Utilisez le bouton "Spécial" pour créer un échéancier personnalisé. 2. Cliquez sur "Confirmer" pour valider l'échéancier. 3. Ensuite, vous pourrez enregistrer des paiements.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Notification importante sur la confirmation d'inscription -->
-                        <div class="col-md-6">
-                            <div class="alert alert-info d-flex align-items-center notification-banner" role="alert">
-                                <i class="ri-information-line me-3 fs-4"></i>
-                                <div class="flex-grow-1">
-                                    <strong>Important - Confirmation d'inscription :</strong>
-                                    <p class="mb-0 text-muted small">Pour confirmer l'inscription d'un étudiant, il est nécessaire qu'au moins un paiement ait été enregistré.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Notification d'échéancier spécial avec bouton Détails -->
-                    <div style="display: none !important;" class="alert alert-info d-flex align-items-center notification-banner mt-2" role="alert" id="echeancierSpecialNotification">
+                    <div style="display: none !important" class="alert alert-info d-flex align-items-center notification-banner mt-2" role="alert" id="echeancierSpecialNotification">
                         <i class="ri-star-line me-3 fs-4"></i>
                         <div class="flex-grow-1">
                             <strong>Un échéancier spécial est disponible pour ce demandeur.</strong>
                             <p class="mb-0 text-muted small">Cliquez sur détails pour voir les informations de l'échéancier.</p>
                         </div>
                         <div class="flex-shrink-0 ms-3">
-                            <button type="button" class="btn btn-primary btn-sm" id="showEcheancierSpecialDetails">
+                            <button type="button" class="btn btn-primary btn-sm" id="showEcheancierSpecialNotification">
                                 <i class="ri-eye-line me-1"></i>Détails
                             </button>
                         </div>
                     </div>
 
                     <!-- Notification d'échéancier en cours d'examen -->
-                    <div style="display: none !important;" class="alert alert-warning d-flex align-items-center notification-banner" role="alert" id="echeancierExamenNotificationf">
+                    <div style="display: none !important" class="alert alert-warning d-flex align-items-center notification-banner" role="alert" id="echeancierExamenNotification">
                         <i class="ri-time-line me-3 fs-4"></i>
                         <div class="flex-grow-1">
                             <strong>L'échéancier demandé est actuellement en cours d'examen.</strong>
@@ -566,6 +560,15 @@
                             <button type="button" class="btn btn-warning btn-sm" id="showEcheancierExamenDetails">
                                 <i class="ri-eye-line me-1"></i>Détails
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Notification de succès pour echeancier special appliquée -->
+                    <div style="display: none !important;" class="alert alert-success d-flex align-items-center notification-banner" role="alert" id="applicedEcheancierSpecial">
+                        <i class="ri-checkbox-circle-line me-3 fs-4"></i>
+                        <div class="flex-grow-1">
+                            <strong>Le client à bénificier d'un echéancier spécial !</strong>
+                            <p class="mb-0 text-muted small">L'echéancier est valider.</p>
                         </div>
                     </div>
 
@@ -589,15 +592,6 @@
                         <div class="flex-grow-1">
                             <strong>Réduction appliquée avec succès !</strong>
                             <p class="mb-0 text-muted small">La réduction a été appliquée à la formation.</p>
-                        </div>
-                    </div>
-
-                    <!-- Notification de succès pour echeancier special appliquée -->
-                    <div  style="display: none !important;" class="alert alert-success d-flex align-items-center notification-banner" role="alert" id="applicedEcheancierSpecial">
-                        <i class="ri-checkbox-circle-line me-3 fs-4"></i>
-                        <div class="flex-grow-1">
-                            <strong>Le client à bénificier d'un echéancier spécial !</strong>
-                            <p class="mb-0 text-muted small">L'echéancier est valider.</p>
                         </div>
                     </div>
                     
@@ -656,7 +650,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <input type="hidden" id="clientIdInput" /> 
+                                        <input type="hidden" id="clientIdInput" value="{{ pk }}" /> 
                                         <h5 class="mb-1" id="demandeur"></h5>
                                         <p class="text-muted mb-0 small">Nom complet</p>
                                     </div>
@@ -682,8 +676,8 @@
                                         </div>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-1" id="motif"></h6>
-                                        <p class="text-muted mb-0 small">Motif de la demande</p>
+                                        <h6 class="mb-1" id="statutClient"></h6>
+                                        <p class="text-muted mb-0 small">Statut</p>
                                     </div>
                                 </div>
                             </div> 
@@ -710,7 +704,7 @@
                                     </div>
                                     <div class="flex-grow-1 ms-3">
                                         <h6 class="mb-1" id="specialite"></h6>
-                                        <p class="text-muted mb-0 small">Spécialité en double diplômation</p>
+                                        <p class="text-muted mb-0 small">Spécialité</p>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center mb-4">
@@ -756,7 +750,7 @@
                                         <div class="text-muted small">Total dû</div>
                                         <div class="amount text-primary" id="totalDueAmount">0.00 DA</div>
                                     </div>
-                                    <span class="status bg-warning bg-opacity-10 text-warning">Total à payer</span>
+                                    <span class="status bg-warning bg-opacity-10 text-warning">En attente</span>
                                 </div>
                                 <div class="payment-summary">
                                     <div>
@@ -785,11 +779,11 @@
                             <div class="d-flex justify-content-between align-items-center flex-wrap">
                                 <h5 class="mb-3 mb-md-0">Actions disponibles</h5>
                                 <div class="action-buttons">
-                                        <button id="btnConfirmInscription" class="btn btn-primary btn-action">
-                                            <i class="ri-check-line"></i> Confirmer l'inscription
-                                        </button>
                                     <button id="btnPrintEngagement" class="btn btn-success btn-action">
                                         <i class="ri-printer-line"></i> Imprimer Engagement
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#consultationEcheancierModal">
+                                        <i class="ri-eye-line me-1"></i> Consulter l'échéancier
                                     </button>
                                 </div>
                             </div>
@@ -799,58 +793,8 @@
                             <input type="hidden" id="_logoFooter" />
                         </div>
                     </div>
-
                     <!-- Payment sections -->
                     <div class="row">
-                        <!-- Échéancier de paiement -->
-                        <div class="col-12 mb-4">
-                            <div class="card section-card h-100">
-                                <div class="card-header bg-white">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                        <div class="d-flex align-items-center">
-                                            <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                                                <i class="ri-calendar-line text-success fs-4"></i>
-                                            </div>
-                                            <div>
-                                                <h5 class="card-title fw-semibold text-success mb-0">Échéancier de paiement</h5>
-                                                <p class="text-muted small mb-0">Détails des tranches de paiement</p>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2 mt-2 mt-md-0">
-                                            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#aideEcheancierModal">
-                                                <i class="ri-question-line me-1"></i>Aide
-                                            </button>
-                                            <button id="idBtnConfirmeEcheancierModal" class="btn btn-sm btn-outline-success" >
-                                                <i class="ri-check-line me-1"></i>Confirmer
-                                            </button>
-                                            <button id="specialBoutonConf" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#specialEcheancierModal">
-                                                <i class="ri-star-line me-1"></i>Spécial
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover align-middle table-nowrap mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Libellé</th>
-                                                    <th>Date d'échéance</th>
-                                                    <th>Montant</th>
-                                                    <th style="display: none;">Entite</th>
-                                                    <th id="prixFinalHeader" style="display: none;">Prix final</th>
-                                                   
-                                                </tr>
-                                            </thead>
-                                            <tbody id="echeancierTable">
-                                                <!-- Échéanciers seront chargés ici -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Paiements -->
                         <div class="col-12">
                             <div class="card section-card h-100">
@@ -1050,8 +994,6 @@
                                                 <th>Date d'échéance</th>
                                                 <th>Montant</th>
                                                 <th id="modalPrixFinalHeader" style="display: none;">Prix final</th>
-                                                <th>Entite</th>
-
                                             </tr>
                                         </thead>
                                         <tbody id="modalEcheancesTable">
@@ -1073,7 +1015,7 @@
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
                     <i class="ri-close-line me-2"></i>Annuler
                 </button>
-                <button type="button" class="btn btn-success px-4 py-2" id="finalLastConfirmBtn">
+                <button type="button" class="btn btn-success px-4 py-2" id="finalConfirmBtn">
                     <i class="ri-check-double-line me-2"></i>Confirmer définitivement
                 </button>
             </div>
@@ -1081,7 +1023,94 @@
     </div>
 </div>
 
-
+<!-- Modal Détails de Confirmation -->
+<div class="modal fade" id="confirmationDetailsModal" tabindex="-1" aria-labelledby="confirmationDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-file-text-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="confirmationDetailsModalLabel">Détails de confirmation</h5>
+                        <p class="text-muted small mb-0">Récapitulatif de l'échéancier de paiement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-4">
+                    <div class="col-lg-12">
+                        <div class="card border border-success">
+                            <div class="card-header bg-success bg-opacity-10">
+                                <h6 class="mb-0 text-success">Informations de la formation</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Spécialité:</span>
+                                    <span class="fw-medium" id="modalSpecialite"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Promo:</span>
+                                    <span class="fw-medium" id="modalPromo"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Prix de la formation:</span>
+                                    <span class="fw-bold text-primary" id="modalPrixFormation"></span>
+                                </div>
+                                <div class="d-flex justify-content-between" id="modalPrixFinalRow" style="display: none;">
+                                    <span class="text-muted">Prix final (avec réduction):</span>
+                                    <span class="fw-bold text-success" id="modalPrixFinal"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border border-info">
+                            <div class="card-header bg-info bg-opacity-10">
+                                <h6 class="mb-0 text-info">Échéancier de paiement</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle table-nowrap mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Libellé</th>
+                                                <th>Date d'échéance</th>
+                                                <th>Montant</th>
+                                                <th id="modalPrixFinalHeader" style="display: none;">Prix final</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modalEcheancesTable">
+                                            <!-- Échéances seront chargées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-4" role="alert">
+                    <i class="ri-alert-line me-2"></i>
+                    <span>En confirmant ces informations, l'échéancier sera définitivement enregistré dans le système.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="finalConfirmBtn">
+                    <i class="ri-check-double-line me-2"></i>Confirmer définitivement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Échéancier Spécial -->
 <div class="modal fade" id="specialEcheancierModal" tabindex="-1" aria-labelledby="specialEcheancierModalLabel" aria-hidden="true">
@@ -1101,7 +1130,28 @@
             </div>
             <div class="modal-body p-4">
                 <div class="row mb-4">
-                    <div class="col-lg-12">
+                    <div class="col-lg-6">
+                        <div class="card border border-primary card-equal-height">
+                            <div class="card-header bg-primary bg-opacity-10">
+                                <h6 class="mb-0 text-primary">Informations de la formation</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Spécialité:</span>
+                                    <span class="fw-medium" id="modalSpecialite"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Promo:</span>
+                                    <span class="fw-medium" id="modalPromo"></span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Prix de la formation:</span>
+                                    <span class="fw-bold text-primary" id="modalPrixFormation"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
                         <div class="card border border-warning card-equal-height">
                             <div class="card-header bg-warning bg-opacity-10">
                                 <h6 class="mb-0 text-warning">Configuration de l'échéancier</h6>
@@ -1369,26 +1419,26 @@
 </div><!-- /.modal -->
 
 <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content rounded-4 shadow-lg border-0">
-                    <div class="modal-body text-center p-5">
-                        <div class="avatar-lg mx-auto mb-4">
-                            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
-                                <i class="ri-close-circle-line"></i>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <h4 class="mb-3">Vous êtes sur le point de supprimer le paiement</h4>
-                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                            <div class="hstack gap-2 justify-content-center">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
-                            </div>
-                        </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-body text-center p-5">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+                        <i class="ri-close-circle-line"></i>
                     </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+                </div>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous êtes sur le point de supprimer le paiement</h4>
+                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
+                    <div class="hstack gap-2 justify-content-center">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
 
 <!-- Demande de remboursement de paiement -->
 <div class="modal fade refundModal" tabindex="-1" role="dialog" aria-labelledby="refundModalLabel" aria-hidden="true">
@@ -1430,51 +1480,6 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<!-- Modal Aucun Paiement pour Remboursement -->
-<div class="modal fade" id="noPaymentForRefundModal" tabindex="-1" aria-labelledby="noPaymentForRefundModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-error-warning-line text-danger fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-danger mb-1" id="noPaymentForRefundModalLabel">Aucun paiement enregistré</h5>
-                        <p class="text-muted small mb-0">Impossible de demander un remboursement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center mb-4">
-                    <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
-                            <i class="ri-forbid-line"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mb-4">
-                    <h5>Impossible de demander un remboursement</h5>
-                    <p class="text-muted">Il n'y a aucun paiement enregistré pour ce client. Vous ne pouvez pas effectuer une demande de remboursement sans paiement préalable.</p>
-                </div>
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="ri-information-line me-2"></i>
-                    <div>
-                        Veuillez d'abord enregistrer un paiement avant de pouvoir demander un remboursement.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-primary px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-check-line me-2"></i>Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
 <!-- Modal Détails du Client -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-labelledby="clientDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -1507,6 +1512,7 @@
                                     </div>
                                 </div>
                                 <h6 class="mb-1 fs-4" id="clientFullName"></h6>
+                                
                             </div>
                         </div>
                         <div class="col-lg-8">
@@ -1617,13 +1623,11 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            
             <div class="modal-body p-4">
                 <div class="card border border-warning">
                     <div class="card-header bg-warning bg-opacity-10">
                         <h6 class="mb-0 text-warning">Réduction disponible</h6>
                     </div>
-                    
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-borderless mb-0">
@@ -1649,13 +1653,9 @@
                         </div>
                     </div>
                 </div>
-                <div id='notifAlertReduc' class="alert alert-info mt-3" role="alert">
+                <div class="alert alert-info mt-3" role="alert">
                     <i class="ri-information-line me-2"></i>
                     <span>En appliquant cette réduction, le prix de la formation sera mis à jour automatiquement.</span>
-                </div>
-                <div id='notifApprobReduc' class="alert alert-danger mt-3" role="alert">
-                    <i class="ri-information-line me-2"></i>
-                    <span>L'application de la réduction nécessiste l'approbation de l'administration</span>
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -1731,64 +1731,6 @@
     </div>
 </div>
 
-<!-- Modal Détails Échéancier Spécial en Examen (sans bouton Appliquer) -->
-<div class="modal fade" id="echeancierExamenDetailsModal" tabindex="-1" aria-labelledby="echeancierExamenDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow border-0">
-            <div class="modal-header border-0 bg-warning bg-opacity-10 px-3 py-2">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-warning bg-opacity-10 rounded-2 p-2 me-2">
-                        <i class="ri-time-line text-warning fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-warning mb-0" id="echeancierExamenDetailsModalLabel">Échéancier en cours d'examen</h5>
-                        <p class="text-muted small mb-0 fs-6">Détails de l'échéancier en attente de validation</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-2">
-                               
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card border border-success">
-                            <div class="card-header bg-success bg-opacity-10 py-1 px-2">
-                                <h6 class="mb-0 text-success fs-6">Détail des tranches</h6>
-                            </div>
-                            <div class="card-body p-2">
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle table-nowrap mb-0 smaller">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Tranche</th>
-                                                <th>Pourcentage</th>
-                                                <th>Montant</th>
-                                                <th>Date d'échéance</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="echeancierExamenLinesTable">
-                                            <!-- Les lignes seront chargées dynamiquement -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="alert alert-warning mt-2 py-2 px-2" role="alert">
-                    <i class="ri-time-line me-1"></i>
-                    <span class="small">Cet échéancier spécial est actuellement en cours d'examen et en attente de validation. Vous ne pouvez pas l'appliquer tant qu'il n'a pas été approuvé.</span>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-2 py-1">
-                <button type="button" class="btn btn-sm btn-light px-2 py-1" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i>Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modal Confirmation Application Échéancier Spécial -->
 <div class="modal fade" id="confirmApplyEcheancierSpecialModal" tabindex="-1" aria-labelledby="confirmApplyEcheancierSpecialModalLabel" aria-hidden="true">
@@ -1832,6 +1774,204 @@
                 </button>
                 <button type="button" class="btn btn-success px-4 py-2" id="confirmApplyEcheancierSpecialBtn">
                     <i class="ri-check-line me-2"></i>Appliquer l'échéancier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Détails du remboursement traité -->
+<div class="modal fade" id="remboursementTraiteDetailsModal" tabindex="-1" aria-labelledby="remboursementTraiteDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-3 shadow border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-3 py-2">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-2 p-2 me-2">
+                        <i class="ri-check-line text-success fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-0" id="remboursementTraiteDetailsModalLabel">Détails du remboursement traité</h5>
+                        <p class="text-muted small mb-0 fs-6">Informations sur le remboursement validé</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border border-success">
+                            <div class="card-header bg-success bg-opacity-10 py-1 px-2">
+                                <h6 class="mb-0 text-success fs-6">Détails du remboursement</h6>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium">Montant autorisé (DA)</label>
+                                    <input type="number" class="form-control border-0 bg-light py-2" id="autoriserMontant" value="0.00" placeholder="Saisir le montant autorisé" disabled>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-borderless mb-0 smaller">
+                                        <tbody>
+                                            <tr>
+                                                <td class="text-muted">Mode de rembourssement</td>
+                                                <td>
+                                                    <span id="mode_de_rembourssement" class="badge bg-primary bg-opacity-10 text-primary">-</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Statut</td>
+                                                <td>
+                                                    <span id="texte_statut_refund" class="badge bg-primary bg-opacity-10 text-primary">-</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Date de validation</td>
+                                                <td id="remboursementTraiteDateValidation">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Motif</td>
+                                                <td id="remboursementTraiteMotif">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Observations</td>
+                                                <td id="remboursementTraiteObservations">-</td>
+                                            </tr>
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-2 py-2 px-2" role="alert">
+                    <i class="ri-information-line me-1"></i>
+                    <span class="small">Le montant autorisé a été validé et est non modifiable.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-2 py-1">
+                <button type="button" class="btn btn-sm btn-light px-2 py-1" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i>Fermer
+                </button>
+                <button type="button" class="btn btn-sm btn-success px-2 py-1" data-bs-toggle="modal" data-bs-target="#confirmationRemboursementModal">
+                    <i class="ri-refund-line me-1"></i>Effectuer le remboursement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmation Remboursement -->
+<div class="modal fade" id="confirmationRemboursementModal" tabindex="-1" aria-labelledby="confirmationRemboursementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-check-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="confirmationRemboursementModalLabel">Confirmation de remboursement</h5>
+                        <p class="text-muted small mb-0">Valider le remboursement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+                            <i class="ri-refund-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mb-4">
+                    <h5>Effectuer le remboursement</h5>
+                    <p class="text-muted">Êtes-vous sûr de vouloir effectuer ce remboursement ?</p>
+                </div>
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="ri-alert-line me-2"></i>
+                    <div>
+                        Cette action effectuera le remboursement au client. Cette opération est irréversible.
+                    </div>
+                </div>
+                
+                <div class="card border border-info mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Montant:</span>
+                            <span class="fw-bold text-success" id="confirmMontantRemboursement">0.00 DA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="confirmerRemboursementBtn">
+                    <i class="ri-check-line me-2"></i>Confirmer le remboursement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Consultation Échéancier -->
+<div class="modal fade" id="consultationEcheancierModal" tabindex="-1" aria-labelledby="consultationEcheancierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-calendar-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="consultationEcheancierModalLabel">Consultation de l'échéancier</h5>
+                        <p class="text-muted small mb-0">Détails de l'échéancier appliqué</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div style="display: none !important;" id="alertEcheancierSpecial" class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <div>
+                        <strong>Échéancier spécial appliqué</strong>
+                        <p class="mb-0">Un échéancier spécial a été appliqué à cette demande de paiement. Il remplace l'échéancier standard.</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border border-info">
+                            <div class="card-header bg-info bg-opacity-10">
+                                <h6 class="mb-0 text-info">Détail de l'échéancier</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle table-nowrap mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Échéance</th>
+                                                <th>Date d'échéance</th>
+                                                <th>Montant (DA)</th>
+                                                <th>Prix final(Reduction)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="echeancierDetailsTable">
+                                            <!-- Les détails de l'échéancier seront chargés dynamiquement -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
                 </button>
             </div>
         </div>
@@ -1893,6 +2033,84 @@
                 <div class="alert alert-info mt-4" role="alert">
                     <i class="ri-information-line me-2"></i>
                     <span>Un échéancier doit être confirmé avant de pouvoir enregistrer des paiements.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-info px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aide - Traitement des paiements des étudiants -->
+<div class="modal fade" id="aideTraitementPaiementModal" tabindex="-1" aria-labelledby="aideTraitementPaiementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-question-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="aideTraitementPaiementModalLabel">Aide - Traitement des paiements des étudiants</h5>
+                        <p class="text-muted small mb-0">Fonctionnalités des boutons</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border border-info">
+                            <div class="card-header bg-info bg-opacity-10">
+                                <h6 class="mb-0 text-info">Fonctionnalités des boutons</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex mb-3">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="avatar-sm bg-success bg-opacity-10 rounded icon-center">
+                                            <i class="ri-add-line text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold text-success">Bouton "Nouveau paiement"</h6>
+                                        <p class="mb-0">Permet d'enregistrer un nouveau paiement pour l'étudiant. Vous pouvez spécifier le montant, la date, le mode de paiement et la référence.</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex mb-3">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="avatar-sm bg-warning bg-opacity-10 rounded icon-center">
+                                            <i class="ri-refund-line text-warning"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold text-warning">Bouton "Remboursement"</h6>
+                                        <p class="mb-0">Permet de soumettre une demande de remboursement. Cette demande devra être validée par un responsable avant traitement.</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="avatar-sm bg-primary bg-opacity-10 rounded icon-center">
+                                            <i class="ri-printer-line text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold text-primary">Bouton "Imprimer Engagement"</h6>
+                                        <p class="mb-0">Génère et imprime l'engagement de paiement pour l'étudiant avec les détails de sa formation et de son échéancier.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-4" role="alert">
+                    <i class="ri-alert-line me-2"></i>
+                    <span>Si une demande de remboursement est créée, toutes les interactions avec les boutons seront désactivées jusqu'à ce que la demande soit traitée.</span>
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -2291,176 +2509,6 @@
     </div>
 </div>
 
-<!-- Modal Assistant Engagement -->
-<div class="modal fade" id="engagementAssistantModal" tabindex="-1" aria-labelledby="engagementAssistantModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-file-info-line text-info fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-info mb-1" id="engagementAssistantModalLabel">Assistant d'impression d'engagement</h5>
-                        <p class="text-muted small mb-0">Sélectionnez les informations pour l'impression de l'engagement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Signataire *</label>
-                        <select class="form-select" id="signataireSelect" required>
-                            <option value="">Sélectionnez le signataire</option>
-                            <option value="Apprenant">Apprenant</option>
-                            <option value="Parents">Parents</option>
-                            <option value="Tuteur">Tuteur</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Pièce d'identité *</label>
-                        <select class="form-select" id="pieceIdentiteSelect" required>
-                            <option value="">Sélectionnez la pièce</option>
-                            <option value="CNI">CNI</option>
-                            <option value="Passeport">Passeport</option>
-                            <option value="Permis de conduire">Permis de conduire</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Champs nom et prénom pour Parents/Tuteur -->
-                <div id="parentTuteurFields" class="row d-none">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Nom du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="nomParentTuteurInput" placeholder="Nom du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Prénom du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="prenomParentTuteurInput" placeholder="Prénom du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Adresse du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="adresseParentTuteurInput" placeholder="Adresse du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Contact téléphonique du parent/tuteur *</label>
-                        <input type="tel" class="form-control" id="contactParentTuteurInput" placeholder="Contact téléphonique du parent ou tuteur" required>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">N° *</label>
-                        <input type="text" class="form-control" id="numeroPieceInput" placeholder="Numéro de la pièce" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Date de délivrance *</label>
-                        <input type="date" class="form-control" id="dateDelivranceInput" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Lieu de délivrance *</label>
-                        <input type="text" class="form-control" id="lieuDelivranceInput" placeholder="Lieu de délivrance" required>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-success px-4 py-2" id="printEngagementWithDetails">
-                    <i class="ri-printer-line me-2"></i>Imprimer l'engagement
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Assistant decharge rembourssement -->
-<div class="modal fade" id="refundAssistantModal" tabindex="-1" aria-labelledby="refundAssistantModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-file-info-line text-info fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-info mb-1" id="refundAssistantModalLabel">Assistant d'impression du rembourssement</h5>
-                        <p class="text-muted small mb-0">Sélectionnez les informations pour l'impression duu remboursement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Signataire *</label>
-                        <select class="form-select" id="signataireSelectRefund" required>
-                            <option value="">Sélectionnez le signataire</option>
-                            <option value="Apprenant">Apprenant</option>
-                            <option value="Parents">Parents</option>
-                            <option value="Tuteur">Tuteur</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Pièce d'identité *</label>
-                        <select class="form-select" id="pieceIdentiteSelectPID" required>
-                            <option value="">Sélectionnez la pièce</option>
-                            <option value="CNI">CNI</option>
-                            <option value="Passeport">Passeport</option>
-                            <option value="Permis de conduire">Permis de conduire</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Champs nom et prénom pour Parents/Tuteur -->
-                <div id="parentTuteurFieldsRefund" class="row d-none">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Nom du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="nomParentTuteurInputRefund" placeholder="Nom du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Prénom du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="prenomParentTuteurInputRefund" placeholder="Prénom du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Adresse du parent/tuteur *</label>
-                        <input type="text" class="form-control" id="adresseParentTuteurInputRefund" placeholder="Adresse du parent ou tuteur" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Contact téléphonique du parent/tuteur *</label>
-                        <input type="tel" class="form-control" id="contactParentTuteurInputRefund" placeholder="Contact téléphonique du parent ou tuteur" required>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">N° *</label>
-                        <input type="text" class="form-control" id="numeroPieceInputRefund" placeholder="Numéro de la pièce" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Date de délivrance *</label>
-                        <input type="date" class="form-control" id="dateDelivranceInputRefund" required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Lieu de délivrance *</label>
-                        <input type="text" class="form-control" id="lieuDelivranceInputRefund" placeholder="Lieu de délivrance" required>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-success px-4 py-2" id="printRefundWithDetails">
-                    <i class="ri-printer-line me-2"></i>Imprimer la décharge
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Synthèse et Confirmation Paiement -->
 <div class="modal fade" id="synthesePaiementModal" tabindex="-1" aria-labelledby="synthesePaiementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2561,14 +2609,14 @@
                 <div class="alert alert-info d-flex align-items-center" role="alert">
                     <i class="ri-information-line me-2"></i>
                     <div class="flex-grow-1">
-                        L'inscription a été finalisée avec succès. Le suivi des échéanciers se fera désormais dans la section "Suivi des échéanciers"
+                        Vous allez être redirigé vers la page de gestion de la scolarité dans quelques instants.
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button id='closeWaitingPaymentBtn' type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Fermer
-                </button>
+                <div class="mt-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2604,7 +2652,7 @@
                                         <td id="remboursementDate">-</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Montant payé</td>
+                                        <td class="text-muted">Montant demandé</td>
                                         <td id="remboursementMontant">-</td>
                                     </tr>
                                     
@@ -2631,185 +2679,6 @@
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
                     <i class="ri-close-line me-2"></i>Fermer
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Détails Remboursement Traité -->
-<div class="modal fade" id="remboursementTraiteDetailsModal" tabindex="-1" aria-labelledby="remboursementTraiteDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-check-line text-success fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-success mb-1" id="remboursementTraiteDetailsModalLabel">Détails du remboursement traité</h5>
-                        <p class="text-muted small mb-0">Informations sur le remboursement traité</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="card border border-success">
-                    <div class="card-header bg-success bg-opacity-10">
-                        <h6 class="mb-0 text-success">Demande de remboursement traitée</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-borderless mb-0">
-                                <tbody>
-                                    <tr>
-                                        <td class="text-muted">Date de traitement</td>
-                                        <td id="remboursementTraiteDateValidation">-</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Montant remboursé</td>
-                                        <td id="remboursementTraiteMontant">-</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Statut de la demande</td>
-                                        <td>
-                                            <span id="texte_statut_refund" class="badge bg-primary badge-payment-status">-</span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Motif du remboursement</td>
-                                        <td id="remboursementTraiteMotif">-</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Observations</td>
-                                        <td id="remboursementTraiteObservations">-</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="alert alert-success mt-3" role="alert">
-                    <i class="ri-check-line me-2"></i>
-                    <span>La demande de remboursement a été traitée avec succès et le montant a été remboursé.</span>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-2 py-1">
-                <button type="button" class="btn btn-sm btn-light px-2 py-1" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i>Fermer
-                </button>
-                <button type="button" class="btn btn-sm btn-success px-2 py-1" data-bs-toggle="modal" data-bs-target="#confirmationRemboursementModal">
-                    <i class="ri-refund-line me-1"></i>Effectuer le remboursement
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Confirmation Remboursement -->
-<div class="modal fade" id="confirmationRemboursementModal" tabindex="-1" aria-labelledby="confirmationRemboursementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-check-line text-success fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-success mb-1" id="confirmationRemboursementModalLabel">Confirmation de remboursement</h5>
-                        <p class="text-muted small mb-0">Valider le remboursement</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center mb-4">
-                    <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
-                            <i class="ri-refund-line"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mb-4">
-                    <h5>Effectuer le remboursement</h5>
-                    <p class="text-muted">Êtes-vous sûr de vouloir effectuer ce remboursement ?</p>
-                </div>
-                <div class="alert alert-warning d-flex align-items-center" role="alert">
-                    <i class="ri-alert-line me-2"></i>
-                    <div>
-                        Cette action effectuera le remboursement au client. Cette opération est irréversible.
-                    </div>
-                </div>
-
-                <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
-                    <i class="ri-information-line me-2"></i>
-                    <div>
-                        Une fois le remboursement confirmé, vous serez redirigé vers une autre partie de l'application où vous pourrez afficher les détails du client ayant reçu un remboursement.
-                    </div>
-                </div>
-
-                <div class="card border border-info mb-3">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Montant:</span>
-                            <span class="fw-bold text-success" id="confirmMontantRemboursement">0.00 DA</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-success px-4 py-2" id="confirmerRemboursementBtn">
-                    <i class="ri-check-line me-2"></i>Confirmer le remboursement
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal pour notifier que le paiement précédent n'est pas passé -->
-<div class="modal fade" id="unpaidPaymentModal" tabindex="-1" aria-labelledby="unpaidPaymentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-alert-line text-warning fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-semibold text-warning mb-1" id="unpaidPaymentModalLabel">Paiement en attente</h5>
-                        <p class="text-muted small mb-0">Un paiement précédent n'est pas encore traité</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center mb-4">
-                    <div class="avatar-lg mx-auto mb-4">
-                        <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
-                            <i class="ri-money-euro-circle-line"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mb-4">
-                    <h5>Attention: Paiement en attente</h5>
-                    <p class="text-muted">Le paiement précédent pour cette échéance n'est pas encore enregistré comme effectué.</p>
-                </div>
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="ri-information-line me-2"></i>
-                    <div>
-                        Veuillez vous assurer que le paiement précédent a été correctement enregistré avant de continuer.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-warning px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-check-line me-2"></i>Compris
                 </button>
             </div>
         </div>
@@ -2877,150 +2746,124 @@
     </div>
 </div>
 
-<!-- Modal de succès de réduction appliquée -->
-<div class="modal fade" id="reductionAppliedSuccessModal" tabindex="-1" aria-labelledby="reductionAppliedSuccessModalLabel" aria-hidden="true">
+<!-- Modal pour notifier que le paiement précédent n'est pas passé -->
+<div class="modal fade" id="unpaidPaymentModal" tabindex="-1" aria-labelledby="unpaidPaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 shadow-lg border-0">
-            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
                 <div class="d-flex align-items-center">
-                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                        <i class="ri-check-double-line text-success fs-4"></i>
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-alert-line text-warning fs-4"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-semibold text-success mb-1" id="reductionAppliedSuccessModalLabel">
-                            Réduction appliquée avec succès
-                        </h5>
-                        <p class="text-muted small mb-0">Confirmation de l'application</p>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="unpaidPaymentModalLabel">Paiement en attente</h5>
+                        <p class="text-muted small mb-0">Un paiement précédent n'est pas encore traité</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="text-center mb-4">
-                    <div class="avatar-lg mx-auto mb-3">
-                        <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
-                            <i class="ri-check-line"></i>
+                    <div class="avatar-lg mx-auto mb-4">
+                        <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
+                            <i class="ri-money-euro-circle-line"></i>
                         </div>
                     </div>
-                    <h5 class="mb-3">Réduction appliquée avec succès !</h5>
-                    <p class="text-muted mb-0">
-                        La réduction a été appliquée avec succès. Les nouveaux montants sont désormais appliqués.
-                    </p>
+                </div>
+                <div class="text-center mb-4">
+                    <h5>Attention: Paiement en attente</h5>
+                    <p class="text-muted">Le paiement précédent pour cette échéance n'est pas encore enregistré comme effectué.</p>
+                </div>
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="ri-information-line me-2"></i>
+                    <div>
+                        Veuillez vous assurer que le paiement précédent a été correctement enregistré avant de continuer.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-success px-4 py-2" data-bs-dismiss="modal">
-                    <i class="ri-check-line me-2"></i>OK
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-warning px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-check-line me-2"></i>Compris
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-
 <input disabled type="hidden" id="_logoHeader" />
 <input disabled type="hidden" id="_logoFooter" />
 
 <input disabled type="hidden" id="_date_naissance" />
 <input disabled type="hidden" id="_lieu_naissance" />
-<input disabled type="hidden" id="_formation" />
 
-<input disabled type="hidden" id="_annee_scolaire" />
-
-<input disabled type="hidden" id="_demandeurAdresse" />
-<input disabled type="hidden" id="_demandeurContact" />
-<input disabled type="hidden" id="_entite" />
-<input disabled type="hidden" id="_ville" />
-<input disabled type="hidden" id="_montant_formation" />
-
-<input disabled type="hidden" id="nomdemandeur" />
-<input disabled type="hidden" id="_montant_formation" />
-
-<input disabled type="hidden" id="_nom_groupe" />
-<input disabled type="hidden" id="_semestre_groupe" />
-
-<input disabled type="hidden" id="_allowed_amount" />
-<input disabled type="hidden" id="_total_paid" />
-<input disabled type="hidden" id="_motif_remboursement" />
-
-<div class="modal fade" id="echeancierConfirmationModal" tabindex="-1" aria-labelledby="echeancierConfirmationModalLabel" aria-hidden="true">                     
-    <div class="modal-dialog modal-dialog-centered">                                                                                                              
-        <div class="modal-content">                                                                                                                               
-            <div class="modal-header bg-warning bg-opacity-10 border-0">                                                                                          
-                <h5 class="modal-title fw-bold text-warning" id="echeancierConfirmationModalLabel">                                                               
-                    <i class="ri-error-warning-line me-2"></i>Attention                                                                                           
-                </h5>                                                                                                                                             
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>                                                      
-            </div>                                                                                                                                                
-            <div class="modal-body">                                                                                                                              
-                <div class="text-center mb-4">                                                                                                                    
-                    <lord-icon                                                                                                                                    
-                        src="https://cdn.lordicon.com/wlqxzvdp.json"                                                                                              
-                        trigger="loop"                                                                                                                            
-                        colors="primary:#ffc107,secondary:#ffc107"                                                                                                
-                        style="width:80px;height:80px">                                                                                                           
-                    </lord-icon>                                                                                                                                  
-                </div>                                                                                                                                            
-                <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 p-3">                                                   
-                    <h6 class="text-warning fw-bold mb-2"><i class="ri-error-warning-line me-1"></i>Prérequis pour la confirmation</h6>                           
-                    <p class="mb-0 text-muted">                                                                                                                   
-                        Pour confirmer l'échéancier, vous devez d'abord confirmer la remise.                                                                      
-                        Veuillez vous assurer que la remise a été correctement enregistrée avant de procéder à la confirmation de l'échéancier.                   
-                    </p>                                                                                                                                          
-                </div>                                                                                                                                            
-            </div>                                                                                                                                                
-            <div class="modal-footer justify-content-center">                                                                                                     
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>                                                           
-            </div>                                                                                                                                                
-        </div>                                                                                                                                                    
-    </div>                                                                                                                                                        
-</div>                  
+<input disabled type="hidden" id="_groupe_name" />
+<input disabled type="hidden" id="_semestre" />
 
 <script>
     
     
     $(document).ready(function(){
         
-        var id_demande = "{{pk}}";
+        var id_client = "{{pk}}";
+
         var prixFormation = 0.00;
         var prixFormationReduction = 0.00;
         let hasReduction =  false;
         let reductionApprouved = false;
-        let reductionAppliced = false;
-        let remise_est_confirmer = false;
         var clientId = null;
         let promoCode = null;
         let has_pending_refund = false;
         let has_special_echeancier = false;
-        let validated_echeancier = false;
         let specialEcheancierState = false;
         let IdSpecialEcheancier = null; 
         let RefundState = false;
-        let id_echeancier = null;
-        let entreprise_data = [];
-        var paymentData = {};
-        var hasPayments = false;
-        var paymentsExists = false;
-    
-
+        let designation = null;
+        
+        let applied_echeacier = [];
+       
         function HideReducNotif(){
            
             let notif = document.getElementById("reductionNotification");
             let appliedRedu = document.getElementById('reductionSuccessNotification');
             
-            if (reductionApprouved && reductionAppliced){
+            if (reductionApprouved){
                 appliedRedu.style.setProperty("display", "flex", "important");
 
             }else if (hasReduction && !reductionApprouved) {
                  notif.style.setProperty("display", "flex", "important");  
-            }else if (hasReduction && !reductionAppliced) {
-                notif.style.setProperty("display", "flex", "important");
-            }else{
-                 notif.style.setProperty("display", "none", "important");
+            }else {
+                notif.style.setProperty("display", "none", "important");
             }
 
            
         }
+
+        function HideSpecialEcheancierNotif(){
+            let special_notif = document.getElementById('echeancierSpecialNotification');
+            let exam_special_notif = document.getElementById('echeancierExamenNotification');
+            
+
+             if (has_special_echeancier && specialEcheancierState === false ){
+                    special_notif.style.setProperty("display", "none", "important"); 
+                    exam_special_notif.style.setProperty("display", "flex", "important");
+                   
+                    
+                } else {
+                    special_notif.style.setProperty("display", "none", "important");
+                    exam_special_notif.style.setProperty("display", "none", "important");
+                    
+                    
+
+                }   
+        }
+    
+        // Add a global variable to store payment data
+        var paymentData = {};
+                
+        
 
         function formatComptable(number) {
             if (number == null || number === '') return "0,00";
@@ -3040,15 +2883,15 @@
         
         function loadDatas(){
             $.ajax({
-                url : "{% url 't_tresorerie:ApiGetDetailsDemandePaiementDouble' %}",
+                url : "{% url 't_tresorerie:ApiGetClientEcheancier' %}",
                 dataType: 'JSON',
                 type : 'GET',
-                data : {'id_demande' : id_demande},
+                data : {'id' : id_client},
                 success : function(data){
                     // Informations du demandeur
                     $('#demandeur').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#created_at').text(data.user_data.created_at.split('T')[0]);
-                    $('#motif').text(data.user_data.motif);
+                    $('#statutClient').text(data.user_data.statut_demandeur);
 
                     const createdAt = new Date(data.user_data.created_at);
                     const date_frais_inscription = createdAt.toISOString().split('T')[0];
@@ -3057,13 +2900,11 @@
                     clientId = data.user_data.client_id;
                     promoCode = data.voeux.promo;
                     $('#clientIdInput').val(clientId);
-                    // $('#_formation').val(data.voeux.formation);
-                    // $('#_entite').val(data.voeux.entite);
-                    // $('#_ville').val(data.voeux.entite_ville);
 
-                    // $('#_nom_groupe').val(data.groupe_data.groupe_nom);
-                    // $('#_semestre_groupe').val(data.groupe_data.groupe_semestre);
+                    $('#_groupe_name').val(data.groupe.nom);
+                    $('#_semestre').val(data.groupe.semestre);
 
+                    
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#clientEmail').text(data.user_data.email || 'Non spécifié');
@@ -3071,38 +2912,23 @@
                     $('#clientAddress').text(data.user_data.adresse || 'Non spécifié');
                     $('#clientBirthDate').text(data.user_data.date_naissance || 'Non spécifié');
                     $('#clientBirthPlace').text(data.user_data.lieu_naissance || 'Non spécifié');
-                    
-                    // Informations sur la formation
-                    $('#specialite').text(data.voeux.specialite_label);
-                    
-                    $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
-                    
+
                     $('#_logoHeader').val(data.voeux.logo_header);
                     $('#_logoFooter').val(data.voeux.logo_footer);
 
                     $('#_date_naissance').val(data.user_data.demandeur_date_naissance);
                     $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
-
-                    $('#_demandeurAdresse').val(data.user_data.demandeur_adresse);
-                    $('#_demandeurContact').val(data.user_data.demandeur_telephone);
-
+                    
+                    // Informations sur la formation
+                    $('#specialite').text(data.voeux.specialite_label);
+                    $('#promo').text(data.voeux.promo);
+                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
+                    
                     // Stocker le prix de la formation pour le modal spécial
                     prixFormation = data.voeux.prix_formation;
-                    
-                    // Charger les échéanciers
+                                                          
                     var echeancierHtml = "";
-                    
-                    // Ajouter les frais d'inscription comme première ligne si > 0
-                    if (data.voeux.frais_inscription > 0) {
-                        echeancierHtml += '<tr>';
-                        echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
-                        echeancierHtml += '<td>'+date_frais_inscription+'</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
-                        
-                        echeancierHtml += '</tr>';
-                    }
-                    
+
                     if(data.remise){
                        
                         $('#applyReductionBtn').data('id', data.remise.id_applied_reduction);
@@ -3117,86 +2943,22 @@
                         $('#initialPrice').text(prixFormation);
                         $('#finalPrice').text(parseFloat(prixFormationReduction));
                         
-                        if (data.remise.remise_approuver && data.remise.remise_appliquer){ 
+                        if (data.remise.remise_approuver){
                             reductionApprouved = true;
-                            reductionAppliced = true;
+                            
                             $('#prixFinalHeader').show();
                             $('[id^=prixFinal]').show();
                         }else{
                             reductionApprouved = false;
-                            reductionAppliced = false;
-
                         }          
                         
                         HideReducNotif();
 
-                        if(!data.remise.remise_approuver){
-                            $('#applyReductionBtn').prop('disabled', true);
-                            document.getElementById('notifApprobReduc').style.setProperty('display', 'flex', 'important');
-                            document.getElementById('notifAlertReduc').style.setProperty('display', 'none', 'important');
-                        }else if (!data.remise.remise_appliquer){
-                            $('#applyReductionBtn').prop('disabled', false);
-                            document.getElementById('notifApprobReduc').style.setProperty('display', 'none', 'important');
-                            document.getElementById('notifAlertReduc').style.setProperty('display', 'flax', 'important');
-                        }
-                        
-                        $('#_montant_formation').val(data.remise.montant_remise);
-                        remise_est_confirmer = data.remise.remise_appliquer;
-                        
-                    }else{
-                        $('#_montant_formation').val(data.voeux.prix_formation);
-                    }
-
-                    if(data.has_special_echeancier){
-                        has_special_echeancier = true;
-                        specialEcheancierState = data.echeancier_special_state_approuvel;
-                        IdSpecialEcheancier = data.id_echeancier_special;
-
-                        var rowSpecial = "";
-                        $.each(data.special_echeancier_line, function(index, item){
-                            rowSpecial += "<tr>";
-                            rowSpecial += "<td>"+item.value+"</td>";
-                            rowSpecial += "<td>"+item.taux+"%</td>";
-                            rowSpecial += "<td>"+item.montant_tranche+" DZD</td>";
-                            rowSpecial += "<td>"+item.date_echeancier+"</td>";
-                            rowSpecial += "</tr>";
-                        });
-                        $('#echeancierSpecialLinesTable').html(rowSpecial);
-                    }
-
-                    if(data.echeancier_special_state_approuvel){
-                        document.getElementById('specialBoutonConf').disabled = true;
-                        
-                    }else{
-                        document.getElementById('specialBoutonConf').disabled = false;
-                    
-                    }
-                    
-                    if(data.special_echeancier_validate){
-                        validated_echeancier = true
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "flex", "important");
                        
-                    }else if (data.echeancier_special_state_approuvel){
-
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
-                        document.getElementById('echeancierSpecialNotification').style.setProperty('display', "flex", "important");
-
-                    }else if(data.has_special_echeancier && !data.echeancier_special_state_approuvel) {
-
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "flex", "important");
-                    }else{
-                        
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
-                        document.getElementById('echeancierSpecialNotification').style.setProperty('display', "none", "important");
                     }
+
 
                     if(data.has_due_paiement){
-                        document.getElementById('idBtnConfirmeEcheancierModal').disabled = true;
-                        document.getElementById('specialBoutonConf').disabled = true;
-                        
                         // Afficher les paiements dus
                         var duePaiementHtml = "";
                         var duePaiementCount = 0;
@@ -3207,8 +2969,8 @@
                             duePaiementHtml += '<td hidden>' + item.id_due_paiement + '</td>';
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + item.montant_due + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + item.montant_restant+ ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + formatComptable(item.montant_due) + ' DA</span></td>';
+                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + formatComptable(item.montant_restant) + ' DA</span></td>';
                             duePaiementHtml += '</td>';
                             duePaiementHtml += '</tr>';
                         });
@@ -3220,44 +2982,16 @@
                     } else {
                         // Masquer le bouton d'engagement s'il n'y a pas de paiements dus
                        
-                        $('#ListePaiementRequestLine').html('<tr><td colspan="6" class="text-center"><div class="d-flex flex-column align-items-center justify-content-center py-5">\
-                                                                <div class="avatar-sm mb-4">\
-                                                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">\
-                                                                        <i class="ri-cash-line"></i>\
-                                                                    </div>\
-                                                                </div>\
-                                                                <h5 class="mb-2">Aucun paiement en attente trouvé</h5>\
-                                                                <p class="text-muted mb-0">Il n\'y a aucun paiement en attente enregistré pour le moment</p>\
-                                                            </div></td></tr>');
+                        $('#ListePaiementRequestLine').html('<tr><td colspan="6" class="text-center">Aucun paiement dû</td></tr>');
                         $('#NbrPaiementDue').text('0');
 
                         document.getElementById('btnNewPaiementModal').disabled = true;
                     }
                     
-                    // Ajouter les autres échéances
-                    $.each(data.echeancier, function(index, echeance){ 
-                        var label = "Tranche " + (index + 1);
-                        
-                        echeancierHtml += '<tr>';
-                        echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
-                        echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
-                        echeancierHtml += "<td style='display: none;'>"+echeance.entite+"</td>";
-
-                        if(hasReduction && reductionApprouved) {
-                            var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
-                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
-                        }
-                        echeancierHtml += '</tr>';
-                    });
-
-
+                    
                     if(data.has_paiement){
                         var row = "";
                         var count = data.paiements_done_data.length;
-
-                        document.getElementById('idBtnConfirmeEcheancierModal').disabled = true;
-                        document.getElementById('specialBoutonConf').disabled = true;
                         
                         // Store payment data for later use
                         paymentData = {};
@@ -3274,6 +3008,7 @@
                             
                             row += "<tr>";
                             row += "<td>"+item.num+"</td>";
+
                             row += "<td>" + 
                                         (item.is_refund 
                                             ? "<span class='badge bg-danger'>" + item.label_paiements + "</span>" 
@@ -3283,8 +3018,8 @@
 
                             row += "<td>" + 
                                         (item.is_refund 
-                                            ? "<span class='badge bg-danger'>" + item.montant_paye + "</span>" 
-                                            : item.montant_paye
+                                            ? "<span class='badge bg-danger'>" + formatComptable(item.montant_paye) + "</span>" 
+                                            : formatComptable(item.montant_paye)
                                         ) + 
                                     "</td>";
                             row += "<td>"+item.date_paiement+"</td>";
@@ -3318,6 +3053,8 @@
                             row += "<div class='dropdown-menu dropdown-menu-end' aria-labelledby='dropdownMenuButton"+item.num+"'>";
                             row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
                             row += "<button class='dropdown-item print-facture-btn' type='button' data-id='"+item.num+"'><i class='ri-printer-line me-2'></i>Facture</button>";
+                            //row += "<div class='dropdown-divider'></div>";
+                            //row += "<button class='dropdown-item delete-btn' type='button' data-id='"+item.num+"'><i class='ri-delete-bin-line me-2'></i>Supprimer</button>";
                             row += "</div>";
                             row += "</div>";
                             row += "</td>";
@@ -3325,44 +3062,32 @@
                         });
                         $('#NbrPaiementDone').text(count);
                         $('#ListePaiementRequestLineDone').html(row);
-                        document.getElementById('btnConfirmInscription').disabled = false;
+                        
                         document.getElementById('btnRefundRequestModal').disabled = false;
                     }else{
-                        $('#ListePaiementRequestLineDone').html('<tr><td colspan="6" class="text-center"><div class="d-flex flex-column align-items-center justify-content-center py-5">\
-                                            <div class="avatar-sm mb-4">\
-                                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">\
-                                                    <i class="ri-cash-line"></i>\
-                                                </div>\
-                                            </div>\
-                                            <h5 class="mb-2">Aucun paiement trouvé</h5>\
-                                            <p class="text-muted mb-0">Il n\'y a aucun paiement enregistré pour le moment</p>\
-                                        </div></td></tr>');
-
+                        $('#ListePaiementRequestLineDone').html('<tr><td colspan="6" class="text-center">Aucun paiement effectué</td></tr>');
                         $('#NbrPaiementDone').text('0');
-                        document.getElementById('btnConfirmInscription').disabled = true;
-                    }
-                    $('#echeancierTable').html(echeancierHtml);
-
-
-                    SummeryPaiement(data.total_paiement, data.total_initial, data.total_solde);
-
-                    if(data.user_data.statut_demandeur === "convertit"){
-                        document.getElementById('btnConfirmInscription').disabled = true;
+                      
+                        document.getElementById('btnRefundRequestModal').disabled = true;
 
                     }
+                    SummeryPaiement(data.total_paiement,data.total_initial,data.total_solde);
                 
                     ShowRefundNotification(data.has_pending_refund, data.has_processed_refund, data.is_appliced);
 
-                    
+                    if (data.has_pending_refund){
+                        //DetailsRefund(data.refund_data.date_de_demande, data.refund_data.montant_paye, data.refund_data.allowed_amount, data.refund_data.motif_rembourssement);
+                    }
                     
                     if (data.has_processed_refund && data.refund_data) {
-                       
                         DetailsRefundTraite(
-                            data.refund_data.date_de_traitement || 'Aucune date', 
+                            data.refund_data.date_de_traitement, 
+                            data.refund_data.montant_rembarque, 
                             data.refund_data.motif_rembourssement,
                             data.refund_data.observation || '',
                             data.refund_data.allowed_amount,
                             data.refund_data.etat,
+                            data.refund_data.mode_rembourssement_label,
                         );
 
                          $('#confirmationRemboursementModal').data('amount', data.refund_data.allowed_amount);
@@ -3370,22 +3095,54 @@
                          $('#confirmationRemboursementModal').data('id_refund', data.refund_data.id);
                          $('#confirmMontantRemboursement').text(data.refund_data.allowed_amount+ " DA");
 
-                        $('#_allowed_amount').val(data.refund_data.allowed_amount);
-                        $('#_total_paid').val(data.refund_data.montant_paye);
-                        $('#_motif_remboursement').val(data.refund_data.motif_rembourssement);
-                        document.getElementById('btnConfirmInscription').disabled = true;
-
-                    
-                        
-                    }
-
-                    RefundState = data.refund_data.etat_key
+                        RefundState = data.refund_data.etat_key
                         if(RefundState === "ref"){
                             $('#remboursementStatut').text(data.refund_data.etat);
                             $('#remboursementDateValidation').text(data.refund_data.date_de_traitement);
                             $('#remboursementMotifDanger').text(data.refund_data.motif_rembourssement);
                             $('#remboursementObservations').text(data.refund_data.observation);
                         }
+
+                    }
+
+                    if(data.has_special_echeancier){
+                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "flex", "important");
+                    }
+
+                    // Affichage des echéancier
+                    if (data.voeux.frais_inscription > 0) {
+                        echeancierHtml += '<tr>';
+                        echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
+                        echeancierHtml += '<td>'+date_frais_inscription+'</td>';
+                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
+                        
+                        echeancierHtml += '</tr>';
+                    }
+
+                    // Ajouter les autres échéances
+                    $.each(data.echeancier, function(index, echeance){ 
+                        var label = "Tranche " + (index + 1);
+                        
+                        echeancierHtml += '<tr>';
+                        echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
+                        echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
+                        echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
+                        if(hasReduction && reductionApprouved) {
+                            var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
+                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
+                        }
+                        echeancierHtml += '</tr>';
+                    });
+
+                    $('#echeancierDetailsTable').html(echeancierHtml);
+
+                    if(data.has_special_echeancier){
+                        console.log("hier");
+                        document.getElementById('alertEcheancierSpecial').style.setProperty("display", "flex", "important");
+                    }else{
+                        document.getElementById('alertEcheancierSpecial').style.setProperty("display", "none", "important");
+
+                    }
 
                     ShowClientDetails(
                         data.user_data.demandeur_email,
@@ -3396,18 +3153,16 @@
                         data.user_data.demandeur_date_inscription,
                     )
 
-                    id_echeancier = data.id_echeancier;
-                    
                     DetailsRembourssementAvantTraitement(data.refund_data.date_de_demande, data.refund_data.montant_paye, data.refund_data.motif_rembourssement);
                 },
             });
         }
 
-        loadDatas();     
+        loadDatas();
         
         function ShowRefundNotification(has_pending_refund, has_processed_refund = false, is_appliced = false){
             if(has_processed_refund && !is_appliced){
-                
+                console.log(has_processed_refund,is_appliced);
                 // Show the processed refund notification
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
@@ -3415,6 +3170,7 @@
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
             } else if(has_pending_refund){
+                console.log(has_processed_refund,is_appliced);
                 // Show the pending refund notification
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
@@ -3422,6 +3178,7 @@
                 document.getElementById('btnRefundRequestModal').disabled = true;
                 document.getElementById('btnPrintEngagement').disabled = true;
             }else if(has_processed_refund && is_appliced){
+                console.log(has_processed_refund,is_appliced);
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
@@ -3437,7 +3194,7 @@
                 document.getElementById('btnPrintEngagement').disabled = false;
             }
         }
-      
+
         function ShowClientDetails(clientEmail,clientPhone,clientAddress,clientBirthDate,clientBirthPlace,clientRegistrationDate){
             $('#clientEmail').text(clientEmail);
             $('#clientPhone').text(clientPhone);
@@ -3452,13 +3209,15 @@
             $('#remboursementMontant').text(montant_paye +" DA");
             $('#remboursementMotif').text(motif);
         }
-
-        function DetailsRefundTraite(remboursementDate = '', remboursementMotif, observations = '', montantAutoriser, etat){
+        
+        function DetailsRefundTraite(remboursementDate, remboursementMontant, remboursementMotif, observations = '', montantAutoriser, etat, mode_de_rembourssement_label){
             $('#remboursementTraiteDateValidation').text(remboursementDate);
+            $('#remboursementTraiteMontant').text(remboursementMontant);
             $('#remboursementTraiteMotif').text(remboursementMotif);
             $('#remboursementTraiteObservations').text(observations || 'Aucune observation');
-            $('#remboursementTraiteMontant').text(montantAutoriser+" DA");
-            $('#texte_statut_refund').text(etat);   
+            $('#autoriserMontant').val(montantAutoriser);
+            $('#texte_statut_refund').text(etat);
+            $('#mode_de_rembourssement').text(mode_de_rembourssement_label);
             
         }
 
@@ -3474,12 +3233,13 @@
             var amount = $('#confirmationRemboursementModal').data('amount');
             var mode_rembourssement = $('#confirmationRemboursementModal').data('mode_paiement');
             var id_refund = $('#confirmationRemboursementModal').data('id_refund');
+
             $.ajax({
                 url : "{% url 't_tresorerie:ApiSaveRefundOperation' %}",
                 dataType : 'JSON',
                 type : 'POST',
                 data : {
-                    'id_client' : clientId,
+                    'id_client' : id_client,
                     'refund_amount' : amount,
                     'mode_rembourssement' : mode_rembourssement,
                     'id_refund' : id_refund,
@@ -3526,7 +3286,6 @@
                         setTimeout(function() {
                             window.location.href = "{% url 't_tresorerie:DetailsRembourssement' pk=0 %}".replace('0',response.rembourssementId);
                         }, 1000);
-                        
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
 
@@ -3535,66 +3294,54 @@
             })
            
         });
-
-        // Gestion du bouton de changement de modèle d'échéancier
-        $(document).on('click', '#changeEcheancierModel', function(){
-            alert("Fonctionnalité de changement de modèle d'échéancier - à implémenter");
-        });
-             
+                  
         $(document).on('click', '#confirmEcheancierBtn', function(){
-
-           
-                // Remplir la modale avec les informations actuelles
-                $('#modalSpecialite').text($('#specialite').text());
-                $('#modalPromo').text($('#promo').text());
-                $('#modalPrixFormation').text($('#prix_formation').text());
+            // Remplir la modale avec les informations actuelles
+            $('#modalSpecialite').text($('#specialite').text());
+            $('#modalPromo').text($('#promo').text());
+            $('#modalPrixFormation').text($('#prix_formation').text());
+            
+            // Vérifier s'il y a une réduction et mettre à jour l'affichage
+            if (hasReduction && reductionApprouved) {
+                $('#modalPrixFormation').text($('#initialPrice').text() + ' DA');
+                $('#modalPrixFinalRow').show();
+                $('#modalPrixFinal').text($('#finalPrice').text() + ' DA');
+                // Afficher la colonne Prix final dans le tableau
+                $('#modalPrixFinalHeader').show();
+            } else {
+                $('#modalPrixFinalRow').hide();
+                // Masquer la colonne Prix final dans le tableau
+                $('#modalPrixFinalHeader').hide();
+            }
+            
+            // Remplir le tableau des échéances dans la modale
+            var echeancesHtml = '';
+            $('#echeancierTable tr').each(function(index) {
+                var libelle = $(this).find('td:eq(0)').text();
+                var date = $(this).find('td:eq(1)').text();
+                var montant = $(this).find('td:eq(2)').text();
                 
-                // Vérifier s'il y a une réduction et mettre à jour l'affichage
+                echeancesHtml += '<tr>';
+                echeancesHtml += '<td>' + libelle + '</td>';
+                echeancesHtml += '<td>' + date + '</td>';
+                echeancesHtml += '<td>' + montant + '</td>';
+                
+                // Ajouter le prix final si une réduction est appliquée
                 if (hasReduction && reductionApprouved) {
-                    $('#modalPrixFormation').text($('#initialPrice').text() + ' DA');
-                    $('#modalPrixFinalRow').show();
-                    $('#modalPrixFinal').text($('#finalPrice').text() + ' DA');
-                    // Afficher la colonne Prix final dans le tableau
-                    $('#modalPrixFinalHeader').show();
-                } else {
-                    $('#modalPrixFinalRow').hide();
-                    // Masquer la colonne Prix final dans le tableau
-                    $('#modalPrixFinalHeader').hide();
+                    var prixReduitElement = $(this).find('td:eq(3)');
+                    if (prixReduitElement.length > 0) {
+                        var prixReduit = prixReduitElement.text();
+                        echeancesHtml += '<td>' + prixReduit + '</td>';
+                    }
                 }
                 
-                // Remplir le tableau des échéances dans la modale
-                var echeancesHtml = '';
-                $('#echeancierTable tr').each(function(index) {
-                    var libelle = $(this).find('td:eq(0)').text();
-                    var date = $(this).find('td:eq(1)').text();
-                    var montant = $(this).find('td:eq(2)').text();
-                    var entite = $(this).find('td:eq(3)').text();
-                    
-                    echeancesHtml += '<tr>';
-                    echeancesHtml += '<td>' + libelle + '</td>';
-                    echeancesHtml += '<td>' + date + '</td>';
-                    echeancesHtml += '<td>' + montant + '</td>';
-                    echeancesHtml += '<td style="display:none;">' + entite + '</td>';
-
-                    
-                    // Ajouter le prix final si une réduction est appliquée
-                    if (hasReduction && reductionApprouved) {
-                        var prixReduitElement = $(this).find('td:eq(4)');
-                        if (prixReduitElement.length > 0) {
-                            var prixReduit = prixReduitElement.text();
-                            echeancesHtml += '<td>' + prixReduit + '</td>';
-                        }
-                    }
-                    
-                    echeancesHtml += '</tr>';
-                });
-                $('#modalEcheancesTable').html(echeancesHtml);
-                
-                // Afficher la modale de détails
-                $('#confirmEcheancierModal').modal('hide');
-                $('#confirmationDetailsModal').modal('show');
-           
+                echeancesHtml += '</tr>';
+            });
+            $('#modalEcheancesTable').html(echeancesHtml);
             
+            // Afficher la modale de détails
+            $('#confirmEcheancierModal').modal('hide');
+            $('#confirmationDetailsModal').modal('show');
         });
         
         // Pré-remplir les informations dans le modal spécial
@@ -3699,15 +3446,6 @@
         
         // Confirmer l'enregistrement de l'échéancier
         $(document).on('click', '#confirmSaveEcheancierBtn', function(){
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
             // Collect data from the special echeancier table
             var echeancierLines = [];
             var isValid = true;
@@ -3763,7 +3501,7 @@
                 data: JSON.stringify(data),
                 success: function(response) {
                     if (response.status === 'success') {
-                        alertify.success("Echancier spécial enregistrer avec succès");
+                        alert("Échéancier spécial enregistré avec succès !");
                         $('#confirmSaveEcheancierModal').modal('hide');
                         $('#specialEcheancierModal').modal('hide');
                         loadDatas();
@@ -3774,28 +3512,12 @@
                 error: function(xhr, status, error) {
                     console.error("Erreur lors de l'enregistrement:", error);
                     alert("Erreur lors de l'enregistrement de l'échéancier spécial.");
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
                 }
             });
         });
         
         // Confirmation définitive de l'échéancier
-        $(document).on('click', '#finalLastConfirmBtn', function(){
-
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
-
+        $(document).on('click', '#finalConfirmBtn', function(){
             // Récupérer les données nécessaires
             var id_demande = "{{pk}}";
             
@@ -3805,7 +3527,6 @@
                 var libelle = $(this).find('td:eq(0)').text().trim();
                 var date = $(this).find('td:eq(1)').text().trim();
                 var montant = $(this).find('td:eq(2)').text().trim().replace(' DA', '');
-                var entite = $(this).find('td:eq(3)').text().trim();
                 
                 var montantFinal = montant; 
                 if (hasReduction && $(this).find('td:eq(3)').length > 0) {
@@ -3818,25 +3539,21 @@
                         'libelle': libelle,
                         'date_echeance': date,
                         'montant': montant,
-                        'montant_final': montantFinal,
-                        'entite' : entite,
+                        'montant_final': montantFinal
                     });
                 }
             });
-
             
-            
-            // // Appeler l'API pour récupérer les détails du paiement
+            // Appeler l'API pour récupérer les détails du paiement
             $.ajax({
-                url: "{% url 't_tresorerie:ApiGetPaiementRequestDetailsDouble' %}",
+                url: "{% url 't_tresorerie:ApiGetPaiementRequestDetails' %}",
                 dataType: 'JSON',
                 type: 'GET',
                 data: {
                     'id_client': clientId,
                     'has_reduction': hasReduction,
                     'reduction': hasReduction ? $('#reductionAmount').text().replace('%', '') : '0',
-                    'echeancier_data': JSON.stringify(echeancierData),
-                    'id_echeancier' : id_echeancier,
+                    'echeancier_data': JSON.stringify(echeancierData)
                 },
                 success: function(response) {
                     if(response.status === "success"){
@@ -3851,11 +3568,6 @@
                 error: function(xhr, status, error) {
                     console.error('Erreur lors de la récupération des détails du paiement:', error);
                     alert('Erreur lors de la récupération des détails du paiement.');
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
                 }
             });
         });
@@ -3878,13 +3590,9 @@
             $('#echeancierExamenDetailsModal').modal('show');
         });
 
-        //validation de l'echeancier spécial
-        $(document).on('click', '#applyEcheancierSpecialBtn', function(){
-            $('#echeancierSpecialDetailsModal').modal('hide');
-            $('#confirmApplyEcheancierSpecialModal').modal('show');
-        });
-            
-        // Gestionnaires d'événements pour les boutons d'engagement et d'impression
+        
+        
+         // Gestionnaires d'événements pour les boutons d'engagement et d'impression
         $(document).on('click', '#btnEngagement', function(){
             // Vérifier si jsPDF est chargé
             if (typeof window.jspdf === 'undefined') {
@@ -3925,106 +3633,13 @@
             $('#engagementModal').modal('show');
         });
         
-        // Gestionnaire d'événement pour le bouton de confirmation d'inscription
-        $(document).on('click', '#btnConfirmInscription', function(){
-            // Remplir la modale avec les informations de l'étudiant et les paiements
-            var studentName = $('#demandeur').text();
-            var formation = $('#specialite').text();
-            var promo = $('#promo').text();
-            
-            // Construire la liste des paiements
-            var paymentsList = '';
-            $('#ListePaiementRequestLine tr').each(function() {
-                var label = $(this).find('td:eq(0)').text();
-                var date_echeance = $(this).find('td:eq(1)').text();
-                var amount = $(this).find('td:eq(2)').text();
-                // Vérifier que la ligne n'est pas vide
-                if (label && amount) {
-                    paymentsList += '<li class="list-group-item d-flex justify-content-between align-items-center">' +
-                                    '<span>' + label + '</span>' +
-                                    '<span class="text-muted">' + date_echeance + '</span>' +
-                                    '<span class="badge bg-primary rounded-pill">' + amount + '</span>' +
-                                    '</li>';
-                }
-            });
-            
-            // Mettre à jour le contenu de la modale
-            $('#confirmStudentName').text(studentName);
-            $('#confirmStudentName2').text(studentName);
-            $('#confirmFormation').text(formation);
-            $('#confirmPromo').text(promo);
-            $('#confirmPaymentsList').html(paymentsList);
-            
-            // Réinitialiser la case à cocher
-            $('#confirmInscriptionCheck').prop('checked', false);
-            $('#confirmInscriptionBtn').prop('disabled', true);
-            
-            // Afficher la modale
-            $('#confirmInscriptionModal').modal('show');
-        });
         
-        // Gérer la case à cocher de confirmation d'inscription
-        $(document).on('change', '#confirmInscriptionCheck', function(){
-            if ($(this).is(':checked')) {
-                $('#confirmInscriptionBtn').prop('disabled', false);
-            } else {
-                $('#confirmInscriptionBtn').prop('disabled', true);
-            }
-        });
-        
-        // Gérer la confirmation d'inscription
-        $(document).on('click', '#confirmInscriptionBtn', function(){
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiConfirmInscriptionDouble' %}",
-                type : 'POST',
-                dataType: 'JSON',
-                data : {
-                    'id_preinscrit' : clientId,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}',
-                },
-                success : function(response){
-                    if(response.status === "success"){
-                        $('#confirmInscriptionModal').modal('hide');
-                        $('#inscriptionFinaliseeModal').modal('show');
-                        
-                    }else{
-                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
-                    }
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
-                }
-                
-            })
-            
-            
-            // Fermer la modale
-            $('#confirmInscriptionModal').modal('hide');
-            
-            // Recharger les données si nécessaire
-            loadDatas();
-        });
-        
-        $(document).on('click','#closeWaitingPaymentBtn', function(){
-            window.location = "{% url 't_tresorerie:attentes_de_paiements' %}";
-        });
-
         $(document).on('click', '.print-bon-btn', function(){
             var id = $(this).data('id');
             alert("Fonctionnalité d'impression de bon - à implémenter pour le paiement ID: " + id);
         });
-               
+             
+        
         // Gérer la case à cocher de confirmation d'engagement
         $(document).on('change', '#engagementConfirmationCheck', function(){
             if ($(this).is(':checked')) {
@@ -4033,116 +3648,33 @@
                 $('#confirmEngagementBtn').prop('disabled', true);
             }
         });
-
-        // Gérer le changement de signataire pour afficher les champs nom/prénom si nécessaire
-        $(document).on('change', '#signataireSelect', function(){
-            var selectedValue = $(this).val();
-            var parentTuteurFields = $('#parentTuteurFields');
-            
-            if (selectedValue === 'Parents' || selectedValue === 'Tuteur') {
-                parentTuteurFields.removeClass('d-none');
-            } else {
-                parentTuteurFields.addClass('d-none');
-            }
-        }); 
+       
 
         // Imprimer l'engagement
         $(document).on('click', '#btnPrintEngagement', function(){
-            $('#engagementAssistantModal').modal('show');
-        });
-    
-        // Add click handler for the assistant modal print button
-        $(document).on('click', '#printEngagementWithDetails', function() {
-            // Validate required fields from assistant modal
-            var signataire = $('#signataireSelect').val();
-            var pieceIdentite = $('#pieceIdentiteSelect').val();
-            var numeroPiece = $('#numeroPieceInput').val();
-            var dateDelivrance = $('#dateDelivranceInput').val();
-            var lieuDelivrance = $('#lieuDelivranceInput').val();
-            var demandeurAdresse = $('#_demandeurAdresse').val();
-            var demandeurContact = $('#_demandeurContact').val();
-
-            
-            if (!signataire || !pieceIdentite || !numeroPiece || !dateDelivrance || !lieuDelivrance) {
-                alert("Veuillez remplir tous les champs obligatoires dans l'assistant.");
-                return;
-            }
-
-            // Vérifier si les champs nom et prénom sont requis (pour Parents ou Tuteur)
-            if (signataire === 'Parents' || signataire === 'Tuteur') {
-                var nomParentTuteur = $('#nomParentTuteurInput').val();
-                var prenomParentTuteur = $('#prenomParentTuteurInput').val();
-                var adresseParentTuteur = $('#adresseParentTuteurInput').val();
-                var contactParentTuteur = $('#contactParentTuteurInput').val();
-                
-
-                if (!nomParentTuteur || !prenomParentTuteur || !adresseParentTuteur || !contactParentTuteur ) {
-                    alert("Veuillez remplir les informations du parent ou tuteur.");
-                    return;
-                }
-            }
-            
-            // Close the assistant modal
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('engagementAssistantModal')).hide();
-            
-            // Call the original printEngagement function which will now have access to the modal data
-            if (signataire === 'Parents' || signataire === 'Tuteur') {
-                var nomParentTuteur = $('#nomParentTuteurInput').val();
-                var prenomParentTuteur = $('#prenomParentTuteurInput').val();
-                var adresseParentTuteur = $('#adresseParentTuteurInput').val();
-                var contactParentTuteur = $('#contactParentTuteurInput').val();
-
-                printEngagement(numeroPiece, signataire, nomParentTuteur, prenomParentTuteur,adresseParentTuteur,contactParentTuteur,pieceIdentite,dateDelivrance,numeroPiece, lieuDelivrance);
-            } else {
-                printEngagement(numeroPiece, signataire, null, null, demandeurAdresse, demandeurContact,pieceIdentite,dateDelivrance, numeroPiece, lieuDelivrance);
-            }
-        });
-        
-        function printEngagement(numeroPiece, signataire, nomParentTuteur, prenomParentTuteur,adresseParentTuteur,contactParentTuteur,pieceIdentite,dateDelivrance,numeroPiece, lieuDelivrance){
             // Récupérer les données de l'étudiant
             var studentName = $('#demandeur').text();
-            var specialite = $('#specialite').text();
-            var formationLabel =$('#_formation').val();
+            var formation = $('#specialite').text();
             var promo = $('#promo').text();
             var currentDate = new Date().toLocaleDateString('fr-FR');
-            var _date_naissance = $('#_date_naissance').val();
-            var _lieu_naissance = $('#_lieu_naissance').val();
-            var entite = $('#_entite').val();
-            var ville = $('#_ville').val();
-            var montant = $('#_montant_formation').val();
-            var montant_lettre = numberToWordsDZD(montant);
-
-            var numeroPiece = numeroPiece;
-            var signataire = signataire;
-            var nomParentTuteur = nomParentTuteur;
-            var prenomParentTuteur = prenomParentTuteur;
-            var adresseParentTuteur = adresseParentTuteur;
-            var contactParentTuteur = contactParentTuteur;
-            var pieceIdentite = pieceIdentite;
-            var  dateDelivrance = dateDelivrance;
-            var  numeroPiece = numeroPiece;
-            var lieuDelivrance = lieuDelivrance;
-
             
-            const today = new Date();
-            const formattedDate = today.toLocaleDateString('fr-FR');
-
             // Vérifier qu'on a les données de l'étudiant
-            if (!studentName || !promo) {
+            if (!studentName || !formation || !promo) {
                 alert("Les informations de l'étudiant ne sont pas complètes.");
                 return;
             }
             
             // Récupérer les paiements dus
             var paymentsData = [];
-              
+            var hasPayments = false;
+            
             $('#ListePaiementRequestLine tr').each(function() {
                 var label = $(this).find('td:eq(1)').text().trim();
                 var date_echeance = $(this).find('td:eq(2)').text().trim();
                 var amount = $(this).find('td:eq(3)').text().trim();
                 
-                // Vérifier que la ligne n'est pas vide et qu'elle ne contient pas "frais d'inscription"
-                if (label && amount && date_echeance && !label.toLowerCase().includes('frais d\'inscription')) {
+                // Vérifier que la ligne n'est pas vide
+                if (label && amount && date_echeance) {
                     paymentsData.push({
                         label: label,
                         amount: amount,
@@ -4158,249 +3690,14 @@
                 return;
             }
             
-            // Fonction pour charger jsPDF dynamiquement si nécessaire
-            function loadJsPDFLibraries(callback) {
-                // Vérifier si jsPDF est déjà disponible
-                if (typeof jsPDF !== 'undefined') {
-                    callback();
-                    return;
-                }
-                
-                // Charger jsPDF
-                var script1 = document.createElement('script');
-                script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                script1.onload = function() {
-                    // Charger autoTable
-                    var script2 = document.createElement('script');
-                    script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js';
-                    script2.onload = callback;
-                    script2.onerror = function() {
-                        console.error('Erreur lors du chargement de jsPDF AutoTable');
-                        alert("Erreur lors du chargement de la bibliothèque PDF (AutoTable).");
-                        callback();
-                    };
-                    document.head.appendChild(script2);
-                };
-                script1.onerror = function() {
-                    console.error('Erreur lors du chargement de jsPDF');
-                    // Si le chargement échoue, utiliser la solution de secours
-                    generateTextDocument();
-                };
-                document.head.appendChild(script1);
-            }
-              
-            // Fonction pour générer le PDF
-            function generateEngagementPDF() {
-                var jsPDFInstance = null;
-                if (typeof jsPDF !== 'undefined') {
-                    jsPDFInstance = jsPDF;
-                } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-                    jsPDFInstance = window.jspdf.jsPDF;
-                } else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
-                    jsPDFInstance = jspdf.jsPDF;
-                }
+            
+        }); 
 
-                if (jsPDFInstance) {
-                    try {
-                        const doc = new jsPDFInstance();
-
-                        // Logos
-                        const logoHeaderUrl = document.getElementById('_logoHeader').value;
-                        const logoFooterUrl = document.getElementById('_logoFooter').value;
-
-                        const addLogosToPDF = () => {
-                            if (logoHeaderUrl) {
-                                const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
-                                const headerLogoWidth = doc.internal.pageSize.width * 0.25;
-                                doc.addImage(headerLogoUrl, 'PNG', 150, 10, headerLogoWidth, headerLogoWidth * 0.375);
-                            }
-
-                            if (logoFooterUrl) {
-                                const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
-                                doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
-                            }
-                        };
-
-                        addLogosToPDF();
-                        doc.setFont('helvetica');
-                        doc.setFontSize(16);
-                        if(has_special_echeancier){
-                            doc.text("LETTRE D'ENGAGEMENT POUR UN ÉCHÉANCIER SPÉCIAL", 105, 50, null, null, 'center');
-                        }else{
-                            doc.text("LETTRE D'ENGAGEMENT", 105, 50, null, null, 'center');
-                        }
-                        
-
-                        doc.setFontSize(10);
-                        let y = 68; // point de départ légèrement plus haut
-                        const line = (step = 6) => y += step; // espacement réduit entre les lignes
-
-                        // Afficher le signataire avec le nom/prénom si c'est un parent ou tuteur
-                        if (signataire === 'Parents' || signataire === 'Tuteur') {
-                            doc.text("Je soussigné(e),  "+prenomParentTuteur+" "+nomParentTuteur, 20, line());
-                            doc.text("Agissant en qualité de : "+signataire, 20, line());
-                        } else {
-                            doc.text("Je soussigné(e),  "+studentName, 20, line());
-                            doc.text("Agissant en qualité de : "+signataire, 20, line());
-                        }
-                        doc.text("Demeurant à : "+adresseParentTuteur, 20, line());
-                        doc.text("Contact téléphonique : "+contactParentTuteur, 20, line(8));
-
-                        doc.text("M'engage formellement à régler la somme de :", 20, line(8));
-                        doc.text("(en chiffres) "+montant+" DZD", 30, line());
-                        doc.text("(en lettres) "+montant_lettre+"", 30, line(8));
-
-                        doc.text("Au titre des frais de scolarité et de formation de l'apprenant(e) :", 20, line(8));
-                        doc.text("Nom et prénom : "+studentName, 30, line());
-                        doc.text("Né(e) le : "+_date_naissance+"  À : "+_lieu_naissance+"", 30, line());
-                        doc.text("Inscrit(e) au niveau de "+entite+", pour la formation de : "+formationLabel, 30, line());
-                        doc.text("Spécialité :"+specialite, 30, line());
-                        doc.text("Année académique : 2023 / 2024", 30, line(8));
-
-                        doc.text("Le paiement de la somme susmentionnée s’effectuera selon l’échéancier suivant :", 20, line(8));
-
-                        // Tableau = seulement les paiements existants
-                        const columns = ["N°", "Montant (DZD)", "Date de règlement prévue"];
-                        const rows = paymentsData.map((p, i) => [
-                            i + 1,
-                            p.amount || "",
-                            p.date_echeance || ""
-                        ]);
-
-                        if (typeof doc.autoTable === 'function') {
-                            doc.autoTable({
-                                head: [columns],
-                                body: rows,
-                                startY: line(5),
-                                theme: 'plain',
-                                styles: { textColor: [0, 0, 0], lineWidth: 0.1, fontSize: 11 },
-                                headStyles: { halign: 'center', fontStyle: 'bold' },
-                                bodyStyles: { halign: 'center' }
-                            });
-                            y = doc.lastAutoTable.finalY + 10;
-                        } else {
-                            doc.text("Erreur : AutoTable non chargée.", 20, line());
-                        }
-
-                        doc.text("Fait à "+ville+", le "+formattedDate, 150, y); y += 5;
-                        doc.text("Signature précédée de la mention « Lu et approuvé » :", 20, y-5); y += 5;
-                        doc.text("(Signature de l'apprenant / parent / tuteur légal)", 20, y-5); y += 5;
-
-                        doc.text("Pièce d'identité :", 20, y+6); y += 10;
-                        doc.text("Type : "+pieceIdentite, 30, y); y += 6;
-                        doc.text("N° : "+numeroPiece, 30, y); y += 6;
-                        doc.text("Délivrée le : "+dateDelivrance+"   Par : "+lieuDelivrance+"", 30, y); y += 10;
-
-                        doc.text("Visa de l'administration", 150, y-30);
-
-                        doc.save("engagement_special_" + studentName.replace(/\s+/g, '_') + ".pdf");
-                        alertify.success("Document d'engagement spécial généré avec succès !");
-                    } catch (error) {
-                        console.error("Erreur lors de la génération du PDF:", error);
-                        alert("Erreur lors de la génération du document : " + error.message);
-                    }
-                }
-            }
-
-            // Générer le document (PDF ou texte)
-            generateEngagementPDF();
-        }
-
-        // Convertir un nombre en lettres (ex : 12500 -> "douze mille cinq cents dinars algériens")
-        function numberToWordsDZD(nombre) {
-            if (!nombre || isNaN(nombre)) return "";
-
-            nombre = parseInt(nombre);
-
-            const unite = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
-            const dizaine = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante"];
-            const dizaine_special = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
-
-            function toWords(n) {
-                let words = "";
-
-                if (n < 10) {
-                    words = unite[n];
-                } else if (n < 20) {
-                    words = dizaine_special[n - 10];
-                } else if (n < 70) {
-                    words = dizaine[Math.floor(n / 10)];
-                    if (n % 10 === 1 && n !== 11 && n !== 71 && n !== 91) words += " et un";
-                    else if (n % 10 > 0) words += "-" + unite[n % 10];
-                } else if (n < 80) {
-                    words = "soixante-" + toWords(n - 60);
-                } else if (n < 100) {
-                    words = "quatre-vingt";
-                    if (n > 80) words += "-" + toWords(n - 80);
-                }
-
-                return words.trim();
-            }
-
-            function underThousand(n) {
-                let words = "";
-                const hundreds = Math.floor(n / 100);
-                const remainder = n % 100;
-
-                if (hundreds > 0) {
-                    if (hundreds === 1) words = "cent";
-                    else words = unite[hundreds] + " cent";
-                    if (remainder === 0 && hundreds > 1) words += "s";
-                }
-
-                if (remainder > 0) {
-                    words += (words ? " " : "") + toWords(remainder);
-                }
-
-                return words;
-            }
-
-            function fullNumberToWords(n) {
-                if (n === 0) return "zéro";
-
-                const parts = [];
-                const milliards = Math.floor(n / 1_000_000_000);
-                const millions = Math.floor((n % 1_000_000_000) / 1_000_000);
-                const milliers = Math.floor((n % 1_000_000) / 1000);
-                const reste = n % 1000;
-
-                if (milliards > 0) {
-                    parts.push((milliards > 1 ? underThousand(milliards) + " milliards" : "un milliard"));
-                }
-
-                if (millions > 0) {
-                    parts.push((millions > 1 ? underThousand(millions) + " millions" : "un million"));
-                }
-
-                if (milliers > 0) {
-                    if (milliers === 1) parts.push("mille");
-                    else parts.push(underThousand(milliers) + " mille");
-                }
-
-                if (reste > 0) {
-                    parts.push(underThousand(reste));
-                }
-
-                return parts.join(" ").replace(/\s+/g, " ").trim();
-            }
-
-            const resultat = fullNumberToWords(nombre);
-            return resultat.charAt(0).toUpperCase() + resultat.slice(1) + " dinars algériens";
-        }
-
-
+     
         $(document).on('click', "#applyReductionBtn", function(){
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
             var remiseId = $(this).data('id');
                       
+           
             
             // Faire un appel AJAX pour appliquer la réduction
             $.ajax({
@@ -4415,18 +3712,11 @@
                     if(response.status === "success"){
                         alertify.success("La remise a été appliquer avec succès");
                         $('#reductionDetailsModal').modal('hide');
-                        document.getElementById('reductionNotification').style.setProperty('display', 'none', 'important');
-                        $('#reductionAppliedSuccessModal').modal('show');
                         loadDatas();
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete.");
                     }
                 },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
-                }
             });
         });
         
@@ -4568,17 +3858,6 @@
         
         // Confirmer le paiement
         $(document).on('click', '#confirmerPaiementBtn', function(){
-
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
-
             // Récupérer les données stockées
             var id_due_paiement = $(this).data('id_due_paiement');
             var echeance = $(this).data('echeance');
@@ -4611,15 +3890,8 @@
                         alertify.success("Le paiement à été enregistrer avec succès");
                         loadDatas();
                     }else{
-                        alertify.error(response.message);
-
-                        //showUnpaidPaymentNotification();
+                        showUnpaidPaymentNotification();
                     }
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
                 }
             })
             
@@ -4640,8 +3912,6 @@
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
-
-            
         });
         
         // Imprimer la quittance
@@ -4660,60 +3930,27 @@
             var formation = $('#specialite').text();
             var promo = $('#promo').text();
             var currentDate = new Date().toLocaleDateString('fr-FR');
-
-            if(payment.label_paiements === "Rembourssement"){
-                $('#refundAssistantModal').modal('show');
-            }else{
-                // Generate PDF
-                generateQuittancePDF(payment, studentName, formation, promo, currentDate,id_demande);
-            }
-        });
-
-        $('#signataireSelectRefund').on('change', function(){
-            var selectedValue = $(this).val();
-            var parentTuteurFields = $('#parentTuteurFieldsRefund');
             
-            if (selectedValue === 'Parents' || selectedValue === 'Tuteur') {
-                parentTuteurFields.removeClass('d-none');
-            } else {
-                parentTuteurFields.addClass('d-none');
-            }
-        });
-
-        $(document).on('click','#printRefundWithDetails', function(){
-            var signataireSelectRefund = $('#signataireSelectRefund').val();
-            var pieceIdentiteSelectPID = $('#pieceIdentiteSelectPID').val();
-            var nomParentTuteurInputRefund = $('#nomParentTuteurInputRefund').val();
-            var prenomParentTuteurInputRefund = $('#prenomParentTuteurInputRefund').val();
-            var adresseParentTuteurInputRefund = $('#adresseParentTuteurInputRefund').val();
-            var contactParentTuteurInputRefund = $('#contactParentTuteurInputRefund').val();
-            var numeroPieceInputRefund = $('#numeroPieceInputRefund').val();
-            var dateDelivranceInputRefund = $('#dateDelivranceInputRefund').val();
-            var lieuDelivranceInputRefund = $('#lieuDelivranceInputRefund').val();
-
-            if (signataireSelectRefund === 'Parents' || signataireSelectRefund === 'Tuteur') {
-                generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,nomParentTuteurInputRefund,prenomParentTuteurInputRefund,adresseParentTuteurInputRefund,contactParentTuteurInputRefund,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund);
-            } else {
-                generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,null,null,null,null,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund);
-            }
-
+            // Generate PDF
+            generateQuittancePDF(payment, studentName, formation, promo, currentDate,id_client);
         });
         
+       
         // === Charger les infos entreprise ===
-        function loadEntrepriseDatas(id_demande) {
+        function loadEntrepriseDatas(id_client) {
             return $.ajax({
-                url: "{% url 't_tresorerie:ApiGetEntrepriseDetails' %}",
+                url: "{% url 't_tresorerie:ApiGetEntrepriseInfos' %}",
                 dataType: "JSON",
                 type: 'GET',
-                data: { 'id_demande': id_demande },
+                data: { 'id_client': id_client },
             });
         }
 
         // === Fonction principale pour générer le PDF ===
-        function generateQuittancePDF(payment, studentName, formation, promo, currentDate, id_demande) {
+        function generateQuittancePDF(payment, studentName, formation, promo, currentDate, id_client) {
 
             // Étape 1 : Charger les infos de l'entreprise avant de générer le PDF
-            loadEntrepriseDatas(id_demande).done(function(entreprise) {
+            loadEntrepriseDatas(id_client).done(function(entreprise) {
                 
                 // Étape 2 : Vérifier jsPDF
                 var jsPDFInstance = null;
@@ -4764,13 +4001,16 @@
         }
 
         // === Fonction pour créer le PDF ===
-        function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise) {
+       function createQuittancePDF(payment, studentName, formation, promo, currentDate, jsPDFInstance, entreprise) {
             try {
                 var doc = new jsPDFInstance('p', 'mm', 'a4');
                 doc.setFont("helvetica");
 
                 const pageHeight = doc.internal.pageSize.height;
                 const middle = pageHeight / 2;
+
+                var groupe_name= $('#_groupe_name').val();
+                var semestre= $('#_semestre').val();
 
                 // Get current print date
                 var today = new Date();
@@ -4783,7 +4023,6 @@
                         doc.text("BON DE PRE-INSCRIPTION", 105, yOffset + 15, null, null, 'center');
                     else{
                         doc.text("BON DE PAIEMENT", 105, yOffset + 15, null, null, 'center');
-                        
                     }
 
                     doc.setDrawColor(59, 125, 221);
@@ -4813,12 +4052,12 @@
                     doc.setFontSize(10);
                     doc.text("Groupe:", 60, yOffset + 47);
                     doc.setFontSize(9);
-                    doc.text("grp", 75, yOffset + 47);
+                    doc.text(groupe_name, 75, yOffset + 47);
 
                     doc.setFontSize(10);
                     doc.text("Semestre:", 110, yOffset + 47);
                     doc.setFontSize(9);
-                    doc.text("sem", 130, yOffset + 47);
+                    doc.text(semestre, 130, yOffset + 47);
 
                     // Get date of birth and place of birth from hidden input fields
                     const dateNaissance = document.getElementById('_date_naissance').value;
@@ -4859,15 +4098,15 @@
                     doc.text(payment.mode_paiement, 60, yOffset + (dateNaissance || lieuNaissance ? 95 : 85));
 
                     doc.text("Référence :", 20, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
-                    doc.text(payment.reference || "N/A", 60, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
+                    doc.text(payment.reference_paiement || "N/A", 60, yOffset + (dateNaissance || lieuNaissance ? 101 : 91));
 
-                    
 
                     doc.setFontSize(8);
                     doc.setTextColor(80, 80, 80);
                     doc.text("Date d'impression: " + printDate, 20, yOffset + (dateNaissance || lieuNaissance ? 117 : 107));
+                   
 
-                    doc.text("Signature du responsable:", 120, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
+                    doc.text("Signature", 120, yOffset + (dateNaissance || lieuNaissance ? 123 : 113));
                     doc.line(120, yOffset + (dateNaissance || lieuNaissance ? 126 : 116), 180, yOffset + (dateNaissance || lieuNaissance ? 126 : 116));
                 }
 
@@ -4892,131 +4131,6 @@
             }
         }
 
-        function generateDechargeRemboursementPDF(signataireSelectRefund,pieceIdentiteSelectPID,nomParentTuteurInputRefund,prenomParentTuteurInputRefund,adresseParentTuteurInputRefund,contactParentTuteurInputRefund,numeroPieceInputRefund,dateDelivranceInputRefund,lieuDelivranceInputRefund) {
-            var clientFullName  = $('#clientFullName').text();
-
-            var etudiant = $('#demandeur').text();
-            var date_naissance = $('#_date_naissance').val();
-            var lieu_naissance = $('#_lieu_naissance').val();
-            var formation = $('#_formation').val();
-            var annee_scolaire = $('#_annee_scolaire').val();
-
-            var signataire = signataireSelectRefund;
-            var TypeId = pieceIdentiteSelectPID;
-            var dateDelivrance = dateDelivranceInputRefund;
-            var numerPiece = numeroPieceInputRefund;
-            var lieuDeDelivrance = lieuDelivranceInputRefund;
-            var nomParentTuteur = nomParentTuteurInputRefund;
-            var prenomParentTuteur = prenomParentTuteurInputRefund;
-
-            var groupe = $('#_nom_groupe').val();
-            var semestre=$('#_semestre_groupe').val();
-            var specialite = $('#specialite').text();
-            var entite = $('#_entite').val();
-            var ville = $('#_ville').val();
-
-            var _allowed_amount = $('#_allowed_amount').val();
-            var _total_paid = $('#_total_paid').val();
-            var _motif_remboursement = $('#_motif_remboursement').val();
-            var amountLettre = numberToWordsDZD(_allowed_amount);
-
-            const today = new Date();
-            const formattedDate = today.toLocaleDateString('fr-FR');
-            
-
-            if(signataireSelectRefund === "Parents" || signataireSelectRefund === "Tuteur"){
-                clientFullName = nomParentTuteur+" "+prenomParentTuteur;
-            }
-
-
-            var jsPDFInstance = null;
-            if (typeof jsPDF !== 'undefined') {
-                jsPDFInstance = jsPDF;
-            } else if (typeof window !== 'undefined' && typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-                jsPDFInstance = window.jspdf.jsPDF;
-            } else if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
-                jsPDFInstance = jspdf.jsPDF;
-            }
-
-            if (jsPDFInstance) {
-                try {
-                    const doc = new jsPDFInstance();
-
-                    // Charger les logos si disponibles
-                    const logoHeaderUrl = document.getElementById('_logoHeader')?.value;
-                    const logoFooterUrl = document.getElementById('_logoFooter')?.value;
-
-                    const addLogosToPDF = () => {
-                        if (logoHeaderUrl) {
-                            const headerLogoUrl = logoHeaderUrl.startsWith('/') ? window.location.origin + logoHeaderUrl : logoHeaderUrl;
-                            const headerLogoWidth = doc.internal.pageSize.width * 0.25;
-                            doc.addImage(headerLogoUrl, 'PNG', 150, 10, headerLogoWidth, headerLogoWidth * 0.375);
-                        }
-
-                        if (logoFooterUrl) {
-                            const footerLogoUrl = logoFooterUrl.startsWith('/') ? window.location.origin + logoFooterUrl : logoFooterUrl;
-                            doc.addImage(footerLogoUrl, 'PNG', 20, doc.internal.pageSize.height - 20, doc.internal.pageSize.width - 40, 15);
-                        }
-                    };
-
-                    addLogosToPDF();
-
-                    // Police et format
-                    doc.setFont('helvetica');
-                    doc.setFontSize(16);
-                    doc.text("DÉCHARGE DE REMBOURSEMENT", 105, 50, null, null, 'center');
-
-                    doc.setFontSize(12);
-                    let y = 55;
-                    const line = (step = 6) => y += step; 
-
-                    // Corps du document
-                    doc.text("Je soussigné(e) : "+clientFullName, 20, line());
-                    doc.text("Qualité : "+signataire, 20, line(8));
-
-                    doc.text("Agissant en ma qualité de représentant(e) de l'apprenant(e) :", 20, line(10));
-                    doc.text("Nom et Prénom : "+etudiant, 30, line());
-                    doc.text("Né(e) le : "+date_naissance+"   À : "+lieu_naissance, 30, line(8));
-
-                    doc.text("Préinscrit(e) / Inscrit(e) en formation :", 20, line(10));
-                    doc.text(formation, 30, line());
-                    doc.text("Spécialité : "+specialite, 30, line());
-                    if(groupe){
-                        doc.text("Semestre : "+semestre+"   Groupe : "+groupe, 30, line());
-                    }
-                    doc.text("Année académique : 2025 – 2026", 30, line(8));
-
-                    doc.text("Je reconnais avoir reçu, en espèces, en chèque, autres, ce jour, de la caisse de", 20, line(10));
-                    doc.text("l'INSIM / HIMI, la somme de :", 20, line(6));
-                    doc.text(_allowed_amount+"DZD", 30, line());
-                    doc.text("(en toutes lettres : "+amountLettre+").", 30, line(8));
-
-                    doc.text("Cette somme représente le remboursement (total / partiel) des frais de formation", 20, line(10));
-                    doc.text("réglés en date du : ____________________", 20, line(8));
-
-                    doc.text("Raison du remboursement :"+_motif_remboursement, 20, line(10));
-
-                    doc.text("Fait à "+ville+", le "+formattedDate, 150, line(12));
-
-                    doc.text("Signature du bénéficiaire précédée de la mention « Lu et approuvé » :", 20, line(12));
-                    doc.text(TypeId, 20, line(10));
-                    doc.text("Délivré(e) le : "+dateDelivrance, 20, line(8));
-                    doc.text("Par : "+lieuDeDelivrance, 20, line(8));
-
-                    doc.text("_____________________________________", 20, line(15));
-                    doc.text("(Signature)", 20, line());
-
-                    doc.text("Visa et cachet de l’administration :", 20, line(15));
-
-                    // Sauvegarde du fichier
-                    doc.save("decharge_remboursement.pdf");
-                    alertify.success("Décharge de remboursement générée avec succès !");
-                } catch (error) {
-                    console.error("Erreur lors de la génération du PDF:", error);
-                    alert("Erreur lors de la génération du document : " + error.message);
-                }
-            }
-        }
 
         // Imprimer la facture
         $(document).on('click', '.print-facture-btn', function(e){
@@ -5024,64 +4138,53 @@
             var id = $(this).data('id');
             alert("Fonctionnalité d'impression de facture - à implémenter pour le paiement ID: " + id);
             // À implémenter : Logique d'impression de la facture
-        });   
+        });
         
-        function checkForPaiements(){
-            
+        
+        // Confirmation de suppression
+        $(document).on('click', '#confirmDeleteBtn', function(){
+            var num_bon = $(this).data('id');
             $.ajax({
-                url : "{% url 't_tresorerie:ApiCheckForPayments' %}",
+                url : "{% url 't_tresorerie:ApiDeletePaiement' %}",
                 dataType : "JSON",
-                type : "GET",
+                type : "POST",
                 data : {
-                    'id_demande' : id_demande,
+                    'num_bon' : num_bon,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){
                     if(response.status === "success"){
-                        $('#confirmRefundBtn').data('clientId', clientId);
-                        $('.refundModal').modal('show');
-                    }else if(response.status == "system-error"){
-                        alertify.error(response.message);
+                        alertify.success("Le paiement à été supprimer avec succès");
+                        loadDatas();
                     }else{
-                        $('#noPaymentForRefundModal').modal('show');
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+
                     }
                 }
-            }); 
-        }
+                
+        });
+            $('.deleteModal').modal('hide');
+        });
         
         // Demande de remboursement (nouveau bouton)
         $(document).on('click', '#btnRefundRequestModal', function(){
             
-            checkForPaiements();
-            
+            $('#confirmRefundBtn').data('clientId', clientId);
+            $('.refundModal').modal('show');
         });
         
         // Confirmation de remboursement
         $(document).on('click', '#confirmRefundBtn', function(){
-
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
-
             var clientId = $(this).data('clientId');
             var reason = $('#refundReason').val();
            
             if (!reason.trim()) {
                 alertify.error("Veuillez indiquer le motif du remboursement.");
-                btn.prop('disabled', false);
-                btn.html(originalText);
                 return;
             }
             
             if (!clientId) {
                 alertify.error("Aucun client sélectionné pour la demande de remboursement.");
-                btn.prop('disabled', false);
-                btn.html(originalText);
                 return;
             }
             
@@ -5102,28 +4205,14 @@
                         $('#refundReason').val(''); // Clear the reason field
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
-                        btn.prop('disabled', false);
-                        btn.html(originalText);
+
                     }
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
                 }
             });
+            
         });
 
         $(document).on('click', '#confirmApplyEcheancierSpecialBtn', function(){
-            var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
-            var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
 
             $.ajax({
                 url : "{% url 't_tresorerie:ApiApplyEcheancierSpecial' %}",
@@ -5136,42 +4225,23 @@
                 success : function(response){
                     if(response.status === "success"){
                         alertify.success("L'échéancier spécial a été appliqué avec succès");
-                        $('#confirmApplyEcheancierSpecialModal').modal('hide');
-                       
                         loadDatas();
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");
+
                     }
-                },
-                complete: function() {
-                    // Réactiver le bouton et restaurer son texte après la requête
-                    btn.prop('disabled', false);
-                    btn.html(originalText);
                 }
             });
             $('#specialEcheancierModal').modal('hide');
 
         });
         
-        function showUnpaidPaymentNotification() {
+         function showUnpaidPaymentNotification() {
             $('#unpaidPaymentModal').modal('show');
         }
-    
-        $(document).on('click','#idBtnConfirmeEcheancierModal', function(){
-            if(has_special_echeancier == true && validated_echeancier == false){
-                alertify.error("Un echéancier spécial est approuver, veuillez d'abord le confirmer");
-            }else if (hasReduction == true && remise_est_confirmer == false){
-                $('#echeancierConfirmationModal').modal('show');
-            }else{
-                $('#confirmEcheancierModal').modal('show');
-            }
-        });
     });
-    
-    
  
 
-  
 </script>
 
 
