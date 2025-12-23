@@ -197,48 +197,46 @@ def ApiStoreEcheancierSpecial(request):
         nombre_tranches = data.get('nombre_tranches')
         echeancier_lines = data.get('echeancier_lines')
 
-        print(echeancier_lines)
-        
         # # Validate required fields
-        # if not prospect_id or not nombre_tranches or not echeancier_lines:
-        #     return JsonResponse({
-        #         'status': 'error',
-        #         'message': 'Données incomplètes'
-        #     })
+        if not prospect_id or not nombre_tranches or not echeancier_lines:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Données incomplètes'
+            })
         
         # # Create EcheancierSpecial
-        # echeancier_special = EcheancierSpecial.objects.create(
-        #     prospect_id=prospect_id,
-        #     nombre_tranche=nombre_tranches,
-        #     is_validate=False,
-        #     is_approuved=False
-        # )
+        echeancier_special = EcheancierSpecial.objects.create(
+            prospect_id=prospect_id,
+            nombre_tranche=nombre_tranches,
+            is_validate=False,
+            is_approuved=False
+        )
         
-        # # Create EcheancierPaiementSpecialLine for each line
-        # for line in echeancier_lines:
-        #     # Convert montant_tranche to Decimal safely
-        #     montant_tranche = line.get('montant_tranche', 0)
-        #     if isinstance(montant_tranche, str):
-        #         montant_tranche = montant_tranche.replace(',', '.')  # Handle comma as decimal separator
-        #         montant_tranche = Decimal(montant_tranche)
-        #     elif isinstance(montant_tranche, (int, float)):
-        #         montant_tranche = Decimal(str(montant_tranche))
-        #     else:
-        #         montant_tranche = Decimal('0')
+        # Create EcheancierPaiementSpecialLine for each line
+        for line in echeancier_lines:
+            # Convert montant_tranche to Decimal safely
+            montant_tranche = line.get('montant_tranche', 0)
+            if isinstance(montant_tranche, str):
+                montant_tranche = montant_tranche.replace(',', '.')  # Handle comma as decimal separator
+                montant_tranche = Decimal(montant_tranche)
+            elif isinstance(montant_tranche, (int, float)):
+                montant_tranche = Decimal(str(montant_tranche))
+            else:
+                montant_tranche = Decimal('0')
             
-        #     EcheancierPaiementSpecialLine.objects.create(
-        #         echeancier=echeancier_special,
-        #         taux=line.get('taux', ''),
-        #         value=line.get('value', ''),
-        #         montant_tranche=montant_tranche,
-        #         date_echeancier=line.get('date_echeancier')
-        #     )
+            EcheancierPaiementSpecialLine.objects.create(
+                echeancier=echeancier_special,
+                taux=line.get('taux', ''),
+                value=line.get('value', ''),
+                montant_tranche=montant_tranche,
+                date_echeancier=line.get('date_echeancier')
+            )
         
-        # return JsonResponse({
-        #     'status': 'success',
-        #     'message': 'Échéancier spécial enregistré avec succès',
-        #     'echeancier_id': echeancier_special.id
-        # })
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Échéancier spécial enregistré avec succès',
+            'echeancier_id': echeancier_special.id
+        })
         
     
     return JsonResponse({
