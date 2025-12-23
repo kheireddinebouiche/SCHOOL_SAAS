@@ -266,6 +266,9 @@ class EcheancierPaiementSpecialLine(models.Model):
     montant_tranche = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=100)
     date_echeancier = models.DateField(null=True, blank=True)
 
+    entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
+
+
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
 

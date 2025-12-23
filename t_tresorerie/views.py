@@ -526,6 +526,14 @@ def ApiGetDetailsDemandePaiementDouble(request):
             # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
+        specialite_data_price = {
+            'prix_1' : voeux.specialite.prix_spec1,
+            'entite_1' : voeux.specialite.specialite1.formation.entite_legal.id,
+            'prix_2' : voeux.specialite.prix_spec2,
+            'entite_2' : voeux.specialite.specialite2.formation.entite_legal.id,
+
+        }
+
         data = {
             'user_data' : user_data,
             'voeux' : voeux_data,
@@ -545,6 +553,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             'has_special_echeancier' : has_special_echeancier,
             'special_echeancier_validate' : special_echeancier_validate,
+            'specialite_data_price' : specialite_data_price,
 
         }
 

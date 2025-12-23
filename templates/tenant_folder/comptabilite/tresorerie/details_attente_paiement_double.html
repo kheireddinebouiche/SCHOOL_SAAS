@@ -1136,6 +1136,7 @@
                                                 <th>Pourcentage</th>
                                                 <th>Montant</th>
                                                 <th>Date d'échéance</th>
+                                                <th>Entité</th>
                                             </tr>
                                         </thead>
                                         <tbody id="specialEcheancierTable">
@@ -1146,14 +1147,6 @@
                                                 </td>
                                             </tr>
                                         </tbody>
-                                        <tfoot id="specialEcheancierFooter">
-                                            <tr class="total-row">
-                                                <td><strong>Total</strong></td>
-                                                <td id="totalPercentage">0%</td>
-                                                <td id="totalAmount">0 DA</td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
                                     </table>
                                 </div>
                                 <div id="percentageWarning" class="alert alert-info mt-3" role="alert">
@@ -3001,6 +2994,8 @@
         var paymentData = {};
         var hasPayments = false;
         var paymentsExists = false;
+        let prix_specialite= [];
+
     
 
         function HideReducNotif(){
@@ -3052,6 +3047,10 @@
 
                     const createdAt = new Date(data.user_data.created_at);
                     const date_frais_inscription = createdAt.toISOString().split('T')[0];
+
+
+                    prix_specialite = data.specialite_data_price;
+                    
                     
                     // Store client ID
                     clientId = data.user_data.client_id;
@@ -3607,38 +3606,117 @@
         // Générer les tranches
         $(document).on('click', '#genererTranchesBtn', function(){
             var nombreTranches = parseInt($('#nombreTranches').val());
-            var prix = parseFloat(prixFormation);
-            
+
             if (isNaN(nombreTranches) || nombreTranches <= 0) {
                 alert("Veuillez entrer un nombre de tranches valide");
                 return;
             }
-            
-            if (isNaN(prix) || prix <= 0) {
-                alert("Prix de formation invalide");
+
+            // Vérifier que le prix_specialite est défini
+            if (!prix_specialite) {
+                alert("Données de prix non disponibles");
                 return;
             }
-            
+
+            // Gestion flexible de la structure de prix_specialite
+            var prix1 = 0;
+            var prix2 = 0;
+            var entite1 = "";
+            var entite2 = "";
+
+            // Vérifier si prix_specialite est un tableau
+            if (Array.isArray(prix_specialite)) {
+                if (prix_specialite.length >= 1) {
+                    if (typeof prix_specialite[0] === 'object') {
+                        // Si c'est un objet, extraire prix et entité
+                        prix1 = parseFloat(prix_specialite[0].prix_1 || prix_specialite[0].prix || prix_specialite[0][0]) || 0;
+                        entite1 = prix_specialite[0].entite_1 || prix_specialite[0].entite || prix_specialite[0].entite1 || "";
+                    } else {
+                        prix1 = parseFloat(prix_specialite[0]) || 0;
+                    }
+                }
+                if (prix_specialite.length >= 2) {
+                    if (typeof prix_specialite[1] === 'object') {
+                        // Si c'est un objet, extraire prix et entité
+                        prix2 = parseFloat(prix_specialite[1].prix_2 || prix_specialite[1].prix || prix_specialite[1][1] || prix_specialite[1][0]) || 0;
+                        entite2 = prix_specialite[1].entite_2 || prix_specialite[1].entite || prix_specialite[1].entite2 || "";
+                    } else {
+                        prix2 = parseFloat(prix_specialite[1]) || 0;
+                    }
+                }
+            } else if (typeof prix_specialite === 'object') {
+                // Si c'est un objet, essayer de récupérer les prix et entités par des clés possibles
+                prix1 = parseFloat(prix_specialite.prix_1 || prix_specialite[0] || prix_specialite.prix1 || prix_specialite.prix) || 0;
+                prix2 = parseFloat(prix_specialite.prix_2 || prix_specialite[1] || prix_specialite.prix2 || 0) || 0;
+                entite1 = prix_specialite.entite_1 || prix_specialite.entite1 || prix_specialite.entite || "";
+                entite2 = prix_specialite.entite_2 || prix_specialite.entite2 || prix_specialite.entite || "";
+            } else {
+                // Si c'est une valeur unique
+                prix1 = parseFloat(prix_specialite) || 0;
+            }
+
+            if (prix1 <= 0 && prix2 <= 0) {
+                // Si les deux prix sont nuls, utiliser le prix de formation par défaut
+                var prix = parseFloat(prixFormation);
+                if (prix > 0) {
+                    prix1 = prix;
+                } else {
+                    alert("Aucun prix de formation disponible");
+                    return;
+                }
+            }
+
             var html = '';
             var pourcentageParTranche = (100 / nombreTranches).toFixed(2);
-            
+
             // Initialiser le tableau des pourcentages précédents
             previousPercentages = [];
-            
-            for (var i = 1; i <= nombreTranches; i++) {
-                var montant = (prix * (pourcentageParTranche / 100)).toFixed(2);
-                previousPercentages.push(parseFloat(pourcentageParTranche));
-                html += '<tr>';
-                html += '<td class="tranche-cell-special"><span class="badge bg-warning">Tranche ' + i + '</span></td>';
-                html += '<td><div class="d-flex align-items-center"><input type="number" class="form-control border-0 bg-light py-1 percentage-input" value="' + pourcentageParTranche + '" data-index="' + (i-1) + '" step="0.01" min="0" style="width: 80px;"><span class="ms-1">%</span></div></td>';
-                html += '<td class="montant-cell">' + montant + ' DA</td>';
-                html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
-                html += '</tr>';
+
+            // Générer les tranches pour le prix 1
+            if (prix1 > 0) {
+                for (var i = 1; i <= nombreTranches; i++) {
+                    var basePercentage = Math.floor(100 / nombreTranches);
+                    var remainder = 100 % nombreTranches;
+                    var pourcentage = (i <= remainder) ? basePercentage + 1 : basePercentage;
+
+                    var montant = (prix1 * (pourcentage / 100)).toFixed(2);
+                    // Calculate index for percentage array based on existing entries
+                    var currentIndex = previousPercentages.length;
+                    previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
+                    html += '<tr>';
+                    html += '<td class="tranche-cell-special"><span class="badge bg-primary">Prix 1 - Tranche ' + i + '</span></td>';
+                    html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
+                    html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
+                    html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
+                    html += '<td>' + entite1 + '</td>'; // Entité correspondante
+                    html += '</tr>';
+                }
             }
-            
+
+            // Générer les tranches pour le prix 2
+            if (prix2 > 0) {
+                for (var i = 1; i <= nombreTranches; i++) {
+                    var basePercentage = Math.floor(100 / nombreTranches);
+                    var remainder = 100 % nombreTranches;
+                    var pourcentage = (i <= remainder) ? basePercentage + 1 : basePercentage;
+
+                    var montant = (prix2 * (pourcentage / 100)).toFixed(2);
+                    // Calculate index for percentage array based on existing entries
+                    var currentIndex = previousPercentages.length;
+                    previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
+                    html += '<tr>';
+                    html += '<td class="tranche-cell-special"><span class="badge bg-success">Prix 2 - Tranche ' + i + '</span></td>';
+                    html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
+                    html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
+                    html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
+                    html += '<td>' + entite2 + '</td>'; // Entité correspondante
+                    html += '</tr>';
+                }
+            }
+
             $('#specialEcheancierTable').html(html);
             $('#saveSpecialEcheancierBtn').prop('disabled', false);
-            
+
             // Calculer les totaux initiaux
             calculateTotals();
         });
@@ -3711,25 +3789,27 @@
             // Collect data from the special echeancier table
             var echeancierLines = [];
             var isValid = true;
-            
+
             $('#specialEcheancierTable tr').each(function() {
                 var $row = $(this);
-                var taux = $row.find('.percentage-input').val();
+                var taux = $row.find('td:nth-child(2)').text().replace(' %', ''); // Get percentage from the 2nd column
                 var nom_tranche = $row.find('.tranche-cell-special').text();
                 var montant = $row.find('.montant-cell').text().replace(' DA', '');
                 var date = $row.find('input[type="date"]').val();
-                
+                var entite = $row.find('td:nth-child(5)').text(); // Get entity from the 5th column
+
                 // Validate required fields
                 if (!taux || !montant || !date) {
                     isValid = false;
                     return false; // Break the loop
                 }
-                
+
                 echeancierLines.push({
                     taux: taux,
                     value: nom_tranche, // We don't have this value in the UI, so leave it empty
                     montant_tranche: montant,
-                    date_echeancier: date
+                    date_echeancier: date,
+                    entite: entite  // Add entity to the data
                 });
             });
             
