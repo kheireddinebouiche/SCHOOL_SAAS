@@ -342,6 +342,8 @@ def ApiGetDetailsDemandePaiement(request):
             'is_appliced' : is_appliced,
             "refund_data" : refund_data,
             'special_echeancier_validate' : special_echeancier_validate,
+            'annee_academique' : voeux.promo.annee_academique,
+
         }
 
         return JsonResponse(data, safe=False)
@@ -360,6 +362,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
         has_processed_refund = False
         is_appliced = False
         special_echeancier_validate = False
+        id_special_echeancier = 0
 
         id= request.GET.get('id_demande')
         obj = ClientPaiementsRequest.objects.get(id = id)
@@ -436,6 +439,9 @@ def ApiGetDetailsDemandePaiementDouble(request):
             echeancier_state_approuvel = obj_echeacncier_speial.is_approuved
             has_special_echeancier = True
             special_echeancier_validate = obj_echeacncier_speial.is_validate
+            
+            ##Id echeancier
+            id_special_echeancier = obj_echeacncier_speial.id
 
             special_echeancier_data = []
             for i in line_echeancier_special:
@@ -445,6 +451,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     'value' : i.value,
                     'date_echeancier' : i.date_echeancier,
                     'montant_tranche' : i.montant_tranche,
+                    'entite' : i.entite.id if i.entite else None,
                 })
 
         echeancier_data=[]
@@ -458,6 +465,10 @@ def ApiGetDetailsDemandePaiementDouble(request):
                 'entite' : i.entite.id if i.entite else None,
                 "entite_nom" : i.entite.designation if i.entite else None,
             })
+
+        ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
+        if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
+            echeancier_data = special_echeancier_data
 
         refund = Rembourssements.objects.filter(client = obj.client).last()
         refund_data = []
@@ -554,6 +565,9 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'has_special_echeancier' : has_special_echeancier,
             'special_echeancier_validate' : special_echeancier_validate,
             'specialite_data_price' : specialite_data_price,
+            'special_echeancier_line' : special_echeancier_data,
+            'echancierSpecialeId': id_special_echeancier,
+            'annee_academique' : voeux.promo.annee_academique,
 
         }
 

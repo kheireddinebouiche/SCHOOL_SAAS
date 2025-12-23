@@ -1665,7 +1665,7 @@
 
 <!-- Modal Détails Échéancier Spécial -->
 <div class="modal fade" id="echeancierSpecialDetailsModal" tabindex="-1" aria-labelledby="echeancierSpecialDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-3 shadow border-0">
             <div class="modal-header border-0 bg-primary bg-opacity-10 px-3 py-2">
                 <div class="d-flex align-items-center">
@@ -1726,7 +1726,7 @@
 
 <!-- Modal Détails Échéancier Spécial en Examen (sans bouton Appliquer) -->
 <div class="modal fade" id="echeancierExamenDetailsModal" tabindex="-1" aria-labelledby="echeancierExamenDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-3 shadow border-0">
             <div class="modal-header border-0 bg-warning bg-opacity-10 px-3 py-2">
                 <div class="d-flex align-items-center">
@@ -1932,7 +1932,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="datePaiement">Date de paiement <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #f8f9fa !important;" />
+                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #e9ecef !important; color: #6c757d !important; pointer-events: none;" readonly />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="montantPaiement">Montant <span class="text-danger">*</span></label>
@@ -2995,6 +2995,7 @@
         var hasPayments = false;
         var paymentsExists = false;
         let prix_specialite= [];
+        let annee_academique = null;
 
     
 
@@ -3062,6 +3063,8 @@
 
                     // $('#_nom_groupe').val(data.groupe_data.groupe_nom);
                     // $('#_semestre_groupe').val(data.groupe_data.groupe_semestre);
+
+                    annee_academique = data.annee_academique;
 
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
@@ -3149,7 +3152,7 @@
                     if(data.has_special_echeancier){
                         has_special_echeancier = true;
                         specialEcheancierState = data.echeancier_special_state_approuvel;
-                        IdSpecialEcheancier = data.id_echeancier_special;
+                        IdSpecialEcheancier = data.echancierSpecialeId;
 
                         var rowSpecial = "";
                         $.each(data.special_echeancier_line, function(index, item){
@@ -4335,7 +4338,7 @@
                         doc.text("Né(e) le : "+_date_naissance+"  À : "+_lieu_naissance+"", 30, line());
                         doc.text("Inscrit(e) au niveau de "+entite+", pour la formation de : "+formationLabel, 30, line());
                         doc.text("Spécialité :"+specialite, 30, line());
-                        doc.text("Année académique : 2023 / 2024", 30, line(8));
+                        doc.text("Année académique : "+annee_academique, 30, line(8));
 
                         doc.text("Le paiement de la somme susmentionnée s’effectuera selon l’échéancier suivant :", 20, line(8));
 
@@ -4514,7 +4517,7 @@
         $('#nouveauPaiementModal').on('show.bs.modal', function () {
             // Charger les échéances dans le dropdown
             var echeancesOptions = '<option value="">Sélectionnez une échéance</option>';
-            
+
             // Parcourir les lignes du tableau des échéances dues
             $('#ListePaiementRequestLine tr').each(function() {
                 var id_due_paiement = $(this).find('td:eq(0)').text().trim();
@@ -4522,7 +4525,7 @@
                 var date = $(this).find('td:eq(2)').text().trim();
                 var montant = $(this).find('td:eq(3)').text().trim();
                 var restant = $(this).find('td:eq(4)').text().trim();
-                
+
                 // Vérifier que la ligne n'est pas vide
                 if (label && montant) {
                     var optionText = label + " - " + restant;
@@ -4532,15 +4535,19 @@
                     echeancesOptions += '<option data-id_due_paiement = "'+ id_due_paiement +'" value="' + label + '" data-montant="' + restant.replace(" DA", "") + '">' + optionText + '</option>';
                 }
             });
-            
+
             $('#echeancierSelection').html(echeancesOptions);
-            
+
             // Réinitialiser le résumé
             $('#resumeEcheance').text('-');
             $('#resumeDate').text('-');
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
+
+            // Définir la date de paiement à aujourd'hui et la rendre non modifiable
+            var today = new Date().toISOString().split('T')[0];
+            $('#datePaiement').val(today);
         });
         
         // Mettre à jour le montant quand une échéance est sélectionnée
@@ -5195,6 +5202,9 @@
         });
 
         $(document).on('click', '#confirmApplyEcheancierSpecialBtn', function(){
+
+           
+
             var btn = $(this); // référence du bouton
             btn.prop('disabled', true); // désactive le bouton
 

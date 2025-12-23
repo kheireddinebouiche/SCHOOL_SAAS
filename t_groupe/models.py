@@ -46,3 +46,15 @@ class GroupeLine(models.Model):
 
     def __str__(self):
         return f"{self.groupe.nom} - {self.student.prenom} {self.student.nom}"
+    
+
+class AffectationGroupe(models.Model):
+    etudiant = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
+    groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('etudiant', 'specialite')
+
+    def __str__(self):
+        return f"{self.etudiant.nom} - {self.specialite.label} - {self.groupe.nom}"

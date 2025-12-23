@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core import serializers
 import json
+import re
 
 
 @login_required(login_url="institut_app:login")
@@ -217,19 +218,29 @@ def ApiStoreEcheancierSpecial(request):
             # Convert montant_tranche to Decimal safely
             montant_tranche = line.get('montant_tranche', 0)
             if isinstance(montant_tranche, str):
+                # Remove any spaces, currency symbols, and normalize decimal separator
+                montant_tranche = montant_tranche.replace(' ', '')  # Remove spaces
+                montant_tranche = montant_tranche.replace('DA', '')  # Remove currency
                 montant_tranche = montant_tranche.replace(',', '.')  # Handle comma as decimal separator
-                montant_tranche = Decimal(montant_tranche)
+                # Remove any non-numeric characters except decimal point
+                montant_tranche = re.sub(r'[^\d.-]', '', montant_tranche)
+
+                try:
+                    montant_tranche = Decimal(montant_tranche)
+                except (ValueError, TypeError):
+                    montant_tranche = Decimal('0')  # Default to 0 if conversion fails
             elif isinstance(montant_tranche, (int, float)):
                 montant_tranche = Decimal(str(montant_tranche))
             else:
                 montant_tranche = Decimal('0')
-            
+
             EcheancierPaiementSpecialLine.objects.create(
                 echeancier=echeancier_special,
                 taux=line.get('taux', ''),
                 value=line.get('value', ''),
                 montant_tranche=montant_tranche,
-                date_echeancier=line.get('date_echeancier')
+                date_echeancier=line.get('date_echeancier'),
+                entite_id = line.get('entite','')
             )
         
         return JsonResponse({

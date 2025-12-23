@@ -14,8 +14,9 @@ from django.db.models import Count, Sum
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
     
+
     student = Prospets.objects.get(id = pk)
-    groupe = GroupeLine.objects.get(student = student)
+    groupe = GroupeLine.objects.filter(student = student)
     paiements = Paiements.objects.filter(prospect = student)
     documents = DocumentsDemandeInscription.objects.filter(prospect = student)
     notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
@@ -26,7 +27,8 @@ def StudentDetails(request, pk):
     
     montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
     montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
-    total_a_paye = FicheDeVoeux.objects.filter(prospect = student, is_confirmed=True).first()
+
+    montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
 
 
     context = {
@@ -40,10 +42,14 @@ def StudentDetails(request, pk):
         'echeanciers' : echeanciers,
         'montant_due' : montant_due,
         'montant_paye' : montant_paye,
-        'total_a_paye' : total_a_paye.specialite.formation.prix_formation + total_a_paye.specialite.formation.frais_inscription,
+        'total_a_paye' : montant_total,
         'remises' : remises,
     }
-    return render(request, 'tenant_folder/student/profile_etudiant.html',context)
+
+    if student.is_double:
+        return render(request, 'tenant_folder/student/profile_etudiant_double.html',context)
+    else:
+        return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 
 
 @login_required(login_url="institut_app:login")

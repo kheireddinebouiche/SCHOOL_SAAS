@@ -246,9 +246,14 @@ def ApiDeletePaiement(request):
 def ApiApplyEcheancierSpecial(request):
     if request.method == "POST":
         id_echeancier_special = request.POST.get('id_echeancier_special')
+
+        if not id_echeancier_special:
+            return JsonResponse({"status": "error","message":"Informations manquante"})
+        
         obj_echeancier_special = EcheancierSpecial.objects.get(id = id_echeancier_special)
         obj_echeancier_special.is_validate = True
         obj_echeancier_special.save()
+        
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})

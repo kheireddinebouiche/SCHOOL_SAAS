@@ -1978,7 +1978,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="datePaiement">Date de paiement <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #f8f9fa !important;" />
+                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #e9ecef !important; color: #6c757d !important; pointer-events: none;" readonly />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="montantPaiement">Montant <span class="text-danger">*</span></label>
@@ -3041,6 +3041,7 @@
         var paymentsExists = false;
         let remise_est_confirmer = false;
         let frais_inscription = null;
+        let annee_academique = null;
         
         function HideReducNotif(){
            
@@ -3093,6 +3094,8 @@
                     const date_frais_inscription = createdAt.toISOString().split('T')[0];
 
                     frais_inscription = data.frais_inscription;
+                    
+                    annee_academique = data.annee_academique;
                     
                     // Store client ID
                     clientId = data.user_data.client_id;
@@ -4294,7 +4297,7 @@
                         doc.text("Né(e) le : "+_date_naissance+"  À : "+_lieu_naissance+"", 30, line());
                         doc.text("Inscrit(e) au niveau de "+entite+", pour la formation de : "+formationLabel, 30, line());
                         doc.text("Spécialité :"+specialite, 30, line());
-                        doc.text("Année académique : 2023 / 2024", 30, line(8));
+                        doc.text("Année académique : "+annee_academique, 30, line(8));
 
                         doc.text("Le paiement de la somme susmentionnée s’effectuera selon l’échéancier suivant :", 20, line(8));
 
@@ -4473,7 +4476,7 @@
         $('#nouveauPaiementModal').on('show.bs.modal', function () {
             // Charger les échéances dans le dropdown
             var echeancesOptions = '<option value="">Sélectionnez une échéance</option>';
-            
+
             // Parcourir les lignes du tableau des échéances dues
             $('#ListePaiementRequestLine tr').each(function() {
                 var id_due_paiement = $(this).find('td:eq(0)').text().trim();
@@ -4481,7 +4484,7 @@
                 var date = $(this).find('td:eq(2)').text().trim();
                 var montant = $(this).find('td:eq(3)').text().trim();
                 var restant = $(this).find('td:eq(4)').text().trim();
-                
+
                 // Vérifier que la ligne n'est pas vide
                 if (label && montant) {
                     var optionText = label + " - " + restant;
@@ -4491,15 +4494,19 @@
                     echeancesOptions += '<option data-id_due_paiement = "'+ id_due_paiement +'" value="' + label + '" data-montant="' + restant.replace(" DA", "") + '">' + optionText + '</option>';
                 }
             });
-            
+
             $('#echeancierSelection').html(echeancesOptions);
-            
+
             // Réinitialiser le résumé
             $('#resumeEcheance').text('-');
             $('#resumeDate').text('-');
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
             $('#resumeReference').text('-');
+
+            // Définir la date de paiement à aujourd'hui et la rendre non modifiable
+            var today = new Date().toISOString().split('T')[0];
+            $('#datePaiement').val(today);
         });
         
         // Mettre à jour le montant quand une échéance est sélectionnée
