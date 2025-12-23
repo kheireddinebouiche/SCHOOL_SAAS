@@ -37,6 +37,7 @@ def ApiLoadEntrepriseData(request):
         'numero' : entreprise.numero,
         'code_wilaya' : entreprise.code_wilaya,
         'representant' : entreprise.representant,
+        'agrement' : entreprise.agrement,
     }
 
     return JsonResponse(data, safe=False)
@@ -45,6 +46,7 @@ def ApiLoadEntrepriseData(request):
 @transaction.atomic
 def ApiUpdateEntrepriseData(request):
     if request.method =="POST":
+        agrement = request.POST.get('agrement')
         id_entreprise = request.POST.get('id_entreprise')
         designation = request.POST.get('designation')
         adresse = request.POST.get('adresse')
@@ -66,6 +68,7 @@ def ApiUpdateEntrepriseData(request):
 
         entreprise = Entreprise.objects.get(id = id_entreprise)
         
+        entreprise.agrement = agrement
         entreprise.designation = designation
         entreprise.adresse = adresse
         entreprise.wilaya = wilaya

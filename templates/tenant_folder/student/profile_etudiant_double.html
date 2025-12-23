@@ -385,21 +385,46 @@
                                                     <th class="border-0">Groupe</th>
                                                     <th class="border-0">Spécialité</th>
                                                     <th class="border-0">Statut</th>
+                                                    <th class="border-0 rounded-end">Action</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>2023/2024</td>
-                                                    <td>Groupe A1</td>
-                                                    <td>Informatique</td>
-                                                    <td><span class="badge bg-success">Actif</span></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>2022/2023</td>
-                                                    <td>Groupe B2</td>
-                                                    <td>Informatique</td>
-                                                    <td><span class="badge bg-secondary">Terminé</span></td>
-                                                </tr>
+                                            <tbody id="listeStudentGroupe">
+                                                {% for item in groupe %}
+                                                    <tr>
+                                                        <td>{{item.groupe.promotion.annee_academique}}</td>
+                                                        <td>{{item.groupe.nom}}</td>
+                                                        <td>{{item.groupe.specialite.label}}</td>
+                                                        <td><span class="badge bg-success">Actif</span></td>
+                                                        <td>
+                                                            <div class="dropdown">
+                                                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                                    <i class="ri-printer-line me-1"></i> Impression
+                                                                </button>
+                                                                <ul class="dropdown-menu">
+                                                                    <li><a class="dropdown-item print-document" href="#" data-document-type="contrat"><i class="ri-file-text-line me-2" data-entite="{{item.groupe.specialite.formation.entite_legal.designation}}" data-specialite="{{item.groupe.specialite.groupe}}" data-formation="{{item.groupe.specialite.formation.nom}}" data-annee-academique="{{item.groupe.promotion.annee_academique}}"></i>Contrat</a></li>
+                                                                    <li><a class="dropdown-item print-document" href="#" data-document-type="certificat"><i class="ri-file-line me-2" data-entite="{{item.groupe.specialite.formation.entite_legal.designation}}" data-specialite="{{item.groupe.specialite.groupe}}" data-formation="{{item.groupe.specialite.formation.nom}}" data-annee-academique="{{item.groupe.promotion.annee_academique}}"></i>Certificat de scolarité</a></li>
+                                                                    <li><a class="dropdown-item print-document" href="#" data-document-type="attestation"><i class="ri-id-card-line me-2" data-entite="{{item.groupe.specialite.formation.entite_legal.designation}}" data-specialite="{{item.groupe.specialite.label}}" data-formation="{{item.groupe.specialite.formation.nom}}" data-annee-academique="{{item.groupe.promotion.annee_academique}}"></i>Attestation d'inscription</a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                    {% empty %}
+                                                    <tr>
+                                                        <td colspan="5">
+                                                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                                                                <div class="avatar-sm mb-4">
+                                                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                                                        <i class="ri-user-unfollow-line"></i>
+                                                                    </div>
+                                                                </div>
+                                                                <h5 class="mb-2">Aucun historique académique trouvé</h5>
+                                                                <p class="text-muted mb-0">Il n'y a aucun historique académique enregistré pour cet étudiant</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                                
                                             </tbody>
                                         </table>
                                     </div>
@@ -1901,6 +1926,10 @@
     $(document).ready(function(){
 
         const id_etudiant = "{{pk}}";
+
+        const nom_complet = "{{etudiant.nom}} {{etudiant.prenom}}";
+
+        console.log(nom_complet);
        
         // Function to generate school certificate with jsPDF
         function generateSchoolCertificate() {
@@ -1999,23 +2028,214 @@
             doc.save("carte_etudiant_{{ etudiant.matricule_interne }}.pdf");
         }
         
-        // Fix for handling dropdown items with text content
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('a.dropdown-item')) {
-                e.preventDefault();
-                const text = e.target.text || e.target.textContent;
-                
-                if (text.includes('Certificat de scolarité')) {
-                    generateSchoolCertificate();
-                } else if (text.includes('Carte étudiant')) {
-                    generateStudentCard();
-                } else if (text.includes('Contrat')) {
-                    // For now, showing an alert for contract
-                    alert("Fonctionnalité de contrat non implémentée pour le moment");
-                }
+       
+        // Separate functions for each document type
+        function generateContrat(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set font similar to Arial (using default font which is similar to Arial/Helvetica)
+            doc.setFontSize(12);
+
+            // Add title
+            doc.setFontSize(16);
+            doc.text("CONTRAT D'INSCRIPTION", 105, 20, null, null, "center");
+
+            // Add content with proper spacing
+            doc.setFontSize(12);
+            var y = 40;
+
+            // Add institution information
+            doc.text("Entre l'établissement: " + entite + ",", 20, y);
+            y += 10;
+
+            // Add student information
+            doc.text("D'une part, et", 20, y);
+            y += 10;
+
+            doc.text("Monsieur/Madame: " + nom_complet, 20, y);
+            y += 10;
+
+            doc.text("Né(e) le: " + date_naissance + " à: " + lieu_naissance, 20, y);
+            y += 10;
+
+            // Add enrollment information
+            doc.text("D'autre part, il a été convenu ce qui suit:", 20, y);
+            y += 15;
+
+            doc.text("L'étudiant(e) s'engage à suivre la formation de: " + formation, 20, y);
+            y += 10;
+
+            doc.text("Spécialité: " + specialite, 20, y);
+            y += 10;
+
+            doc.text("Durant l'année académique: " + annee_academique, 20, y);
+            y += 10;
+
+            // Add terms and conditions (general)
+            y += 10;
+            doc.text("Les conditions générales de formation sont celles définies", 20, y);
+            y += 10;
+            doc.text("dans le règlement intérieur de l'établissement.", 20, y);
+            y += 20;
+
+            // Add date and signature sections
+            var today = new Date();
+            var dateStr = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear();
+            doc.text("Fait à " + entite.split(' ')[0] + ", le " + dateStr, 20, y);
+
+            // Add signature lines
+            doc.text("Signature de l'étudiant(e)", 20, y + 30);
+            doc.text("Signature du responsable", 150, y + 30);
+
+            // Save the PDF
+            doc.save("contrat_" + "{{etudiant.matricule_interne}}" + ".pdf");
+        }
+
+        function generateCertificatScolarite(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set font similar to Arial (using default font which is similar to Arial/Helvetica)
+            doc.setFontSize(12);
+
+            // Add title
+            doc.setFontSize(16);
+            doc.text("CERTIFICAT DE SCOLARITE", 105, 20, null, null, "center");
+
+            // Add content with proper spacing
+            doc.setFontSize(12);
+            var y = 40;
+
+            // Add institution information
+            doc.text("Je soussigné, Directeur de l'établissement,", 20, y);
+            y += 10;
+            doc.text("Certifie que l'étudiant(e):", 20, y);
+            y += 10;
+
+            doc.setFontSize(14);
+            doc.text(nom_complet, 20, y);
+            y += 10;
+
+            doc.setFontSize(12);
+            doc.text("Né(e) le: " + date_naissance + " à " + lieu_naissance, 20, y);
+            y += 10;
+            doc.text("Nationalité: " + "{{etudiant.nationalite|default:'Non renseigné'}}", 20, y);
+            y += 10;
+            doc.text("Est régulièrement inscrit(e) dans notre établissement pour l'année scolaire:", 20, y);
+            y += 10;
+            doc.text(annee_academique, 20, y);
+            y += 10;
+            doc.text("Dans la spécialité de: " + specialite, 20, y);
+            y += 10;
+            doc.text("Au niveau: " + "{{etudiant.get_niveau_etude_display|default:'Non renseigné'}}", 20, y);
+            y += 20;
+
+            // Add signature section
+            doc.text("Fait en certification conforme,", 20, y);
+            y += 10;
+            var today = new Date();
+            var dateStr = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear();
+            doc.text("Le " + dateStr, 20, y);
+            y += 30;
+            doc.text("Le Directeur", 150, y);
+
+            // Save the PDF
+            doc.save("certificat_scolarite_" + "{{etudiant.matricule_interne}}" + ".pdf");
+        }
+
+        function generateAttestation(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Set font similar to Arial (using default font which is similar to Arial/Helvetica)
+            doc.setFontSize(12);
+
+            // Add title
+            doc.setFontSize(16);
+            doc.text("ATTESTATION D'INSCRIPTION", 105, 20, null, null, "center");
+
+            // Add content with proper spacing
+            doc.setFontSize(12);
+            var y = 40;
+            var leftMargin = 20; // Standard left margin
+            var rightMargin = 20; // Standard right margin for right-aligned text
+
+            // Add institution information and student details exactly as in the template
+            doc.text("Nous soussignés, " + entite + " attestons que l'apprenant(e) :", leftMargin, y);
+            y += 10;
+
+            doc.setFontSize(14);
+            doc.text(nom_complet, leftMargin, y);
+            y += 10;
+
+            doc.setFontSize(12);
+            doc.text("Né(e) le " + date_naissance + " à " + lieu_naissance, leftMargin, y);
+            y += 10;
+
+            // Add enrollment information - potentially split long lines
+            var line1 = "Est inscrit(e) au sein de notre école pour suivre un programme de formation";
+            var line2 = "en vue de l'obtention du diplôme de " + formation;
+
+            doc.text(line1, leftMargin, y);
+            y += 10;
+            doc.text(line2, leftMargin, y);
+            y += 10;
+
+            doc.text("Spécialité : " + specialite, leftMargin, y);
+            y += 10;
+
+            doc.text("Pour l'année académique : " + annee_academique, leftMargin, y);
+            y += 10;
+
+            // Add purpose statement - potentially split if too long
+            var purposeStatement = "La présente attestation est délivrée à l'intéressé(e), sur sa demande, pour servir et valoir ce que de droit.";
+            // Split the purpose statement if it's too long
+            if (doc.getTextWidth(purposeStatement) > (doc.internal.pageSize.width - leftMargin - rightMargin - 20)) {
+                doc.text(purposeStatement, leftMargin, y, { maxWidth: doc.internal.pageSize.width - leftMargin - rightMargin - 20 });
+            } else {
+                doc.text(purposeStatement, leftMargin, y);
+            }
+            y += 20; // Space before location (like blank line in template)
+
+            // Add location and date
+            var today = new Date();
+            var dateStr = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear();
+            doc.text("Chéraga, le " + dateStr, leftMargin, y);
+            y += 20; // Space before signature like blank line in template
+
+            // Add signature - Right aligned using calculated position
+            var signatureText = "Le Directeur";
+            var textWidth = doc.getTextWidth(signatureText);
+            var pageWidth = doc.internal.pageSize.width;
+            var xPosition = pageWidth - rightMargin - textWidth; // Right aligned with right margin
+            doc.text(signatureText, xPosition, y);
+
+            // Save the PDF
+            doc.save("attestation_inscription_" + "{{etudiant.matricule_interne}}" + ".pdf");
+        }
+
+        // Event handler for print documents
+        $(document).on('click', '.print-document', function(e){
+            e.preventDefault(); // Prevent default link behavior
+
+            var documentType = $(this).data('document-type');
+            var specialite = $(this).find('i').data('specialite');
+            var formation = $(this).find('i').data('formation');
+            var annee_academique = $(this).find('i').data('annee-academique');
+            var nom_complet = "{{etudiant.nom}} {{etudiant.prenom}}";
+            var entite = $(this).find('i').data('entite');
+            var date_naissance = "{{etudiant.date_naissance|date:'d/m/Y'}}";
+            var lieu_naissance = "{{etudiant.lieu_naissance}}";
+
+            if(documentType === 'contrat') {
+                generateContrat(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance);
+            } else if(documentType === 'certificat') {
+                generateCertificatScolarite(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance);
+            } else if(documentType === 'attestation') {
+                generateAttestation(entite, specialite, formation, annee_academique, nom_complet, date_naissance, lieu_naissance);
             }
         });
-        
 
         // Initialize the first tab as active and enhance tab functionality
         document.addEventListener('DOMContentLoaded', function() {
@@ -2297,7 +2517,6 @@
             $('#createDocumentModal').modal('show');
         });
         
-
         // Handle click on Accomplir button for notes
         $(document).on('click', '.accomplir-note', function() {
             var noteId = $(this).data('note-id');
@@ -2547,7 +2766,6 @@
                 }
             });
         });
-
 
         $(document).on('click','#saveRappelBtn', function(){
             var reminderType = $('#reminderType').val();

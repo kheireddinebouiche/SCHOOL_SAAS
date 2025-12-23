@@ -81,6 +81,7 @@ class Entreprise(models.Model):
 
     code_wilaya = models.CharField(max_length=100, null=True, blank=True)
     numero = models.CharField(max_length=100, null=True, blank=True)
+    agrement = models.CharField(max_length=100, null=True, blank=True)
 
     entite_afficher = models.CharField(max_length=100, null=True, blank=True, help_text="Abreviation a afficher sur les rapport ex: INSIM")
 
