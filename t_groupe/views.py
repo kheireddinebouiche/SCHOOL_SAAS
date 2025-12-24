@@ -113,6 +113,9 @@ def detailsGroupe(request, pk):
 
     echeancier_line = EcheancierPaiementLine.objects.filter(echeancier__formation = groupe.specialite.formation).values('value','date_echeancier', 'montant_tranche')
     echeancier = EcheancierPaiement.objects.get(formation = groupe.specialite.formation)
+    dossier_inscription = DossierInscription.objects.filter(formation = groupe.specialite.formation).values('label')
+    montant_formation = groupe.specialite.formation.prix_formation
+
 
     context = {
         'groupe' : groupe,
@@ -124,6 +127,7 @@ def detailsGroupe(request, pk):
         "date_debut" : groupe.start_date,
         "date_fin" : groupe.end_date,
         "branche" : groupe.specialite.branche,
+        'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 
