@@ -1917,10 +1917,44 @@
             var pageWidth = doc.internal.pageSize.width;
             var textAreaWidth = rightMargin - leftMargin;
 
-            // Add header logo if available on the left
-            if (logo_header) {
-                // Add the header logo at the top left
-                doc.addImage(logo_header, 'JPEG', 5, 5, 55, 15); // Positioned at top left
+            // Add header logo if available (on the left side, 25% of page width)
+            if(logo_header && logo_header.trim() !== '') {
+                try {
+                    // Calculate the position for the header logo (top left corner, 25% of page width)
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = leftMargin; // Position from left margin
+                    const logoY = 10; // Position from top (moved up from 5 to 10)
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG'; // Default format
+                    if (logo_header.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_header.toLowerCase().endsWith('.jpg') || logo_header.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_header.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    // Add the header logo to the document with 25% page width, auto height for aspect ratio
+                    doc.addImage(logo_header, format, logoX, logoY, logoWidth, 0); // width=25% of page, height=auto
+
+                    // Adjust starting position for text content if header logo is present
+                    // This is handled in the text positioning below
+                } catch (e) {
+                    console.log("Error adding header logo:", e.message);
+
+                    // Fallback: try adding with fixed dimensions if percentage approach fails
+                    try {
+                        const logoWidth = pageWidth * 0.25; // 25% of page width
+                        const logoHeight = 25; // Fixed height for logo
+                        const logoX = leftMargin; // Position from left margin
+                        const logoY = 10; // Position from top (moved up from 5 to 10)
+
+                        doc.addImage(logo_header, logoX, logoY, logoWidth, logoHeight);
+                    } catch (fallbackError) {
+                        console.log("Fallback also failed for header logo:", fallbackError.message);
+                    }
+                }
             }
 
             // Add title "Certificat de scolarité" at top right with calligraphic style
@@ -1929,17 +1963,17 @@
             var certificatText = "Certificat de scolarité";
             var certificatWidth = doc.getTextWidth(certificatText);
             var titleX = (pageWidth - certificatWidth) / 2; // Center the title instead of right aligning
-            doc.text(certificatText, titleX, 35); // Combined text in calligraphic style
+            doc.text(certificatText, titleX, 55); // Combined text in calligraphic style (moved down from 35 to 55 to match attestation spacing)
 
             // Add ID at top, with extra space below the title
             doc.setFontSize(12); // Reset to normal size
             doc.setFont('helvetica', 'normal'); // Reset font to normal
-            doc.text("ID : ", leftMargin, 60); // Increased Y position to add space below title
+            doc.text("ID : ", leftMargin, 80); // Increased Y position to add more space below title and logo
 
             // Add main certification text - using splitTextToSize to ensure it stays within margins
             var certificationText = "Je soussigné, Directeur général de l'Ecole de Formation Professionnelle "+entite+", certifie que l'apprenant (e) :";
             var wrappedCertificationText = doc.splitTextToSize(certificationText, textAreaWidth);
-            doc.text(wrappedCertificationText, leftMargin, 70); // Increased Y position to add space after "ID : "
+            doc.text(wrappedCertificationText, leftMargin, 90); // Increased Y position to add space after "ID : "
 
             // Student name (bold)
             doc.setFontSize(14);
@@ -1949,41 +1983,87 @@
             doc.text(wrappedStudentName, leftMargin, 85); // Increased spacing
             doc.setFontSize(12);
 
-            // Birth information
-            var birthInfo = "Né (e) le {{ etudiant.date_naissance|date:'d/m/Y' }} à {{ etudiant.lieu_naissance }}";
+            // Birth information - with bold label
+            var birthLabel = "Né (e) le ";
+            var birthInfo = birthLabel + "{{ etudiant.date_naissance|date:'d/m/Y' }} à {{ etudiant.lieu_naissance }}";
             var wrappedBirthInfo = doc.splitTextToSize(birthInfo, textAreaWidth);
-            doc.text(wrappedBirthInfo, leftMargin, 95); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(birthLabel, leftMargin, 95); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingBirthText = "{{ etudiant.date_naissance|date:'d/m/Y' }} à {{ etudiant.lieu_naissance }}";
+            var remainingBirthX = leftMargin + doc.getTextWidth(birthLabel);
+            doc.text(remainingBirthText, remainingBirthX, 95); // Increased spacing
 
-            // Add formation information
-            var formationText = "Suit la formation résidentielle de "+formation;
+            // Add formation information - with bold label
+            var formationLabel = "Suit la formation résidentielle de ";
+            var formationText = formationLabel + formation;
             var wrappedFormationText = doc.splitTextToSize(formationText, textAreaWidth);
-            doc.text(wrappedFormationText, leftMargin, 105); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(formationLabel, leftMargin, 105); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingFormationText = formation;
+            var remainingFormationX = leftMargin + doc.getTextWidth(formationLabel);
+            doc.text(remainingFormationText, remainingFormationX, 105); // Increased spacing
 
-            var brancheText = "Branche : "+branche;
+            var brancheLabel = "Branche : ";
+            var brancheText = brancheLabel + branche;
             var wrappedBrancheText = doc.splitTextToSize(brancheText, textAreaWidth);
-            doc.text(wrappedBrancheText, leftMargin, 115); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(brancheLabel, leftMargin, 115); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingBrancheText = branche;
+            var remainingBrancheX = leftMargin + doc.getTextWidth(brancheLabel);
+            doc.text(remainingBrancheText, remainingBrancheX, 115); // Increased spacing
 
-            var specialiteText = "Spécialité : "+specialite;
+            var specialiteLabel = "Spécialité : ";
+            var specialiteText = specialiteLabel + specialite;
             var wrappedSpecialiteText = doc.splitTextToSize(specialiteText, textAreaWidth);
-            doc.text(wrappedSpecialiteText, leftMargin, 125); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(specialiteLabel, leftMargin, 125); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingSpecialiteText = specialite;
+            var remainingSpecialiteX = leftMargin + doc.getTextWidth(specialiteLabel);
+            doc.text(remainingSpecialiteText, remainingSpecialiteX, 125); // Increased spacing
 
-            var niveauText = "Niveau de qualification : "+qualification;
+            var niveauLabel = "Niveau de qualification : ";
+            var niveauText = niveauLabel + qualification;
             var wrappedNiveauText = doc.splitTextToSize(niveauText, textAreaWidth);
-            doc.text(wrappedNiveauText, leftMargin, 135); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(niveauLabel, leftMargin, 135); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingNiveauText = qualification;
+            var remainingNiveauX = leftMargin + doc.getTextWidth(niveauLabel);
+            doc.text(remainingNiveauText, remainingNiveauX, 135); // Increased spacing
 
-            // Training dates
-            var debutFormation = "Début de formation : "+date_debut;
-            var wrappedDebutFormation = doc.splitTextToSize(debutFormation, textAreaWidth);
-            doc.text(wrappedDebutFormation, leftMargin, 145); // Increased spacing
+            // Training dates - with bold label
+            var debutFormationLabel = "Début de formation : ";
+            var debutFormation = debutFormationLabel + date_debut;
+            doc.setFont('helvetica', 'bold');
+            doc.text(debutFormationLabel, leftMargin, 145); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingDebutFormationText = date_debut;
+            var remainingDebutFormationX = leftMargin + doc.getTextWidth(debutFormationLabel);
+            doc.text(remainingDebutFormationText, remainingDebutFormationX, 145); // Increased spacing
 
-            var finFormation = "Fin de formation : "+date_fin;
-            var wrappedFinFormation = doc.splitTextToSize(finFormation, textAreaWidth);
-            doc.text(wrappedFinFormation, leftMargin, 155); // Increased spacing
+            var finFormationLabel = "Fin de formation : ";
+            var finFormation = finFormationLabel + date_fin;
+            doc.setFont('helvetica', 'bold');
+            doc.text(finFormationLabel, leftMargin, 155); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingFinFormationText = date_fin;
+            var remainingFinFormationX = leftMargin + doc.getTextWidth(finFormationLabel);
+            doc.text(remainingFinFormationText, remainingFinFormationX, 155); // Increased spacing
 
-            // Academic year
-            var anneeText = "Année professionnelle : "+annee_academique;
+            // Academic year - with bold label
+            var anneeLabel = "Année professionnelle : ";
+            var anneeText = anneeLabel + annee_academique;
             var wrappedAnneeText = doc.splitTextToSize(anneeText, textAreaWidth);
-            doc.text(wrappedAnneeText, leftMargin, 165); // Increased spacing
+            doc.setFont('helvetica', 'bold');
+            doc.text(anneeLabel, leftMargin, 165); // Increased spacing
+            doc.setFont('helvetica', 'normal');
+            var remainingAnneeText = annee_academique;
+            var remainingAnneeX = leftMargin + doc.getTextWidth(anneeLabel);
+            doc.text(remainingAnneeText, remainingAnneeX, 165); // Increased spacing
 
             // Add spacing before signature
             var yPos = 210; // Increased spacing before signature
@@ -2008,17 +2088,58 @@
             doc.text(directorText, directorX, 240); // Adjusted for increased spacing
 
             // Add footer logo if available
-            if (logo_footer) {
-                // Add the footer logo at the bottom, stretched to fill between margins with reduced height
-                var pageHeight = doc.internal.pageSize.height;
-                doc.addImage(logo_footer, 'JPEG', leftMargin, pageHeight - 20, textAreaWidth, 15); // Stretched between margins with reduced height
+            if(logo_footer && logo_footer.trim() !== '') {
+                try {
+                    // Calculate the position for the footer logo (bottom centered)
+                    const logoWidth = pageWidth - (2 * leftMargin); // Use full page width minus margins
+                    const logoX = leftMargin; // Position at left margin
+                    const logoY = 270; // Position slightly lower to accommodate larger image (moved down from 265 to 270)
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG'; // Default format
+                    if (logo_footer.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_footer.toLowerCase().endsWith('.jpg') || logo_footer.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_footer.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    // Add the footer logo to the document, using almost full page width
+                    // Use calculated width and let height adjust automatically to maintain aspect ratio
+                    doc.addImage(logo_footer, format, logoX, logoY, logoWidth, 0); // width=calculated, height=0 means auto height
+
+                    // The actual height will be calculated automatically to maintain aspect ratio
+                    // For signature positioning, we'll use a more conservative approach
+                    // Since logo might be tall, we'll add more space below
+                    var currentY = logoY + 35; // Position considering potentially taller logo (reduced from 40 to 35)
+                } catch (e) {
+                    console.log("Error adding footer logo:", e.message);
+
+                    // Fallback: try adding with fixed dimensions if original size approach fails
+                    try {
+                        const logoWidth = pageWidth - (2 * leftMargin); // Use full page width minus margins
+                        const logoHeight = 35; // Fixed height for logo
+                        const logoX = leftMargin; // Position at left margin
+                        const logoY = 270; // Near bottom of page (moved down from 265 to 270)
+
+                        doc.addImage(logo_footer, logoX, logoY, logoWidth, logoHeight);
+
+                        // Adjust the signature position if footer logo is present
+                        var currentY = logoY + logoHeight + 15; // Position signature below the footer logo (increased from 10 to 15)
+                    } catch (fallbackError) {
+                        console.log("Fallback also failed for footer logo:", fallbackError.message);
+                    }
+                }
+            } else {
+                // If no footer logo, set a default position
+                var currentY = 250; // Default position when no footer logo
             }
 
             // Footer note - on a single line, just above the logo
             doc.setFontSize(9);
             var footerText = "Ce certificat n'est délivré qu'en un seul exemplaire. Il appartient à l'apprenant (e) d'en faire des photocopies conformes.";
-            var pageHeight = doc.internal.pageSize.height;
-            doc.text(footerText, leftMargin, pageHeight - 25); // Positioned just above the logo
+            doc.text(footerText, leftMargin, currentY - 15); // Positioned just above the logo
 
             // Save the PDF
             doc.save("certificat_scolarite_{{ etudiant.matricule_interne }}.pdf");
@@ -2628,6 +2749,8 @@
                     generateStudentCard();
                 } else if (text.includes('Contrat')) {
                     generateContract();
+                } else if (text.includes("Attestation d'inscription")){
+                    generateAttestationInscription();
                 }
             }
         });
@@ -3286,9 +3409,224 @@
             });
 
         });
+
+        // Function to generate attestation d'inscription with jsPDF
+        function generateAttestationInscription() {
+            const { jsPDF } = window.jspdf;
+
+            // Create a new PDF document
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Remove the default first page since we'll add pages as needed
+            doc.deletePage(1);
+
+            // Define variables for the attestation using the student data from this page
+            var studentNom = "{{etudiant.nom|escapejs}}";
+            var studentPrenom = "{{etudiant.prenom|escapejs}}";
+            var studentDateNaissance = "{{etudiant.date_naissance|date:'d/m/Y'|escapejs}}";
+            var studentLieuNaissance = "{{etudiant.lieu_naissance|escapejs}}";
+            var formation = "{{formation|escapejs}}";
+            var specialite = "{{specialite_simple|escapejs}}";
+            var anneeScolaire = "{{annee_academique|escapejs}}";
+            var institutionName = "{{entreprise_details.designation|default:'INSIM'|escapejs}}";
+            var ville = "{{entreprise_details.ville|escapejs}}";
+
+            // Add attestation page for the current student
+            addAttestationPage(doc, studentNom, studentPrenom, studentDateNaissance, studentLieuNaissance, formation, specialite, anneeScolaire, institutionName, ville);
+
+            // Save the PDF if there are pages
+            if (doc.getNumberOfPages() > 0) {
+                doc.save("attestation_inscription_{{etudiant.matricule_interne}}.pdf");
+            } else {
+                alert("Erreur: Aucune attestation à générer.");
+            }
+        }
+
+        // Function to add an attestation page for a student
+        function addAttestationPage(doc, studentNom, studentPrenom, studentDateNaissance, studentLieuNaissance, formation, specialite, anneeScolaire, institutionName, ville) {
+            // Add a new page for each attestation
+            doc.addPage();
+
+            // Set margins and font
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width;
+            const textWidth = pageWidth - 2 * margin; // Available text width
+
+            doc.setFontSize(12);
+
+            // Add header logo if available (on the left side, 25% of page width)
+            if(logo_header && logo_header.trim() !== '') {
+                try {
+                    // Calculate the position for the header logo (top left corner, 25% of page width)
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = margin; // Position from left margin
+                    const logoY = 10; // Position from top (moved up from 15 to 10)
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG'; // Default format
+                    if (logo_header.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_header.toLowerCase().endsWith('.jpg') || logo_header.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_header.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    // Add the header logo to the document with 25% page width, auto height for aspect ratio
+                    doc.addImage(logo_header, format, logoX, logoY, logoWidth, 0); // width=25% of page, height=auto
+
+                    // Adjust starting position for text content if header logo is present
+                    // This is handled in the text positioning below
+                } catch (e) {
+                    console.log("Error adding header logo:", e.message);
+
+                    // Fallback: try adding with fixed dimensions if percentage approach fails
+                    try {
+                        const logoWidth = pageWidth * 0.25; // 25% of page width
+                        const logoHeight = 25; // Fixed height for logo
+                        const logoX = margin; // Position from left margin
+                        const logoY = 10; // Position from top (moved up from 15 to 10)
+
+                        doc.addImage(logo_header, logoX, logoY, logoWidth, logoHeight);
+                    } catch (fallbackError) {
+                        console.log("Fallback also failed for header logo:", fallbackError.message);
+                    }
+                }
+            }
+
+            // Add centered title - moved down and with more space
+            doc.setFontSize(16);
+            doc.setFont('times', 'bold');
+            doc.text("ATTESTATION D’INSCRIPTION", pageWidth / 2, 55, { align: 'center' }); // Moved up from 60 to 55 to accommodate higher header logo
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+
+            // Add attestation content aligned to the left
+            let currentY = 75; // Increased from 60 to 75 to add more space after title (moved up since title is higher)
+            doc.setFont('times', 'normal');
+
+            // Add some space if header logo was present
+            if(logo_header && logo_header.trim() !== '') {
+                currentY = 75; // Adjust starting position if logo was added, with more space (moved up from 85 to 75 since header logo is now higher)
+            }
+
+            // Main text - ensure it doesn't exceed margins
+            var headerText = "Nous soussignés, " + institutionName + " attestons que l'apprenant(e) :";
+            var wrappedHeader = doc.splitTextToSize(headerText, textWidth);
+            doc.text(wrappedHeader, margin, currentY);
+
+            // Update currentY based on the number of lines
+            currentY += wrappedHeader.length * 8; // Increased from 6 to 8
+
+            currentY += 8; // Increased additional space from 5 to 8
+
+            // Student name in bold - ensure it doesn't exceed margins
+            var completeStudentName = studentNom.toUpperCase() + " " + studentPrenom.toUpperCase();
+            var wrappedStudentName = doc.splitTextToSize(completeStudentName, textWidth);
+            doc.setFont('times', 'bold');
+            doc.text(wrappedStudentName, margin, currentY);
+            doc.setFont('times', 'normal');
+            currentY += wrappedStudentName.length * 8; // Increased from 6 to 8
+
+            // Birth information - ensure it doesn't exceed margins
+            var birthInfo = "Né(e) le " + studentDateNaissance + " à " + studentLieuNaissance;
+            var wrappedBirthInfo = doc.splitTextToSize(birthInfo, textWidth);
+            doc.text(wrappedBirthInfo, margin, currentY);
+            currentY += wrappedBirthInfo.length * 8; // Increased from 6 to 8
+
+            // Following program information - ensure it doesn't exceed margins
+            var programInfo = "Est inscrit(e) au sein de notre école pour suivre un programme de formation en vue de l'obtention du diplôme de " + formation;
+            var wrappedProgramInfo = doc.splitTextToSize(programInfo, textWidth);
+            doc.text(wrappedProgramInfo, margin, currentY);
+            currentY += wrappedProgramInfo.length * 8; // Increased from 6 to 8
+
+            // Speciality - using the JavaScript variable that was defined - ensure it doesn't exceed margins
+            var specialiteText = "Spécialité : " + specialite;
+            var wrappedSpecialite = doc.splitTextToSize(specialiteText, textWidth);
+            doc.text(wrappedSpecialite, margin, currentY);
+            currentY += wrappedSpecialite.length * 8; // Increased from 6 to 8
+
+            // Academic year - ensure it doesn't exceed margins
+            var yearInfo = "Pour l’année académique : " + anneeScolaire;
+            var wrappedYearInfo = doc.splitTextToSize(yearInfo, textWidth);
+            doc.text(wrappedYearInfo, margin, currentY);
+            currentY += wrappedYearInfo.length * 8; // Increased from 6 to 8
+            currentY += 15; // Increased additional spacing from 12 to 15
+
+            // Main statement - ensure it doesn't exceed margins
+            var statementText = "La présente attestation est délivrée à l’intéressé(e), sur sa demande, pour servir et valoir ce que de droit.";
+            var wrappedStatement = doc.splitTextToSize(statementText, textWidth);
+            doc.text(wrappedStatement, margin, currentY);
+
+            // Update currentY based on the number of lines
+            currentY += wrappedStatement.length * 8; // Increased from 6 to 8
+            currentY += 20; // Increased additional space from 15 to 20
+
+            // Add footer logo if available
+            if(logo_footer && logo_footer.trim() !== '') {
+                try {
+                    // Calculate the position for the footer logo (bottom centered)
+                    const margin = 20; // Using same margin as defined at beginning of function
+                    const logoWidth = pageWidth - (2 * margin); // Use full page width minus margins
+                    const logoX = margin; // Position at left margin
+                    const logoY = 270; // Position slightly lower to accommodate larger image (moved down from 265 to 270)
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG'; // Default format
+                    if (logo_footer.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_footer.toLowerCase().endsWith('.jpg') || logo_footer.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_footer.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    // Add the footer logo to the document, using almost full page width
+                    // Use calculated width and let height adjust automatically to maintain aspect ratio
+                    doc.addImage(logo_footer, format, logoX, logoY, logoWidth, 0); // width=calculated, height=0 means auto height
+
+                    // The actual height will be calculated automatically to maintain aspect ratio
+                    // For signature positioning, we'll use a more conservative approach
+                    // Since logo might be tall, we'll add more space below
+                    currentY = logoY + 40; // Increased space from 35 to 40 to accommodate more spacing
+                } catch (e) {
+                    console.log("Error adding footer logo:", e.message);
+
+                    // Fallback: try adding with fixed dimensions if original size approach fails
+                    try {
+                        const margin = 20;
+                        const logoWidth = pageWidth - (2 * margin); // Use full page width minus margins
+                        const logoHeight = 35; // Fixed height for logo
+                        const logoX = margin; // Position at left margin
+                        const logoY = 270; // Near bottom of page (moved down from 265 to 270)
+
+                        doc.addImage(logo_footer, logoX, logoY, logoWidth, logoHeight);
+
+                        // Adjust the signature position if footer logo is present
+                        currentY = logoY + logoHeight + 15; // Increased space from 10 to 15 to position signature below the footer logo
+                    } catch (fallbackError) {
+                        console.log("Fallback also failed for footer logo:", fallbackError.message);
+                    }
+                }
+            }
+
+            // Date and location (right aligned) - ensure it's properly positioned
+            var currentDate = new Date();
+            var formattedDate = currentDate.getDate().toString().padStart(2, '0') + '/' +
+                               (currentDate.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                               currentDate.getFullYear();
+            var locationDateText = ville + ", le " + formattedDate;
+            var textLineWidth = doc.getTextWidth(locationDateText);
+            var rightMargin = pageWidth - margin;
+            doc.text(locationDateText, rightMargin - textLineWidth, currentY);
+
+            // Director signature (centered at the bottom)
+            currentY += 25; // Increased from 20 to 25 for more spacing before signature
+            doc.text("Le Directeur", pageWidth / 2, currentY, { align: 'center' });
+        }
     });
 
-    
+
 </script>
 
 
