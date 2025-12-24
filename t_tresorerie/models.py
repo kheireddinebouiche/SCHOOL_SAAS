@@ -244,7 +244,7 @@ class EcheancierPaiementLine(models.Model):
 
 
     def __str__(self):
-        return self.echeancier.label
+        return self.value
 
 class EcheancierSpecial(models.Model):
     nombre_tranche = models.IntegerField(null=True, blank=True)
@@ -419,7 +419,6 @@ class OperationsBancaire(models.Model):
     def __str__(self):
         return f"Lettrage {self.id} - {self.compte_bancaire}"
     
-
 class SpecialiteCompte(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
     compte = models.ForeignKey(PaymentCategory, on_delete=models.CASCADE, null=True)

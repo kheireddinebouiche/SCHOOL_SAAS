@@ -13,6 +13,7 @@ from .f_views.plan_comptable import *
 from .f_views.facturation import *
 from .f_views.produits import *
 from .f_views.imputation_comptable_specialite import *
+from .f_views.autre_paiement import *
 
 app_name="t_tresorerie"
 
@@ -204,6 +205,11 @@ urlpatterns = [
     path('UpdateSpecialiteCompte',UpdateSpecialiteCompte , name="UpdateSpecialiteCompte"),
     path('CreateSpecialiteCompte',CreateSpecialiteCompte, name="CreateSpecialiteCompte"),
     path('DeleteSpecialiteCompte',DeleteSpecialiteCompte,name="DeleteSpecialiteCompte"),
+
+
+    path('paiements/autres/liste/', PageAutresPaiement, name="pageautrespaiement"),
+    path('paiements/autres/nouveau/',PageNouveauAutrePaiement, name="PageNouveauAutrePaiement"),
+    path("ApiListeAutresPaiements",ApiListeAutresPaiements, name="ApiListeAutresPaiements"),
 
 
 

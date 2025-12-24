@@ -8,7 +8,8 @@ from django.contrib.auth.decorators import login_required
 from t_crm.models import *
 from t_tresorerie.models import *
 from django.db.models import Count, Sum
-
+from django.core.serializers.json import DjangoJSONEncoder
+import json
 
 
 @login_required(login_url="institut_app:login")
@@ -29,6 +30,17 @@ def StudentDetails(request, pk):
         montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
         specialite_simple = FicheDeVoeux.objects.get(prospect = student, is_confirmed=True)
         modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
+        entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
+        echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
+        echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
+
+        echeancier_special_line = EcheancierPaiementLine.objects.filter(echeancier = EcheancierSpecial.objects.filter(prospect = student).first()).values('id','value','montant_tranche','date_echeancier')
+
+        montant_formation = specialite_simple.specialite.formation.prix_formation
+        frais_incription = echancier_standard.frais_inscription
+
+        dossier_inscription = DossierInscription.objects.filter(formation = specialite_simple.specialite.formation).values('label')
+
 
         context = {
             'pk' : pk,
@@ -44,7 +56,17 @@ def StudentDetails(request, pk):
             'total_a_paye' : montant_total,
             'remises' : remises,
             'specialite_simple' : specialite_simple.specialite.label if not student.is_double else None,
+            'formation' : specialite_simple.specialite.formation.nom,
             'modele_contrat' : modele_contrat,
+            'qualification' : specialite_simple.specialite.formation.qualification,
+            'entreprise_details' : entreprise_details,
+            'echeancier_standart' : echancier_standard,
+            'echeancier_line' : json.dumps(list(echeancier_line), cls=DjangoJSONEncoder),
+            'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
+            'montant_formation' : montant_formation,
+            'frais_incription' : frais_incription,
+            'annee_academique' : specialite_simple.promo.annee_academique,
+            'echeancier_special_line' : echeancier_special_line,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 

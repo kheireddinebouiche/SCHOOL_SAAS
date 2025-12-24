@@ -185,7 +185,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Profile Stats Section -->
                         <div class="card-body p-4">
                          
@@ -1873,6 +1873,7 @@
 
 
 <!-- Include jsPDF library -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -1882,35 +1883,135 @@
 
         const id_etudiant = "{{pk}}";
         const id_modele_contrat = "{{modele_contrat.id}}";
-       
-        // Function to generate school certificate with jsPDF
+        var echeancier_line = JSON.parse('{{echeancier_line|escapejs}}');
+        var document_inscription = JSON.parse('{{dossier_inscription|escapejs}}');
+        var formation = "{{formation}}";
+
+
+        var logo_header = "{{entreprise_details.entete_logo.url}}";
+        var logo_footer = "{{entreprise_details.pied_page_logo.url}}";
+
+        console.log(logo_header);
+
+        var montant_formation = "{{montant_formation}}";
+        var frais_inscription = "{{frais_incription}}";
+        var annee_academique = "{{annee_academique}}";
+
+        var entite = "{{entreprise_details.designation}}";
+
+        console.log(annee_academique);
+
+        // Function to generate school certificate with jsPDF (using new format)
         function generateSchoolCertificate() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
-            // Add title
-            doc.setFontSize(18);
-            doc.text("CERTIFICAT DE SCOLARITÉ", 105, 20, null, null, "center");
-            
-            // Add student information
+
+            // Set font size
             doc.setFontSize(12);
-            doc.text("Je soussigné, Directeur de l'établissement,", 20, 40);
-            doc.text("Certifie que l'étudiant(e):", 20, 50);
+
+            // Define margins
+            var leftMargin = 20;
+            var rightMargin = 190; // Standard A4 page width is 210mm, so right margin at 20mm from right edge
+            var pageWidth = doc.internal.pageSize.width;
+            var textAreaWidth = rightMargin - leftMargin;
+
+            // Add header logo if available on the left
+            if (logo_header) {
+                // Add the header logo at the top left
+                doc.addImage(logo_header, 'JPEG', 5, 5, 55, 15); // Positioned at top left
+            }
+
+            // Add title "Certificat de scolarité" at top right with calligraphic style
+            doc.setFontSize(22); // Increased size
+            doc.setFont('helvetica', 'bolditalic'); // Using bold italic to simulate calligraphic style
+            var certificatText = "Certificat de scolarité";
+            var certificatWidth = doc.getTextWidth(certificatText);
+            var titleX = (pageWidth - certificatWidth) / 2; // Center the title instead of right aligning
+            doc.text(certificatText, titleX, 35); // Combined text in calligraphic style
+
+            // Add ID at top, with extra space below the title
+            doc.setFontSize(12); // Reset to normal size
+            doc.setFont('helvetica', 'normal'); // Reset font to normal
+            doc.text("ID : ", leftMargin, 60); // Increased Y position to add space below title
+
+            // Add main certification text - using splitTextToSize to ensure it stays within margins
+            var certificationText = "Je soussigné, Directeur général de l'Ecole de Formation Professionnelle "+entite+", certifie que l'apprenant (e) :";
+            var wrappedCertificationText = doc.splitTextToSize(certificationText, textAreaWidth);
+            doc.text(wrappedCertificationText, leftMargin, 70); // Increased Y position to add space after "ID : "
+
+            // Student name (bold)
             doc.setFontSize(14);
-            doc.text("{{ etudiant.nom }} {{ etudiant.prenom }}", 20, 60);
+            var studentName = "{{ etudiant.nom|upper }} {{ etudiant.prenom|capfirst }}";
+            // Ensure student name doesn't exceed margins
+            var wrappedStudentName = doc.splitTextToSize(studentName, textAreaWidth);
+            doc.text(wrappedStudentName, leftMargin, 81.5); // 80 + 1.5 interline spacing
             doc.setFontSize(12);
-            doc.text("Né(e) le: {{ etudiant.date_naissance|date:'d M Y' }} à {{ etudiant.lieu_naissance }}", 20, 70);
-            doc.text("Nationalité: {{ etudiant.nationalite|default:'Non renseigné' }}", 20, 80);
-            doc.text("Est régulièrement inscrit(e) dans notre établissement pour l'année scolaire:", 20, 90);
-            doc.text("{{ groupe.groupe.annee_scolaire }}", 20, 100);
-            doc.text("Dans la spécialité de: {{ etudiant.groupe.specialite }}", 20, 110);
-            doc.text("Au niveau: {{ etudiant.get_niveau_etude_display|default:'Non renseigné' }}", 20, 120);
-            
-            // Add signature section
-            doc.text("Fait en certification conforme,", 20, 140);
-            doc.text("Le {{ current_date|date:'d M Y' }}", 20, 150);
-            doc.text("Le Directeur", 150, 180);
-            
+
+            // Birth information
+            var birthInfo = "Né (e) le {{ etudiant.date_naissance|date:'d/m/Y' }} à {{ etudiant.lieu_naissance }}";
+            var wrappedBirthInfo = doc.splitTextToSize(birthInfo, textAreaWidth);
+            doc.text(wrappedBirthInfo, leftMargin, 88); // 85 + 1.5 interline spacing (rounded)
+
+            // Add formation information
+            var formationText = "Suit la formation résidentielle de {{ etudiant.groupe.specialite.formation.qualification }}";
+            var wrappedFormationText = doc.splitTextToSize(formationText, textAreaWidth);
+            doc.text(wrappedFormationText, leftMargin, 98); // 95 + 1.5 interline spacing (rounded)
+
+            var brancheText = "Branche : {{ etudiant.groupe.specialite.groupe.label }}";
+            var wrappedBrancheText = doc.splitTextToSize(brancheText, textAreaWidth);
+            doc.text(wrappedBrancheText, leftMargin, 103); // 100 + 1.5 interline spacing (rounded)
+
+            var specialiteText = "Spécialité : {{ etudiant.groupe.specialite.label }}";
+            var wrappedSpecialiteText = doc.splitTextToSize(specialiteText, textAreaWidth);
+            doc.text(wrappedSpecialiteText, leftMargin, 108); // 105 + 1.5 interline spacing (rounded)
+
+            var niveauText = "Niveau de qualification : {{ etudiant.groupe.specialite.niveau_qualification|default:'V' }}";
+            var wrappedNiveauText = doc.splitTextToSize(niveauText, textAreaWidth);
+            doc.text(wrappedNiveauText, leftMargin, 113); // 110 + 1.5 interline spacing (rounded)
+
+            // Training dates
+            var debutFormation = "Début de formation : {{ etudiant.groupe.start_date|date:'d/m/Y' }}";
+            var wrappedDebutFormation = doc.splitTextToSize(debutFormation, textAreaWidth);
+            doc.text(wrappedDebutFormation, leftMargin, 123); // 120 + 1.5 interline spacing (rounded)
+
+            var finFormation = "Fin de formation : {{ etudiant.groupe.end_date|date:'d/m/Y' }}";
+            var wrappedFinFormation = doc.splitTextToSize(finFormation, textAreaWidth);
+            doc.text(wrappedFinFormation, leftMargin, 128); // 125 + 1.5 interline spacing (rounded)
+
+            // Academic year
+            var anneeText = "Année professionnelle : {{ etudiant.groupe.annee_scolaire }}";
+            var wrappedAnneeText = doc.splitTextToSize(anneeText, textAreaWidth);
+            doc.text(wrappedAnneeText, leftMargin, 138); // 135 + 1.5 interline spacing (rounded)
+
+            // Add spacing before signature
+            var yPos = 183; // 180 + 1.5 interline spacing (rounded)
+
+            // Signature section at the bottom - align to right but ensure it doesn't go beyond margins
+            var text = "Fait à {{ etudiant.groupe.specialite.formation.entite_legal.ville|default:'Chéraga' }}, le {{ current_date|date:'d/m/Y' }}";
+            // Align to right within the text area
+            var textWidth = doc.getTextWidth(text);
+            var alignedRightX = rightMargin - textWidth;
+            doc.text(text, alignedRightX, 193); // 190 + 1.5 interline spacing (rounded)
+
+            // Align "Le Directeur Général" to the right as well
+            var directorText = "Le Directeur Général";
+            var directorTextWidth = doc.getTextWidth(directorText);
+            var directorX = rightMargin - directorTextWidth;
+            doc.text(directorText, directorX, 213); // 210 + 1.5 interline spacing (rounded)
+
+            // Add footer logo if available
+            if (logo_footer) {
+                // Add the footer logo at the bottom, stretched to fill between margins with reduced height
+                var pageHeight = doc.internal.pageSize.height;
+                doc.addImage(logo_footer, 'JPEG', leftMargin, pageHeight - 20, textAreaWidth, 15); // Stretched between margins with reduced height
+            }
+
+            // Footer note - on a single line, just above the logo
+            doc.setFontSize(9);
+            var footerText = "Ce certificat n'est délivré qu'en un seul exemplaire. Il appartient à l'apprenant (e) d'en faire des photocopies conformes.";
+            var pageHeight = doc.internal.pageSize.height;
+            doc.text(footerText, leftMargin, pageHeight - 25); // Positioned just above the logo
+
             // Save the PDF
             doc.save("certificat_scolarite_{{ etudiant.matricule_interne }}.pdf");
         }
@@ -1918,12 +2019,12 @@
         // Function to generate student card with jsPDF
         function generateStudentCard() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ 
+            const doc = new jsPDF({
                 orientation: 'landscape',
                 unit: 'mm',
                 format: [86, 54] // Standard card size (credit card size)
             });
-            
+
             // Define card dimensions
             const cardWidth = 86;
             const cardHeight = 54;
@@ -1979,7 +2080,534 @@
             // Save the PDF
             doc.save("carte_etudiant_{{ etudiant.matricule_interne }}.pdf");
         }
+
+        // Function to generate contract with jsPDF
+        function generateContract() {
+            if (!id_modele_contrat) {
+                alert('Aucun modèle de contrat disponible pour cet étudiant.');
+                return;
+            }
+
+            // Get the contract clauses via AJAX
+            $.ajax({
+                url: '{% url "t_etudiants:ApiLoadArticlesContrat" %}',
+                data: { modele_id: id_modele_contrat },
+                type: 'GET',
+                success: function(clauses) {
+                    if (clauses.length === 0) {
+                        alert('Aucune clause trouvée pour ce modèle de contrat.');
+                        return;
+                    }
+
+                    // Prepare student data for contract
+                    var student = {
+                        id: id_etudiant,
+                        fullName: "{{ etudiant.nom }} {{ etudiant.prenom }}",
+                        lastName: "{{ etudiant.nom }}",
+                        firstName: "{{ etudiant.prenom }}",
+                        email: "{{ etudiant.email }}",
+                        birthDate: "{{ etudiant.date_naissance|date:'d/m/Y' }}",
+                        birthPlace: "{{ etudiant.lieu_naissance }}",
+                        address: "{{ etudiant.adresse|default:'______________'}}"
+                    };
+
+                    // Generate the contract PDF
+                    generateSingleContractPDF(student, clauses);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract clauses:', error);
+                    alert('Erreur lors du chargement des clauses du contrat.');
+                }
+            });
+        }
         
+
+        // Function to generate a single contract PDF
+        function generateSingleContractPDF(student, clauses) {
+            const { jsPDF } = window.jspdf;
+
+            // Create a new PDF document
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Set margins and font
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width;
+
+            // Set font to Times New Roman at 10pt for the entire document
+            doc.setFont('times', 'normal');
+            doc.setFontSize(10);
+
+            // Add centered title
+            doc.setFontSize(12);
+            doc.setFont('times', 'bold');
+            doc.text("CONTRAT DE FORMATION", pageWidth / 2, 30, { align: 'center' });
+            doc.setFont('times', 'normal');
+            doc.setFontSize(10);
+
+            // Add "Entre les soussignés" section
+            let currentY = 40;
+            doc.setFont('times', 'bold');
+            doc.text("Entre les soussignés :", margin, currentY);
+            doc.setFont('times', 'normal');
+            currentY += 8;
+
+            // Institution details
+            doc.text("L'établissement privé de formation professionnelle INSIM", margin, currentY);
+            currentY += 5;
+            var institutionAdresse = "{{entreprise_details.adresse}}";
+            var represantant = "{{entreprise_details.representant}}";
+            doc.text('Sis '+institutionAdresse, margin, currentY);
+            currentY += 5;
+            doc.text("Représenté par M. Said KESSAL en sa qualité de Directeur,", margin, currentY);
+            currentY += 8;
+
+            // Separator
+            doc.text("Et", margin, currentY);
+            currentY += 8;
+
+            // Student details
+            // Format: "Le stagiaire (Nom et prénom)"
+            doc.text("Le stagiaire " + student.fullName.trim(), margin, currentY);
+            currentY += 5;
+
+            // Format: "Né(e) le :     A :"
+            var birthText = "Né(e) le : " + student.birthDate + "    A : " + student.birthPlace;
+            doc.text(birthText, margin, currentY);
+            currentY += 5;
+
+            // Format: "Demeurant à (adresse complète du stagiaire) :"
+            doc.text("Demeurant à : " + student.address, margin, currentY);
+            currentY += 8;
+
+            // Add clauses
+            doc.setFont('times', 'bold');
+            doc.text("Clauses du contrat :", margin, currentY);
+            doc.setFont('times', 'normal');
+            currentY += 6;
+
+            // Add each clause to the document
+            clauses.forEach(function(clause, index) {
+                // Add clause title if available
+                if (clause.titre && clause.titre.trim() !== '') {
+                    doc.setFont('times', 'bold');
+                    doc.text(clause.titre, margin, currentY);
+                    currentY += 5;
+                    doc.setFont('times', 'normal');
+                }
+
+                // Add clause content
+                if (clause.article && clause.article.trim() !== '') {
+                    // Process tags in the clause content and replace them with student-specific information
+                    var processedContent = processContractTags(clause.article, student);
+
+                    // Split text to fit within page margins
+                    var wrappedText = doc.splitTextToSize(processedContent, pageWidth - 2 * margin);
+
+                    // Add the wrapped text with 1.5pt interline spacing
+                    for (var i = 0; i < wrappedText.length; i++) {
+                        // Check if we need a new page before adding each line
+                        if (currentY + 5.5 > 270) { // 270 is close to bottom margin
+                            doc.addPage();
+                            doc.setFont('times', 'normal');
+                            doc.setFontSize(10);
+                            currentY = 30;
+                        }
+                        doc.text(wrappedText[i], margin, currentY);
+                        currentY += 5.5; // 4 (original spacing) + 1.5 (additional interline spacing) = 5.5
+                    }
+
+                    // Add some space after each clause
+                    currentY += 3;
+
+                    // Check if we need a new page after adding content (with 1.5pt interline spacing)
+                    if (currentY > 270) {
+                        doc.addPage();
+                        doc.setFont('times', 'normal');
+                        doc.setFontSize(10);
+                        currentY = 30;
+                    }
+                }
+            });
+
+            // Add location and date - aligned to the right
+            currentY += 10; // Add some space after the clauses
+            var currentDate = new Date();
+            var formattedDate = currentDate.getDate().toString().padStart(2, '0') + '/' +
+                               (currentDate.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                               currentDate.getFullYear();
+            var ville = "{{ etudiant.groupe.specialite.formation.entite_legal.ville|default:'Alger' }}";
+            var locationText = "Fait à " + ville + ", le " + formattedDate;
+            var textWidth = doc.getTextWidth(locationText);
+            var rightMargin = pageWidth - margin;
+            doc.text(locationText, rightMargin - textWidth, currentY);
+
+            // Add signature section at the end
+            currentY += 10; // Add some space before the signature section
+
+            // Check if we need a new page for signatures
+            if (currentY + 80 > 270) { // 80 is estimated height for signature section
+                doc.addPage();
+                doc.setFont('times', 'normal');
+                doc.setFontSize(12);
+                currentY = 30;
+            }
+
+            // Add signature section
+            doc.setFont('times', 'normal');
+            doc.text("Le stagiaire", margin, currentY);
+            // Align director's signature to the right
+            doc.text("Le Directeur de l'établissement", pageWidth - margin - 70, currentY);
+            currentY += 6;
+
+            // "Lu et approuvé" in italics at 10pt
+            doc.setFont('times', 'italic');
+            doc.setFontSize(10);
+            doc.text("Signature précédée de la mention « Lu et approuvé »", margin, currentY);
+            doc.text("Signature précédée de la mention « Lu et approuvé »", pageWidth - margin - 70, currentY);
+
+            // Reset font back to normal 12pt
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+            currentY += 12;
+
+            // CNI/PC section (only for student)
+            doc.text("CNI / PC N°____________________________", margin, currentY);
+            currentY += 6;
+            doc.text("Délivré le : _____________________________", margin, currentY);
+            currentY += 6;
+            doc.text("Par : __________________________________", margin, currentY);
+            currentY += 8;
+            doc.text("Signature", margin, currentY);
+            currentY += 15;
+
+            // Skip some space for formatting
+            currentY += 15;
+
+            // Tuteur section (for minor students) - centered
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+            var tutorText1 = "Le Tuteur (en cas de stagiaire mineur)";
+            var tutorText1Width = doc.getTextWidth(tutorText1);
+            var centerX1 = Math.max(margin, (pageWidth - tutorText1Width) / 2);  // Ensure it doesn't go beyond margins
+            doc.text(tutorText1, centerX1, currentY);
+
+            currentY += 10;
+
+            // "Lu et approuvé" in italics at 10pt for tutor
+            doc.setFont('times', 'italic');
+            doc.setFontSize(10);
+            var tutorText2 = "Signature précédée de la mention « Lu et approuvé »";
+            var tutorText2Width = doc.getTextWidth(tutorText2);
+            var centerX2 = Math.max(margin, (pageWidth - tutorText2Width) / 2);  // Ensure it doesn't go beyond margins
+            doc.text(tutorText2, centerX2, currentY);
+
+            // Reset font back to normal 12pt
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+
+            // Add echeancier table page
+            addEcheancierTablePage(doc, pageWidth, margin, echeancier_line, montant_formation, frais_inscription, annee_academique, document_inscription);
+
+            // Save the PDF
+            doc.save("contrat_{{ etudiant.matricule_interne }}.pdf");
+        }
+
+        // Function to process tags in contract content and replace with student data
+        function processContractTags(content, student) {
+            // Replace tags with actual student information
+            if (!content) return content;
+
+            return content
+                .replace(/\[nom_etudiant\]/g, student.lastName || '')
+                .replace(/\[prenom_etudiant\]/g, student.firstName || '')
+                .replace(/\[duree_formation\]/g, '{{ etudiant.groupe.specialite.formation.duree|default:"N/A" }}')
+                .replace(/\[formations\]/g, '{{formation}}')
+                .replace(/\[qualification\]/g, '{{qualification}}')
+                .replace(/\[frais_inscription\]/g, '{{ etudiant.groupe.specialite.formation.frais_inscription|default:"N/A" }}')
+                .replace(/\[prix_formation\]/g, '{{ etudiant.groupe.specialite.formation.prix|default:"N/A" }}')
+                .replace(/\[specialite\]/g, '{{ specialite_simple|default:"N/A" }}')
+                .replace(/\[date_naissance_etudiant\]/g, student.birthDate || '')
+                .replace(/\[lieu_naissance_etudiant\]/g, student.birthPlace || '')
+                .replace(/\[adresse_etudiant\]/g, student.address || "______________");
+        }
+
+        // Function to add echeancier table page
+        function addEcheancierTablePage(doc, pageWidth, margin, echeancierData, montantFormation, fraisInscription, anneeAcademique) {
+            // Add a new page for the echeancier table
+            doc.addPage();
+
+            // Set font for the main header
+            doc.setFont('times', 'bold');
+            doc.setFontSize(14);
+
+            // Add ANNEXE 1 title above the main title
+            var annexTitle = "ANNEXE 1";
+            var annexTitleWidth = doc.getTextWidth(annexTitle);
+            var annexTitleX = (pageWidth - annexTitleWidth) / 2;
+            doc.text(annexTitle, annexTitleX, 25);
+
+            // Add title for the echeancier page below ANNEXE 1
+            var title = "Échéancier de paiement";
+            var titleWidth = doc.getTextWidth(title);
+            var titleX = (pageWidth - titleWidth) / 2;
+            doc.text(title, titleX, 35);
+
+            // Add academic year below the main title
+            doc.setFontSize(12);
+            var academicYearText = "Année académique : " + (anneeAcademique || "{{ annee_academique }}");
+            var academicYearWidth = doc.getTextWidth(academicYearText);
+            var academicYearX = (pageWidth - academicYearWidth) / 2;
+            doc.text(academicYearText, academicYearX, 45);
+
+            // Add "Formation" title above the table, positioned on the left
+            doc.setFont('times', 'bold');
+            doc.setFontSize(10);
+            doc.text("Formation : "+formation, margin, 55);
+
+            // Reset font for table content
+            doc.setFont('times', 'normal');
+            doc.setFontSize(10);
+
+            // Define table headers - two columns: labels and values
+            var headers = ["Désignation", "Montant"];
+            var colWidths = [(pageWidth - 2 * margin) * 0.6,  // Labels column
+                             (pageWidth - 2 * margin) * 0.4]; // Values column
+            var startX = margin;
+            var startY = 60; // Adjusted to account for the new titles above the table
+            var rowHeight = 10;
+            var currentY = startY;
+
+            // Calculate total table width
+            var tableWidth = pageWidth - 2 * margin;
+
+            // Draw table header
+            doc.setFont('times', 'bold');
+            // Draw header background
+            doc.setFillColor(240, 240, 240); // Light gray
+            doc.rect(startX, currentY, tableWidth, rowHeight, 'F');
+
+            // Draw header text
+            var xPos = startX;
+            for (var i = 0; i < headers.length; i++) {
+                doc.text(headers[i], xPos + 2, currentY + 7);
+                xPos += colWidths[i];
+            }
+
+            // Reset font for data rows
+            doc.setFont('times', 'normal');
+
+            // Add formation cost row
+            currentY += rowHeight;
+            var yPos = currentY;
+            doc.setFillColor(255, 255, 255); // White background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw formation cost data
+            var labelX = startX + 2;
+            var valueX = startX + colWidths[0] + 2;
+
+            doc.text("Coût de la formation en TTC", labelX, yPos + 7);
+            doc.text(montantFormation, valueX, yPos + 7);
+
+            // Add inscription fees row
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(250, 250, 250); // Light gray background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw inscription fees data
+            labelX = startX + 2;
+            valueX = startX + colWidths[0] + 2;
+
+            doc.text("Frais d'inscription (non remboursables)", labelX, yPos + 7);
+            doc.text(fraisInscription, valueX, yPos + 7);
+
+            // Add total row
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(245, 245, 245); // Slightly darker gray for total
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Calculate total
+            var total = (parseFloat(montantFormation) || 0) + (parseFloat(fraisInscription) || 0);
+
+            // Draw total data
+            labelX = startX + 2;
+            valueX = startX + colWidths[0] + 2;
+
+            doc.setFont('times', 'bold');
+            doc.text("TOTAL", labelX, yPos + 7);
+            doc.text(total.toFixed(2), valueX, yPos + 7);
+            doc.setFont('times', 'normal');
+
+            // Add a blank row for spacing
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(255, 255, 255); // White background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw label for payment schedule
+            labelX = startX + 2;
+            doc.text("Échéancier des paiements", labelX, yPos + 7);
+
+            // Draw table rows from echeancierData
+            if (echeancierData && echeancierData.length > 0) {
+                for (var i = 0; i < echeancierData.length; i++) {
+                    currentY += rowHeight;
+                    yPos = currentY;
+
+                    // Draw row background (alternating)
+                    if (i % 2 === 0) {  // Color even-indexed rows (0, 2, 4...) for proper alternating after the headers
+                        doc.setFillColor(250, 250, 250); // Very light gray
+                        doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+                    } else {
+                        doc.setFillColor(255, 255, 255); // White background
+                        doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+                    }
+
+                    // Draw row data
+                    var echeance = echeancierData[i]; // Define echeance inside the loop
+                    var labelX = startX + 2;
+                    var valueX = startX + colWidths[0] + 2;
+                    var montant = echeance.montant_tranche || "0";
+                    var date = echeance.date_echeancier ? " - " + echeance.date_echeancier : "";
+
+                    // Draw cell content
+                    doc.text("Tranche " + (i + 1) + date, labelX, yPos + 7);
+                    doc.text(montant, valueX, yPos + 7);
+
+                    // Check if we need a new page
+                    if (currentY > 260) { // Adjusted for more space for content
+                        doc.addPage();
+                        currentY = 30; // Reset Y position on new page
+                        startX = margin;
+                        tableWidth = pageWidth - 2 * margin; // Reset table width
+
+                        // Redraw header on new page if needed
+                        doc.setFont('times', 'bold');
+                        doc.setFillColor(240, 240, 240); // Light gray
+                        doc.rect(startX, currentY, tableWidth, rowHeight, 'F');
+
+                        // Draw header text
+                        var headerXPos = startX;
+                        for (var j = 0; j < headers.length; j++) {
+                            doc.text(headers[j], headerXPos + 2, currentY + 7);
+                            headerXPos += colWidths[j];
+                        }
+
+                        doc.setFont('times', 'normal');
+                        currentY += rowHeight;
+                    }
+                }
+            } else {
+                // If no echeancier data, add a message
+                currentY += rowHeight;
+                yPos = currentY;
+                doc.text("Aucune donnée d'échéancier disponible", startX, yPos + 7);
+            }
+
+            // Now draw all borders for the complete table
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.3); // Slightly thicker border for outer box
+
+            // Draw vertical lines for columns that extend to the actual final position
+            doc.setLineWidth(0.1); // Thinner for inner lines
+            var xPosition = startX;
+            for (var i = 0; i <= headers.length; i++) {
+                doc.line(xPosition, startY, xPosition, currentY);
+                if (i < headers.length) {
+                    xPosition += colWidths[i];
+                }
+            }
+
+            // Draw outer border of the table to ensure it encompasses all content
+            doc.setLineWidth(0.3); // Slightly thicker border for outer box
+            doc.rect(startX, startY, tableWidth, currentY - startY);
+
+            // Draw horizontal lines for rows - using the actual positions where content was drawn
+            doc.setLineWidth(0.1); // Thinner for inner lines
+            // Draw horizontal line at the top of the table
+            doc.line(startX, startY, startX + tableWidth, startY);
+
+            // Draw horizontal lines after each row that was actually drawn
+            var actualY = startY + rowHeight; // After header
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After formation cost
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After fees
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After total
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After "Échéancier" header
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            // Draw horizontal lines after each echeancier data row
+            if (echeancierData && echeancierData.length > 0) {
+                for (var i = 0; i < echeancierData.length; i++) {
+                    actualY += rowHeight; // After each echeancier row
+                    doc.line(startX, actualY, startX + tableWidth, actualY);
+                }
+            } else {
+                // If no echeancier data, we still need a line after the "no data" message
+                actualY += rowHeight;
+                doc.line(startX, actualY, startX + tableWidth, actualY);
+            }
+
+            // Add section for registration documents below the table
+            currentY += 20; // Add some space below the table
+
+            // Add title for the documents section
+            doc.setFont('times', 'bold');
+            doc.text("Documents d'inscription requis :", startX, currentY);
+            currentY += 8;
+
+            // Draw list of registration documents with right indentation
+            if (document_inscription && document_inscription.length > 0) {
+                doc.setFont('times', 'normal');
+
+                // Add indentation for the document list
+                var documentIndent = startX + 10; // 10mm indentation to the right
+
+                for (var i = 0; i < document_inscription.length; i++) {
+                    var docItem = document_inscription[i];
+                    var docLabel = (docItem.label || "Document inconnu").toString();
+
+                    // Add bullet point and document label with indentation
+                    doc.text("• " + docLabel, documentIndent, currentY);
+                    currentY += 6; // Space between items
+
+                    // Check if we need a new page
+                    if (currentY > 270) {
+                        doc.addPage();
+                        currentY = 30; // Reset Y position on new page
+                        startX = margin;
+                        documentIndent = startX + 10; // Reset indentation
+
+                        // Add title for documents section on new page
+                        doc.setFont('times', 'bold');
+                        doc.text("Documents d'inscription requis :", startX, currentY);
+                        currentY += 8;
+                        doc.setFont('times', 'normal');
+                    }
+                }
+            } else {
+                doc.setFont('times', 'normal');
+                // Apply same indentation to the "no documents" message
+                var documentIndent = startX + 10; // 10mm indentation to the right
+                doc.text("Aucun document d'inscription requis spécifié.", documentIndent, currentY);
+                currentY += 6;
+            }
+
+            // Reset colors and font
+            doc.setFillColor(0, 0, 0);
+            doc.setDrawColor(0, 0, 0);
+            doc.setFont('times', 'normal');
+        }
+
         // Fix for handling dropdown items with text content
         document.addEventListener('click', function(e) {
             if (e.target.closest('a.dropdown-item')) {
@@ -1991,8 +2619,7 @@
                 } else if (text.includes('Carte étudiant')) {
                     generateStudentCard();
                 } else if (text.includes('Contrat')) {
-                    // For now, showing an alert for contract
-                    alert("Fonctionnalité de contrat non implémentée pour le moment");
+                    generateContract();
                 }
             }
         });
@@ -2278,7 +2905,6 @@
             $('#createDocumentModal').modal('show');
         });
         
-
         // Handle click on Accomplir button for notes
         $(document).on('click', '.accomplir-note', function() {
             var noteId = $(this).data('note-id');
@@ -2528,7 +3154,6 @@
                 }
             });
         });
-
 
         $(document).on('click','#saveRappelBtn', function(){
             var reminderType = $('#reminderType').val();
