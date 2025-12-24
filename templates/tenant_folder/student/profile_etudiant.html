@@ -162,11 +162,7 @@
                                     <div>
                                         <h5 class="card-title fw-semibold text-primary mb-1">{{ etudiant.nom }} {{ etudiant.prenom }}</h5>
                                         <p class="text-muted small mb-0">ID: {{ etudiant.matricule_interne }} | {{ etudiant.email }}</p>
-                                        <div class="d-flex flex-wrap gap-2 mt-2">
-                                            <span class="badge bg-light text-primary">Inscrit le: {{ etudiant.convertit_date}}</span>
-                                            <span class="badge bg-light text-primary">Groupe: {{ groupe.groupe.nom }}</span>
-                                            <span class="badge bg-light text-primary">Spécialité: {{ groupe.groupe.specialite.label }}</span>
-                                        </div>
+                                        <span class="badge bg-light text-primary">Spécialité: {{specialite_simple}}</span>
                                     </div>
                                 </div>
                                 
@@ -182,6 +178,7 @@
                                         <ul class="dropdown-menu" aria-labelledby="impressionDropdown">
                                             <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i>Contrat</a></li>
                                             <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Certificat de scolarité</a></li>
+                                            <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Attestation d'inscription</a></li>
                                             <li><a class="dropdown-item" href="#"><i class="ri-id-card-line me-2"></i>Carte étudiant</a></li>
                                         </ul>
                                     </div>
@@ -343,20 +340,6 @@
                                     <div class="row">
                                         <div class="col-lg-6">
                                             <div class="mb-3">
-                                                <label class="form-label text-muted">Groupe actuel</label>
-                                                <div class="form-control bg-light border-0">{{ groupe.groupe.nom }}</div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label text-muted">Année scolaire</label>
-                                                <div class="form-control bg-light border-0">{{ groupe.groupe.annee_scolaire }}</div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label text-muted">Spécialité</label>
-                                                <div class="form-control bg-light border-0">{{ etudiant.groupe.specialite }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-6">
-                                            <div class="mb-3">
                                                 <label class="form-label text-muted">Niveau d'étude</label>
                                                 <div class="form-control bg-light border-0">{{ etudiant.get_niveau_scolaire_display|default:"Non renseigné" }}</div>
                                             </div>
@@ -388,18 +371,15 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <td>2023/2024</td>
-                                                    <td>Groupe A1</td>
-                                                    <td>Informatique</td>
-                                                    <td><span class="badge bg-success">Actif</span></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>2022/2023</td>
-                                                    <td>Groupe B2</td>
-                                                    <td>Informatique</td>
-                                                    <td><span class="badge bg-secondary">Terminé</span></td>
-                                                </tr>
+                                                {% for item in groupe %}
+                                                    <tr>
+                                                        <td>{{i.groupe.promotion.annee_academique}}</td>
+                                                        <td>{{item.groupe.nom}}</td>
+                                                        <td>{{item.groupe.specialite.label}}</td>
+                                                        <td><span class="badge bg-success">Actif</span></td>
+                                                    </tr>
+                                                {% endfor %}
+                                               
                                             </tbody>
                                         </table>
                                     </div>
@@ -1901,6 +1881,7 @@
     $(document).ready(function(){
 
         const id_etudiant = "{{pk}}";
+        const id_modele_contrat = "{{modele_contrat.id}}";
        
         // Function to generate school certificate with jsPDF
         function generateSchoolCertificate() {

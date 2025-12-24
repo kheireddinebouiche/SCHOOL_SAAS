@@ -14,42 +14,73 @@ from django.db.models import Count, Sum
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
     
-
     student = Prospets.objects.get(id = pk)
-    groupe = GroupeLine.objects.filter(student = student)
-    paiements = Paiements.objects.filter(prospect = student)
-    documents = DocumentsDemandeInscription.objects.filter(prospect = student)
-    notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
-    rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
-    echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
 
-    remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)
-    
-    montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
-    montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+    if not student.is_double:
+        groupe = GroupeLine.objects.filter(student = student)
+        paiements = Paiements.objects.filter(prospect = student)
+        documents = DocumentsDemandeInscription.objects.filter(prospect = student)
+        notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
+        rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
+        echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
+        remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)        
+        montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
+        montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
+        specialite_simple = FicheDeVoeux.objects.get(prospect = student, is_confirmed=True)
+        modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
 
-    montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
-
-
-    context = {
-        'pk' : pk,
-        'etudiant' : student,
-        'groupe' : groupe,
-        'paiements' : paiements,
-        'documents' : documents,
-        'notes' : notes,
-        'rappels' : rappels,
-        'echeanciers' : echeanciers,
-        'montant_due' : montant_due,
-        'montant_paye' : montant_paye,
-        'total_a_paye' : montant_total,
-        'remises' : remises,
-    }
-
-    if student.is_double:
-        return render(request, 'tenant_folder/student/profile_etudiant_double.html',context)
-    else:
+        context = {
+            'pk' : pk,
+            'etudiant' : student,
+            'groupe' : groupe,
+            'paiements' : paiements,
+            'documents' : documents,
+            'notes' : notes,
+            'rappels' : rappels,
+            'echeanciers' : echeanciers,
+            'montant_due' : montant_due,
+            'montant_paye' : montant_paye,
+            'total_a_paye' : montant_total,
+            'remises' : remises,
+            'specialite_simple' : specialite_simple.specialite.label if not student.is_double else None,
+            'modele_contrat' : modele_contrat,
+        }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
+
+
+    else:
+
+        groupe = GroupeLine.objects.filter(student = student)
+        paiements = Paiements.objects.filter(prospect = student)
+        documents = DocumentsDemandeInscription.objects.filter(prospect = student)
+        notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
+        rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
+        echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
+        remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)        
+        montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
+        montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
+        specialite = FicheVoeuxDouble.objects.filter(prospect = student, is_confirmed=True).first()
+
+        context = {
+            'pk' : pk,
+            'etudiant' : student,
+            'groupe' : groupe,
+            'paiements' : paiements,
+            'documents' : documents,
+            'notes' : notes,
+            'rappels' : rappels,
+            'echeanciers' : echeanciers,
+            'montant_due' : montant_due,
+            'montant_paye' : montant_paye,
+            'total_a_paye' : montant_total,
+            'remises' : remises,
+            'specialite_double' : specialite.specialite.label if student.is_double else None,
+        }
+        return render(request, 'tenant_folder/student/profile_etudiant_double.html',context)
+
+
 
 
 @login_required(login_url="institut_app:login")
