@@ -104,13 +104,26 @@ def ApiGetGroupeList(request):
 
 @login_required(login_url="institut_app:login")
 def detailsGroupe(request, pk):
+    from t_tresorerie.models import EcheancierPaiementLine,EcheancierPaiement
+    from django.core.serializers.json import DjangoJSONEncoder
+    import json
+
     groupe = Groupe.objects.get(pk=pk)
     students = GroupeLine.objects.filter(groupe = groupe)
+
+    echeancier_line = EcheancierPaiementLine.objects.filter(echeancier__formation = groupe.specialite.formation).values('value','date_echeancier', 'montant_tranche')
+    echeancier = EcheancierPaiement.objects.get(formation = groupe.specialite.formation)
+
     context = {
         'groupe' : groupe,
         'students' : students,
         "specialite" : groupe.specialite,
-        'tenant' : request.tenant,
+        'echeancier_line' : json.dumps(list(echeancier_line),cls=DjangoJSONEncoder),
+        'frais_inscription' : echeancier.frais_inscription,
+        "qualification" : groupe.specialite.formation.qualification,
+        "date_debut" : groupe.start_date,
+        "date_fin" : groupe.end_date,
+        "branche" : groupe.specialite.branche,
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 

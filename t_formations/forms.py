@@ -124,7 +124,7 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['abr','code', 'label', 'prix', 'formation','duree','responsable','nb_semestre','version','condition_access','prix_double_diplomation']
+        fields = ['abr','code', 'label', 'prix','branche', 'formation','duree','responsable','nb_semestre','version','condition_access','prix_double_diplomation']
 
         widgets = {
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'specialiteId'}),
@@ -138,9 +138,11 @@ class NewSpecialiteForm(forms.ModelForm):
             'version' : forms.TextInput(attrs={'class' : 'form-control'}),
             'condition_access' : forms.TextInput(attrs={'class' : 'form-control'}),
             'abr' : forms.TextInput(attrs={"class":"form-control"}),
+            'branche' : forms.TextInput(attrs={"class" : "form-control"}),
         }
 
         labels = {
+            'branche' : "Branche :",
             'label' : "Désignation de la spécialité :",
             'code' : "Code la spécialité :",
             'formation' : "Formation parante :",

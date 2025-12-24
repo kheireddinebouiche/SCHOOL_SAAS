@@ -19,6 +19,7 @@ def StudentDetails(request, pk):
 
     if not student.is_double:
         groupe = GroupeLine.objects.filter(student = student)
+        current_groupe = GroupeLine.objects.get(student = student, groupe__etat = "inscription" )
         paiements = Paiements.objects.filter(prospect = student)
         documents = DocumentsDemandeInscription.objects.filter(prospect = student)
         notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
@@ -38,9 +39,10 @@ def StudentDetails(request, pk):
 
         montant_formation = specialite_simple.specialite.formation.prix_formation
         frais_incription = echancier_standard.frais_inscription
-
+        branche = specialite_simple.specialite.branche
         dossier_inscription = DossierInscription.objects.filter(formation = specialite_simple.specialite.formation).values('label')
-
+        
+        print(current_groupe.groupe.start_date)
 
         context = {
             'pk' : pk,
@@ -67,6 +69,9 @@ def StudentDetails(request, pk):
             'frais_incription' : frais_incription,
             'annee_academique' : specialite_simple.promo.annee_academique,
             'echeancier_special_line' : echeancier_special_line,
+            'branche' : branche,
+            'date_debut' : current_groupe.groupe.start_date,
+            'date_fin' : current_groupe.groupe.end_date,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 

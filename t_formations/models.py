@@ -72,6 +72,7 @@ class Specialites(models.Model):
     nb_semestre = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
     branche = models.CharField(max_length=100, null=True, blank=True)
     abr = models.CharField(max_length=100, null=True, blank=True)
+    branche = models.CharField(max_length=2555, null=True, blank=True)
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True,to_field="code", related_name="formation_specilite")
 
     nb_tranche = models.CharField(choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')], null=True, blank=True, max_length=1)
