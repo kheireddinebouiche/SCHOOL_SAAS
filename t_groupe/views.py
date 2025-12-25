@@ -128,6 +128,7 @@ def detailsGroupe(request, pk):
         "date_fin" : groupe.end_date,
         "branche" : groupe.specialite.branche,
         'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
+        "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id)
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 
