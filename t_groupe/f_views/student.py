@@ -35,8 +35,12 @@ def StudentDetails(request, pk):
         echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
         echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
 
-        echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
-        echeancier_special_line = EcheancierPaiementLine.objects.filter(echeancier_id = echeancier_special.id).values('id','value','montant_tranche','date_echeancier')
+        try:
+            echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
+            echeancier_special_line = EcheancierPaiementLine.objects.filter(echeancier_id = echeancier_special.id).values('id','value','montant_tranche','date_echeancier')
+        except:
+            echeancier_special = 0
+            echeancier_special_line = []
 
         montant_formation = specialite_simple.specialite.formation.prix_formation
         frais_incription = echancier_standard.frais_inscription
