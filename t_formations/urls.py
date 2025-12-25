@@ -72,7 +72,7 @@ urlpatterns = [
 
     path('ApiGetPartenaireSync', ApiGetPartenaireSync, name="ApiGetPartenaireSync"),
     path('ApiSyncPartenaire', ApiSyncPartenaire, name="ApiSyncPartenaire"),
-    path('mise-a-jour-partenaire<int:pk>/',UpdatePartenaire, name="UpdatePartenaire"),
+    path('mise-a-jour-partenaire/<int:pk>/',UpdatePartenaire, name="UpdatePartenaire"),
 
     path('ApiLoadDocuments', ApiLoadDocuments , name="ApiLoadDocuments"),
     path('ApiAddDocument', ApiAddDocument, name="ApiAddDocument"),

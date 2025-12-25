@@ -177,7 +177,11 @@
                                         </button>
                                         <ul class="dropdown-menu" aria-labelledby="impressionDropdown">
                                             <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i>Contrat</a></li>
-                                            <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Certificat de scolarité</a></li>
+                                            {% if type_formation == "etrangere" %}
+                                                <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Certificat d'admission</a></li>
+                                            {% else %}
+                                                <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Certificat de scolarité</a></li>
+                                            {% endif %}
                                             <li><a class="dropdown-item" href="#"><i class="ri-file-line me-2"></i>Attestation d'inscription</a></li>
                                             <li><a class="dropdown-item" href="#"><i class="ri-id-card-line me-2"></i>Carte étudiant</a></li>
                                         </ul>
@@ -1883,8 +1887,10 @@
 
         const id_etudiant = "{{pk}}";
         const id_modele_contrat = "{{modele_contrat.id}}";
+
         var echeancier_line = JSON.parse('{{echeancier_line|escapejs}}');
         var document_inscription = JSON.parse('{{dossier_inscription|escapejs}}');
+
         var formation = "{{formation}}";
         var specialite = "{{specialite_simple}}";
         var qualification = "{{qualification}}";
@@ -1902,6 +1908,8 @@
 
         var entite = "{{entreprise_details.designation}}";
         var ville  = "{{entreprise_details.ville}}";
+
+        console.log("{{logo_partenaire.logo.url}}");
 
         // Function to generate school certificate with jsPDF (using new format)
         function generateSchoolCertificate() {
@@ -2204,7 +2212,6 @@
             });
         }
         
-
         // Function to generate a single contract PDF
         function generateSingleContractPDF(student, clauses) {
             const { jsPDF } = window.jspdf;
@@ -2237,13 +2244,13 @@
                 currentY += 8;
 
                 // Institution details
-                doc.text("L'établissement privé de formation professionnelle INSIM", margin, currentY);
+                doc.text("L'établissement privé de formation professionnelle "+entite, margin, currentY);
                 currentY += 5;
                 var institutionAdresse = "{{entreprise_details.adresse}}";
                 var represantant = "{{entreprise_details.representant}}";
                 doc.text('Sis '+institutionAdresse, margin, currentY);
                 currentY += 5;
-                doc.text("Représenté par M. Said KESSAL en sa qualité de Directeur,", margin, currentY);
+                doc.text("Représenté par "+represantant+" en sa qualité de Directeur,", margin, currentY);
                 currentY += 8;
 
                 // Separator
@@ -2320,7 +2327,7 @@
                 var formattedDate = currentDate.getDate().toString().padStart(2, '0') + '/' +
                                    (currentDate.getMonth() + 1).toString().padStart(2, '0') + '/' +
                                    currentDate.getFullYear();
-                var ville = "{{ etudiant.groupe.specialite.formation.entite_legal.ville|default:'Alger' }}";
+                
                 var locationText = "Fait à " + ville + ", le " + formattedDate;
                 var textWidth = doc.getTextWidth(locationText);
                 var rightMargin = pageWidth - margin;
@@ -2714,7 +2721,7 @@
         }
 
         
-        // Fix for handling dropdown items with text content
+        // Ecouteur d'evenement sur les boutons d'impressions
         document.addEventListener('click', function(e) {
             if (e.target.closest('a.dropdown-item')) {
                 e.preventDefault();

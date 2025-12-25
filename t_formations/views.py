@@ -348,7 +348,7 @@ def UpdatePartenaire(request, pk):
     form = NewPartenaireForm(instance=partenaire)
 
     if request.method == "POST":
-        form = NewPartenaireForm(request.POST, instance=partenaire)
+        form = NewPartenaireForm(request.POST, request.FILES ,instance=partenaire)
         if form.is_valid():
             updated_partenaire = form.save()
             if updated_partenaire.type_partenaire == 'etranger':

@@ -46,8 +46,10 @@ def StudentDetails(request, pk):
         frais_incription = echancier_standard.frais_inscription
         branche = specialite_simple.specialite.branche
         dossier_inscription = DossierInscription.objects.filter(formation = specialite_simple.specialite.formation).values('label')
-        
-        print(current_groupe.groupe.start_date)
+        try:
+            logo_partenanire = Partenaires.objects.get(id = current_groupe.groupe.specialite.formation.partenaire.id)
+        except:
+            logo_partenanire = None
 
         context = {
             'pk' : pk,
@@ -77,6 +79,8 @@ def StudentDetails(request, pk):
             'branche' : branche,
             'date_debut' : current_groupe.groupe.start_date,
             'date_fin' : current_groupe.groupe.end_date,
+            'type_formation' : current_groupe.groupe.specialite.formation.type_formation,
+            'logo_partenaire' : logo_partenanire,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 
