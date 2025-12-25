@@ -1422,7 +1422,6 @@
         var branche = "{{branche}}";
 
         
-        
         // Load the contract model for the group's formation automatically
         function loadContractModel() {
             // Clear any previous error
@@ -1562,6 +1561,8 @@
             });
         }
         
+        
+
         // Function to get student details
         function getStudentDetails(studentIds, callback) {
             // Since we don't have a specific API to get student details, 
@@ -1611,7 +1612,18 @@
                     
                     // Extract address from the address column (4th column, index 3)
                     var studentAddress = studentRow.find('td:eq(3)').text().trim();
-                    
+
+                    // Extract is_double from the "Type Formation" column (5th column, index 5)
+                    var isDoubleText = studentRow.find('td:eq(5)').text().trim();
+                    // Check if the is_double field is true (considering various representations)
+                    // If isDoubleText is empty or undefined, default to false (will add echeancier table)
+                    var isDouble = (isDoubleText && (
+                                   isDoubleText.toLowerCase() === 'true' ||
+                                   isDoubleText.toLowerCase() === '1' ||
+                                   isDoubleText.toLowerCase() === 'yes' ||
+                                   isDoubleText.toLowerCase() === 'oui' ||
+                                   isDoubleText === 'True'));
+
                     studentsDetails.push({
                         id: studentId,
                         fullName: studentName,
@@ -1620,7 +1632,8 @@
                         email: studentEmail,
                         birthDate: birthDate,
                         birthPlace: birthPlace,
-                        address: studentAddress
+                        address: studentAddress,
+                        isDouble: isDouble
                     });
                 }
             });
@@ -1628,25 +1641,57 @@
             callback(studentsDetails);
         }
         
+        function getEcheancierStudentSpecial(id_student, callback){
+            $.ajax({
+                url : "{% url 't_etudiants:ApiGetStudentFinancialsData' %}",
+                dataType : "JSON",
+                type: "GET",
+                data : {
+                    'id_student' : id_student,
+                },
+                success: function(data){
+                    callback(data);
+                },
+                error: function(xhr, status, error) {
+                    console.log("Error getting student financials data:", error);
+                    callback(null); // Return null on error
+                }
+            })
+        }
+
         // Function to generate contract PDFs
-        function generateContractPDFs(students, clauses) {
+        async function generateContractPDFs(students, clauses) {
             const { jsPDF } = window.jspdf;
-            
+
             // Create a new PDF document - it starts with one page by default
             const doc = new jsPDF('p', 'mm', 'a4');
-            
+
             // Remove the default first page since we'll add pages as needed
             doc.deletePage(1);
-            
-            // For each student, add their contract
-            students.forEach(function(student) {
-                addContractPage(doc, student, clauses);
+
+            // Process each student's contract with their specific echeancier data
+            const promises = students.map(function(student) {
+                return new Promise(function(resolve) {
+                    // Get the student-specific echeancier data
+                    getEcheancierStudentSpecial(student.id, function(specificEcheancierData) {
+                        // If specific echeancier data is available, use it; otherwise use standard data
+                        let echeancierDataToUse = specificEcheancierData && specificEcheancierData.length > 0 ? specificEcheancierData : echeancier_line;
+
+                        // Add the contract page with the appropriate echeancier data
+                        addContractPage(doc, student, clauses, echeancierDataToUse);
+
+                        resolve(); // Resolve the promise when the contract page is added
+                    });
+                });
             });
-            
-            // Save the PDF if there are pages
+
+            // Wait for all promises to resolve
+            await Promise.all(promises);
+
+            // Save the PDF after all students have been processed
             if (doc.getNumberOfPages() > 0) {
                 doc.save("contrats_{{groupe.nom}}.pdf");
-                
+
                 // Close the modal
                 $('#contratsModal').modal('hide');
             } else {
@@ -1655,7 +1700,7 @@
         }
         
         // Function to add a contract page for a student
-        function addContractPage(doc, student, clauses) {
+        function addContractPage(doc, student, clauses, echeancierDataToUse) {
             // Add a new page for each contract
             doc.addPage();
 
@@ -1834,8 +1879,8 @@
             doc.setFont('times', 'normal');
             doc.setFontSize(12);
 
-            // Add echeancier table page
-            addEcheancierTablePage(doc, pageWidth, margin, echeancier_line, montant_formation, frais_inscription, annee_academique, document_inscription);
+            // Add echeancier table page for all students using the specific data
+            addEcheancierTablePage(doc, pageWidth, margin, echeancierDataToUse, montant_formation, frais_inscription, annee_academique, document_inscription);
         }
         
         // Function to add echeancier table page
@@ -2133,7 +2178,9 @@
                 .replace(/\[lieu_naissance_etudiant\]/g, student.birthPlace || '')
                 .replace(/\[adresse_etudiant\]/g, "______________"); // Address not available in this context
         }
-    
+        
+
+        
     
     });
 </script>

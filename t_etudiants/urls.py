@@ -41,4 +41,6 @@ urlpatterns = [
    path('contrat/modele/articles/delete/', ApiDeleteArticleContrat, name="ApiDeleteArticleContrat"),
 
    path('ApiGetModeleContratByFormation', ApiGetModeleContratByFormation, name="ApiGetModeleContratByFormation"),
+
+   path('ApiGetStudentFinancialsData', ApiGetStudentFinancialsData, name="ApiGetStudentFinancialsData"),
 ]

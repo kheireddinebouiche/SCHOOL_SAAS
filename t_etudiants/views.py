@@ -150,3 +150,24 @@ def StudentArchive(request):
 @login_required(login_url='institut_app:login')
 def StudentsDelete(request):
     pass
+
+@login_required(login_url="institut_app:login")
+def ApiGetStudentFinancialsData(request):
+    if request.method == "GET":
+        from t_tresorerie.models import DuePaiements
+        id_student = request.GET.get('id_student')
+
+        echeancier_special = DuePaiements.objects.filter(client_id = id_student,type="frais_f").exclude(label="Frais d'inscription")
+        data = []
+        for i in echeancier_special:
+            data.append({
+                'montant_tranche' : i.montant_due,
+                'date_echeancier' : i.date_echeance,
+                'value' : i.label
+            })
+        
+        return JsonResponse(list(data), safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})
+
