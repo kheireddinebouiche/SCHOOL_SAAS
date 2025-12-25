@@ -62,6 +62,7 @@ TENANT_APPS = [
     't_conseil',
     't_remise',
     't_timetable',
+    't_documents_maker',
     'phonenumber_field',
     'django_countries',
     'django.contrib.auth',
@@ -70,7 +71,7 @@ TENANT_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'django.contrib.sessions',
-   
+
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]

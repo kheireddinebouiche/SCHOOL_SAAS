@@ -335,6 +335,7 @@ def deletePartenaire(request, pk):
     messages.success(request, 'Partenaire supprimé avec succès')
     return redirect('t_formations:listPartenaires')
 
+@login_required(login_url="institut_app:login")
 def ListeDesPartenaires(request):
     liste = Partenaires.objects.all()
     context = {
@@ -343,6 +344,8 @@ def ListeDesPartenaires(request):
     }
     return render(request, 'tenant_folder/formations/liste_des_partenaires.html', context)
 
+
+@login_required(login_url="institut_app:login")
 def UpdatePartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
     form = NewPartenaireForm(instance=partenaire)
