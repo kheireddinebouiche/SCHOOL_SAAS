@@ -1893,8 +1893,8 @@
         var echeancier_line = JSON.parse('{{echeancier_line|escapejs}}');
         var document_inscription = JSON.parse('{{dossier_inscription|escapejs}}');
 
-        var formation = "{{formation}}";
-        var specialite = "{{specialite_simple}}";
+        var formation = "{{formation|escapejs}}";
+        var specialite = "{{specialite_simple|escapejs}}";
         var qualification = "{{qualification}}";
 
         var date_debut = "{{date_debut}}";
@@ -1910,7 +1910,7 @@
 
         var entite = "{{entreprise_details.designation}}";
         var ville  = "{{entreprise_details.ville}}";
-        var logo_partenaire = "{{logo_partenanire.logo.url}}";
+        var logo_partenaire = "{{ logo_partenaire|escapejs }}";
 
 
         // Ecouteur d'evenement sur les boutons d'impressions
@@ -1929,6 +1929,8 @@
                     generateAttestationInscription();
                 } else if (text.trim() === "Contrat de formation"){
                     generateFormationContract();
+                } else if(text.trim() === "Certificat d'admission"){
+                    generateAdmissionCertificate();
                 }
             }
         });
@@ -2421,7 +2423,7 @@
 
                 // Add echeancier table page using student-specific data if available, otherwise standard data
                 var echeancierDataToUse = specificEcheancierData && specificEcheancierData.length > 0 ? specificEcheancierData : echeancier_line;
-                addEcheancierTablePage(doc, pageWidth, margin, echeancierDataToUse, montant_formation, frais_inscription, annee_academique, document_inscription);
+                addEcheancierTablePageFormationNational(doc, pageWidth, margin, echeancierDataToUse, montant_formation, frais_inscription, annee_academique, document_inscription);
 
                 // Save the PDF
                 doc.save("contrat_{{ etudiant.matricule_interne }}.pdf");
@@ -2587,10 +2589,20 @@
                 currentY += 8;
 
                 // Institution details
-                doc.text("Higher International Management Institute HIMI Business School, sis au 19, boulevard Mohamed BOUDIAF, Chéraga – Alger (Algérie), ci-après désigné par HIMI Business School, représenté par", margin, currentY);
-                currentY += 5;
-                doc.text("monsieur Said KESSAL ; Directeur Général, ayant tous les pouvoirs à l’effet du présent contrat,", margin, currentY);
-                currentY += 8;
+                var institutionText = "Higher International Management Institute HIMI Business School, sis au 19, boulevard Mohamed BOUDIAF, Chéraga – Alger (Algérie), ci-après désigné par HIMI Business School, représenté par";
+                var wrappedInstitutionText = doc.splitTextToSize(institutionText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedInstitutionText.length; i++) {
+                    doc.text(wrappedInstitutionText[i], margin, currentY);
+                    currentY += 5;
+                }
+
+                var representativeText = "monsieur Said KESSAL ; Directeur Général, ayant tous les pouvoirs à l’effet du présent contrat,";
+                var wrappedRepresentativeText = doc.splitTextToSize(representativeText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedRepresentativeText.length; i++) {
+                    doc.text(wrappedRepresentativeText[i], margin, currentY);
+                    currentY += 5;
+                }
+
                 doc.text("d’une part,", margin, currentY);
                 currentY += 8;
 
@@ -2614,8 +2626,12 @@
 
                 // Contract clause
                 currentY += 5;
-                doc.text("Est conclu un contrat de formation d'AEC (Attestation d'Études Collégiales) du Cégep de Sherbrooke pour une durée égale à la durée de la formation.", margin, currentY);
-                currentY += 8;
+                var contractClauseText = "Est conclu un contrat de formation d'AEC (Attestation d'Études Collégiales) du Cégep de Sherbrooke pour une durée égale à la durée de la formation.";
+                var wrappedContractClauseText = doc.splitTextToSize(contractClauseText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedContractClauseText.length; i++) {
+                    doc.text(wrappedContractClauseText[i], margin, currentY);
+                    currentY += 5;
+                }
 
                 // Add location and date - aligned to the right
                 currentY += 10; // Add some space after the contract clause
@@ -2703,8 +2719,8 @@
                     }
                 }
 
-                // Add title for clauses section
-                let clauseY = 80;
+                // Add title for clauses section - position just below the header logos
+                let clauseY = 40; // Start just below the header logos (which start at Y=10 and have ~20-30mm height)
                 doc.setFont('times', 'bold');
                 doc.text("Clauses du contrat :", margin, clauseY);
                 doc.setFont('times', 'normal');
@@ -2775,9 +2791,9 @@
 
                                 // Add title for clauses section on new page
                                 doc.setFont('times', 'bold');
-                                doc.text("Clauses du contrat :", margin, 80);
+                                doc.text("Clauses du contrat :", margin, 40);
                                 doc.setFont('times', 'normal');
-                                clauseY = 86; // Start after the title
+                                clauseY = 46; // Start after the title
                             }
                             doc.text(wrappedText[i], margin, clauseY);
                             clauseY += 5.5; // 4 (original spacing) + 1.5 (additional interline spacing) = 5.5
@@ -2831,9 +2847,9 @@
 
                             // Add title for clauses section on new page
                             doc.setFont('times', 'bold');
-                            doc.text("Clauses du contrat :", margin, 80);
+                            doc.text("Clauses du contrat :", margin, 40);
                             doc.setFont('times', 'normal');
-                            clauseY = 86; // Start after the title
+                            clauseY = 46; // Start after the title
                         }
                     }
                 });
@@ -2890,16 +2906,36 @@
                 // Add signature section after clauses
                 let signatureY = 80; // Start at a reasonable position on the new page
                 doc.setFont('times', 'normal');
-                doc.text("Le stagiaire", margin, signatureY);
-                // Align director's signature to the right
-                doc.text("Le Directeur de l'établissement", pageWidth - margin - 70, signatureY);
+
+                // Student signature label
+                var studentSignatureText = "Le stagiaire";
+                var wrappedStudentSignatureText = doc.splitTextToSize(studentSignatureText, (pageWidth - 2 * margin) / 2);
+                for (var i = 0; i < wrappedStudentSignatureText.length; i++) {
+                    doc.text(wrappedStudentSignatureText[i], margin, signatureY);
+                }
+
+                // Director's signature label - aligned to the right
+                var directorSignatureText = "Le Directeur de l'établissement";
+                var wrappedDirectorSignatureText = doc.splitTextToSize(directorSignatureText, (pageWidth - 2 * margin) / 2);
+                for (var i = 0; i < wrappedDirectorSignatureText.length; i++) {
+                    doc.text(wrappedDirectorSignatureText[i], pageWidth - margin - doc.getTextWidth(wrappedDirectorSignatureText[i]), signatureY);
+                }
+
                 signatureY += 6;
 
                 // "Lu et approuvé" in italics at 10pt
                 doc.setFont('times', 'italic');
                 doc.setFontSize(10);
-                doc.text("Signature précédée de la mention « Lu et approuvé »", margin, signatureY);
-                doc.text("Signature précédée de la mention « Lu et approuvé »", pageWidth - margin - 70, signatureY);
+
+                var approvalText = "Signature précédée de la mention « Lu et approuvé »";
+                var wrappedApprovalText = doc.splitTextToSize(approvalText, (pageWidth - 2 * margin) / 2);
+                for (var i = 0; i < wrappedApprovalText.length; i++) {
+                    doc.text(wrappedApprovalText[i], margin, signatureY);
+                }
+
+                for (var i = 0; i < wrappedApprovalText.length; i++) {
+                    doc.text(wrappedApprovalText[i], pageWidth - margin - doc.getTextWidth(wrappedApprovalText[i]), signatureY);
+                }
 
                 // Reset font back to normal 10pt
                 doc.setFont('times', 'normal');
@@ -2907,12 +2943,27 @@
                 signatureY += 12;
 
                 // CNI/PC section (only for student)
-                doc.text("CNI / PC N°____________________________", margin, signatureY);
-                signatureY += 6;
-                doc.text("Délivré le : _____________________________", margin, signatureY);
-                signatureY += 6;
-                doc.text("Par : __________________________________", margin, signatureY);
-                signatureY += 8;
+                var cniText = "CNI / PC N°____________________________";
+                var wrappedCniText = doc.splitTextToSize(cniText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedCniText.length; i++) {
+                    doc.text(wrappedCniText[i], margin, signatureY);
+                    signatureY += 5;
+                }
+
+                var issuedText = "Délivré le : _____________________________";
+                var wrappedIssuedText = doc.splitTextToSize(issuedText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedIssuedText.length; i++) {
+                    doc.text(wrappedIssuedText[i], margin, signatureY);
+                    signatureY += 5;
+                }
+
+                var issuedByText = "Par : __________________________________";
+                var wrappedIssuedByText = doc.splitTextToSize(issuedByText, pageWidth - 2 * margin);
+                for (var i = 0; i < wrappedIssuedByText.length; i++) {
+                    doc.text(wrappedIssuedByText[i], margin, signatureY);
+                    signatureY += 5;
+                }
+
                 doc.text("Signature", margin, signatureY);
                 signatureY += 15;
 
@@ -2939,7 +2990,7 @@
 
                 // Add echeancier table page using student-specific data if available, otherwise standard data
                 var echeancierDataToUse = specificEcheancierData && specificEcheancierData.length > 0 ? specificEcheancierData : echeancier_line;
-                addEcheancierTablePage(doc, pageWidth, margin, echeancierDataToUse, montant_formation, frais_inscription, annee_academique, document_inscription);
+                addEcheancierTablePageFormationEtrangers(doc, pageWidth, margin, echeancierDataToUse, montant_formation, frais_inscription, annee_academique, document_inscription);
 
                 // Add page numbers to all pages
                 const pageCount = doc.getNumberOfPages();
@@ -2980,84 +3031,38 @@
             });
         }
 
-        // Function to add echeancier table page
-        function addEcheancierTablePage(doc, pageWidth, margin, echeancierData, montantFormation, fraisInscription, anneeAcademique, documentInscription) {
+        // Function to add echeancier table page numero 1
+        function addEcheancierTablePageFormationNational(doc, pageWidth, margin, echeancierData, montantFormation, fraisInscription, anneeAcademique, documentInscription) {
             // Add a new page for the echeancier table
             doc.addPage();
-
-            // Add header logo on the left (25% of page width) for this new page
-            if(logo_header && logo_header.trim() !== '') {
-                try {
-                    const logoWidth = pageWidth * 0.25; // 25% of page width
-                    const logoX = margin; // Position from left margin
-                    const logoY = 10; // Position from top
-
-                    // Determine image format based on file extension
-                    let format = 'JPEG';
-                    if (logo_header.toLowerCase().endsWith('.png')) {
-                        format = 'PNG';
-                    } else if (logo_header.toLowerCase().endsWith('.jpg') || logo_header.toLowerCase().endsWith('.jpeg')) {
-                        format = 'JPEG';
-                    } else if (logo_header.toLowerCase().endsWith('.gif')) {
-                        format = 'GIF';
-                    }
-
-                    doc.addImage(logo_header, format, logoX, logoY, logoWidth, 0);
-                } catch (e) {
-                    console.log("Error adding header logo:", e.message);
-                }
-            }
-
-            // Add partner logo on the right (25% of page width) for this new page
-            if(logo_partenaire && logo_partenaire.trim() !== '') {
-                try {
-                    const logoWidth = pageWidth * 0.25; // 25% of page width
-                    const logoX = pageWidth - margin - logoWidth; // Position from right margin
-                    const logoY = 10; // Position from top
-
-                    // Determine image format based on file extension
-                    let format = 'JPEG';
-                    if (logo_partenaire.toLowerCase().endsWith('.png')) {
-                        format = 'PNG';
-                    } else if (logo_partenaire.toLowerCase().endsWith('.jpg') || logo_partenaire.toLowerCase().endsWith('.jpeg')) {
-                        format = 'JPEG';
-                    } else if (logo_partenaire.toLowerCase().endsWith('.gif')) {
-                        format = 'GIF';
-                    }
-
-                    doc.addImage(logo_partenaire, format, logoX, logoY, logoWidth, 0);
-                } catch (e) {
-                    console.log("Error adding partner logo:", e.message);
-                }
-            }
 
             // Set font for the main header
             doc.setFont('times', 'bold');
             doc.setFontSize(14);
 
-            // Add ANNEXE 1 title above the main title
+            // Add ANNEXE 1 title just below the header logos
             var annexTitle = "ANNEXE 1";
             var annexTitleWidth = doc.getTextWidth(annexTitle);
             var annexTitleX = (pageWidth - annexTitleWidth) / 2;
-            doc.text(annexTitle, annexTitleX, 25);
+            doc.text(annexTitle, annexTitleX, 40); // Start just below the header logos (which start at Y=10)
 
             // Add title for the echeancier page below ANNEXE 1
             var title = "Échéancier de paiement";
             var titleWidth = doc.getTextWidth(title);
             var titleX = (pageWidth - titleWidth) / 2;
-            doc.text(title, titleX, 35);
+            doc.text(title, titleX, 50); // Position just below the previous title
 
             // Add academic year below the main title
             doc.setFontSize(12);
             var academicYearText = "Année académique : " + (anneeAcademique || "{{ annee_academique }}");
             var academicYearWidth = doc.getTextWidth(academicYearText);
             var academicYearX = (pageWidth - academicYearWidth) / 2;
-            doc.text(academicYearText, academicYearX, 45);
+            doc.text(academicYearText, academicYearX, 60); // Position just below the previous title
 
             // Add "Formation" title above the table, positioned on the left
             doc.setFont('times', 'bold');
             doc.setFontSize(10);
-            doc.text("Formation : "+formation, margin, 55);
+            doc.text("Formation : "+formation, margin, 70); // Position just below the previous text
 
             // Reset font for table content
             doc.setFont('times', 'normal');
@@ -3068,7 +3073,7 @@
             var colWidths = [(pageWidth - 2 * margin) * 0.6,  // Labels column
                              (pageWidth - 2 * margin) * 0.4]; // Values column
             var startX = margin;
-            var startY = 60; // Adjusted to account for the new titles above the table
+            var startY = 75; // Adjusted to account for the new titles above the table
             var rowHeight = 10;
             var currentY = startY;
 
@@ -3301,6 +3306,510 @@
             doc.setFillColor(0, 0, 0);
             doc.setDrawColor(0, 0, 0);
             doc.setFont('times', 'normal');
+        }
+
+        // Function to add echeancier table page
+        function addEcheancierTablePageFormationEtrangers(doc, pageWidth, margin, echeancierData, montantFormation, fraisInscription, anneeAcademique, documentInscription) {
+            // Add a new page for the echeancier table
+            doc.addPage();
+
+            // Add header logo on the left (25% of page width) for this new page
+            if(logo_header && logo_header.trim() !== '') {
+                try {
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = margin; // Position from left margin
+                    const logoY = 10; // Position from top
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG';
+                    if (logo_header.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_header.toLowerCase().endsWith('.jpg') || logo_header.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_header.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    doc.addImage(logo_header, format, logoX, logoY, logoWidth, 0);
+                } catch (e) {
+                    console.log("Error adding header logo:", e.message);
+                }
+            }
+
+            // Add partner logo on the right (25% of page width) for this new page
+            if(logo_partenaire && logo_partenaire.trim() !== '') {
+                try {
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = pageWidth - margin - logoWidth; // Position from right margin
+                    const logoY = 10; // Position from top
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG';
+                    if (logo_partenaire.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_partenaire.toLowerCase().endsWith('.jpg') || logo_partenaire.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_partenaire.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    doc.addImage(logo_partenaire, format, logoX, logoY, logoWidth, 0);
+                } catch (e) {
+                    console.log("Error adding partner logo:", e.message);
+                }
+            }
+
+            // Set font for the main header
+            doc.setFont('times', 'bold');
+            doc.setFontSize(14);
+
+            // Add ANNEXE 1 title further below the header logos
+            var annexTitle = "ANNEXE 1";
+            var annexTitleWidth = doc.getTextWidth(annexTitle);
+            var annexTitleX = (pageWidth - annexTitleWidth) / 2;
+            doc.text(annexTitle, annexTitleX, 50); // Start further below the header logos (which start at Y=10)
+
+            // Add title for the echeancier page below ANNEXE 1
+            var title = "Échéancier de paiement";
+            var titleWidth = doc.getTextWidth(title);
+            var titleX = (pageWidth - titleWidth) / 2;
+            doc.text(title, titleX, 65); // Position further below the previous title
+
+            // Add academic year below the main title
+            doc.setFontSize(12);
+            var academicYearText = "Année académique : " + (anneeAcademique || "{{ annee_academique }}");
+            var academicYearWidth = doc.getTextWidth(academicYearText);
+            var academicYearX = (pageWidth - academicYearWidth) / 2;
+            doc.text(academicYearText, academicYearX, 80); // Position further below the previous title
+
+            // Add "Formation" title above the table, positioned on the left
+            doc.setFont('times', 'bold');
+            doc.setFontSize(10);
+            doc.text("Formation : "+formation, margin, 95); // Position further below the previous text
+
+            // Reset font for table content
+            doc.setFont('times', 'normal');
+            doc.setFontSize(10);
+
+            // Define table headers - two columns: labels and values
+            var headers = ["Désignation", "Montant"];
+            var colWidths = [(pageWidth - 2 * margin) * 0.6,  // Labels column
+                             (pageWidth - 2 * margin) * 0.4]; // Values column
+            var startX = margin;
+            var startY = 100; // Adjusted to account for the new titles above the table
+            var rowHeight = 10;
+            var currentY = startY;
+
+            // Calculate total table width
+            var tableWidth = pageWidth - 2 * margin;
+
+            // Draw table header
+            doc.setFont('times', 'bold');
+            // Draw header background
+            doc.setFillColor(240, 240, 240); // Light gray
+            doc.rect(startX, currentY, tableWidth, rowHeight, 'F');
+
+            // Draw header text
+            var xPos = startX;
+            for (var i = 0; i < headers.length; i++) {
+                doc.text(headers[i], xPos + 2, currentY + 7);
+                xPos += colWidths[i];
+            }
+
+            // Reset font for data rows
+            doc.setFont('times', 'normal');
+
+            // Add formation cost row
+            currentY += rowHeight;
+            var yPos = currentY;
+            doc.setFillColor(255, 255, 255); // White background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw formation cost data
+            var labelX = startX + 2;
+            var valueX = startX + colWidths[0] + 2;
+
+            doc.text("Coût de la formation en TTC", labelX, yPos + 7);
+            doc.text(montantFormation, valueX, yPos + 7);
+
+            // Add inscription fees row
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(250, 250, 250); // Light gray background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw inscription fees data
+            labelX = startX + 2;
+            valueX = startX + colWidths[0] + 2;
+
+            doc.text("Frais d'inscription (non remboursables)", labelX, yPos + 7);
+            doc.text(fraisInscription, valueX, yPos + 7);
+
+            // Add total row
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(245, 245, 245); // Slightly darker gray for total
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Calculate total
+            var total = (parseFloat(montantFormation) || 0) + (parseFloat(fraisInscription) || 0);
+
+            // Draw total data
+            labelX = startX + 2;
+            valueX = startX + colWidths[0] + 2;
+
+            doc.setFont('times', 'bold');
+            doc.text("TOTAL", labelX, yPos + 7);
+            doc.text(total.toFixed(2), valueX, yPos + 7);
+            doc.setFont('times', 'normal');
+
+            // Add a blank row for spacing
+            currentY += rowHeight;
+            yPos = currentY;
+            doc.setFillColor(255, 255, 255); // White background
+            doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+
+            // Draw label for payment schedule
+            labelX = startX + 2;
+            doc.text("Échéancier des paiements", labelX, yPos + 7);
+
+            // Draw table rows from echeancierData
+            if (echeancierData && echeancierData.length > 0) {
+                for (var i = 0; i < echeancierData.length; i++) {
+                    currentY += rowHeight;
+                    yPos = currentY;
+
+                    // Draw row background (alternating)
+                    if (i % 2 === 0) {  // Color even-indexed rows (0, 2, 4...) for proper alternating after the headers
+                        doc.setFillColor(250, 250, 250); // Very light gray
+                        doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+                    } else {
+                        doc.setFillColor(255, 255, 255); // White background
+                        doc.rect(startX, yPos, tableWidth, rowHeight, 'F');
+                    }
+
+                    // Draw row data
+                    var echeance = echeancierData[i]; // Define echeance inside the loop
+                    var labelX = startX + 2;
+                    var valueX = startX + colWidths[0] + 2;
+                    var montant = echeance.montant_tranche || "0";
+                    var date = echeance.date_echeancier ? " - " + echeance.date_echeancier : "";
+
+                    // Draw cell content
+                    doc.text("Tranche " + (i + 1) + date, labelX, yPos + 7);
+                    doc.text(montant, valueX, yPos + 7);
+
+                    // Check if we need a new page
+                    if (currentY > 260) { // Adjusted for more space for content
+                        doc.addPage();
+                        currentY = 30; // Reset Y position on new page
+                        startX = margin;
+                        tableWidth = pageWidth - 2 * margin; // Reset table width
+
+                        // Redraw header on new page if needed
+                        doc.setFont('times', 'bold');
+                        doc.setFillColor(240, 240, 240); // Light gray
+                        doc.rect(startX, currentY, tableWidth, rowHeight, 'F');
+
+                        // Draw header text
+                        var headerXPos = startX;
+                        for (var j = 0; j < headers.length; j++) {
+                            doc.text(headers[j], headerXPos + 2, currentY + 7);
+                            headerXPos += colWidths[j];
+                        }
+
+                        doc.setFont('times', 'normal');
+                        currentY += rowHeight;
+                    }
+                }
+            } else {
+                // If no echeancier data, add a message
+                currentY += rowHeight;
+                yPos = currentY;
+                doc.text("Aucune donnée d'échéancier disponible", startX, yPos + 7);
+            }
+
+            // Now draw all borders for the complete table
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.3); // Slightly thicker border for outer box
+
+            // Draw vertical lines for columns that extend to the actual final position
+            doc.setLineWidth(0.1); // Thinner for inner lines
+            var xPosition = startX;
+            for (var i = 0; i <= headers.length; i++) {
+                doc.line(xPosition, startY, xPosition, currentY);
+                if (i < headers.length) {
+                    xPosition += colWidths[i];
+                }
+            }
+
+            // Draw outer border of the table to ensure it encompasses all content
+            doc.setLineWidth(0.3); // Slightly thicker border for outer box
+            doc.rect(startX, startY, tableWidth, currentY - startY);
+
+            // Draw horizontal lines for rows - using the actual positions where content was drawn
+            doc.setLineWidth(0.1); // Thinner for inner lines
+            // Draw horizontal line at the top of the table
+            doc.line(startX, startY, startX + tableWidth, startY);
+
+            // Draw horizontal lines after each row that was actually drawn
+            var actualY = startY + rowHeight; // After header
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After formation cost
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After fees
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After total
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            actualY += rowHeight; // After "Échéancier" header
+            doc.line(startX, actualY, startX + tableWidth, actualY);
+
+            // Draw horizontal lines after each echeancier data row
+            if (echeancierData && echeancierData.length > 0) {
+                for (var i = 0; i < echeancierData.length; i++) {
+                    actualY += rowHeight; // After each echeancier row
+                    doc.line(startX, actualY, startX + tableWidth, actualY);
+                }
+            } else {
+                // If no echeancier data, we still need a line after the "no data" message
+                actualY += rowHeight;
+                doc.line(startX, actualY, startX + tableWidth, actualY);
+            }
+
+            // Add section for registration documents below the table
+            currentY += 20; // Add some space below the table
+
+            // Add title for the documents section
+            doc.setFont('times', 'bold');
+            doc.text("Documents d'inscription requis :", startX, currentY);
+            currentY += 8;
+
+            // Draw list of registration documents with right indentation
+            if (document_inscription && document_inscription.length > 0) {
+                doc.setFont('times', 'normal');
+
+                // Add indentation for the document list
+                var documentIndent = startX + 10; // 10mm indentation to the right
+
+                for (var i = 0; i < document_inscription.length; i++) {
+                    var docItem = document_inscription[i];
+                    var docLabel = (docItem.label || "Document inconnu").toString();
+
+                    // Add bullet point and document label with indentation
+                    doc.text("• " + docLabel, documentIndent, currentY);
+                    currentY += 6; // Space between items
+
+                    // Check if we need a new page
+                    if (currentY > 270) {
+                        doc.addPage();
+                        currentY = 30; // Reset Y position on new page
+                        startX = margin;
+                        documentIndent = startX + 10; // Reset indentation
+
+                        // Add title for documents section on new page
+                        doc.setFont('times', 'bold');
+                        doc.text("Documents d'inscription requis :", startX, currentY);
+                        currentY += 8;
+                        doc.setFont('times', 'normal');
+                    }
+                }
+            } else {
+                doc.setFont('times', 'normal');
+                // Apply same indentation to the "no documents" message
+                var documentIndent = startX + 10; // 10mm indentation to the right
+                doc.text("Aucun document d'inscription requis spécifié.", documentIndent, currentY);
+                currentY += 6;
+            }
+
+            // Reset colors and font
+            doc.setFillColor(0, 0, 0);
+            doc.setDrawColor(0, 0, 0);
+            doc.setFont('times', 'normal');
+        }
+
+        // Function to generate admission certificate PDF
+        function generateAdmissionCertificate(programme, specialite, dateDebut, dateFin, groupe, anneeAcademique, dateCertificat) {
+            const { jsPDF } = window.jspdf;
+
+            // Create a new PDF document
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Set margins and font
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width;
+            const pageHeight = doc.internal.pageSize.height;
+
+             // Prepare student data for contract
+            var student = {
+                id: id_etudiant,
+                fullName: "{{ etudiant.nom }} {{ etudiant.prenom }}",
+                lastName: "{{ etudiant.nom }}",
+                firstName: "{{ etudiant.prenom }}",
+                email: "{{ etudiant.email }}",
+                birthDate: "{{ etudiant.date_naissance|date:'d/m/Y' }}",
+                birthPlace: "{{ etudiant.lieu_naissance }}",
+                address: "{{ etudiant.adresse|default:'______________'}}"
+            };
+
+            // Set font to Times New Roman at 12pt for the entire document
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+
+            // Add header logo on the left (25% of page width)
+            if(logo_header && logo_header.trim() !== '') {
+                try {
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = margin; // Position from left margin
+                    const logoY = 10; // Position from top
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG';
+                    if (logo_header.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_header.toLowerCase().endsWith('.jpg') || logo_header.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_header.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    doc.addImage(logo_header, format, logoX, logoY, logoWidth, 0);
+                } catch (e) {
+                    console.log("Error adding header logo:", e.message);
+                }
+            }
+
+            // Add partner logo on the right (25% of page width)
+            if(logo_partenaire && logo_partenaire.trim() !== '') {
+                try {
+                    const logoWidth = pageWidth * 0.25; // 25% of page width
+                    const logoX = pageWidth - margin - logoWidth; // Position from right margin
+                    const logoY = 10; // Position from top
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG';
+                    if (logo_partenaire.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_partenaire.toLowerCase().endsWith('.jpg') || logo_partenaire.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_partenaire.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    doc.addImage(logo_partenaire, format, logoX, logoY, logoWidth, 0);
+                } catch (e) {
+                    console.log("Error adding partner logo:", e.message);
+                }
+            }
+
+            // Add centered title
+            let currentY = 50; // Start position after logos
+            doc.setFontSize(16);
+            doc.setFont('times', 'bold');
+            doc.text("CERTIFICAT D’ADMISSION", pageWidth / 2, currentY, { align: 'center' });
+            currentY += 10;
+
+            // Add programme line
+            doc.setFontSize(14);
+            doc.setFont('times', 'normal');
+            doc.text("Programme Bachelor", pageWidth / 2, currentY, { align: 'center' });
+            currentY += 20;
+
+            // Add "Nous soussignés" line - wrap if necessary
+            var nousSoussignesText = "Nous soussignés, Higher International Management Institute - HIMI Business School certifions que :";
+            var wrappedNousSoussignesText = doc.splitTextToSize(nousSoussignesText, pageWidth - 2 * margin);
+            for (var i = 0; i < wrappedNousSoussignesText.length; i++) {
+                doc.text(wrappedNousSoussignesText[i], margin, currentY);
+                currentY += 6;
+            }
+            currentY += 9; // Additional space after the wrapped text
+
+            // Add student name - centered but within margins
+            doc.setFont('times', 'bold');
+            var studentNameText = student.fullName;
+            var studentNameWidth = doc.getTextWidth(studentNameText);
+            var studentNameX = (pageWidth - studentNameWidth) / 2;
+            doc.text(studentNameText, studentNameX, currentY);
+            currentY += 10;
+
+            // Add birth date and place - centered but within margins
+            doc.setFont('times', 'normal');
+            var birthText = "Né(e) le " + (student.date_naissance || "____/____/____") + " à " + (student.lieu_naissance || "_______");
+            var birthTextWidth = doc.getTextWidth(birthText);
+            var birthTextX = (pageWidth - birthTextWidth) / 2;
+            doc.text(birthText, birthTextX, currentY);
+            currentY += 15;
+
+            // Add inscription details
+            var inscriptionText = "Est inscrit(e) au programme de Bachelor développé en partenariat avec l'école Pôle Paris Alternance.";
+            var wrappedInscriptionText = doc.splitTextToSize(inscriptionText, pageWidth - 2 * margin);
+            for (var i = 0; i < wrappedInscriptionText.length; i++) {
+                doc.text(wrappedInscriptionText[i], margin, currentY);
+                currentY += 6;
+            }
+
+            // Add speciality
+            currentY += 5;
+            doc.text("Spécialité : " + (specialite || "___________"), margin, currentY);
+            currentY += 8;
+
+            // Add period dates
+            doc.text("Pour la période du : " + (dateDebut || "____/____/____") + " au : " + (dateFin || "____/____/____"), margin, currentY);
+            currentY += 8;
+
+            // Add group
+            doc.text("Groupe : " + (groupe || "_______"), margin, currentY);
+            currentY += 8;
+
+            // Add academic year
+            doc.text("Année académique : " + (anneeAcademique || "_______"), margin, currentY);
+            currentY += 25;
+
+            // Add location and date - aligned to the right but within margins
+            var locationText = "Alger, le " + (dateCertificat || "____/____/____");
+            var textWidth = doc.getTextWidth(locationText);
+            var rightMargin = pageWidth - margin;
+            doc.text(locationText, rightMargin - textWidth, currentY);
+
+            currentY += 15; // Reduced space before signature - just below the date
+
+            // Add signature line centered, just below the date
+            doc.text("Le Directeur général", pageWidth / 2, currentY, { align: 'center' });
+
+            // Add footer logo if available
+            if(logo_footer && logo_footer.trim() !== '') {
+                try {
+                    // Calculate the position for the footer logo (bottom centered)
+                    const logoWidth = pageWidth - (2 * margin); // Use full page width minus margins
+                    const logoX = margin; // Position at left margin
+                    const logoY = pageHeight - 30; // Position near bottom of page
+
+                    // Determine image format based on file extension
+                    let format = 'JPEG';
+                    if (logo_footer.toLowerCase().endsWith('.png')) {
+                        format = 'PNG';
+                    } else if (logo_footer.toLowerCase().endsWith('.jpg') || logo_footer.toLowerCase().endsWith('.jpeg')) {
+                        format = 'JPEG';
+                    } else if (logo_footer.toLowerCase().endsWith('.gif')) {
+                        format = 'GIF';
+                    }
+
+                    // Add the footer logo to the document
+                    doc.addImage(logo_footer, format, logoX, logoY, logoWidth, 0);
+                } catch (e) {
+                    console.log("Error adding footer logo:", e.message);
+                }
+            }
+
+            // Add page number
+            doc.setFontSize(10);
+            doc.text("Page 1 / 1", pageWidth - margin - 20, pageHeight - 10);
+
+            // Save the PDF
+            doc.save("certificat_admission_" + student.matricule_interne + ".pdf");
         }
 
         // Initialize the first tab as active and enhance tab functionality

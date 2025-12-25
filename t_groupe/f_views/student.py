@@ -80,7 +80,7 @@ def StudentDetails(request, pk):
             'date_debut' : current_groupe.groupe.start_date,
             'date_fin' : current_groupe.groupe.end_date,
             'type_formation' : current_groupe.groupe.specialite.formation.type_formation,
-            'logo_partenaire' : logo_partenanire,
+            'logo_partenaire' : logo_partenanire.logo.url if logo_partenanire.logo else "",
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 
