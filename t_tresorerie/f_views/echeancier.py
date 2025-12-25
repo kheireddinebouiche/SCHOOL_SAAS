@@ -102,16 +102,29 @@ def ApiSaveEcheancier(request):
 
             echeancier.save()
 
-            # Créer les lignes d'échéancier
-            for tranche in tranches:
-                EcheancierPaiementLine.objects.create(
-                    echeancier=echeancier,
-                    taux=tranche['pourcentage'],
-                    value=tranche['libelle'],
-                    montant_tranche=tranche['montant_echeance'],
-                    date_echeancier=tranche['date'] if tranche['date'] else None,
-                    entite_id = tranche['specialite_id'],
-                )
+            if is_double_diplomation:
+                # Créer les lignes d'échéancier
+                for tranche in tranches:
+                    EcheancierPaiementLine.objects.create(
+                        echeancier=echeancier,
+                        taux=tranche['pourcentage'],
+                        value=tranche['libelle'],
+                        montant_tranche=tranche['montant_echeance'],
+                        date_echeancier=tranche['date'] if tranche['date'] else None,
+                        entite_id = tranche['specialite_id'] if tranche['specialite_id'] else None,
+                    )
+            else:
+
+                 # Créer les lignes d'échéancier
+                for tranche in tranches:
+                    EcheancierPaiementLine.objects.create(
+                        echeancier=echeancier,
+                        taux=tranche['pourcentage'],
+                        value=tranche['libelle'],
+                        montant_tranche=tranche['montant_echeance'],
+                        date_echeancier=tranche['date'] if tranche['date'] else None,
+                        
+                    )
 
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
         except Exception as e:
