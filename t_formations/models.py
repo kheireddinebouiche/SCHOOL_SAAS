@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from institut_app.models import Entreprise
 from t_rh.models import *
 from t_crm.tenant_path import *
+from t_documents_maker.models import *
 
 
 class Partenaires(models.Model):
@@ -44,6 +45,8 @@ class Formation(models.Model):
     updated = models.BooleanField(default=False)
     qualification = models.CharField(max_length=10, null=True, blank=True)
     prix_formation = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
+
+    documents = models.ManyToManyField(DocumentTemplate)
 
     class Meta:
         verbose_name="Formation"

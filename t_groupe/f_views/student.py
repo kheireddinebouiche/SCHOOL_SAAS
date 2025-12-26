@@ -1,16 +1,20 @@
-from django.shortcuts import render, redirect
 from ..models import *
 from ..forms import *
 from django.contrib import messages
 from django.db import transaction
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
 from t_crm.models import *
 from t_tresorerie.models import *
 from django.db.models import Count, Sum
 from django.core.serializers.json import DjangoJSONEncoder
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, FileResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from t_documents_maker.models import DocumentTemplate
+from t_documents_maker.services.template_processor import TemplateProcessor
+from t_documents_maker.services.pdf_generator import PDFGenerator
 import json
-
+from io import BytesIO
 
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
@@ -34,6 +38,8 @@ def StudentDetails(request, pk):
         entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
         echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
         echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
+
+        documents_available = current_groupe.groupe.specialite.formation.documents.all()
 
         try:
             echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
@@ -81,6 +87,7 @@ def StudentDetails(request, pk):
             'date_fin' : current_groupe.groupe.end_date,
             'type_formation' : current_groupe.groupe.specialite.formation.type_formation,
             'logo_partenaire' : logo_partenanire.logo.url if logo_partenanire.logo else "",
+            'documents_available':documents_available,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 
@@ -151,3 +158,76 @@ def ApiUpdate_etudiant(request):
     return JsonResponse({'status': 'success'})
 
   
+
+@login_required
+@require_http_methods(["POST"])
+def generate_student_pdf(request):
+    """Génère le PDF - NOM + PRENOM"""
+    try:
+        data = json.loads(request.body)
+        template_id = data.get('template_id')
+        student_id = data.get('student_id')
+        
+        template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
+        etudiant = get_object_or_404(Prospets, pk=student_id)
+        
+        print(f"\n{'='*80}")
+        print(f"DÉBUT GÉNÉRATION PDF")
+        print(f"{'='*80}")
+        
+        # ✅ DONNÉES
+        student_data = {
+            'nom': str(etudiant.nom or '') or 'Non renseigné',
+            'prenom': str(etudiant.prenom or '') or 'Non renseigné',
+            'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
+        }
+        
+        print(f"\n1️⃣ DONNÉES PRÊTES: {student_data}")
+        print(f"\n2️⃣ HTML ORIGINAL (500 chars):\n{template.html_content[:500]}")
+        
+        # ✅ NETTOIE ET REND
+        processor = TemplateProcessor(template.html_content)
+        rendered_html = processor.render(student_data)
+        
+        print(f"\n3️⃣ VÉRIFICATION HTML RENDU:")
+        if rendered_html and rendered_html.strip():
+            print(f"   ✅ HTML NON-VIDE ({len(rendered_html)} chars)")
+            print(f"   Contenu (200 chars): {rendered_html[:200]}")
+        else:
+            print(f"   ❌ ERREUR: HTML VIDE!")
+            return JsonResponse({'error': 'HTML template vide après rendu'}, status=500)
+        
+        # ✅ GÉNÈRE PDF
+        print(f"\n4️⃣ GÉNÉRATION PDF...")
+        pdf_gen = PDFGenerator(rendered_html, {
+            'page_size': template.page_size,
+            'page_orientation': template.page_orientation
+        })
+        pdf_bytes, success, error = pdf_gen.generate()
+        
+        if not success:
+            print(f"   ❌ ERREUR PDF: {error}")
+            return JsonResponse({'error': error}, status=500)
+        
+        print(f"   ✅ PDF généré ({len(pdf_bytes)} bytes)")
+        
+        pdf_buffer = BytesIO(pdf_bytes)
+        
+        print(f"\n{'='*80}")
+        print(f"✅ SUCCÈS!")
+        print(f"{'='*80}\n")
+        
+        return FileResponse(
+            pdf_buffer,
+            as_attachment=False,
+            filename=f"document_{etudiant.id}_{template_id}.pdf",
+            content_type='application/pdf'
+        )
+        
+    except Exception as e:
+        print(f"\n{'='*80}")
+        print(f"❌ ERREUR: {e}")
+        print(f"{'='*80}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)

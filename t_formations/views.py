@@ -462,6 +462,7 @@ def deleteSpecialite(request, pk):
 def deleteFraisInscription(request):
     pass
 
+@login_required(login_url="institut_app:login")
 def detailFormation(request, pk):
     formation = Formation.objects.get(id = pk)
     specialite = Specialites.objects.filter(formation = formation)
@@ -866,6 +867,78 @@ def ApiLoadSpecForPartenaire(request):
         print(code_partenaire)
         liste = Specialites.objects.filter(formation__partenaire__code = code_partenaire).values('id', 'label','code','version')
         return JsonResponse(list(liste),safe=False)
+
+
+# Vue pour enregistrer les documents d'impression sélectionnés
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@login_required(login_url="institut_app")
+def ApiLoadDocumentTemplate(request):
+    if request.method == "GET":
+        all = DocumentTemplate.objects.all().values('id','name')
+
+        return JsonResponse(list(all), safe=False)
+    
+    else:
+        return JsonResponse({"status":"error"})
+
+@csrf_exempt
+@login_required
+def save_print_documents(request, pk):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            formation_id = data.get('formation_id')
+            documents = data.get('documents', [])  # liste d'IDs
+
+            # Récupérer la formation
+            formation = Formation.objects.get(id=formation_id)
+
+            # Associer les documents (remplace les anciens)
+            formation.documents.set(documents)
+
+            return JsonResponse({
+                'success': True,
+                'message': f'{len(documents)} documents enregistrés pour la formation {formation.nom}'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'Méthode non autorisée'
+        }, status=405)
+
+# Vue pour récupérer les documents d'impression sélectionnés
+@login_required
+def get_print_documents(request, pk):
+    if request.method == 'GET':
+        try:
+            formation = Formation.objects.get(id=pk)
+
+            # Récupérer les documents associés à la formation
+            # Pour l'instant, nous retournons une liste vide car il n'y a pas de relation documents dans le modèle Formation
+            selected_documents = list(formation.documents.values_list('id', flat=False))
+            
+
+            return JsonResponse({
+                'success': True,
+                'documents': selected_documents
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': 'Méthode non autorisée'
+        }, status=405)
 
     
 

@@ -39,4 +39,7 @@ urlpatterns = [
     path('ApiListePromo', ApiListePromo, name="ApiListePromo"),
     path('ApiCreateGroupe', ApiCreateGroupe, name="ApiCreateGroupe"),
     path('ApiDeleteGroupe', ApiDeleteGroupe, name="ApiDeleteGroupe"),
+
+
+    path('student/generate-pdf/', generate_student_pdf, name='generate_student_pdf'),
 ]

@@ -1,62 +1,82 @@
 from xhtml2pdf import pisa
 from io import BytesIO
-from typing import Tuple, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PDFGenerator:
-    """PDF universel Windows/Linux/Mac"""
+    """Génère des PDFs avec xhtml2pdf (Windows-friendly)"""
     
-    def __init__(self, html_content: str, options: Dict = None):
+    def __init__(self, html_content, options=None):
         self.html_content = html_content
         self.options = options or {}
+        self.page_size = self.options.get('page_size', 'A4')
+        self.orientation = self.options.get('page_orientation', 'portrait')
     
-    def generate(self) -> Tuple[bytes, bool, str]:
+    def generate(self):
+        """Génère le PDF"""
         try:
-            buffer = BytesIO()
-            css = self._get_css()
+            print(f"\n=== GÉNÉRATION PDF (xhtml2pdf) ===")
+            print(f"Page size: {self.page_size}")
+            print(f"Orientation: {self.orientation}")
             
-            result = pisa.CreatePDF(
-                f'<html><head><style>{css}</style></head><body>{self.html_content}</body></html>',
-                dest=buffer,
+            # CSS pour la mise en page
+            page_css = self._get_page_css()
+            
+            # Enveloppe le HTML
+            html_final = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+{page_css}
+</style>
+</head>
+<body>
+{self.html_content}
+</body>
+</html>"""
+            
+            # Génère le PDF
+            pdf_buffer = BytesIO()
+            pisa_status = pisa.CreatePDF(
+                html_final,
+                pdf_buffer,
                 encoding='UTF-8'
             )
             
-            if result.err:
-                return b'', False, str(result.err)
+            if pisa_status.err:
+                print(f"❌ ERREUR: {pisa_status.err}")
+                return None, False, str(pisa_status.err)
             
-            buffer.seek(0)
-            return buffer.getvalue(), True, ""
+            pdf_bytes = pdf_buffer.getvalue()
+            print(f"✅ PDF généré ({len(pdf_bytes)} bytes)")
+            return pdf_bytes, True, None
+            
         except Exception as e:
-            return b'', False, str(e)
+            print(f"❌ ERREUR: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, False, str(e)
     
-    def _get_css(self) -> str:
-        size = self.options.get('page_size', 'A4')
-        orientation = self.options.get('page_orientation', 'portrait')
+    def _get_page_css(self):
+        """CSS pour la page"""
+        orientation = self.orientation.lower() if self.orientation else 'portrait'
         
-        return f"""
-        @page {{
-            size: {size} {orientation};
-            margin: 2cm 1.5cm 2.5cm 1.5cm;
-            @bottom-center {{ content: "Page " counter(page); font-size: 10px; }}
-        }}
-        * {{ box-sizing: border-box; }}
-        body {{ 
-            font-family: DejaVu Sans, Arial, sans-serif; 
-            line-height: 1.6; 
-            color: #333; 
-            font-size: 12pt; 
-        }}
-        h1 {{ font-size: 24pt; color: #2c3e50; text-align: center; margin: 1cm 0; }}
-        h2 {{ font-size: 18pt; color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 8pt; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 1cm 0; }}
-        th {{ background: #3498db !important; color: white !important; padding: 10pt 8pt; text-align: center; }}
-        td {{ border: 1pt solid #ddd; padding: 8pt; }}
-        tr:nth-child(even) {{ background: #f8f9fa; }}
-        .jinja-highlight {{ 
-            background: #fff3cd !important; 
-            border: 2px dashed #ffc107 !important; 
-            padding: 4pt 8pt !important; 
-        }}
-        .success {{ color: #28a745; }}
-        .warning {{ color: #ffc107; }}
-        .danger {{ color: #dc3545; }}
+        if orientation == 'landscape':
+            size_css = "@page { size: landscape; margin: 1cm; }"
+        else:
+            size_css = "@page { size: A4 portrait; margin: 1cm; }"
+        
+        css = f"""
+        {size_css}
+        * {{ margin: 0; padding: 0; }}
+        body {{ font-family: Arial, sans-serif; font-size: 12px; color: #000; }}
+        h1, h2, h3, h4, h5, h6 {{ margin: 15px 0 10px 0; line-height: 1.2; }}
+        h1 {{ font-size: 24px; }}
+        h2 {{ font-size: 20px; }}
+        p {{ margin: 10px 0; line-height: 1.5; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+        td, th {{ border: 1px solid #000; padding: 5px; }}
         """
+        return css
