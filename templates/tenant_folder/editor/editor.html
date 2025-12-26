@@ -166,6 +166,24 @@
                           </div>
                         </div>
                       </div>
+
+                      <h6 class="mb-3 mt-4">Marges du document</h6>
+                      <div class="mb-2">
+                        <label class="form-label">Marge haute</label>
+                        <input type="number" class="form-control form-control-sm" id="marginTopInput" min="0" max="200" value="50" placeholder="px">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Marge basse</label>
+                        <input type="number" class="form-control form-control-sm" id="marginBottomInput" min="0" max="200" value="50" placeholder="px">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Marge gauche</label>
+                        <input type="number" class="form-control form-control-sm" id="marginLeftInput" min="0" max="200" value="50" placeholder="px">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Marge droite</label>
+                        <input type="number" class="form-control form-control-sm" id="marginRightInput" min="0" max="200" value="50" placeholder="px">
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -174,7 +192,7 @@
                 <div class="col-lg-8">
                   <div class="p-3">
                     <div class="canvas-container position-relative" style="background: #f8f9fa; border: 1px solid #dee2e6;">
-                      <canvas id="canvas" width="800" height="1000"></canvas>
+                      <canvas id="canvas" width="800" height="1000" style="background: white; border: 1px solid #dee2e6;"></canvas>
                     </div>
                   </div>
                 </div>
@@ -226,6 +244,14 @@
   // Set canvas background to white
   canvas.backgroundColor = '#ffffff';
   canvas.renderAll();
+
+  // Initialize margin values
+  let documentMargins = {
+    top: 50,
+    right: 50,
+    bottom: 50,
+    left: 50
+  };
 
   // Template ID from Django context
   const templateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
@@ -366,6 +392,40 @@
     updatePropertiesPanel(e);
   });
 
+  // Initialize margin controls with default values
+  document.getElementById('marginTopInput').value = documentMargins.top;
+  document.getElementById('marginBottomInput').value = documentMargins.bottom;
+  document.getElementById('marginLeftInput').value = documentMargins.left;
+  document.getElementById('marginRightInput').value = documentMargins.right;
+
+  // Update margin values when inputs change
+  document.getElementById('marginTopInput').onchange = function() {
+    documentMargins.top = parseInt(this.value) || 0;
+    updateCanvasMargins();
+  };
+
+  document.getElementById('marginBottomInput').onchange = function() {
+    documentMargins.bottom = parseInt(this.value) || 0;
+    updateCanvasMargins();
+  };
+
+  document.getElementById('marginLeftInput').onchange = function() {
+    documentMargins.left = parseInt(this.value) || 0;
+    updateCanvasMargins();
+  };
+
+  document.getElementById('marginRightInput').onchange = function() {
+    documentMargins.right = parseInt(this.value) || 0;
+    updateCanvasMargins();
+  };
+
+  // Function to update canvas based on margins
+  function updateCanvasMargins() {
+    // Update the canvas container to reflect margins visually
+    const canvasContainer = document.querySelector('.canvas-container');
+    canvasContainer.style.padding = `${documentMargins.top}px ${documentMargins.right}px ${documentMargins.bottom}px ${documentMargins.left}px`;
+  }
+
   function updatePropertiesPanel(e) {
     const obj = e.selected ? e.selected[0] : (e.target || null);
     if (!obj) return;
@@ -403,56 +463,56 @@
     // Update properties when inputs change
     document.getElementById('fontSizeInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('fontSize', parseInt(this.value));
+        currentObject.set({ fontSize: parseInt(this.value) });
         canvas.renderAll();
       }
     };
 
     document.getElementById('colorInput').onchange = function() {
       if (currentObject) {
-        currentObject.set('fill', this.value);
+        currentObject.set({ fill: this.value });
         canvas.renderAll();
       }
     };
 
     document.getElementById('alignInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('textAlign', this.value);
+        currentObject.set({ textAlign: this.value });
         canvas.renderAll();
       }
     };
 
     document.getElementById('fontFamilyInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('fontFamily', this.value);
+        currentObject.set({ fontFamily: this.value });
         canvas.renderAll();
       }
     };
 
     document.getElementById('boldInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('fontWeight', this.checked ? 'bold' : 'normal');
+        currentObject.set({ fontWeight: this.checked ? 'bold' : 'normal' });
         canvas.renderAll();
       }
     };
 
     document.getElementById('italicInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('fontStyle', this.checked ? 'italic' : 'normal');
+        currentObject.set({ fontStyle: this.checked ? 'italic' : 'normal' });
         canvas.renderAll();
       }
     };
 
     document.getElementById('lineHeightInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('lineHeight', parseFloat(this.value));
+        currentObject.set({ lineHeight: parseFloat(this.value) });
         canvas.renderAll();
       }
     };
 
     document.getElementById('charSpacingInput').onchange = function() {
       if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set('charSpacing', parseInt(this.value));
+        currentObject.set({ charSpacing: parseInt(this.value) });
         canvas.renderAll();
       }
     };
@@ -490,7 +550,8 @@
       body: JSON.stringify({
         id: templateId,
         name: currentTemplateName,
-        layout: layout
+        layout: layout,
+        margins: documentMargins
       })
     })
     .then(response => response.json())
@@ -528,7 +589,7 @@
           <style>
             body {
               margin: 0;
-              padding: 20px;
+              padding: ${documentMargins.top}px ${documentMargins.right}px ${documentMargins.bottom}px ${documentMargins.left}px;
               display: flex;
               justify-content: center;
               align-items: center;
@@ -583,6 +644,20 @@
           canvas.loadFromJSON(data.layout, function() {
             canvas.renderAll();
           });
+        }
+
+        // Restore margins if they exist in the saved template
+        if (data.margins) {
+          documentMargins = data.margins;
+
+          // Update the margin input fields
+          document.getElementById('marginTopInput').value = documentMargins.top;
+          document.getElementById('marginBottomInput').value = documentMargins.bottom;
+          document.getElementById('marginLeftInput').value = documentMargins.left;
+          document.getElementById('marginRightInput').value = documentMargins.right;
+
+          // Apply the margins to the canvas
+          updateCanvasMargins();
         }
       })
       .catch(error => console.error('Error loading template:', error));

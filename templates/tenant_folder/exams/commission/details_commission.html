@@ -703,10 +703,9 @@
                       <thead class="bg-light">
                         <tr>
                           <th class="px-4" scope="col">Étudiant</th>
-                          <th class="text-center" scope="col" style="width: 120px;">Statut</th>
-                          <th class="text-center" scope="col" style="width: 120px;">Moyenne Générale</th>
-                          <th class="text-center" scope="col" style="width: 120px;">Rang</th>
                           <th class="text-center" scope="col" style="width: 120px;">Décision</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Modules</th>
+                          <th class="text-center" scope="col" style="width: 120px;">Commentaire</th>
                           <th class="text-center" scope="col" style="width: 180px;">Actions</th>
                         </tr>
                       </thead>
@@ -1826,9 +1825,34 @@
     // Bouton Afficher les résultats de commission
     $('#showResultsBtn').on('click', function() {
       var commissionId = $('#commissionId').val();
+      GetCommissionResult(commissionId);
+
       // Open the results modal
       $('#commissionResultsModal').modal('show');
     });
+
+
+    function GetCommissionResult(commissionId){
+      $.ajax({
+        url : "{% url 't_exam:ApiGetCommissionResults' %}",
+        dataType: "JSON",
+        type: "GET",
+        data: {
+          "idCommission" : commissionId,
+        },
+        success : function(data){
+          var row = "";
+          $.each(data, function(index, i){
+            row += "<tr>";
+              row += "<td>"+i.nom+' '+i.prenom+"</td>";
+              row += "<td><span class='badge bg-info'>"+i.result+"</span></td>";
+            row += "</tr>";
+          });
+
+          $('#listResults').html(row);
+        }
+      })
+    }
 
     // Bouton Imprimer - Generate PDF using jsPDF
     $('#printBtn').on('click', function() {

@@ -202,7 +202,25 @@ def ApiGetGroupeDetails(request):
 def ApiGetCommissionResults(request):
     if request.method == "GET":
         id_commission = request.GET.get('idCommission')
-
+        results = (CommisionResult.objects
+                   .filter(commission_id = id_commission)
+                   .select_related('etudiants')
+                   .prefetch_related('modules'))
+        
+        data = []
+        for r in results:
+            data.append({
+                "id": r.id,
+                "nom": r.etudiants.nom,
+                "prenom": r.etudiants.prenom,
+                "modules": list(
+                    r.modules.values('id', 'code', 'label')
+                ),
+                "result": r.get_result_display(),
+                "commentaire": r.commentaire,
+            })
+        
+        return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status":"error"})
     
