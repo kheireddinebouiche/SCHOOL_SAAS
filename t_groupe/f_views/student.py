@@ -167,63 +167,94 @@ def generate_student_pdf(request):
         data = json.loads(request.body)
         template_id = data.get('template_id')
         student_id = data.get('student_id')
-        
+
         template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
         etudiant = get_object_or_404(Prospets, pk=student_id)
-        
+
         print(f"\n{'='*80}")
         print(f"DÉBUT GÉNÉRATION PDF")
         print(f"{'='*80}")
-        
+
         # ✅ DONNÉES
         student_data = {
             'nom': str(etudiant.nom or '') or 'Non renseigné',
             'prenom': str(etudiant.prenom or '') or 'Non renseigné',
             'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
         }
-        
+
         print(f"\n1️⃣ DONNÉES PRÊTES: {student_data}")
-        print(f"\n2️⃣ HTML ORIGINAL (500 chars):\n{template.html_content[:500]}")
-        
-        # ✅ NETTOIE ET REND
-        processor = TemplateProcessor(template.html_content)
-        rendered_html = processor.render(student_data)
-        
-        print(f"\n3️⃣ VÉRIFICATION HTML RENDU:")
-        if rendered_html and rendered_html.strip():
-            print(f"   ✅ HTML NON-VIDE ({len(rendered_html)} chars)")
-            print(f"   Contenu (200 chars): {rendered_html[:200]}")
+
+        # ✅ PROCESS ALL PAGES WITH STUDENT DATA
+        from t_documents_maker.services.pdf_generator import MultiPagePDFGenerator
+
+        if template.pages:
+            # Process all pages with the student data
+            processed_pages = []
+            for page in template.pages:
+                content = page.get('content', '')
+                processor = TemplateProcessor(content)
+                rendered_content = processor.render(student_data)
+
+                # Create a processed page object
+                processed_page = {
+                    'content': rendered_content,
+                    'page_size': page.get('page_size', template.page_size),
+                    'orientation': page.get('orientation', template.page_orientation)
+                }
+                processed_pages.append(processed_page)
+
+            print(f"\n2️⃣ PROCESSING {len(processed_pages)} PAGES...")
+
+            # Use MultiPagePDFGenerator for multi-page documents
+            pdf_gen = MultiPagePDFGenerator(processed_pages, {
+                'page_size': template.page_size,
+                'page_orientation': template.page_orientation
+            })
+            pdf_bytes, success, error = pdf_gen.generate()
         else:
-            print(f"   ❌ ERREUR: HTML VIDE!")
-            return JsonResponse({'error': 'HTML template vide après rendu'}, status=500)
-        
-        # ✅ GÉNÈRE PDF
-        print(f"\n4️⃣ GÉNÉRATION PDF...")
-        pdf_gen = PDFGenerator(rendered_html, {
-            'page_size': template.page_size,
-            'page_orientation': template.page_orientation
-        })
-        pdf_bytes, success, error = pdf_gen.generate()
-        
+            # Fallback to single page processing if no pages exist
+            print(f"\n2️⃣ PROCESSING SINGLE PAGE...")
+            print(f"HTML ORIGINAL (500 chars):\n{template.get_first_page_content()[:500]}")
+
+            # ✅ NETTOIE ET REND
+            processor = TemplateProcessor(template.get_first_page_content())
+            rendered_html = processor.render(student_data)
+
+            print(f"\n3️⃣ VÉRIFICATION HTML RENDU:")
+            if rendered_html and rendered_html.strip():
+                print(f"   ✅ HTML NON-VIDE ({len(rendered_html)} chars)")
+                print(f"   Contenu (200 chars): {rendered_html[:200]}")
+            else:
+                print(f"   ❌ ERREUR: HTML VIDE!")
+                return JsonResponse({'error': 'HTML template vide après rendu'}, status=500)
+
+            # ✅ GÉNÈRE PDF
+            print(f"\n4️⃣ GÉNÉRATION PDF...")
+            pdf_gen = PDFGenerator(rendered_html, {
+                'page_size': template.page_size,
+                'page_orientation': template.page_orientation
+            })
+            pdf_bytes, success, error = pdf_gen.generate()
+
         if not success:
             print(f"   ❌ ERREUR PDF: {error}")
             return JsonResponse({'error': error}, status=500)
-        
+
         print(f"   ✅ PDF généré ({len(pdf_bytes)} bytes)")
-        
+
         pdf_buffer = BytesIO(pdf_bytes)
-        
+
         print(f"\n{'='*80}")
         print(f"✅ SUCCÈS!")
         print(f"{'='*80}\n")
-        
+
         return FileResponse(
             pdf_buffer,
             as_attachment=False,
             filename=f"document_{etudiant.id}_{template_id}.pdf",
             content_type='application/pdf'
         )
-        
+
     except Exception as e:
         print(f"\n{'='*80}")
         print(f"❌ ERREUR: {e}")
