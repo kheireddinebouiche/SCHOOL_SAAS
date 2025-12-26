@@ -208,7 +208,8 @@ def generate_student_pdf(request):
             # Use MultiPagePDFGenerator for multi-page documents
             pdf_gen = MultiPagePDFGenerator(processed_pages, {
                 'page_size': template.page_size,
-                'page_orientation': template.page_orientation
+                'page_orientation': template.page_orientation,
+                'header_footer': template.get_header_footer_config()
             })
             pdf_bytes, success, error = pdf_gen.generate()
         else:

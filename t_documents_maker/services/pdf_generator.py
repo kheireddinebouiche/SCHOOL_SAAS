@@ -90,6 +90,7 @@ class MultiPagePDFGenerator:
         self.options = options or {}
         self.default_page_size = self.options.get('page_size', 'A4')
         self.default_orientation = self.options.get('page_orientation', 'portrait')
+        self.header_footer_config = self.options.get('header_footer', {})
 
     def generate(self):
         """Génère le PDF multi-page"""
@@ -111,9 +112,13 @@ class MultiPagePDFGenerator:
                 if i > 0:
                     html_parts.append('<div style="page-break-before: always;"></div>')
 
-                # Ajouter le contenu de la page
+                # Ajouter le contenu de la page avec header et footer
                 page_html = f"""<div class="page-{i}">
-                    {content}
+                    {self._get_header_html()}
+                    <div class="page-content">
+                        {content}
+                    </div>
+                    {self._get_footer_html()}
                 </div>"""
                 html_parts.append(page_html)
 
@@ -157,6 +162,70 @@ class MultiPagePDFGenerator:
             import traceback
             traceback.print_exc()
             return None, False, str(e)
+
+    def _get_header_html(self):
+        """Génère le HTML pour l'en-tête"""
+        if not self.header_footer_config:
+            return ""
+
+        header_config = self.header_footer_config.get('header', {})
+        if not header_config.get('enabled', False):
+            return ""
+
+        logo_html = ""
+        if header_config.get('logo_path'):
+            logo_html = f'<img src="{header_config["logo_path"]}" style="height: 50px; max-width: 200px;" />'
+
+        text_html = ""
+        if header_config.get('text'):
+            text_html = f'<div style="font-size: 14px; font-weight: bold;">{header_config["text"]}</div>'
+
+        # Positionnement du logo
+        logo_position = header_config.get('logo_position', 'left')
+        text_position = header_config.get('text_position', 'right')
+
+        # Créer le conteneur de l'en-tête
+        header_style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;"
+
+        if logo_position == 'left' and text_position == 'right':
+            return f'<div class="header" style="{header_style}">{logo_html}<div></div>{text_html}</div>'
+        elif logo_position == 'center' or text_position == 'center':
+            return f'<div class="header" style="{header_style}"><div style="flex: 1;"></div>{logo_html}{text_html}<div style="flex: 1;"></div></div>'
+        else:
+            return f'<div class="header" style="{header_style}">{text_html}<div></div>{logo_html}</div>'
+
+    def _get_footer_html(self):
+        """Génère le HTML pour le pied de page"""
+        if not self.header_footer_config:
+            return ""
+
+        footer_config = self.header_footer_config.get('footer', {})
+        if not footer_config.get('enabled', False):
+            return ""
+
+        # Générer le HTML pour le logo
+        logo_html = ""
+        if footer_config.get('logo_path'):
+            logo_html = f'<img src="{footer_config["logo_path"]}" style="height: 30px; max-width: 150px;" />'
+
+        # Générer le HTML pour le texte
+        text_html = ""
+        if footer_config.get('text'):
+            text_html = f'<div style="font-size: 12px;">{footer_config["text"]}</div>'
+
+        # Positionnement du logo
+        logo_position = footer_config.get('logo_position', 'center')
+        text_position = footer_config.get('text_position', 'center')
+
+        # Créer le conteneur du pied de page
+        footer_style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-top: 1px solid #ccc; margin-top: 20px; font-size: 12px;"
+
+        if logo_position == 'left' and text_position == 'right':
+            return f'<div class="footer" style="{footer_style}">{logo_html}<div></div>{text_html}</div>'
+        elif logo_position == 'center' or text_position == 'center':
+            return f'<div class="footer" style="{footer_style}"><div style="flex: 1;"></div>{logo_html}{text_html}<div style="flex: 1;"></div></div>'
+        else:
+            return f'<div class="footer" style="{footer_style}">{text_html}<div></div>{logo_html}</div>'
 
     def _get_page_css(self, page_size='A4', orientation='portrait'):
         """CSS pour une page spécifique"""

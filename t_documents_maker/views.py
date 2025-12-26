@@ -99,6 +99,11 @@ def save_template(request):
                 pages=pages_data  # Initialize with the pages data
             )
 
+        # Handle header and footer configuration
+        header_footer_config = data.get('header_footer', {})
+        if header_footer_config:
+            template.set_header_footer_config(header_footer_config)
+
         template.save()
         # Vérifier que le template a été sauvegardé correctement
         template.refresh_from_db()
@@ -126,6 +131,7 @@ def preview_template(request):
         # Handle both single html_content (for backward compatibility) and pages
         html_content = data.get('html_content', '')
         pages_data = data.get('pages', [])
+        header_footer_config = data.get('header_footer', {})
 
         all_variables = set()
         rendered_html = ""
@@ -141,7 +147,21 @@ def preview_template(request):
                 # Add page separator for preview
                 if i > 0:
                     rendered_html += '<div style="page-break-before: always;"></div>'
-                rendered_html += content
+
+                # Add header and footer if enabled
+                page_html = ""
+                if header_footer_config:
+                    header_config = header_footer_config.get('header', {})
+                    if header_config.get('enabled', False):
+                        page_html += _generate_header_html(header_config)
+
+                page_html += content
+
+                footer_config = header_footer_config.get('footer', {})
+                if footer_config.get('enabled', False):
+                    page_html += _generate_footer_html(footer_config)
+
+                rendered_html += page_html
         else:
             # Process single content for backward compatibility
             processor = TemplateProcessor(html_content)
@@ -156,6 +176,64 @@ def preview_template(request):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def _generate_header_html(header_config):
+    """Génère le HTML pour l'en-tête"""
+    if not header_config.get('enabled', False):
+        return ""
+
+    logo_html = ""
+    if header_config.get('logo_path'):
+        logo_html = f'<img src="{header_config["logo_path"]}" style="height: 50px; max-width: 200px;" />'
+
+    text_html = ""
+    if header_config.get('text'):
+        text_html = f'<div style="font-size: 14px; font-weight: bold;">{header_config["text"]}</div>'
+
+    # Positionnement du logo
+    logo_position = header_config.get('logo_position', 'left')
+    text_position = header_config.get('text_position', 'right')
+
+    # Créer le conteneur de l'en-tête
+    header_style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;"
+
+    if logo_position == 'left' and text_position == 'right':
+        return f'<div class="header" style="{header_style}">{logo_html}<div></div>{text_html}</div>'
+    elif logo_position == 'center' or text_position == 'center':
+        return f'<div class="header" style="{header_style}"><div style="flex: 1;"></div>{logo_html}{text_html}<div style="flex: 1;"></div></div>'
+    else:
+        return f'<div class="header" style="{header_style}">{text_html}<div></div>{logo_html}</div>'
+
+
+def _generate_footer_html(footer_config):
+    """Génère le HTML pour le pied de page"""
+    if not footer_config.get('enabled', False):
+        return ""
+
+    # Générer le HTML pour le logo
+    logo_html = ""
+    if footer_config.get('logo_path'):
+        logo_html = f'<img src="{footer_config["logo_path"]}" style="height: 30px; max-width: 150px;" />'
+
+    # Générer le HTML pour le texte
+    text_html = ""
+    if footer_config.get('text'):
+        text_html = f'<div style="font-size: 12px;">{footer_config["text"]}</div>'
+
+    # Positionnement du logo
+    logo_position = footer_config.get('logo_position', 'center')
+    text_position = footer_config.get('text_position', 'center')
+
+    # Créer le conteneur du pied de page
+    footer_style = "display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-top: 1px solid #ccc; margin-top: 20px; font-size: 12px;"
+
+    if logo_position == 'left' and text_position == 'right':
+        return f'<div class="footer" style="{footer_style}">{logo_html}<div></div>{text_html}</div>'
+    elif logo_position == 'center' or text_position == 'center':
+        return f'<div class="footer" style="{footer_style}"><div style="flex: 1;"></div>{logo_html}{text_html}<div style="flex: 1;"></div></div>'
+    else:
+        return f'<div class="footer" style="{footer_style}">{text_html}<div></div>{logo_html}</div>'
 
 @login_required
 @require_http_methods(["POST"])
@@ -186,7 +264,8 @@ def generate_pdf(request):
         from .services.pdf_generator import MultiPagePDFGenerator
         pdf_gen = MultiPagePDFGenerator(processed_pages, {
             'page_size': template.page_size,
-            'page_orientation': template.page_orientation
+            'page_orientation': template.page_orientation,
+            'header_footer': template.get_header_footer_config()
         })
         pdf_bytes, success, error = pdf_gen.generate()
 

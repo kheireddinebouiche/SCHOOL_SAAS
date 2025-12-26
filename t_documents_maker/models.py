@@ -61,6 +61,32 @@ class DocumentTemplate(models.Model):
         """Get the number of pages in the template"""
         return len(self.pages)
 
+    def get_header_footer_config(self):
+        """Get header and footer configuration from the config"""
+        return self.config.get('header_footer', {
+            'header': {
+                'enabled': False,
+                'logo_path': '',
+                'logo_position': 'left',  # left, center, right
+                'text': '',
+                'text_position': 'right'  # left, center, right
+            },
+            'footer': {
+                'enabled': False,
+                'text': '',
+                'text_position': 'center',  # left, center, right
+                'logo_path': '',
+                'logo_position': 'center'  # left, center, right
+            }
+        })
+
+    def set_header_footer_config(self, header_footer_config):
+        """Set header and footer configuration in the config"""
+        config = self.config
+        config['header_footer'] = header_footer_config
+        self.config = config
+        self.save()
+
 
 class GeneratedDocument(models.Model):
     template = models.ForeignKey(DocumentTemplate, on_delete=models.CASCADE, related_name='documents')
