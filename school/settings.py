@@ -123,7 +123,7 @@ WSGI_APPLICATION = 'school.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': 'insim',
+        'NAME': 'dup',
         'USER': 'postgres',
         'PASSWORD': '1230042690',
         'HOST': 'localhost',

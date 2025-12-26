@@ -1,669 +1,700 @@
-{% extends 'tenant_folder/base.html' %}
-{% block title %}Éditeur de documents{% endblock title %}
+
+{% extends 'tenant_folder/editor/base.html' %}
+{% load static %}
+{% csrf_token %}
+
+
+{% block extra_css %}
+<style>
+    .editor-container { 
+        display: flex; 
+        flex-direction: column; 
+        height: calc(100vh - 100px); 
+        background: white; 
+        border-radius: 8px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+        overflow: hidden; 
+    }
+    
+    .editor-header { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        color: white; 
+        padding: 15px 20px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    
+    .editor-main { 
+        display: flex; 
+        flex: 1; 
+        overflow: hidden; 
+    }
+    
+    .editor-sidebar { 
+        width: 280px; 
+        background: #f8f9fa; 
+        border-right: 1px solid #dee2e6; 
+        overflow-y: auto; 
+        padding: 20px; 
+    }
+    
+    .sidebar-section { 
+        margin-bottom: 25px; 
+    }
+    
+    .sidebar-section h5 { 
+        font-weight: 600; 
+        color: #667eea; 
+        margin-bottom: 12px; 
+        font-size: 13px; 
+        text-transform: uppercase; 
+    }
+    
+    .insert-btn { 
+        width: 100%; 
+        padding: 10px; 
+        margin-bottom: 8px; 
+        border: 1px solid #dee2e6; 
+        background: white; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        font-size: 13px; 
+        transition: all 0.3s; 
+    }
+    
+    .insert-btn:hover { 
+        background: #667eea; 
+        color: white; 
+        border-color: #667eea; 
+    }
+    
+    .editor-content { 
+        flex: 1; 
+        display: flex; 
+        flex-direction: column; 
+    }
+    
+    .editor-toolbar { 
+        background: #f8f9fa; 
+        padding: 12px; 
+        border-bottom: 1px solid #dee2e6; 
+        display: flex; 
+        gap: 8px; 
+        flex-wrap: wrap; 
+    }
+    
+    .editor-btn { 
+        width: 40px; 
+        height: 40px; 
+        border: 1px solid #dee2e6; 
+        background: white; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        transition: all 0.2s; 
+    }
+    
+    .editor-btn:hover { 
+        background: #667eea; 
+        color: white; 
+        border-color: #667eea; 
+    }
+    
+    .canvas { 
+        flex: 1; 
+        padding: 30px; 
+        overflow-y: auto; 
+        background: white; 
+        border: 1px solid #dee2e6; 
+        margin: 20px; 
+        border-radius: 8px; 
+        min-height: 600px; 
+    }
+    
+    .jinja-block {
+        background: #fff3cd;
+        border: 2px dashed #ffc107;
+        padding: 2px 6px;
+        margin: 0 2px;
+        border-radius: 4px;
+        font-family: monospace;
+        color: #856404;
+        word-break: break-all;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    
+    .variables-badge {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 6px 12px;
+        border-radius: 20px;
+        margin: 4px;
+        font-size: 12px;
+    }
+
+    .toolbar-select {
+        height: 40px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 6px;
+        padding: 0 10px;
+        margin-right: 8px;
+        cursor: pointer;
+        min-width: 100px;
+    }
+
+    .toolbar-color {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        padding: 2px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="main-content">
-  <div class="page-content">
-    <div class="container-fluid">
-      <!-- start page title -->
-      <div class="row">
-        <div class="col-12">
-          <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Éditeur de documents</h4>
-
-            <div class="page-title-right">
-              <ol class="breadcrumb m-0">
-                <li class="breadcrumb-item"><a href="javascript: void(0);">Documents</a></li>
-                <li class="breadcrumb-item active">Éditeur</li>
-              </ol>
-            </div>
-          </div>
+<div class="editor-container">
+    <div class="editor-header">
+        <h5 class="mb-0"><i class="fas fa-edit"></i> Éditeur Visuel</h5>
+        <div>
+            <button id="save-btn" class="btn btn-success btn-sm me-2">
+                <i class="fas fa-save"></i> Sauvegarder
+            </button>
+            <button id="preview-btn" class="btn btn-info btn-sm me-2">
+                <i class="fas fa-eye"></i> Aperçu
+            </button>
+            <a href="{% url 'document_manager:template_list' %}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
         </div>
-      </div>
-      <!-- end page title -->
-
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">
-                {% if template %}
-                  Édition: {{ template.name }}
-                {% else %}
-                  Nouveau modèle de document
-                {% endif %}
-              </h5>
-              <div>
-                <button class="btn btn-success me-2" id="saveTemplate">
-                  <i class="fas fa-save me-1"></i>Enregistrer
-                </button>
-                <button class="btn btn-primary me-2" id="previewTemplate">
-                  <i class="fas fa-eye me-1"></i>Prévisualiser
-                </button>
-                <button class="btn btn-info" id="exportTemplate">
-                  <i class="fas fa-download me-1"></i>Exporter
-                </button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <!-- Left Sidebar - Tools -->
-                <div class="col-lg-2 border-end">
-                  <div class="p-3">
-                    <h6 class="mb-3">Outils</h6>
-                    <div class="mb-3">
-                      <button class="btn btn-outline-primary w-100 mb-2" id="addTextBtn">
-                        <i class="fas fa-font me-1"></i>Texte
-                      </button>
-                      <button class="btn btn-outline-primary w-100 mb-2" id="addImageBtn">
-                        <i class="fas fa-image me-1"></i>Image
-                      </button>
-                      <button class="btn btn-outline-primary w-100 mb-2" id="addRectangleBtn">
-                        <i class="fas fa-square me-1"></i>Rectangle
-                      </button>
-                      <button class="btn btn-outline-primary w-100 mb-2" id="addLineBtn">
-                        <i class="fas fa-minus me-1"></i>Ligne
-                      </button>
-                    </div>
-
-                    <h6 class="mb-3">Variables</h6>
-                    <div id="variablesList" class="mb-3">
-                      <!-- Variables will be loaded here -->
-                      <div class="text-center text-muted py-3" id="variablesLoading">
-                        <i class="fas fa-sync fa-spin me-2"></i>Chargement des variables...
-                      </div>
-                    </div>
-
-                    <div class="card bg-light mb-3">
-                      <div class="card-header py-2">
-                        <h6 class="mb-0">
-                          <i class="fas fa-info-circle me-1 text-info"></i>
-                          Aide sur les variables
-                        </h6>
-                      </div>
-                      <div class="card-body p-2">
-                        <p class="mb-1 small">Les variables sont des champs dynamiques qui seront remplacés par des données réelles lors de la génération du document.</p>
-                        <p class="mb-1 small">Cliquez sur une variable pour l'ajouter à votre document.</p>
-                        <p class="mb-0 small text-muted fst-italic">Ex: {{formation}} sera remplacé par le nom de la formation.</p>
-                      </div>
-                    </div>
-
-                    <div class="card bg-light">
-                      <div class="card-header py-2">
-                        <h6 class="mb-0">
-                          <i class="fas fa-list me-1 text-info"></i>
-                          Variables disponibles
-                        </h6>
-                      </div>
-                      <div class="card-body p-2">
-                        <ul class="mb-0 small">
-                          <li><strong>{{formation}}</strong> - Nom de la formation</li>
-                          <li><strong>{{specialite}}</strong> - Spécialité de l'étudiant</li>
-                          <li><strong>{{qualification}}</strong> - Qualification de la formation</li>
-                          <li><strong>{{prix_formation}}</strong> - Prix de la formation</li>
-                          <li><strong>{{annee_academique}}</strong> - Année académique en cours</li>
-                          <li><strong>{{ville}}</strong> - Ville de l'établissement</li>
-                          <li><strong>{{date}}</strong> - Date du document</li>
-                          <li><strong>{{institut}}</strong> - Nom de l'institut</li>
-                          <li><strong>{{date_naissance_etudiant}}</strong> - Date de naissance de l'étudiant</li>
-                          <li><strong>{{lieu_naissance_etudiant}}</strong> - Lieu de naissance de l'étudiant</li>
-                          <li><strong>{{adresse_etudiant}}</strong> - Adresse de l'étudiant</li>
-                          <li><strong>{{branche}}</strong> - Branche de la formation</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <h6 class="mb-3">Propriétés</h6>
-                    <div id="propertiesPanel">
-                      <div class="mb-2">
-                        <label class="form-label">Police</label>
-                        <select class="form-select form-select-sm" id="fontFamilyInput">
-                          <option value="Arial">Arial</option>
-                          <option value="Times New Roman">Times New Roman</option>
-                          <option value="Courier New">Courier New</option>
-                          <option value="Georgia">Georgia</option>
-                          <option value="Verdana">Verdana</option>
-                          <option value="Helvetica">Helvetica</option>
-                          <option value="Impact">Impact</option>
-                          <option value="Comic Sans MS">Comic Sans MS</option>
-                        </select>
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Taille de police</label>
-                        <input type="number" class="form-control form-control-sm" id="fontSizeInput" min="8" max="72">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Couleur</label>
-                        <input type="color" class="form-control form-control-sm" id="colorInput">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Alignement</label>
-                        <select class="form-select form-select-sm" id="alignInput">
-                          <option value="left">Gauche</option>
-                          <option value="center">Centre</option>
-                          <option value="right">Droite</option>
-                          <option value="justify">Justifié</option>
-                        </select>
-                      </div>
-                      <div class="mb-2">
-                        <div class="form-check form-check-inline">
-                          <input class="form-check-input" type="checkbox" id="boldInput">
-                          <label class="form-check-label" for="boldInput">Gras</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                          <input class="form-check-input" type="checkbox" id="italicInput">
-                          <label class="form-check-label" for="italicInput">Italique</label>
-                        </div>
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Espacement</label>
-                        <div class="row">
-                          <div class="col-6">
-                            <input type="number" class="form-control form-control-sm" id="lineHeightInput" min="0.5" max="3" step="0.1" placeholder="Hauteur">
-                          </div>
-                          <div class="col-6">
-                            <input type="number" class="form-control form-control-sm" id="charSpacingInput" min="-5" max="20" placeholder="Caractères">
-                          </div>
-                        </div>
-                      </div>
-
-                      <h6 class="mb-3 mt-4">Marges du document</h6>
-                      <div class="mb-2">
-                        <label class="form-label">Marge haute</label>
-                        <input type="number" class="form-control form-control-sm" id="marginTopInput" min="0" max="200" value="50" placeholder="px">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Marge basse</label>
-                        <input type="number" class="form-control form-control-sm" id="marginBottomInput" min="0" max="200" value="50" placeholder="px">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Marge gauche</label>
-                        <input type="number" class="form-control form-control-sm" id="marginLeftInput" min="0" max="200" value="50" placeholder="px">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Marge droite</label>
-                        <input type="number" class="form-control form-control-sm" id="marginRightInput" min="0" max="200" value="50" placeholder="px">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Main Canvas Area -->
-                <div class="col-lg-8">
-                  <div class="p-3">
-                    <div class="canvas-container position-relative" style="background: #f8f9fa; border: 1px solid #dee2e6;">
-                      <canvas id="canvas" width="800" height="1000" style="background: white; border: 1px solid #dee2e6;"></canvas>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Right Sidebar - Templates -->
-                <div class="col-lg-2">
-                  <div class="p-3">
-                    <h6 class="mb-3">Modèles existants</h6>
-                    <div class="list-group" id="templatesList">
-                      {% if templates %}
-                        {% for temp in templates %}
-                          <a href="{% url 't_documents_maker:edit_template' temp.id %}"
-                             class="list-group-item list-group-item-action">
-                            {{ temp.name }}
-                          </a>
-                        {% endfor %}
-                      {% else %}
-                        <p class="text-muted">Aucun modèle existant</p>
-                      {% endif %}
-                    </div>
-
-                    <div class="mt-3">
-                      <a href="{% url 't_documents_maker:create_template' %}"
-                         class="btn btn-outline-primary w-100">
-                        <i class="fas fa-plus me-1"></i>Nouveau modèle
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
+
+    <div class="editor-main">
+        <!-- SIDEBAR -->
+        <div class="editor-sidebar">
+            <!-- Section Propriétés -->
+            <div class="sidebar-section">
+                <h5><i class="fas fa-cog"></i> Propriétés</h5>
+                <div class="mb-3">
+                    <label class="form-label">Nom</label>
+                    <input type="text" id="template-name" class="form-control form-control-sm" 
+                           value="{% if template %}{{ template.name }}{% endif %}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Format</label>
+                    <select id="page-size" class="form-select form-select-sm">
+                        <option value="A4" {% if template and template.page_size == 'A4' %}selected{% endif %}>A4</option>
+                        <option value="Letter" {% if template and template.page_size == 'Letter' %}selected{% endif %}>Letter</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Orientation</label>
+                    <select id="page-orientation" class="form-select form-select-sm">
+                        <option value="portrait" {% if template and template.page_orientation == 'portrait' %}selected{% endif %}>Portrait</option>
+                        <option value="landscape" {% if template and template.page_orientation == 'landscape' %}selected{% endif %}>Paysage</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Marges (cm)</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" id="margin-top" class="form-control form-control-sm" placeholder="Haut" min="0" max="10" step="0.5" value="2">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" id="margin-bottom" class="form-control form-control-sm" placeholder="Bas" min="0" max="10" step="0.5" value="2.5">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" id="margin-left" class="form-control form-control-sm" placeholder="Gauche" min="0" max="10" step="0.5" value="1.5">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" id="margin-right" class="form-control form-control-sm" placeholder="Droite" min="0" max="10" step="0.5" value="1.5">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Insérer -->
+            <div class="sidebar-section">
+                <h5><i class="fas fa-plus-circle"></i> Insérer</h5>
+                <button class="insert-btn" data-insert="title">
+                    <i class="fas fa-heading"></i> Titre
+                </button>
+                <button class="insert-btn" data-insert="paragraph">
+                    <i class="fas fa-text-height"></i> Texte
+                </button>
+                <button class="insert-btn" data-insert="table">
+                    <i class="fas fa-table"></i> Tableau
+                </button>
+                <button class="insert-btn" data-insert="for-loop">
+                    <i class="fas fa-list"></i> Boucle
+                </button>
+                <button class="insert-btn" data-insert="variable">
+                    <i class="fas fa-tag"></i> Variable
+                </button>
+            </div>
+
+            <!-- Section Variables -->
+            <div class="sidebar-section">
+                <h5><i class="fas fa-variables"></i> Variables</h5>
+                <button class="btn btn-outline-primary btn-sm w-100 mb-2" id="analyze-btn">
+                    <i class="fas fa-search"></i> Analyser
+                </button>
+                <div id="variables-list"></div>
+            </div>
+        </div>
+
+        <!-- EDITOR CONTENT -->
+        <div class="editor-content">
+            <!-- Toolbar -->
+            <div class="editor-toolbar">
+                <button class="editor-btn" data-format="bold" title="Gras">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button class="editor-btn" data-format="italic" title="Italique">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button class="editor-btn" data-format="underline" title="Souligné">
+                    <i class="fas fa-underline"></i>
+                </button>
+                <div style="width: 1px; background: #dee2e6; margin: 0 5px;"></div>
+                <button class="editor-btn" data-format="justifyLeft" title="Gauche">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <button class="editor-btn" data-format="justifyCenter" title="Centre">
+                    <i class="fas fa-align-center"></i>
+                </button>
+                <button class="editor-btn" data-format="justifyRight" title="Droite">
+                    <i class="fas fa-align-right"></i>
+                </button>
+                <div style="width: 1px; background: #dee2e6; margin: 0 5px;"></div>
+                <select id="font-family" class="toolbar-select" title="Police d'écriture">
+                    <option value="">Police</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times</option>
+                    <option value="Courier New">Courier</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                </select>
+                <select id="font-size" class="toolbar-select" title="Taille de police">
+                    <option value="">Taille</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                </select>
+                <input type="color" id="font-color" class="toolbar-color" title="Couleur de texte">
+            </div>
+            
+            <!-- Canvas -->
+            <div id="page-canvas" class="canvas" contenteditable="true">
+                {% if template %}
+                    {{ template.html_content|safe }}
+                {% else %}
+                    <h1 style="text-align: center; color: #667eea;">Titre du Document</h1>
+                    <p>Commencez à éditer...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<!-- Modal Aperçu -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Aperçu du Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <iframe id="preview-frame" style="width:100%; height:600px; border:1px solid #dee2e6;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  // Initialize canvas
-  const canvas = new fabric.Canvas('canvas', {
-    selection: true,
-    preserveObjectStacking: true,
-    width: 800,
-    height: 1000
-  });
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
 
-  // Set canvas background to white
-  canvas.backgroundColor = '#ffffff';
-  canvas.renderAll();
+// Données du template
+const templateData = {
+    id: {{ template.id|default:"null" }},
+    config: {% if template and template.config %}{{ template.config|safe }}{% else %}{}{% endif %}
+};
 
-  // Initialize margin values
-  let documentMargins = {
-    top: 50,
-    right: 50,
-    bottom: 50,
-    left: 50
-  };
+class EditorApp {
+    constructor() {
+        this.templateId = {{ template.id|default:"null" }};
+        this.canvas = document.getElementById('page-canvas');
+        this.init();
+    }
+    
+    init() {
+        this.setupFormatButtons();
+        this.setupInsertButtons();
+        this.setupSaveButton();
+        this.setupPreviewButton();
+        this.setupAnalyzeButton();
+        this.setupMarginControls();
+        this.loadSavedMargins(); // Charger les marges sauvegardées
+        this.updateToolbarState(); // Initialiser l'état de la barre d'outils
+    }
+    
+    setupFormatButtons() {
+        document.querySelectorAll('.editor-btn[data-format]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.execCommand(btn.dataset.format, false, null);
+                this.updateToolbarState();
+                this.canvas.focus();
+            });
+        });
 
-  // Template ID from Django context
-  const templateId = {% if template %}{{ template.id }}{% else %}null{% endif %};
-  let currentTemplateName = {% if template %}"{{ template.name|escapejs }}"{% else %}"Nouveau modèle"{% endif %};
+        // Gestion de la police d'écriture
+        document.getElementById('font-family').addEventListener('change', (e) => {
+            document.execCommand('fontName', false, e.target.value);
+            this.updateToolbarState();
+            this.canvas.focus();
+        });
 
-  // Current selected object for property updates
-  let currentObject = null;
+        // Gestion de la taille de police
+        document.getElementById('font-size').addEventListener('change', (e) => {
+            document.execCommand('fontSize', false, e.target.value);
+            this.updateToolbarState();
+            this.canvas.focus();
+        });
 
-  // Load variables
-  function loadVariables() {
-    fetch('{% url "t_documents_maker:list_variables" %}')
-      .then(response => response.json())
-      .then(data => {
-        const variablesList = document.getElementById('variablesList');
+        // Gestion de la couleur de texte
+        document.getElementById('font-color').addEventListener('change', (e) => {
+            document.execCommand('foreColor', false, e.target.value);
+            this.updateToolbarState();
+            this.canvas.focus();
+        });
 
-        if (data.variables && data.variables.length > 0) {
-          variablesList.innerHTML = ''; // Clear loading indicator
-          data.variables.forEach(variable => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-outline-secondary btn-sm w-100 mb-1';
-            btn.textContent = '{{' + variable.name + '}} - ' + variable.label;
-            btn.title = variable.description || variable.label;
-            btn.onclick = () => addVariableText(variable.name, variable.label);
-            variablesList.appendChild(btn);
-          });
+        // Mettre à jour les contrôles quand le curseur se déplace ou que le texte est sélectionné
+        this.canvas.addEventListener('mouseup', () => this.updateToolbarState());
+        this.canvas.addEventListener('keyup', () => this.updateToolbarState());
+    }
+
+    setupMarginControls() {
+        // Gestion des marges
+        ['top', 'bottom', 'left', 'right'].forEach(side => {
+            const input = document.getElementById(`margin-${side}`);
+            if (input) {
+                input.addEventListener('change', () => this.updateMargins());
+            }
+        });
+    }
+
+    loadSavedMargins() {
+        // Si un template existe (mode édition), charger les marges sauvegardées
+        if (this.templateId && templateData && templateData.config && templateData.config.margins) {
+            const margins = templateData.config.margins;
+            document.getElementById('margin-top').value = margins.top || '2';
+            document.getElementById('margin-bottom').value = margins.bottom || '2.5';
+            document.getElementById('margin-left').value = margins.left || '1.5';
+            document.getElementById('margin-right').value = margins.right || '1.5';
+            this.updateMargins(); // Appliquer les marges chargées
         } else {
-          variablesList.innerHTML = '<div class="text-center text-muted py-2">Aucune variable disponible</div>';
+            // Définir les valeurs par défaut
+            document.getElementById('margin-top').value = '2';
+            document.getElementById('margin-bottom').value = '2.5';
+            document.getElementById('margin-left').value = '1.5';
+            document.getElementById('margin-right').value = '1.5';
+            this.updateMargins(); // Appliquer les marges par défaut
         }
-      })
-      .catch(error => {
-        console.error('Error loading variables:', error);
-        const variablesList = document.getElementById('variablesList');
-        variablesList.innerHTML = '<div class="text-center text-danger py-2">Erreur de chargement des variables</div>';
-      });
-  }
-
-  function addVariableText(name, label) {
-    const text = new fabric.IText('{{' + name + '}}', {
-      left: 100,
-      top: 100,
-      fontSize: 16,
-      fill: '#007bff',
-      fontFamily: 'Arial',
-      variableName: name
-    });
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    canvas.renderAll();
-  }
-
-  // Add text element
-  function addText() {
-    const text = new fabric.IText('Texte éditable', {
-      left: 100,
-      top: 100,
-      fontSize: 20,
-      fontFamily: 'Arial',
-      fill: '#000000',
-      originX: 'left',
-      originY: 'top'
-    });
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    canvas.renderAll();
-  }
-
-  // Add image element
-  function addImage() {
-    // Create a placeholder image
-    const rect = new fabric.Rect({
-      left: 100,
-      top: 100,
-      width: 150,
-      height: 100,
-      fill: '#e9ecef',
-      stroke: '#adb5bd',
-      strokeWidth: 1,
-      strokeDashArray: [5, 5]
-    });
-
-    const text = new fabric.Text('Image', {
-      left: 125,
-      top: 140,
-      fontSize: 14,
-      fill: '#6c757d'
-    });
-
-    const group = new fabric.Group([rect, text], {
-      left: 100,
-      top: 100,
-      originX: 'left',
-      originY: 'top'
-    });
-
-    canvas.add(group);
-    canvas.setActiveObject(group);
-    canvas.renderAll();
-  }
-
-  // Add rectangle element
-  function addRectangle() {
-    const rect = new fabric.Rect({
-      left: 100,
-      top: 100,
-      width: 100,
-      height: 50,
-      fill: 'transparent',
-      stroke: '#000000',
-      strokeWidth: 1,
-      originX: 'left',
-      originY: 'top'
-    });
-    canvas.add(rect);
-    canvas.setActiveObject(rect);
-    canvas.renderAll();
-  }
-
-  // Add line element
-  function addLine() {
-    const line = new fabric.Line([50, 50, 150, 50], {
-      left: 100,
-      top: 100,
-      stroke: '#000000',
-      strokeWidth: 1,
-      originX: 'left',
-      originY: 'top'
-    });
-    canvas.add(line);
-    canvas.setActiveObject(line);
-    canvas.renderAll();
-  }
-
-  // Update properties panel when object is selected
-  canvas.on('selection:created', updatePropertiesPanel);
-  canvas.on('selection:updated', updatePropertiesPanel);
-  canvas.on('object:selected', updatePropertiesPanel);
-  canvas.on('object:modified', function(e) {
-    updatePropertiesPanel(e);
-  });
-
-  // Initialize margin controls with default values
-  document.getElementById('marginTopInput').value = documentMargins.top;
-  document.getElementById('marginBottomInput').value = documentMargins.bottom;
-  document.getElementById('marginLeftInput').value = documentMargins.left;
-  document.getElementById('marginRightInput').value = documentMargins.right;
-
-  // Update margin values when inputs change
-  document.getElementById('marginTopInput').onchange = function() {
-    documentMargins.top = parseInt(this.value) || 0;
-    updateCanvasMargins();
-  };
-
-  document.getElementById('marginBottomInput').onchange = function() {
-    documentMargins.bottom = parseInt(this.value) || 0;
-    updateCanvasMargins();
-  };
-
-  document.getElementById('marginLeftInput').onchange = function() {
-    documentMargins.left = parseInt(this.value) || 0;
-    updateCanvasMargins();
-  };
-
-  document.getElementById('marginRightInput').onchange = function() {
-    documentMargins.right = parseInt(this.value) || 0;
-    updateCanvasMargins();
-  };
-
-  // Function to update canvas based on margins
-  function updateCanvasMargins() {
-    // Update the canvas container to reflect margins visually
-    const canvasContainer = document.querySelector('.canvas-container');
-    canvasContainer.style.padding = `${documentMargins.top}px ${documentMargins.right}px ${documentMargins.bottom}px ${documentMargins.left}px`;
-  }
-
-  function updatePropertiesPanel(e) {
-    const obj = e.selected ? e.selected[0] : (e.target || null);
-    if (!obj) return;
-
-    currentObject = obj;
-
-    // Update properties panel based on object type
-    if (obj.type === 'i-text' || obj.type === 'text') {
-      // Set values for text objects
-      document.getElementById('fontSizeInput').value = obj.fontSize || 16;
-      document.getElementById('colorInput').value = obj.fill || '#000000';
-      document.getElementById('alignInput').value = obj.textAlign || 'left';
-      document.getElementById('fontFamilyInput').value = obj.fontFamily || 'Arial';
-      document.getElementById('boldInput').checked = obj.fontWeight === 'bold';
-      document.getElementById('italicInput').checked = obj.fontStyle === 'italic';
-      document.getElementById('lineHeightInput').value = obj.lineHeight || 1.16;
-      document.getElementById('charSpacingInput').value = obj.charSpacing || 0;
-
-      // Show properties panel
-      document.getElementById('propertiesPanel').style.display = 'block';
-    } else {
-      // Hide properties that don't apply to non-text objects
-      document.getElementById('propertiesPanel').style.display = 'block';
-      // Reset inputs for non-text objects
-      document.getElementById('fontSizeInput').value = '';
-      document.getElementById('colorInput').value = '#000000';
-      document.getElementById('alignInput').value = 'left';
-      document.getElementById('fontFamilyInput').value = 'Arial';
-      document.getElementById('boldInput').checked = false;
-      document.getElementById('italicInput').checked = false;
-      document.getElementById('lineHeightInput').value = '';
-      document.getElementById('charSpacingInput').value = '';
     }
 
-    // Update properties when inputs change
-    document.getElementById('fontSizeInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ fontSize: parseInt(this.value) });
-        canvas.renderAll();
-      }
-    };
+    updateMargins() {
+        // Récupérer les valeurs des marges
+        const marginTop = document.getElementById('margin-top').value || '2';
+        const marginBottom = document.getElementById('margin-bottom').value || '2.5';
+        const marginLeft = document.getElementById('margin-left').value || '1.5';
+        const marginRight = document.getElementById('margin-right').value || '1.5';
 
-    document.getElementById('colorInput').onchange = function() {
-      if (currentObject) {
-        currentObject.set({ fill: this.value });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('alignInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ textAlign: this.value });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('fontFamilyInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ fontFamily: this.value });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('boldInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ fontWeight: this.checked ? 'bold' : 'normal' });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('italicInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ fontStyle: this.checked ? 'italic' : 'normal' });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('lineHeightInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ lineHeight: parseFloat(this.value) });
-        canvas.renderAll();
-      }
-    };
-
-    document.getElementById('charSpacingInput').onchange = function() {
-      if (currentObject && (currentObject.type === 'i-text' || currentObject.type === 'text')) {
-        currentObject.set({ charSpacing: parseInt(this.value) });
-        canvas.renderAll();
-      }
-    };
-  }
-
-  // Deselect when clicking on canvas background
-  canvas.on('mouse:down', function(opt) {
-    if (opt.target === null) {
-      canvas.discardActiveObject();
-      canvas.renderAll();
-      currentObject = null;
-      // Reset properties panel
-      document.getElementById('fontSizeInput').value = '';
-      document.getElementById('colorInput').value = '#000000';
-      document.getElementById('alignInput').value = 'left';
+        // Appliquer les marges au canvas
+        this.canvas.style.margin = `${marginTop}cm ${marginRight}cm ${marginBottom}cm ${marginLeft}cm`;
     }
-  });
 
-  // Button event handlers
-  document.getElementById('addTextBtn').onclick = addText;
-  document.getElementById('addImageBtn').onclick = addImage;
-  document.getElementById('addRectangleBtn').onclick = addRectangle;
-  document.getElementById('addLineBtn').onclick = addLine;
+    updateToolbarState() {
+        // Mettre à jour les sélections de la barre d'outils en fonction de la sélection actuelle
+        try {
+            const fontName = document.queryCommandValue('fontName');
+            const fontSize = document.queryCommandValue('fontSize');
+            // Pour la couleur, il n'y a pas de méthode directe, donc on ne met à jour que si nécessaire
 
-  // Save template
-  document.getElementById('saveTemplate').onclick = function() {
-    const layout = canvas.toJSON(['variableName']);
-
-    fetch('{% url "t_documents_maker:save_template" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({
-        id: templateId,
-        name: currentTemplateName,
-        layout: layout,
-        margins: documentMargins
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Modèle sauvegardé avec succès !');
-        if (!templateId) {
-          // Redirect to edit the newly created template
-          window.location.href = '{% url "t_documents_maker:edit_template" 0 %}'.replace('0', data.id);
-        }
-      } else {
-        alert('Erreur lors de la sauvegarde du modèle');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Erreur lors de la sauvegarde du modèle');
-    });
-  };
-
-  // Preview template - opens in new window
-  document.getElementById('previewTemplate').onclick = function() {
-    // Get canvas data URL
-    const dataUrl = canvas.toDataURL({
-      format: 'png',
-      quality: 0.8
-    });
-
-    // Open preview in new window
-    const previewWindow = window.open('', '_blank');
-    previewWindow.document.write(`
-      <html>
-        <head>
-          <title>Prévisualisation du modèle</title>
-          <style>
-            body {
-              margin: 0;
-              padding: ${documentMargins.top}px ${documentMargins.right}px ${documentMargins.bottom}px ${documentMargins.left}px;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background: #f0f0f0;
+            if (fontName) {
+                document.getElementById('font-family').value = fontName;
             }
-            img {
-              max-width: 100%;
-              max-height: 100vh;
-              box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-              background: white;
+
+            if (fontSize) {
+                document.getElementById('font-size').value = fontSize;
             }
-          </style>
-        </head>
-        <body>
-          <img src="${dataUrl}" alt="Preview" />
-        </body>
-      </html>
-    `);
-  };
-
-  // Export template
-  document.getElementById('exportTemplate').onclick = function() {
-    if (templateId) {
-      window.location.href = '{% url "t_documents_maker:export_template" 0 %}'.replace('0', templateId);
-    } else {
-      alert('Veuillez d\'abord sauvegarder le modèle avant de l\'exporter');
+        } catch (e) {
+            // Ne rien faire si la commande n'est pas supportée
+        }
     }
-  };
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', function(e) {
-    // Ctrl + S to save
-    if (e.ctrlKey && e.key === 's') {
-      e.preventDefault();
-      document.getElementById('saveTemplate').click();
+    
+    setupInsertButtons() {
+        document.querySelectorAll('.insert-btn[data-insert]').forEach(btn => {
+            btn.addEventListener('click', () => this.insertBlock(btn.dataset.insert));
+        });
     }
+    
+    insertBlock(type) {
+        const selection = window.getSelection();
+        const range = selection.rangeCount ? selection.getRangeAt(0) : document.createRange();
+        
+        switch(type) {
+            case 'title':
+                const titleHtml = '<h1 style="text-align: center; color: #667eea; margin: 20px 0;">Titre du Document</h1>';
+                const titleFragment = document.createRange().createContextualFragment(titleHtml);
+                range.insertNode(titleFragment);
+                break;
+                
+            case 'paragraph':
+                const pHtml = '<p style="margin: 15px 0;">Texte du paragraphe ici...</p>';
+                const pFragment = document.createRange().createContextualFragment(pHtml);
+                range.insertNode(pFragment);
+                break;
+                
+            case 'table':
+                const tableHtml = `<table style="border-collapse: collapse; width: 100%; margin: 1cm 0;">
+                    <tr style="background: #f8f9fa;">
+                        <th style="border: 1px solid #ddd; padding: 10px;">Colonne 1</th>
+                        <th style="border: 1px solid #ddd; padding: 10px;">Colonne 2</th>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 10px;">{{ item.nom }}</td>
+                        <td style="border: 1px solid #ddd; padding: 10px;">{{ item.valeur }}</td>
+                    </tr>
+                </table>`;
+                const tableFragment = document.createRange().createContextualFragment(tableHtml);
+                range.insertNode(tableFragment);
+                break;
+                
+            case 'for-loop':
+                const loopHtml = `<div class="jinja-block">
+                    &#123;% for item in items %&#125;<br>
+                    &nbsp;&nbsp;&#123;&#123; item.nom &#125;&#125;<br>
+                    &#123;% endfor %&#125;
+                </div>`;
+                const loopFragment = document.createRange().createContextualFragment(loopHtml);
+                range.insertNode(loopFragment);
+                break;
+                
+            case 'variable':
+                const varName = prompt('Nom de la variable (ex: client_name, total):');
+                if (!varName || !varName.trim()) return;
 
-    // Delete selected object
-    if (e.key === 'Delete' && canvas.getActiveObject()) {
-      canvas.remove(canvas.getActiveObject());
+                // Créer un span pour la variable
+                const span = document.createElement('span');
+                span.className = 'jinja-block';
+                span.contentEditable = false; // Rendre le span non éditable
+                span.setAttribute('data-variable', varName.trim());
+                span.setAttribute('unselectable', 'on'); // Empêcher la sélection
+                span.style.userSelect = 'none'; // Désactiver la sélection
+                span.innerHTML = '&#123;&#123; ' + varName.trim() + ' &#125;&#125;';
+
+                // Insérer la variable
+                range.insertNode(span);
+
+                // Créer un espace éditable après la variable
+                const space = document.createTextNode(' ');
+                range.insertNode(space);
+
+                // Positionner le curseur après l'espace
+                const newRange = document.createRange();
+                newRange.setStartAfter(space);
+                newRange.collapse(true);
+
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+
+                // Forcer le focus sur le canvas pour assurer la bonne position du curseur
+                setTimeout(() => {
+                    document.getElementById('page-canvas').focus();
+                }, 0);
+                break;
+        }
+        
+        this.canvas.focus();
     }
-  });
+    
+    setupSaveButton() {
+        document.getElementById('save-btn').addEventListener('click', () => this.save());
+    }
+    
+    async save() {
+        const name = document.getElementById('template-name').value.trim();
+        const html = this.canvas.innerHTML;
+        const pageSize = document.getElementById('page-size').value;
+        const pageOrientation = document.getElementById('page-orientation').value;
+        // Récupérer les valeurs des marges
+        const marginTop = document.getElementById('margin-top').value || '2';
+        const marginBottom = document.getElementById('margin-bottom').value || '2.5';
+        const marginLeft = document.getElementById('margin-left').value || '1.5';
+        const marginRight = document.getElementById('margin-right').value || '1.5';
 
-  // Load template if editing existing
-  if (templateId) {
-    fetch('{% url "t_documents_maker:load_template" 0 %}'.replace('0', templateId))
-      .then(response => response.json())
-      .then(data => {
-        currentTemplateName = data.name;
-        if (data.layout && data.layout.objects) {
-          canvas.loadFromJSON(data.layout, function() {
-            canvas.renderAll();
-          });
+        // Créer un objet de configuration avec les marges
+        const config = {
+            margins: {
+                top: parseFloat(marginTop),
+                bottom: parseFloat(marginBottom),
+                left: parseFloat(marginLeft),
+                right: parseFloat(marginRight)
+            }
+        };
+
+        if (!name) {
+            alert('❌ Veuillez entrer un nom pour le template');
+            return;
         }
 
-        // Restore margins if they exist in the saved template
-        if (data.margins) {
-          documentMargins = data.margins;
-
-          // Update the margin input fields
-          document.getElementById('marginTopInput').value = documentMargins.top;
-          document.getElementById('marginBottomInput').value = documentMargins.bottom;
-          document.getElementById('marginLeftInput').value = documentMargins.left;
-          document.getElementById('marginRightInput').value = documentMargins.right;
-
-          // Apply the margins to the canvas
-          updateCanvasMargins();
+        try {
+            const response = await fetch('{% url "document_manager:save_template" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    id: this.templateId,
+                    name: name,
+                    html_content: html,
+                    page_size: pageSize,
+                    page_orientation: pageOrientation,
+                    config: JSON.stringify(config)
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                this.templateId = result.id;
+                alert('✅ Template sauvegardé avec succès!');
+                this.analyzeVariables();
+            } else {
+                alert('❌ Erreur: ' + (result.error || 'Erreur inconnue'));
+            }
+        } catch (e) {
+            alert('❌ Erreur de sauvegarde: ' + e.message);
         }
-      })
-      .catch(error => console.error('Error loading template:', error));
-  }
+    }
+    
+    setupPreviewButton() {
+        document.getElementById('preview-btn').addEventListener('click', () => this.showPreview());
+    }
+    
+    async showPreview() {
+        const html = this.canvas.innerHTML;
 
-  // Load variables on page load
-  loadVariables();
+        try {
+            const response = await fetch('{% url "document_manager:preview_template" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ html_content: html })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                const frame = document.getElementById('preview-frame');
+                const doc = frame.contentDocument;
+                doc.open();
+                doc.write(`<!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body { padding: 20px; font-family: Arial, sans-serif; }
+                            .jinja-block {
+                                background: #fff3cd;
+                                border: 2px dashed #ffc107;
+                                padding: 2px 6px;
+                                margin: 0 2px;
+                                display: inline-block;
+                                vertical-align: middle;
+                            }
+                        </style>
+                    </head>
+                    <body>${result.rendered_html}</body>
+                    </html>`);
+                doc.close();
+                new bootstrap.Modal(document.getElementById('previewModal')).show();
+            } else {
+                alert('❌ Erreur aperçu: ' + (result.error || 'Erreur inconnue'));
+            }
+        } catch (e) {
+            alert('❌ Erreur: ' + e.message);
+        }
+    }
+    
+    setupAnalyzeButton() {
+        document.getElementById('analyze-btn').addEventListener('click', () => this.analyzeVariables());
+    }
+    
+    async analyzeVariables() {
+        const html = this.canvas.innerHTML;
+
+        try {
+            const response = await fetch('{% url "document_manager:preview_template" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ html_content: html })
+            });
+            
+            const result = await response.json();
+            const vars = result.variables || [];
+            const list = document.getElementById('variables-list');
+            
+            if (vars.length > 0) {
+                list.innerHTML = vars
+                    .map(v => `<span class="variables-badge">\{\{ ${v} \}\}</span>`)
+                    .join('');
+            } else {
+                list.innerHTML = '<span class="text-muted" style="display: block; margin-top: 10px;">Aucune variable détectée</span>';
+            }
+        } catch (e) {
+            console.error('Erreur analyse:', e);
+            alert('❌ Erreur lors de l\'analyse: ' + e.message);
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new EditorApp();
+});
 </script>
-{% endblock content %}
+{% endblock %}
