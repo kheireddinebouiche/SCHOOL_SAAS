@@ -174,9 +174,6 @@ def generate_student_pdf(request):
         groupe = GroupeLine.objects.filter(student = etudiant).first()
         logo = groupe.groupe.specialite.formation.entite_legal.entete_logo.url
 
-        print(f"\n{'='*80}")
-        print(f"DÉBUT GÉNÉRATION PDF")
-        print(f"{'='*80}")
 
         # ✅ DONNÉES
         student_data = {
@@ -185,8 +182,6 @@ def generate_student_pdf(request):
             'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
            
         }
-
-        print(f"\n1️⃣ DONNÉES PRÊTES: {student_data}")
 
         # ✅ PROCESS ALL PAGES WITH STUDENT DATA
         from t_documents_maker.services.pdf_generator import MultiPagePDFGenerator
@@ -207,8 +202,6 @@ def generate_student_pdf(request):
                 }
                 processed_pages.append(processed_page)
 
-            print(f"\n2️⃣ PROCESSING {len(processed_pages)} PAGES...")
-
             # Use MultiPagePDFGenerator for multi-page documents
             pdf_gen = MultiPagePDFGenerator(processed_pages, {
                 'page_size': template.page_size,
@@ -217,9 +210,7 @@ def generate_student_pdf(request):
             })
             pdf_bytes, success, error = pdf_gen.generate()
         else:
-            # Fallback to single page processing if no pages exist
-            print(f"\n2️⃣ PROCESSING SINGLE PAGE...")
-            print(f"HTML ORIGINAL (500 chars):\n{template.get_first_page_content()[:500]}")
+           
 
             # ✅ NETTOIE ET REND
             processor = TemplateProcessor(template.get_first_page_content())
