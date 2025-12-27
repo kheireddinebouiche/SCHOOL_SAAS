@@ -11,8 +11,6 @@
         flex-direction: column;
         height: calc(100vh - 100px);
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         overflow: hidden;
         transition: all 0.3s ease;
     }
@@ -33,12 +31,20 @@
         overflow: hidden;
     }
 
+    .editor-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #f1f5f9;
+        overflow: hidden;
+    }
+
     .editor-sidebar {
-        width: 300px;
+        width: 250px;
         background: #f8fafc;
         border-right: 1px solid #e2e8f0;
         overflow-y: auto;
-        padding: 25px 20px;
+        padding: 20px 15px;
         transition: all 0.3s ease;
     }
 
@@ -358,6 +364,7 @@
         box-sizing: border-box; /* Include padding in width calculation */
         display: block;
         position: relative;
+        max-width: calc(100% - 50px); /* S'assurer qu'il y ait un peu de marge sur les côtés */
     }
 </style>
 {% endblock %}
@@ -662,7 +669,7 @@ class MultiPageEditorApp {
             const canvas = document.createElement('div');
             canvas.className = 'page-canvas';
             canvas.contentEditable = true;
-            canvas.innerHTML = page.content || '<h1 style="text-align: center; color: #667eea;">Titre du Document</h1><p>Commencez à éditer...</p>';
+            canvas.innerHTML = page.content || '';  // Aucun contenu par défaut
             canvas.dataset.pageIndex = index;
 
             pageContent.appendChild(canvas);
@@ -729,7 +736,7 @@ class MultiPageEditorApp {
 
     addPage() {
         const newPage = {
-            content: '<h1 style="text-align: center; color: #667eea;">Nouvelle Page</h1><p>Contenu de la nouvelle page...</p>',
+            content: '',  // Aucun contenu par défaut
             page_size: document.getElementById('page-size').value || 'A4',
             orientation: document.getElementById('page-orientation').value || 'portrait'
         };
@@ -824,6 +831,7 @@ class MultiPageEditorApp {
                 if (this.canvas) {
                     if (e.target.value) {
                         // Appliquer la taille de police directement en créant un span avec le style
+                        document.execCommand('styleWithCSS', false, true);
                         const selection = window.getSelection();
                         if (selection.rangeCount > 0) {
                             const range = selection.getRangeAt(0);
@@ -836,10 +844,10 @@ class MultiPageEditorApp {
                                 range.insertNode(span);
 
                                 // Restaurer la sélection sur le span
-                                const newRange = document.createRange();
-                                newRange.selectNodeContents(span);
+                                const newRangeForSize = document.createRange();
+                                newRangeForSize.selectNodeContents(span);
                                 selection.removeAllRanges();
-                                selection.addRange(newRange);
+                                selection.addRange(newRangeForSize);
                             } else {
                                 // Si aucune sélection, créer un span avec la taille de police
                                 // qui sera appliqué au prochain texte saisi
@@ -849,11 +857,11 @@ class MultiPageEditorApp {
                                 range.insertNode(span);
 
                                 // Déplacer le curseur à l'intérieur du span
-                                const newRange = document.createRange();
-                                newRange.setStart(span.firstChild, 1);
-                                newRange.collapse(true);
+                                const newRangeForSize = document.createRange();
+                                newRangeForSize.setStart(span.firstChild, 1);
+                                newRangeForSize.collapse(true);
                                 selection.removeAllRanges();
-                                selection.addRange(newRange);
+                                selection.addRange(newRangeForSize);
                             }
                         }
                     } else {
@@ -1108,10 +1116,10 @@ class MultiPageEditorApp {
                 // Créer un span pour la variable
                 const span = document.createElement('span');
                 span.className = 'jinja-block';
-                span.contentEditable = false; // Rendre le span non éditable
+                // Rendre le span éditable pour permettre l'application de styles
+                span.contentEditable = true;
                 span.setAttribute('data-variable', varName.trim());
-                span.setAttribute('unselectable', 'on'); // Empêcher la sélection
-                span.style.userSelect = 'none'; // Désactiver la sélection
+                // Ne pas désactiver la sélection pour permettre l'application de styles
                 span.innerHTML = '&#123;&#123; ' + varName.trim() + ' &#125;&#125;';
 
                 // Insérer la variable
@@ -1122,13 +1130,13 @@ class MultiPageEditorApp {
                 range.insertNode(space);
 
                 // Positionner le curseur après l'espace
-                const newRange = document.createRange();
-                newRange.setStartAfter(space);
-                newRange.collapse(true);
+                const newRangeForVariable = document.createRange();
+                newRangeForVariable.setStartAfter(space);
+                newRangeForVariable.collapse(true);
 
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(newRange);
+                const selectionForVariable = window.getSelection();
+                selectionForVariable.removeAllRanges();
+                selectionForVariable.addRange(newRangeForVariable);
 
                 // Forcer le focus sur le canvas pour assurer la bonne position du curseur
                 setTimeout(() => {
@@ -1241,6 +1249,10 @@ class MultiPageEditorApp {
 
             const result = await response.json();
             if (result.success) {
+                // Pour l'instant, on affiche le HTML tel quel, mais avec un style CSS pour les numéros de page
+                // La numérotation réelle sera gérée côté serveur ou avec une logique plus complexe
+                const renderedHtml = result.rendered_html;
+
                 const frame = document.getElementById('preview-frame');
                 const doc = frame.contentDocument;
                 doc.open();
@@ -1319,10 +1331,16 @@ class MultiPageEditorApp {
                                     width: 21cm !important;
                                     min-height: 29.7cm !important;
                                 }
+                                [data-page-number="true"] {
+                                    background: #e2e8f0 !important;
+                                    padding: 2px 8px !important;
+                                    border-radius: 4px !important;
+                                    font-weight: bold !important;
+                                }
                             }
                         </style>
                     </head>
-                    <body>${result.rendered_html}</body>
+                    <body>${renderedHtml}</body>
                     </html>`);
                 doc.close();
                 new bootstrap.Modal(document.getElementById('previewModal')).show();
