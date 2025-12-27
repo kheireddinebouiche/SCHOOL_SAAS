@@ -920,11 +920,8 @@ def get_print_documents(request, pk):
         try:
             formation = Formation.objects.get(id=pk)
 
-            # Récupérer les documents associés à la formation
-            # Pour l'instant, nous retournons une liste vide car il n'y a pas de relation documents dans le modèle Formation
             selected_documents = list(formation.documents.values_list('id', flat=False))
             
-
             return JsonResponse({
                 'success': True,
                 'documents': selected_documents
