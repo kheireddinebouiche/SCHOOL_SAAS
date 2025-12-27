@@ -14,7 +14,7 @@ def ListeStudents(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeDesEtudiants(request):
-    liste = Prospets.objects.filter(statut="convertit" , is_affected=True).values('id','nom','prenom','email','indic','telephone','date_naissance','nin','groupe_line_student__groupe__nom','groupe_line_student__groupe__specialite__label','groupe_line_student__groupe__id')
+    liste = Prospets.objects.filter(statut="convertit").values('id','nom','prenom','email','indic','telephone','date_naissance','nin','groupe_line_student__groupe__nom','groupe_line_student__groupe__specialite__label','groupe_line_student__groupe__id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url='institut_app:login')
