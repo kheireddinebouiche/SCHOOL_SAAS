@@ -171,6 +171,9 @@ def generate_student_pdf(request):
         template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
         etudiant = get_object_or_404(Prospets, pk=student_id)
 
+        groupe = GroupeLine.objects.filter(student = etudiant).first()
+        logo = groupe.groupe.specialite.formation.entite_legal.entete_logo.url
+
         print(f"\n{'='*80}")
         print(f"DÉBUT GÉNÉRATION PDF")
         print(f"{'='*80}")
@@ -180,6 +183,7 @@ def generate_student_pdf(request):
             'nom': str(etudiant.nom or '') or 'Non renseigné',
             'prenom': str(etudiant.prenom or '') or 'Non renseigné',
             'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
+           
         }
 
         print(f"\n1️⃣ DONNÉES PRÊTES: {student_data}")

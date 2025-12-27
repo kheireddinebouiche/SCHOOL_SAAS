@@ -345,20 +345,19 @@
     }
 
     .page-canvas {
-        width: 100%;
-        max-width: 800px; /* Limit width for better readability */
-        height: auto;
+        width: 21cm; /* Taille réelle de la page A4 */
+        height: 29.7cm; /* Hauteur réelle de la page A4 */
         padding: 40px;
         overflow-y: auto;
         background: white;
         border: 1px solid #e2e8f0;
         margin: 25px auto; /* Center horizontally */
         border-radius: 12px;
-        min-height: 600px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         transition: all 0.3s ease;
         box-sizing: border-box; /* Include padding in width calculation */
         display: block;
+        position: relative;
     }
 </style>
 {% endblock %}
@@ -453,92 +452,7 @@
                 <div id="variables-list"></div>
             </div>
 
-            <!-- Section En-tête et Pied de Page -->
-            <div class="sidebar-section">
-                <h5><i class="fas fa-heading"></i> En-tête et Pied de Page</h5>
-
-                <!-- En-tête -->
-                <div class="mb-3">
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="header-enabled">
-                        <label class="form-check-label" for="header-enabled">Activer l'en-tête</label>
-                    </div>
-
-                    <div id="header-config" style="display: none;">
-                        <div class="mb-2">
-                            <label class="form-label">Texte de l'en-tête</label>
-                            <input type="text" id="header-text" class="form-control form-control-sm" placeholder="Entrez le texte de l'en-tête">
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Position du texte</label>
-                            <select id="header-text-position" class="form-select form-select-sm">
-                                <option value="left">Gauche</option>
-                                <option value="center">Centre</option>
-                                <option value="right">Droite</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Position du logo</label>
-                            <select id="header-logo-position" class="form-select form-select-sm">
-                                <option value="left">Gauche</option>
-                                <option value="center">Centre</option>
-                                <option value="right">Droite</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Logo</label>
-                            <input type="file" id="header-logo" class="form-control form-control-sm" accept="image/*">
-                            <div id="logo-preview" class="mt-2" style="display: none;">
-                                <img id="logo-preview-img" src="" style="max-width: 100px; max-height: 50px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pied de page -->
-                <div class="mb-3">
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="footer-enabled">
-                        <label class="form-check-label" for="footer-enabled">Activer le pied de page</label>
-                    </div>
-
-                    <div id="footer-config" style="display: none;">
-                        <div class="mb-2">
-                            <label class="form-label">Texte du pied de page</label>
-                            <input type="text" id="footer-text" class="form-control form-control-sm" placeholder="Entrez le texte du pied de page">
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Position du texte</label>
-                            <select id="footer-text-position" class="form-select form-select-sm">
-                                <option value="left">Gauche</option>
-                                <option value="center">Centre</option>
-                                <option value="right">Droite</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Position du logo</label>
-                            <select id="footer-logo-position" class="form-select form-select-sm">
-                                <option value="left">Gauche</option>
-                                <option value="center">Centre</option>
-                                <option value="right">Droite</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Logo du pied de page</label>
-                            <input type="file" id="footer-logo" class="form-control form-control-sm" accept="image/*">
-                            <div id="footer-logo-preview" class="mt-2" style="display: none;">
-                                <img id="footer-logo-preview-img" src="" style="max-width: 100px; max-height: 50px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Section En-tête et Pied de Page supprimée -->
         </div>
 
         <!-- EDITOR CONTENT -->
@@ -640,76 +554,47 @@ function getCookie(name) {
 }
 const csrftoken = getCookie('csrftoken');
 
-// Données du template - using a safer approach with proper boolean handling
+// Données du template - using JSON-encoded data from Django
 const templateData = (function() {
-    // Define a function to safely convert Python values to JavaScript values
-    function convertPythonToJS(value) {
-        if (typeof value === 'string') {
-            if (value === 'True') return true;
-            if (value === 'False') return false;
-            if (value === 'None') return null;
-            if (/^\d+$/.test(value)) return parseInt(value);
-            if (/^\d+\.\d+$/.test(value)) return parseFloat(value);
-        }
-        return value;
-    }
+    // Create script tags with JSON content to safely pass data from Django
+    const createJsonScript = function(id, data) {
+        const script = document.createElement('script');
+        script.id = id;
+        script.type = 'application/json';
+        script.textContent = JSON.stringify(data);
+        document.head.appendChild(script);
+        return script.textContent;
+    };
 
-    // Create a temporary container to hold the raw data
-    const container = document.createElement('div');
-    container.style.display = 'none';
-    container.setAttribute('data-id', '{{ template.id|default:"null" }}');
-    container.setAttribute('data-pages', `{% if template and template.pages %}{{ template.pages|escapejs }}{% else %}[{"content": ""}]{% endif %}`);
-    container.setAttribute('data-config', `{% if template and template.config %}{{ template.config|escapejs }}{% else %}{}{% endif %}`);
-    document.body.appendChild(container);
+    // Get data from Django template system and ensure it's properly JSON-encoded
+    const templateId = '{{ template.id|default:"null" }}';
+    const templatePages = {% if template and template.pages %}{{ template.pages|safe }}{% else %}[{"content": ""}]{% endif %};
+    const templateConfig = {% if template and template.config %}{{ template.config|safe }}{% else %}{}{% endif %};
 
-    // Get the raw data
-    const id = container.getAttribute('data-id');
-    const pagesStr = container.getAttribute('data-pages');
-    const configStr = container.getAttribute('data-config');
+    // Convert the ID properly
+    const id = templateId === 'null' ? null : parseInt(templateId);
 
-    // Remove the container
-    document.body.removeChild(container);
+    // The pages and config should already be proper JavaScript objects
+    // from the template rendering, but we'll handle potential issues
+    let pages = templatePages;
+    let config = templateConfig;
 
-    // Evaluate the strings as JavaScript objects (this is safe because we control the data)
-    let pages, config;
-    try {
-        pages = eval('(' + pagesStr + ')');
-    } catch (e) {
-        console.error('Error evaluating pages:', e);
+    // Ensure pages is an array
+    if (!Array.isArray(pages)) {
+        console.error('Pages is not an array:', pages);
         pages = [{"content": ""}];
     }
 
-    try {
-        config = eval('(' + configStr + ')');
-    } catch (e) {
-        console.error('Error evaluating config:', e);
+    // Ensure config is an object
+    if (typeof config !== 'object' || config === null) {
+        console.error('Config is not an object:', config);
         config = {};
     }
 
-    // Fix any remaining Python boolean values in the objects
-    function fixBooleans(obj) {
-        if (obj && typeof obj === 'object') {
-            for (let key in obj) {
-                if (typeof obj[key] === 'string') {
-                    obj[key] = convertPythonToJS(obj[key]);
-                } else if (obj[key] && typeof obj[key] === 'object') {
-                    fixBooleans(obj[key]);
-                }
-            }
-        }
-        return obj;
-    }
-
-    // Apply the fix to the config
-    const fixedConfig = fixBooleans(config);
-
-    // Convert the id properly
-    const finalId = convertPythonToJS(id);
-
     return {
-        id: finalId,
+        id: id,
         pages: pages,
-        config: fixedConfig
+        config: config
     };
 })();
 
@@ -735,7 +620,7 @@ class MultiPageEditorApp {
         this.setupPreviewButton();
         this.setupAnalyzeButton();
         this.setupMarginControls();
-        this.setupHeaderFooterControls(); // Setup header and footer controls
+        // Header and footer controls have been removed
         this.loadSavedMargins(); // Charger les marges sauvegardées
         this.updateToolbarState(); // Initialiser l'état de la barre d'outils
     }
@@ -1138,7 +1023,7 @@ class MultiPageEditorApp {
                 left: parseFloat(marginLeft),
                 right: parseFloat(marginRight)
             },
-            header_footer: this.getHeaderFooterConfig()
+            // header_footer: this.getHeaderFooterConfig()  // Header and footer functionality has been removed
         };
 
         if (!name) {
@@ -1147,20 +1032,27 @@ class MultiPageEditorApp {
         }
 
         try {
+            // Créer un objet FormData pour envoyer les données
+            const formData = new FormData();
+
+            // Ajouter les données JSON
+            const data = {
+                id: this.templateId,
+                name: name,
+                pages: this.pages,  // Send all pages instead of single html_content
+                page_size: pageSize,
+                page_orientation: pageOrientation,
+                config: JSON.stringify(config)
+            };
+
+            formData.append('data', JSON.stringify(data));
+
             const response = await fetch('{% url "document_manager:save_template" %}', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    id: this.templateId,
-                    name: name,
-                    pages: this.pages,  // Send all pages instead of single html_content
-                    page_size: pageSize,
-                    page_orientation: pageOrientation,
-                    config: JSON.stringify(config)
-                })
+                body: formData
             });
 
             const result = await response.json();
@@ -1194,7 +1086,7 @@ class MultiPageEditorApp {
                 },
                 body: JSON.stringify({
                     pages: this.pages,  // Send all pages instead of single html_content
-                    header_footer: this.getHeaderFooterConfig()  // Include header and footer config
+                    // header_footer: this.getHeaderFooterConfig()  // Header and footer functionality has been removed
                 })
             });
 
@@ -1281,112 +1173,11 @@ class MultiPageEditorApp {
         document.getElementById('analyze-btn').addEventListener('click', () => this.analyzeVariables());
     }
 
-    setupHeaderFooterControls() {
-        // Header enabled toggle
-        const headerEnabled = document.getElementById('header-enabled');
-        headerEnabled.addEventListener('change', () => {
-            document.getElementById('header-config').style.display = headerEnabled.checked ? 'block' : 'none';
-        });
+    // Header and footer functionality has been removed
 
-        // Footer enabled toggle
-        const footerEnabled = document.getElementById('footer-enabled');
-        footerEnabled.addEventListener('change', () => {
-            document.getElementById('footer-config').style.display = footerEnabled.checked ? 'block' : 'none';
-        });
+    // Header and footer functionality has been removed
 
-        // Header logo upload preview
-        const headerLogoInput = document.getElementById('header-logo');
-        headerLogoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    document.getElementById('logo-preview-img').src = event.target.result;
-                    document.getElementById('logo-preview').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Footer logo upload preview
-        const footerLogoInput = document.getElementById('footer-logo');
-        footerLogoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    document.getElementById('footer-logo-preview-img').src = event.target.result;
-                    document.getElementById('footer-logo-preview').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Load existing header/footer config if available
-        this.loadHeaderFooterConfig();
-    }
-
-    loadHeaderFooterConfig() {
-        const headerFooterConfig = templateData.config.header_footer || {
-            header: {
-                enabled: false,
-                logo_path: '',
-                logo_position: 'left',
-                text: '',
-                text_position: 'right'
-            },
-            footer: {
-                enabled: false,
-                text: '',
-                text_position: 'center',
-                logo_path: '',
-                logo_position: 'center'
-            }
-        };
-
-        // Load header config
-        document.getElementById('header-enabled').checked = headerFooterConfig.header.enabled;
-        document.getElementById('header-text').value = headerFooterConfig.header.text || '';
-        document.getElementById('header-text-position').value = headerFooterConfig.header.text_position || 'right';
-        document.getElementById('header-logo-position').value = headerFooterConfig.header.logo_position || 'left';
-
-        // Show header config if enabled
-        document.getElementById('header-config').style.display = headerFooterConfig.header.enabled ? 'block' : 'none';
-
-        // Load footer config
-        document.getElementById('footer-enabled').checked = headerFooterConfig.footer.enabled;
-        document.getElementById('footer-text').value = headerFooterConfig.footer.text || '';
-        document.getElementById('footer-text-position').value = headerFooterConfig.footer.text_position || 'center';
-        document.getElementById('footer-logo-position').value = headerFooterConfig.footer.logo_position || 'center';
-
-        // Load footer logo if exists
-        if (headerFooterConfig.footer.logo_path) {
-            document.getElementById('footer-logo-preview-img').src = headerFooterConfig.footer.logo_path;
-            document.getElementById('footer-logo-preview').style.display = 'block';
-        }
-
-        // Show footer config if enabled
-        document.getElementById('footer-config').style.display = headerFooterConfig.footer.enabled ? 'block' : 'none';
-    }
-
-    getHeaderFooterConfig() {
-        return {
-            header: {
-                enabled: document.getElementById('header-enabled').checked,
-                logo_path: document.getElementById('logo-preview-img').src || '',
-                logo_position: document.getElementById('header-logo-position').value,
-                text: document.getElementById('header-text').value,
-                text_position: document.getElementById('header-text-position').value
-            },
-            footer: {
-                enabled: document.getElementById('footer-enabled').checked,
-                text: document.getElementById('footer-text').value,
-                text_position: document.getElementById('footer-text-position').value,
-                logo_path: document.getElementById('footer-logo-preview-img').src || '',
-                logo_position: document.getElementById('footer-logo-position').value
-            }
-        };
-    }
+    // Header and footer functionality has been removed
 
     async analyzeVariables() {
         // Save current page content before analysis

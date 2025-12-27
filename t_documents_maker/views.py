@@ -48,28 +48,47 @@ def template_delete(request, template_id):
 @require_http_methods(["POST"])
 def save_template(request):
     try:
-        data = json.loads(request.body)
-        template_id = data.get('id')
-        name = data.get('name', 'Nouveau template')
-        # Get pages data instead of single html_content
-        pages_data = data.get('pages', [])
-        page_size = data.get('page_size', 'A4')
-        page_orientation = data.get('page_orientation', 'portrait')
-        config_str = data.get('config', '{}')  # Récupérer la configuration
+        # Vérifier si la requête contient des fichiers (multipart/form-data)
+        if request.content_type.startswith('multipart/form-data'):
+            # Récupérer les données JSON du champ 'data'
+            data = json.loads(request.POST.get('data', '{}'))
+            template_id = data.get('id')
+            name = data.get('name', 'Nouveau template')
+            # Get pages data instead of single html_content
+            pages_data = data.get('pages', [])
+            page_size = data.get('page_size', 'A4')
+            page_orientation = data.get('page_orientation', 'portrait')
+            config_str = data.get('config', '{}')  # Récupérer la configuration
 
-        # Parser la configuration
-        try:
-            config = json.loads(config_str) if config_str else {}
-        except json.JSONDecodeError:
-            config = {}
+            # Parser la configuration
+            try:
+                config = json.loads(config_str) if config_str else {}
+            except json.JSONDecodeError:
+                config = {}
 
-        print(f"Requête de sauvegarde reçue:")
-        print(f"  - template_id: {template_id}")
-        print(f"  - name: {name}")
-        print(f"  - pages count: {len(pages_data)}")
-        print(f"  - page_size: {page_size}")
-        print(f"  - page_orientation: {page_orientation}")
-        print(f"  - config: {config}")
+            # Récupérer les fichiers de logo
+            header_logo_file = request.FILES.get('header_logo')
+            footer_logo_file = request.FILES.get('footer_logo')
+        else:
+            # Ancienne méthode pour les requêtes JSON
+            data = json.loads(request.body)
+            template_id = data.get('id')
+            name = data.get('name', 'Nouveau template')
+            # Get pages data instead of single html_content
+            pages_data = data.get('pages', [])
+            page_size = data.get('page_size', 'A4')
+            page_orientation = data.get('page_orientation', 'portrait')
+            config_str = data.get('config', '{}')  # Récupérer la configuration
+
+            # Parser la configuration
+            try:
+                config = json.loads(config_str) if config_str else {}
+            except json.JSONDecodeError:
+                config = {}
+
+            # Pas de fichiers dans ce cas
+            header_logo_file = None
+            footer_logo_file = None
 
         # Extract variables from all pages
         all_variables = set()
@@ -79,7 +98,7 @@ def save_template(request):
             page_variables = processor.extract_variables()
             all_variables.update(page_variables)
 
-        if template_id:
+        if template_id and template_id != 'null':
             template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
             template.name = name
             template.page_size = page_size
@@ -102,14 +121,16 @@ def save_template(request):
         # Handle header and footer configuration
         header_footer_config = data.get('header_footer', {})
         if header_footer_config:
+            # Ne pas sauvegarder les logos dans la configuration puisque le support est supprimé
+            if 'header' in header_footer_config:
+                header_footer_config['header']['logo_path'] = ''
+            if 'footer' in header_footer_config:
+                header_footer_config['footer']['logo_path'] = ''
             template.set_header_footer_config(header_footer_config)
 
         template.save()
         # Vérifier que le template a été sauvegardé correctement
         template.refresh_from_db()
-        print(f"Template sauvegardé avec succès. ID: {template.id}")
-        print(f"Pages dans la base de données: {len(template.pages)}")
-        print(f"Configuration dans la base de données: {template.config}")
         return JsonResponse({
             'success': True,
             'id': template.id,
@@ -245,6 +266,13 @@ def generate_pdf(request):
 
         template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
 
+        # Get header and footer configuration
+        header_footer_config = template.get_header_footer_config()
+
+        # Clear logo paths since logo support has been removed
+        header_footer_config['header']['logo_path'] = ''
+        header_footer_config['footer']['logo_path'] = ''
+
         # Process all pages with the user data
         processed_pages = []
         for page in template.pages:
@@ -265,7 +293,7 @@ def generate_pdf(request):
         pdf_gen = MultiPagePDFGenerator(processed_pages, {
             'page_size': template.page_size,
             'page_orientation': template.page_orientation,
-            'header_footer': template.get_header_footer_config()
+            'header_footer': header_footer_config
         })
         pdf_bytes, success, error = pdf_gen.generate()
 
