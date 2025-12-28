@@ -311,7 +311,7 @@ def generate_pdf(request):
 
         return JsonResponse({
             'success': True,
-            'download_url': reverse('t_documents_maker:download_pdf', args=[doc.id])
+            'download_url': reverse('document_manager:download_pdf', args=[doc.id])
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

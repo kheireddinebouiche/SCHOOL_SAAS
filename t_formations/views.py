@@ -875,13 +875,25 @@ import json
 
 @login_required(login_url="institut_app")
 def ApiLoadDocumentTemplate(request):
-    if request.method == "GET":
-        all = DocumentTemplate.objects.all().values('id','name')
+    formation_id = request.GET.get('formation_id')
 
-        return JsonResponse(list(all), safe=False)
-    
-    else:
-        return JsonResponse({"status":"error"})
+    formation = Formation.objects.get(id=formation_id)
+
+    all_docs = DocumentTemplate.objects.all()
+    selected_docs = formation.documents.values_list('id', flat=True)
+
+    data = {
+        "documents": [
+            {
+                "id": doc.id,
+                "name": doc.name,
+                "checked": doc.id in selected_docs
+            }
+            for doc in all_docs
+        ]
+    }
+
+    return JsonResponse(data)
 
 @csrf_exempt
 @login_required

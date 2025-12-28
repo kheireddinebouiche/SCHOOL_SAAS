@@ -5,6 +5,7 @@
 
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     :root {
         --primary-color: #32373c;
@@ -23,6 +24,7 @@
         --border-radius: 3px;
         --box-shadow: 0 1px 1px rgba(0,0,0,.04);
         --transition: all .2s ease;
+        --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
     }
 
     .editor-container {
@@ -34,7 +36,7 @@
         overflow: hidden;
         transition: var(--transition);
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        font-family: var(--font-family);
     }
 
     .editor-header {
@@ -221,8 +223,8 @@
     .page-canvas {
         width: 21cm; /* Taille réelle de la page A4 */
         height: 29.7cm; /* Hauteur réelle de la page A4 */
-        padding: 1cm; /* Utilisation de cm pour correspondre aux marges */
-        overflow-y: auto;
+        padding: 0;
+        overflow: hidden; /* Remove scrollbars */
         background: white;
         border: 1px solid var(--panel-border);
         border-radius: var(--border-radius);
@@ -232,7 +234,24 @@
         display: block;
         position: relative;
         min-height: 100%;
+        margin: 25px auto; /* Center the page horizontally */
     }
+
+    .page-content-area {
+        position: relative;
+        width: 21cm; /* Full A4 width */
+        height: 29.7cm; /* Full A4 height */
+        background: white;
+        z-index: 2;
+        box-sizing: border-box;
+        overflow: hidden; /* No scrolling in the content area */
+        position: absolute; /* Use absolute positioning for better control */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
 
     .jinja-block {
         background: #fff5f5;
@@ -400,6 +419,356 @@
             width: 220px;
         }
     }
+
+    /* Page numbering styles */
+    .page-number {
+        position: absolute;
+        font-size: 12px;
+        color: #666;
+        font-family: Arial, sans-serif;
+        z-index: 100;
+        padding: 2px 6px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px dashed #ccc;
+        cursor: move;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .page-number.dragging {
+        opacity: 0.7;
+        background: rgba(114, 174, 230, 0.3);
+        border: 1px solid #72aee6;
+    }
+
+    .page-number-content {
+        flex: 1;
+    }
+
+    .page-number-delete {
+        cursor: pointer;
+        color: #dc3232;
+        font-size: 14px;
+        font-weight: bold;
+        padding: 0 2px;
+        line-height: 1;
+        margin-left: 5px;
+    }
+
+    .page-number-delete:hover {
+        color: #ff0000;
+        background: rgba(220, 50, 50, 0.1);
+        border-radius: 50%;
+    }
+
+    /* Context menu for page numbers */
+    .page-number-context-menu {
+        position: fixed;
+        z-index: 10000;
+        background: white;
+        border: 1px solid #dcdcde;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px 0;
+        min-width: 200px;
+        display: none;
+    }
+
+    .page-number-context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .page-number-context-menu-item:hover {
+        background: #f0f0f1;
+    }
+
+    .page-number-context-menu-divider {
+        height: 1px;
+        background: #dcdcde;
+        margin: 4px 0;
+    }
+
+    .page-number-context-menu-input {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #dcdcde;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+
+    .page-number-controls {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid var(--panel-border);
+    }
+
+    .page-number-position {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .page-number-position label {
+        flex: 1;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .page-number-position input {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--border-radius);
+        font-size: 12px;
+    }
+
+    .page-number-format {
+        margin-bottom: 10px;
+    }
+
+    .page-number-format select {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--border-radius);
+        font-size: 12px;
+    }
+
+    .add-page-number-btn {
+        width: 100%;
+        padding: 8px;
+        background: #f0f0f1;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 13px;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-color);
+    }
+
+    .add-page-number-btn:hover {
+        background: var(--hover-color);
+        border-color: var(--accent-color);
+        color: var(--primary-color);
+    }
+
+    .add-page-number-btn i {
+        width: 16px;
+        text-align: center;
+        color: var(--accent-color);
+    }
+
+    /* Shape styles */
+    .shape-line {
+        position: absolute;
+        background: #000;
+        z-index: 50;
+        cursor: move;
+        user-select: none;
+    }
+
+    /* Image styles */
+    .image-element {
+        position: absolute;
+        z-index: 40;
+        cursor: move;
+        user-select: none;
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .image-element img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* Image context menu */
+    .image-context-menu {
+        position: fixed;
+        z-index: 10000;
+        background: white;
+        border: 1px solid #dcdcde;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px 0;
+        min-width: 200px;
+        display: none;
+    }
+
+    .image-context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .image-context-menu-item:hover {
+        background: #f0f0f1;
+    }
+
+    .image-context-menu-input {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #dcdcde;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+
+    .image-context-menu-input-group {
+        display: flex;
+        flex-direction: column;
+        padding: 8px 16px;
+    }
+
+    .image-context-menu-input-group label {
+        font-size: 12px;
+        color: #646970;
+        margin-bottom: 4px;
+    }
+
+    .image-context-menu-input-group input {
+        width: 100%;
+        padding: 4px;
+        border: 1px solid #dcdcde;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+
+    .image-context-menu-divider {
+        height: 1px;
+        background: #dcdcde;
+        margin: 4px 0;
+    }
+
+    /* Shape context menu */
+    .shape-context-menu {
+        position: fixed;
+        z-index: 10000;
+        background: white;
+        border: 1px solid #dcdcde;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px 0;
+        min-width: 180px;
+        display: none;
+    }
+
+    .shape-context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .shape-context-menu-item:hover {
+        background: #f0f0f1;
+    }
+
+    .shape-line.horizontal {
+        height: 2px;
+        min-width: 20px;
+    }
+
+    .shape-line.vertical {
+        width: 2px;
+        min-height: 20px;
+    }
+
+    .shape-frame {
+        position: absolute;
+        z-index: 50;
+        cursor: move;
+        user-select: none;
+    }
+
+    .shape-frame.solid {
+        border: 2px solid #000;
+    }
+
+    .shape-frame.dashed {
+        border: 2px dashed #000;
+    }
+
+    .shape-frame.dotted {
+        border: 2px dotted #000;
+    }
+
+    .shape-resize-handle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: #72aee6;
+        border: 1px solid #fff;
+        border-radius: 50%;
+        z-index: 101;
+        cursor: nwse-resize;
+    }
+
+    .shape-resize-handle-se {
+        bottom: -4px;
+        right: -4px;
+        cursor: nwse-resize;
+    }
+
+    .shape-resize-handle-sw {
+        bottom: -4px;
+        left: -4px;
+        cursor: nesw-resize;
+    }
+
+    .shape-resize-handle-ne {
+        top: -4px;
+        right: -4px;
+        cursor: nesw-resize;
+    }
+
+    .shape-resize-handle-nw {
+        top: -4px;
+        left: -4px;
+        cursor: nwse-resize;
+    }
+
+    /* Shape context menu */
+    .shape-context-menu {
+        position: absolute;
+        z-index: 10000;
+        background: white;
+        border: 1px solid #dcdcde;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px 0;
+        min-width: 180px;
+        display: none;
+    }
+
+    .shape-context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .shape-context-menu-item:hover {
+        background: #f0f0f1;
+    }
 </style>
 {% endblock %}
 
@@ -410,9 +779,6 @@
         <div>
             <button id="save-btn" class="btn btn-primary btn-sm me-2 px-4 py-2">
                 <i class="fas fa-save me-2"></i>Sauvegarder
-            </button>
-            <button id="preview-btn" class="btn btn-info btn-sm me-2 px-4 py-2">
-                <i class="fas fa-eye me-2"></i>Aperçu
             </button>
             <a href="{% url 'document_manager:template_list' %}" class="btn btn-outline-light btn-sm px-4 py-2">
                 <i class="fas fa-arrow-left me-2"></i>Retour
@@ -445,23 +811,6 @@
                         <option value="landscape" {% if template and template.page_orientation == 'landscape' %}selected{% endif %}>Paysage</option>
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Marges (cm)</label>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <input type="number" id="margin-top" class="form-control form-control-sm" placeholder="Haut" min="0" max="10" step="0.5" value="2.0">
-                        </div>
-                        <div class="col-6">
-                            <input type="number" id="margin-bottom" class="form-control form-control-sm" placeholder="Bas" min="0" max="10" step="0.5" value="2.5">
-                        </div>
-                        <div class="col-6">
-                            <input type="number" id="margin-left" class="form-control form-control-sm" placeholder="Gauche" min="0" max="10" step="0.5" value="1.5">
-                        </div>
-                        <div class="col-6">
-                            <input type="number" id="margin-right" class="form-control form-control-sm" placeholder="Droite" min="0" max="10" step="0.5" value="1.5">
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Section Insérer -->
@@ -481,6 +830,42 @@
                 </button>
                 <button class="insert-btn" data-insert="variable">
                     <i class="fas fa-tag"></i> Variable
+                </button>
+                <button class="insert-btn" data-insert="shape">
+                    <i class="fas fa-shapes"></i> Forme
+                </button>
+                <button class="insert-btn" data-insert="image">
+                    <i class="fas fa-image"></i> Image
+                </button>
+                <button class="insert-btn" data-insert="page-number">
+                    <i class="fas fa-hashtag"></i> Numéro de page
+                </button>
+            </div>
+
+            <!-- Section Numéro de page -->
+            <div class="sidebar-section page-number-controls">
+                <h5><i class="fas fa-hashtag"></i> Numéro de Page</h5>
+                <div class="page-number-format mb-3">
+                    <label class="form-label">Format</label>
+                    <select id="page-number-format" class="form-select form-select-sm">
+                        <option value="1,2,3...">1, 2, 3...</option>
+                        <option value="i,ii,iii...">i, ii, iii...</option>
+                        <option value="I,II,III...">I, II, III...</option>
+                    </select>
+                </div>
+                <div class="page-number-position mb-3">
+                    <label class="form-label">Position (cm)</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" id="page-number-top" class="form-control form-control-sm" placeholder="Haut" min="0" max="30" step="0.5" value="2.0">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" id="page-number-right" class="form-control form-control-sm" placeholder="Droite" min="0" max="30" step="0.5" value="2.0">
+                        </div>
+                    </div>
+                </div>
+                <button class="add-page-number-btn" id="add-page-number-btn">
+                    <i class="fas fa-plus"></i> Ajouter Numéro de Page
                 </button>
             </div>
 
@@ -527,6 +912,7 @@
                     <option value="Courier New">Courier</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Georgia">Georgia</option>
+                    <option value="Poppins">Poppins</option>
                 </select>
                 <select id="font-size" class="toolbar-select" title="Taille de police">
                     <option value="">Taille</option>
@@ -571,20 +957,117 @@
     </div>
 </div>
 
-<!-- Modal Aperçu -->
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+
+<!-- Modal Confirmation -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Aperçu du Document</h5>
+                <h5 class="modal-title" id="confirmModalTitle">Confirmation</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-0">
-                <iframe id="preview-frame" style="width:100%; height:70vh; border:none; background:white;"></iframe>
+            <div class="modal-body">
+                <p id="confirmModalMessage">Êtes-vous sûr de vouloir continuer ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmModalYes">Oui</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Message -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalTitle">Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalMessage">Message</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Context Menu for Page Numbers -->
+<div id="page-number-context-menu" class="page-number-context-menu">
+    <div class="page-number-context-menu-item" id="context-menu-font-family">
+        <i class="fas fa-font"></i>
+        <span>Police d'écriture:</span>
+        <select class="page-number-context-menu-input" id="context-font-family-select">
+            <option value="">Défaut</option>
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times</option>
+            <option value="Courier New">Courier</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Poppins">Poppins</option>
+        </select>
+    </div>
+    <div class="page-number-context-menu-item" id="context-menu-font-size">
+        <i class="fas fa-text-height"></i>
+        <span>Taille de police:</span>
+        <input type="number" class="page-number-context-menu-input" id="context-font-size-input" min="8" max="72" step="1" placeholder="Taille">
+    </div>
+    <div class="page-number-context-menu-item" id="context-menu-font-color">
+        <i class="fas fa-palette"></i>
+        <span>Couleur de texte:</span>
+        <input type="color" class="page-number-context-menu-input" id="context-font-color-input" value="#000000">
+    </div>
+    <div class="page-number-context-menu-divider"></div>
+    <div class="page-number-context-menu-item" id="context-menu-delete">
+        <i class="fas fa-trash"></i>
+        <span>Supprimer le numéro de page</span>
+    </div>
+</div>
+
+<!-- Context Menu for Shapes -->
+<div id="shape-context-menu" class="shape-context-menu">
+    <div class="shape-context-menu-item" id="shape-menu-line">
+        <i class="fas fa-minus"></i>
+        <span>Ligne</span>
+    </div>
+    <div class="shape-context-menu-item" id="shape-menu-frame">
+        <i class="fas fa-square"></i>
+        <span>Encadrement</span>
+    </div>
+    <div class="shape-context-menu-item" id="shape-menu-dashed-frame">
+        <i class="fas fa-border-style"></i>
+        <span>Encadrement pointillés</span>
+    </div>
+</div>
+
+<!-- Context Menu for Images -->
+<div id="image-context-menu" class="image-context-menu">
+    <div class="image-context-menu-input-group">
+        <label>Largeur (cm)</label>
+        <input type="number" class="image-context-menu-input" id="image-width-input" min="1" max="20" step="0.1" placeholder="Largeur">
+    </div>
+    <div class="image-context-menu-input-group">
+        <label>Hauteur (cm)</label>
+        <input type="number" class="image-context-menu-input" id="image-height-input" min="1" max="30" step="0.1" placeholder="Hauteur">
+    </div>
+    <div class="image-context-menu-divider"></div>
+    <div class="image-context-menu-item" id="image-context-menu-delete">
+        <i class="fas fa-trash"></i>
+        <span>Supprimer l'image</span>
+    </div>
+</div>
+
+<!-- Context Menu for Shapes -->
+<div id="shape-context-menu" class="shape-context-menu">
+    <div class="shape-context-menu-item" id="shape-context-menu-delete">
+        <i class="fas fa-trash"></i>
+        <span>Supprimer la forme</span>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -655,6 +1138,7 @@ class MultiPageEditorApp {
         this.templateId = '{{ template.id|default:"null" }}';
         this.currentPageIndex = 0;
         this.pages = [...templateData.pages]; // Copie des pages
+        this.contentAreas = []; // Store references to content areas for each page
         this.init();
     }
 
@@ -669,11 +1153,9 @@ class MultiPageEditorApp {
         this.setupFormatButtons();
         this.setupInsertButtons();
         this.setupSaveButton();
-        this.setupPreviewButton();
         this.setupAnalyzeButton();
         this.setupMarginControls();
         // Header and footer controls have been removed
-        this.loadSavedMargins(); // Charger les marges sauvegardées
         this.updateToolbarState(); // Initialiser l'état de la barre d'outils
     }
 
@@ -705,11 +1187,26 @@ class MultiPageEditorApp {
             const canvas = document.createElement('div');
             canvas.className = 'page-canvas';
             canvas.contentEditable = true;
-            canvas.innerHTML = page.content || '';  // Aucun contenu par défaut
             canvas.dataset.pageIndex = index;
 
+            // Create content area - full A4 page
+            const contentArea = document.createElement('div');
+            contentArea.className = 'page-content-area';
+            contentArea.innerHTML = page.content || '';  // Aucun contenu par défaut
+
+            // Append content area to canvas
+            canvas.appendChild(contentArea);
+
+            // Make sure page numbers are draggable after loading content
             pageContent.appendChild(canvas);
             pagesContent.appendChild(pageContent);
+
+            // Store reference to content area
+            this.contentAreas[index] = contentArea;
+
+            // Make all page numbers draggable after content is loaded
+            this.makeAllPageNumbersDraggable(contentArea);
+
         });
 
         // Add event listeners to page tabs
@@ -739,15 +1236,387 @@ class MultiPageEditorApp {
 
         // Setup format buttons for the current page
         this.setupCurrentPageFormatButtons();
+
+        // Update all page numbers after rendering pages
+        this.updateAllPageNumbers();
+
+        // Update all shapes after rendering pages
+        this.updateAllShapes();
+
+        // Update all images after rendering pages
+        this.updateAllImages();
+
+    }
+
+    makeAllPageNumbersDraggable(canvas) {
+        // Find all page number elements and make them draggable
+        const pageNumbers = canvas.querySelectorAll('.page-number[data-page-number="true"]');
+        pageNumbers.forEach(pn => {
+            // Check if the page number has the proper structure (content and delete button)
+            if (pn.children.length === 0) {
+                // If it doesn't have the proper structure, reconstruct it
+                const currentText = pn.textContent.trim();
+                // Get the original position attributes before clearing content
+                const originalTop = pn.getAttribute('data-top') || '2.0';
+                const originalRight = pn.getAttribute('data-right') || '2.0';
+                const originalFormat = pn.getAttribute('data-format') || '1,2,3...';
+
+                pn.innerHTML = ''; // Clear the content
+
+                const contentSpan = document.createElement('span');
+                contentSpan.className = 'page-number-content';
+                contentSpan.textContent = currentText;
+
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'page-number-delete';
+                deleteBtn.innerHTML = '&times;'; // Times symbol
+                deleteBtn.title = 'Supprimer le numéro de page';
+
+                // Add event listener to delete button
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent drag event
+                    showModalConfirm('Confirmation', 'Voulez-vous supprimer ce numéro de page ?', () => {
+                        pn.remove();
+                    });
+                };
+
+                // Add content and delete button to the page number element
+                pn.appendChild(contentSpan);
+                pn.appendChild(deleteBtn);
+
+                // Restore original attributes and position
+                pn.setAttribute('data-format', originalFormat);
+                pn.setAttribute('data-top', originalTop);
+                pn.setAttribute('data-right', originalRight);
+                pn.style.top = `${originalTop}cm`;
+                pn.style.right = `${originalRight}cm`;
+            } else {
+                // If it already has the structure, make sure the delete button has the event listener
+                const deleteBtn = pn.querySelector('.page-number-delete');
+                if (deleteBtn) {
+                    // Remove any existing onclick to avoid duplicates
+                    deleteBtn.onclick = null;
+                    // Add the event listener to delete button
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); // Prevent drag event
+                        showModalConfirm('Confirmation', 'Voulez-vous supprimer ce numéro de page ?', () => {
+                            pn.remove();
+                        });
+                    };
+                }
+
+                // Make sure position attributes are preserved
+                const originalTop = pn.getAttribute('data-top');
+                const originalRight = pn.getAttribute('data-right');
+                if (originalTop && originalRight) {
+                    pn.style.top = `${originalTop}cm`;
+                    pn.style.right = `${originalRight}cm`;
+                }
+            }
+
+            // Always ensure the element is draggable and has context menu
+            // If it doesn't have drag enabled yet, make it draggable
+            if (!pn.hasAttribute('data-drag-enabled')) {
+                this.makeDraggable(pn);
+                pn.setAttribute('data-drag-enabled', 'true');
+            }
+        });
+
+        // Also handle shapes (lines and frames)
+        this.makeAllShapesFunctional(canvas);
+    }
+
+    makeAllShapesFunctional(canvas) {
+        // Handle line shapes
+        const lines = canvas.querySelectorAll('.shape-line[data-shape-type="line"]');
+        lines.forEach(line => {
+            // Check if resize handles already exist
+            if (line.querySelectorAll('.shape-resize-handle').length === 0) {
+                this.makeShapeResizable(line);
+            }
+
+            // Make sure it's draggable
+            if (!line.hasAttribute('data-drag-enabled')) {
+                this.makeDraggable(line);
+                line.setAttribute('data-drag-enabled', 'true');
+            }
+
+            // Make sure the context menu is attached
+            if (!line.oncontextmenu) {
+                line.oncontextmenu = (e) => {
+                    e.preventDefault(); // Prevent default context menu
+                    showShapeContextMenu(line, e.clientX, e.clientY);
+                    return false;
+                };
+            }
+        });
+
+        // Handle frame shapes (solid, dashed, dotted)
+        const frames = canvas.querySelectorAll('.shape-frame[data-shape-type="frame"]');
+        frames.forEach(frame => {
+            // Check if resize handles already exist
+            if (frame.querySelectorAll('.shape-resize-handle').length === 0) {
+                this.makeShapeResizable(frame);
+            }
+
+            // Make sure it's draggable
+            if (!frame.hasAttribute('data-drag-enabled')) {
+                this.makeDraggable(frame);
+                frame.setAttribute('data-drag-enabled', 'true');
+            }
+
+            // Make sure the context menu is attached
+            if (!frame.oncontextmenu) {
+                frame.oncontextmenu = (e) => {
+                    e.preventDefault(); // Prevent default context menu
+                    showShapeContextMenu(frame, e.clientX, e.clientY);
+                    return false;
+                };
+            }
+        });
+    }
+
+
+    addImage() {
+        if (!this.canvas) return;
+
+        // Create a file input element to select an image
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    // Create an image element
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'image-element';
+                    imageContainer.contentEditable = false; // Make it non-editable
+                    imageContainer.setAttribute('data-element-type', 'image');
+
+                    // Set default size and position
+                    const defaultWidth = '5cm';
+                    const defaultHeight = '4cm';
+                    const defaultTop = '2cm';
+                    const defaultLeft = '2cm';
+
+                    imageContainer.style.width = defaultWidth;
+                    imageContainer.style.height = defaultHeight;
+                    imageContainer.style.top = defaultTop;
+                    imageContainer.style.left = defaultLeft;
+
+                    // Store initial position and dimension data as attributes
+                    imageContainer.setAttribute('data-width', defaultWidth.replace('cm', ''));
+                    imageContainer.setAttribute('data-height', defaultHeight.replace('cm', ''));
+                    imageContainer.setAttribute('data-top', defaultTop.replace('cm', ''));
+                    imageContainer.setAttribute('data-left', defaultLeft.replace('cm', ''));
+
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.alt = 'Image insérée';
+
+                    imageContainer.appendChild(img);
+
+                    // Add resize and drag functionality
+                    this.makeImageResizable(imageContainer);
+                    this.makeDraggable(imageContainer);
+
+                    // Add to the content area instead of the full canvas
+                    const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+                    if (currentPageContentArea) {
+                        currentPageContentArea.appendChild(imageContainer);
+                    } else {
+                        // Fallback to canvas if content area is not available
+                        this.canvas.appendChild(imageContainer);
+                    }
+
+                    // Focus on the canvas
+                    this.canvas.focus();
+
+                    // Save the current page content to ensure the image is preserved
+                    this.saveCurrentPageContent();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        fileInput.click();
+    }
+
+    makeImageResizable(element) {
+        // Create resize handles
+        const handleSE = document.createElement('div');
+        handleSE.className = 'shape-resize-handle shape-resize-handle-se';
+
+        const handleSW = document.createElement('div');
+        handleSW.className = 'shape-resize-handle shape-resize-handle-sw';
+
+        const handleNE = document.createElement('div');
+        handleNE.className = 'shape-resize-handle shape-resize-handle-ne';
+
+        const handleNW = document.createElement('div');
+        handleNW.className = 'shape-resize-handle shape-resize-handle-nw';
+
+        // Add handles to the element
+        element.appendChild(handleSE);
+        element.appendChild(handleSW);
+        element.appendChild(handleNE);
+        element.appendChild(handleNW);
+
+        // Add context menu for right-click
+        element.oncontextmenu = (e) => {
+            e.preventDefault(); // Prevent default context menu
+            showImageContextMenu(element, e.clientX, e.clientY);
+            return false;
+        };
+
+        // Add event listeners to handles
+        this.addImageResizeListeners(element, handleSE, 'se');
+        this.addImageResizeListeners(element, handleSW, 'sw');
+        this.addImageResizeListeners(element, handleNE, 'ne');
+        this.addImageResizeListeners(element, handleNW, 'nw');
+    }
+
+    addImageResizeListeners(element, handle, direction) {
+        let startX, startY, startWidth, startHeight, startTop, startLeft;
+
+        handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+            startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+            startTop = parseInt(document.defaultView.getComputedStyle(element).top, 10) || 0;
+            startLeft = parseInt(document.defaultView.getComputedStyle(element).left, 10) || 0;
+
+            document.documentElement.addEventListener('mousemove', doResize);
+            document.documentElement.addEventListener('mouseup', stopResize);
+        });
+
+        const doResize = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            switch(direction) {
+                case 'se':
+                    element.style.width = Math.max(50, startWidth + deltaX) + 'px';
+                    element.style.height = Math.max(50, startHeight + deltaY) + 'px';
+                    // Update data attributes (convert px to cm, 1cm = ~37.8px)
+                    element.setAttribute('data-width', (Math.max(50, startWidth + deltaX) / 37.8).toFixed(2));
+                    element.setAttribute('data-height', (Math.max(50, startHeight + deltaY) / 37.8).toFixed(2));
+                    break;
+                case 'sw':
+                    element.style.width = Math.max(50, startWidth - deltaX) + 'px';
+                    element.style.height = Math.max(50, startHeight + deltaY) + 'px';
+                    element.style.left = (startLeft + deltaX) + 'px';
+                    // Update data attributes (convert px to cm)
+                    element.setAttribute('data-width', (Math.max(50, startWidth - deltaX) / 37.8).toFixed(2));
+                    element.setAttribute('data-height', (Math.max(50, startHeight + deltaY) / 37.8).toFixed(2));
+                    element.setAttribute('data-left', ((startLeft + deltaX) / 37.8).toFixed(2));
+                    break;
+                case 'ne':
+                    element.style.width = Math.max(50, startWidth + deltaX) + 'px';
+                    element.style.height = Math.max(50, startHeight - deltaY) + 'px';
+                    element.style.top = (startTop + deltaY) + 'px';
+                    // Update data attributes (convert px to cm)
+                    element.setAttribute('data-width', (Math.max(50, startWidth + deltaX) / 37.8).toFixed(2));
+                    element.setAttribute('data-height', (Math.max(50, startHeight - deltaY) / 37.8).toFixed(2));
+                    element.setAttribute('data-top', ((startTop + deltaY) / 37.8).toFixed(2));
+                    break;
+                case 'nw':
+                    element.style.width = Math.max(50, startWidth - deltaX) + 'px';
+                    element.style.height = Math.max(50, startHeight - deltaY) + 'px';
+                    element.style.top = (startTop + deltaY) + 'px';
+                    element.style.left = (startLeft + deltaX) + 'px';
+                    // Update data attributes (convert px to cm)
+                    element.setAttribute('data-width', (Math.max(50, startWidth - deltaX) / 37.8).toFixed(2));
+                    element.setAttribute('data-height', (Math.max(50, startHeight - deltaY) / 37.8).toFixed(2));
+                    element.setAttribute('data-top', ((startTop + deltaY) / 37.8).toFixed(2));
+                    element.setAttribute('data-left', ((startLeft + deltaX) / 37.8).toFixed(2));
+                    break;
+            }
+        };
+
+        const stopResize = () => {
+            document.documentElement.removeEventListener('mousemove', doResize);
+            document.documentElement.removeEventListener('mouseup', stopResize);
+        };
+    }
+
+    updateAllImages() {
+        // Update images on all pages when pages change
+        for (let i = 0; i < this.pages.length; i++) {
+            this.updateAllImagesForPage(i);
+        }
+    }
+
+    updateAllImagesForPage(pageIndex) {
+        // Update images on a specific page to ensure they maintain their functionality
+        const pageContentArea = this.contentAreas[pageIndex];
+        if (pageContentArea) {
+            // Make sure all images maintain their functionality
+            this.makeAllImagesFunctional(pageContentArea);
+        }
+    }
+
+    makeAllImagesFunctional(canvas) {
+        // Handle image elements
+        const images = canvas.querySelectorAll('.image-element[data-element-type="image"]');
+        images.forEach(img => {
+            // Check if resize handles already exist
+            if (img.querySelectorAll('.shape-resize-handle').length === 0) {
+                this.makeImageResizable(img);
+            }
+
+            // Make sure it's draggable
+            if (!img.hasAttribute('data-drag-enabled')) {
+                this.makeDraggable(img);
+                img.setAttribute('data-drag-enabled', 'true');
+            }
+
+            // Restore position and dimension data from attributes if they exist
+            const widthAttr = img.getAttribute('data-width');
+            const heightAttr = img.getAttribute('data-height');
+            const topAttr = img.getAttribute('data-top');
+            const leftAttr = img.getAttribute('data-left');
+
+            if (widthAttr) img.style.width = `${widthAttr}cm`;
+            if (heightAttr) img.style.height = `${heightAttr}cm`;
+            if (topAttr) img.style.top = `${topAttr}cm`;
+            if (leftAttr) img.style.left = `${leftAttr}cm`;
+
+            // Make sure the context menu is attached
+            if (!img.oncontextmenu) {
+                img.oncontextmenu = (e) => {
+                    e.preventDefault(); // Prevent default context menu
+                    showImageContextMenu(img, e.clientX, e.clientY);
+                    return false;
+                };
+            }
+        });
     }
 
     setupCurrentPageFormatButtons() {
         // Remove old event listeners and add to current page
         const currentPageCanvas = document.querySelector(`#page-content-${this.currentPageIndex} .page-canvas`);
-        if (currentPageCanvas) {
-            this.canvas = currentPageCanvas;
+        const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+        if (currentPageCanvas && currentPageContentArea) {
+            this.canvas = currentPageContentArea; // Point to content area instead of full canvas
             this.setupFormatButtons();
             this.updateToolbarState();
+
+            // Make page numbers draggable on the current page
+            this.makeAllPageNumbersDraggable(currentPageContentArea);
+
+            // Make shapes functional on the current page
+            this.makeAllShapesFunctional(currentPageContentArea);
+
+            // Make images functional on the current page
+            this.makeAllImagesFunctional(currentPageContentArea);
+
         }
     }
 
@@ -767,6 +1636,21 @@ class MultiPageEditorApp {
 
             this.currentPageIndex = index;
             this.setupCurrentPageFormatButtons();
+
+            // Update page numbers for the current page
+            this.updatePageNumbersForPage(index);
+
+            // Update shapes for the current page
+            this.updateAllShapesForPage(index);
+
+            // Update images for the current page
+            this.updateAllImagesForPage(index);
+
+            // Make page numbers draggable on the current page
+            const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+            if (currentPageContentArea) {
+                this.makeAllPageNumbersDraggable(currentPageContentArea);
+            }
         }
     }
 
@@ -780,35 +1664,98 @@ class MultiPageEditorApp {
         this.pages.push(newPage);
         this.renderPages();
         this.switchPage(this.pages.length - 1); // Switch to the new page
+
+        // Update all page numbers after adding a new page
+        this.updateAllPageNumbers();
+
+        // Update all shapes after adding a new page
+        this.updateAllShapes();
+
+        // Update all images after adding a new page
+        this.updateAllImages();
+
     }
 
     deletePage(index) {
         if (this.pages.length <= 1) {
-            alert('❌ Impossible de supprimer la dernière page. Il doit y avoir au moins une page.');
+            showModalMessage('Erreur', 'Impossible de supprimer la dernière page. Il doit y avoir au moins une page.', 'error');
             return;
         }
 
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette page ?')) {
-            return;
-        }
+        showModalConfirm('Confirmation', 'Êtes-vous sûr de vouloir supprimer cette page ?', () => {
+            this.pages.splice(index, 1);
 
-        this.pages.splice(index, 1);
+            // Adjust current page index if needed
+            if (this.currentPageIndex >= this.pages.length) {
+                this.currentPageIndex = this.pages.length - 1;
+            }
 
-        // Adjust current page index if needed
-        if (this.currentPageIndex >= this.pages.length) {
-            this.currentPageIndex = this.pages.length - 1;
-        }
+            this.renderPages();
+            this.switchPage(this.currentPageIndex);
 
-        this.renderPages();
-        this.switchPage(this.currentPageIndex);
+            // Update all page numbers after deleting a page
+            this.updateAllPageNumbers();
+
+            // Update all shapes after deleting a page
+            this.updateAllShapes();
+
+            // Update all images after deleting a page
+            this.updateAllImages();
+
+        });
     }
 
     saveCurrentPageContent() {
         const currentPageCanvas = document.querySelector(`#page-content-${this.currentPageIndex} .page-canvas`);
-        if (currentPageCanvas) {
-            this.pages[this.currentPageIndex].content = currentPageCanvas.innerHTML;
+        const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+        if (currentPageCanvas && currentPageContentArea) {
+            // Before saving, we need to update page numbers with the correct page index
+            this.updatePageNumbersForPage(this.currentPageIndex);
+            // Save only the content area, not the margin overlays
+            this.pages[this.currentPageIndex].content = currentPageContentArea.innerHTML;
         }
     }
+
+    updatePageNumbersForPage(pageIndex) {
+        const pageContentArea = this.contentAreas[pageIndex];
+        if (pageContentArea) {
+            const pageNumbers = pageContentArea.querySelectorAll('.page-number[data-page-number="true"]');
+            pageNumbers.forEach(pn => {
+                const format = pn.getAttribute('data-format');
+                const contentSpan = pn.querySelector('.page-number-content');
+                if (contentSpan) {
+                    contentSpan.textContent = this.getPageNumberText(pageIndex + 1, format);
+                } else {
+                    // Fallback for old format without content span
+                    pn.textContent = this.getPageNumberText(pageIndex + 1, format);
+                }
+            });
+        }
+    }
+
+    updateAllPageNumbers() {
+        // Update page numbers on all pages when pages change
+        for (let i = 0; i < this.pages.length; i++) {
+            this.updatePageNumbersForPage(i);
+        }
+    }
+
+    updateAllShapesForPage(pageIndex) {
+        // Update shapes on a specific page to ensure they maintain their functionality
+        const pageContentArea = this.contentAreas[pageIndex];
+        if (pageContentArea) {
+            // Make sure all shapes maintain their functionality
+            this.makeAllShapesFunctional(pageContentArea);
+        }
+    }
+
+    updateAllShapes() {
+        // Update shapes on all pages when pages change
+        for (let i = 0; i < this.pages.length; i++) {
+            this.updateAllShapesForPage(i);
+        }
+    }
+
 
     setupEventListeners() {
         // Save page content when user types or makes changes
@@ -931,55 +1878,19 @@ class MultiPageEditorApp {
     }
 
     setupMarginControls() {
-        // Gestion des marges
-        ['top', 'bottom', 'left', 'right'].forEach(side => {
-            const input = document.getElementById(`margin-${side}`);
-            if (input) {
-                // Remove old listener and add new one
-                input.replaceWith(input.cloneNode(true));
-                document.getElementById(`margin-${side}`).addEventListener('change', () => this.updateMargins());
-            }
-        });
+        // No margin controls - all elements positioned as they appear in the editor
     }
 
     loadSavedMargins() {
-        // Si un template existe (mode édition), charger les marges sauvegardées
-        if (this.templateId && templateData && templateData.config && templateData.config.margins) {
-            const margins = templateData.config.margins;
-            document.getElementById('margin-top').value = margins.top || '2';
-            document.getElementById('margin-bottom').value = margins.bottom || '2.5';
-            document.getElementById('margin-left').value = margins.left || '1.5';
-            document.getElementById('margin-right').value = margins.right || '1.5';
-            this.updateMargins(); // Appliquer les marges chargées
-        } else {
-            // Définir les valeurs par défaut
-            document.getElementById('margin-top').value = '2';
-            document.getElementById('margin-bottom').value = '2.5';
-            document.getElementById('margin-left').value = '1.5';
-            document.getElementById('margin-right').value = '1.5';
-            this.updateMargins(); // Appliquer les marges par défaut
-        }
+        // No margin loading - all elements positioned as they appear in the editor
     }
 
     updateMargins() {
-        // Récupérer les valeurs des marges
-        const marginTop = document.getElementById('margin-top').value || '2';
-        const marginBottom = document.getElementById('margin-bottom').value || '2.5';
-        const marginLeft = document.getElementById('margin-left').value || '1.5';
-        const marginRight = document.getElementById('margin-right').value || '1.5';
+        // No margin updates - all elements positioned as they appear in the editor
+    }
 
-        // Appliquer les marges au canvas
-        if (this.canvas) {
-            // Appliquer les marges comme padding pour créer une zone de contenu intérieure
-            this.canvas.style.padding = `${marginTop}cm ${marginRight}cm ${marginBottom}cm ${marginLeft}cm`;
-
-            // Maintenir la taille fixe de la page A4 (21cm x 29.7cm) pour correspondre aux standards
-            this.canvas.style.width = '21cm';
-            this.canvas.style.height = '29.7cm';
-
-            // Réinitialiser la marge externe pour centrer le canvas
-            this.canvas.style.margin = '25px auto';
-        }
+    updateCurrentPageContentArea() {
+        // No content area updates - all elements positioned as they appear in the editor
     }
 
     updateToolbarState() {
@@ -1097,8 +2008,16 @@ class MultiPageEditorApp {
         });
 
         document.querySelectorAll('.insert-btn[data-insert]').forEach(btn => {
-            btn.addEventListener('click', () => this.insertBlock(btn.dataset.insert));
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default behavior
+                e.stopPropagation(); // Stop event from propagating
+                this.insertBlock(btn.dataset.insert);
+            });
         });
+
+        // Setup page number button
+        document.getElementById('add-page-number-btn').replaceWith(document.getElementById('add-page-number-btn').cloneNode(true)); // Remove old listener
+        document.getElementById('add-page-number-btn').addEventListener('click', () => this.addPageNumber());
     }
 
     insertBlock(type) {
@@ -1179,9 +2098,365 @@ class MultiPageEditorApp {
                     if (this.canvas) this.canvas.focus();
                 }, 0);
                 break;
+
+            case 'page-number':
+                this.addPageNumber();
+                break;
+
+            case 'shape':
+                // Show the shape context menu at the button position
+                const shapeBtn = document.querySelector('.insert-btn[data-insert="shape"]');
+                if (shapeBtn) {
+                    const rect = shapeBtn.getBoundingClientRect();
+                    // Position the context menu below the button
+                    showShapeContextMenu(shapeBtn, rect.left, rect.bottom);
+                }
+                return; // Don't focus on canvas for shape context menu
+
+            case 'image':
+                this.addImage();
+                break;
         }
 
         if (this.canvas) this.canvas.focus();
+    }
+
+    addPageNumber() {
+        if (!this.canvas) return;
+
+        // Get the selected format and position
+        const format = document.getElementById('page-number-format').value;
+        const top = document.getElementById('page-number-top').value || '2.0';
+        const right = document.getElementById('page-number-right').value || '2.0';
+
+        // Create a page number element
+        const pageNumber = document.createElement('div');
+        pageNumber.className = 'page-number';
+        pageNumber.contentEditable = false; // Make it non-editable
+        pageNumber.setAttribute('data-page-number', 'true');
+        pageNumber.setAttribute('data-format', format);
+        pageNumber.setAttribute('data-top', top);
+        pageNumber.setAttribute('data-right', right);
+
+        // Create content container and delete button
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'page-number-content';
+        contentSpan.textContent = this.getPageNumberText(1, format);
+
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'page-number-delete';
+        deleteBtn.innerHTML = '&times;'; // Times symbol
+        deleteBtn.title = 'Supprimer le numéro de page';
+
+        // Add event listener to delete button
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation(); // Prevent drag event
+            showModalConfirm('Confirmation', 'Voulez-vous supprimer ce numéro de page ?', () => {
+                pageNumber.remove();
+            });
+        };
+
+        // Add content and delete button to the page number element
+        pageNumber.appendChild(contentSpan);
+        pageNumber.appendChild(deleteBtn);
+
+        // Position the page number
+        pageNumber.style.top = `${top}cm`;
+        pageNumber.style.right = `${right}cm`;
+
+        // Add drag functionality
+        this.makeDraggable(pageNumber);
+
+        // Add to the content area instead of the full canvas
+        const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+        if (currentPageContentArea) {
+            currentPageContentArea.appendChild(pageNumber);
+        } else {
+            // Fallback to canvas if content area is not available
+            this.canvas.appendChild(pageNumber);
+        }
+
+        // Focus on the canvas
+        this.canvas.focus();
+
+        // Save the current page content to ensure the page number is preserved
+        this.saveCurrentPageContent();
+    }
+
+    addLine() {
+        if (!this.canvas) return;
+
+        // Create a line element
+        const line = document.createElement('div');
+        line.className = 'shape-line horizontal';
+        line.contentEditable = false; // Make it non-editable
+        line.setAttribute('data-shape-type', 'line');
+        line.setAttribute('data-orientation', 'horizontal');
+
+        // Set default size and position
+        line.style.width = '5cm';
+        line.style.height = '2px';
+        line.style.top = '2cm';
+        line.style.left = '2cm';
+
+        // Add resize and drag functionality
+        this.makeShapeResizable(line);
+        this.makeDraggable(line);
+
+        // Add to the content area instead of the full canvas
+        const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+        if (currentPageContentArea) {
+            currentPageContentArea.appendChild(line);
+        } else {
+            // Fallback to canvas if content area is not available
+            this.canvas.appendChild(line);
+        }
+
+        // Focus on the canvas
+        this.canvas.focus();
+
+        // Save the current page content to ensure the line is preserved
+        this.saveCurrentPageContent();
+    }
+
+    addFrame(styleType) {
+        if (!this.canvas) return;
+
+        // Create a frame element
+        const frame = document.createElement('div');
+        frame.className = `shape-frame ${styleType}`;
+        frame.contentEditable = false; // Make it non-editable
+        frame.setAttribute('data-shape-type', 'frame');
+        frame.setAttribute('data-frame-style', styleType);
+
+        // Set default size and position
+        frame.style.width = '4cm';
+        frame.style.height = '3cm';
+        frame.style.top = '3cm';
+        frame.style.left = '3cm';
+
+        // Add resize and drag functionality
+        this.makeShapeResizable(frame);
+        this.makeDraggable(frame);
+
+        // Add to the content area instead of the full canvas
+        const currentPageContentArea = this.contentAreas[this.currentPageIndex];
+        if (currentPageContentArea) {
+            currentPageContentArea.appendChild(frame);
+        } else {
+            // Fallback to canvas if content area is not available
+            this.canvas.appendChild(frame);
+        }
+
+        // Focus on the canvas
+        this.canvas.focus();
+
+        // Save the current page content to ensure the frame is preserved
+        this.saveCurrentPageContent();
+    }
+
+    makeShapeResizable(element) {
+        // Create resize handles
+        const handleSE = document.createElement('div');
+        handleSE.className = 'shape-resize-handle shape-resize-handle-se';
+
+        const handleSW = document.createElement('div');
+        handleSW.className = 'shape-resize-handle shape-resize-handle-sw';
+
+        const handleNE = document.createElement('div');
+        handleNE.className = 'shape-resize-handle shape-resize-handle-ne';
+
+        const handleNW = document.createElement('div');
+        handleNW.className = 'shape-resize-handle shape-resize-handle-nw';
+
+        // Add handles to the element
+        element.appendChild(handleSE);
+        element.appendChild(handleSW);
+        element.appendChild(handleNE);
+        element.appendChild(handleNW);
+
+        // Add event listeners to handles
+        this.addResizeListeners(element, handleSE, 'se');
+        this.addResizeListeners(element, handleSW, 'sw');
+        this.addResizeListeners(element, handleNE, 'ne');
+        this.addResizeListeners(element, handleNW, 'nw');
+    }
+
+    addResizeListeners(element, handle, direction) {
+        let startX, startY, startWidth, startHeight, startTop, startLeft;
+
+        handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+            startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+            startTop = parseInt(document.defaultView.getComputedStyle(element).top, 10) || 0;
+            startLeft = parseInt(document.defaultView.getComputedStyle(element).left, 10) || 0;
+
+            document.documentElement.addEventListener('mousemove', doResize);
+            document.documentElement.addEventListener('mouseup', stopResize);
+        });
+
+        const doResize = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            switch(direction) {
+                case 'se':
+                    element.style.width = Math.max(20, startWidth + deltaX) + 'px';
+                    element.style.height = Math.max(20, startHeight + deltaY) + 'px';
+                    break;
+                case 'sw':
+                    element.style.width = Math.max(20, startWidth - deltaX) + 'px';
+                    element.style.height = Math.max(20, startHeight + deltaY) + 'px';
+                    element.style.left = (startLeft + deltaX) + 'px';
+                    break;
+                case 'ne':
+                    element.style.width = Math.max(20, startWidth + deltaX) + 'px';
+                    element.style.height = Math.max(20, startHeight - deltaY) + 'px';
+                    element.style.top = (startTop + deltaY) + 'px';
+                    break;
+                case 'nw':
+                    element.style.width = Math.max(20, startWidth - deltaX) + 'px';
+                    element.style.height = Math.max(20, startHeight - deltaY) + 'px';
+                    element.style.top = (startTop + deltaY) + 'px';
+                    element.style.left = (startLeft + deltaX) + 'px';
+                    break;
+            }
+        };
+
+        const stopResize = () => {
+            document.documentElement.removeEventListener('mousemove', doResize);
+            document.documentElement.removeEventListener('mouseup', stopResize);
+        };
+    }
+
+    getPageNumberText(pageIndex, format) {
+        switch(format) {
+            case 'i,ii,iii...':
+                // Convert page number to lowercase Roman numerals
+                return this.toRomanNumerals(pageIndex).toLowerCase();
+            case 'I,II,III...':
+                // Convert page number to uppercase Roman numerals
+                return this.toRomanNumerals(pageIndex);
+            case '1,2,3...':
+            default:
+                // Use regular numbers
+                return pageIndex.toString();
+        }
+    }
+
+    toRomanNumerals(num) {
+        if (num <= 0 || num > 3999) return num.toString();
+
+        const lookup = [
+            { value: 1000, symbol: 'M' },
+            { value: 900, symbol: 'CM' },
+            { value: 500, symbol: 'D' },
+            { value: 400, symbol: 'CD' },
+            { value: 100, symbol: 'C' },
+            { value: 90, symbol: 'XC' },
+            { value: 50, symbol: 'L' },
+            { value: 40, symbol: 'XL' },
+            { value: 10, symbol: 'X' },
+            { value: 9, symbol: 'IX' },
+            { value: 5, symbol: 'V' },
+            { value: 4, symbol: 'IV' },
+            { value: 1, symbol: 'I' }
+        ];
+
+        let result = '';
+        for (const item of lookup) {
+            while (num >= item.value) {
+                result += item.symbol;
+                num -= item.value;
+            }
+        }
+        return result;
+    }
+
+    makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        element.onmousedown = dragMouseDown;
+
+        // Add context menu for right-click
+        element.oncontextmenu = (e) => {
+            e.preventDefault(); // Prevent default context menu
+            // Check the element type and show appropriate context menu
+            if (element.classList.contains('page-number')) {
+                showPageNumberContextMenu(element, e.clientX, e.clientY);
+            } else if (element.classList.contains('image-element')) {
+                showImageContextMenu(element, e.clientX, e.clientY);
+            } else if (element.classList.contains('shape-line') || element.classList.contains('shape-frame')) {
+                showShapeContextMenu(element, e.clientX, e.clientY);
+            } else {
+                // For other elements, you could add a generic context menu or do nothing
+                // For now, we'll just prevent the default context menu
+            }
+            return false;
+        };
+
+        function dragMouseDown(e) {
+            if (e.button === 2) return; // Right mouse button, handled by context menu
+            e = e || window.event;
+            e.preventDefault();
+            // Get the mouse cursor position at startup
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // Call a function whenever the cursor moves
+            document.onmousemove = elementDrag;
+            // Add dragging class for visual feedback
+            element.classList.add('dragging');
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // Calculate the new cursor position
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+
+            // Set the element's new position (constrain to canvas)
+            const newTop = element.offsetTop - pos2;
+            const newLeft = element.offsetLeft - pos1;
+
+            // Constrain to canvas boundaries
+            const canvasRect = element.parentElement.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+
+            // Calculate new positions in pixels
+            const newTopPx = Math.max(0, Math.min(newTop, canvasRect.height - elementRect.height));
+            const newLeftPx = Math.max(0, Math.min(newLeft, canvasRect.width - elementRect.width));
+
+            // Convert pixels to cm for CSS (1cm = ~37.8px)
+            const cmPerPx = 1 / 37.8;
+            const newTopCm = (newTopPx * cmPerPx).toFixed(2);
+            const newLeftCm = (newLeftPx * cmPerPx).toFixed(2);
+
+            element.style.top = `${newTopCm}cm`;
+            element.style.left = `${newLeftCm}cm`;
+
+            // Update data attributes
+            element.setAttribute('data-top', newTopCm);
+            element.setAttribute('data-left', newLeftCm);
+
+            // Remove right positioning when dragging horizontally
+            element.style.right = '';
+        }
+
+        function closeDragElement() {
+            // Stop moving when mouse button is released
+            document.onmouseup = null;
+            document.onmousemove = null;
+            // Remove dragging class
+            element.classList.remove('dragging');
+        }
     }
 
     setupSaveButton() {
@@ -1190,35 +2465,31 @@ class MultiPageEditorApp {
     }
 
     async save() {
-        // Save current page content before saving
-        this.saveCurrentPageContent();
+        // Prevent multiple clicks during save
+        const saveBtn = document.getElementById('save-btn');
+        if (saveBtn.disabled) return; // Already saving
 
-        const name = document.getElementById('template-name').value.trim();
-        const pageSize = document.getElementById('page-size').value;
-        const pageOrientation = document.getElementById('page-orientation').value;
-        // Récupérer les valeurs des marges
-        const marginTop = document.getElementById('margin-top').value || '2';
-        const marginBottom = document.getElementById('margin-bottom').value || '2.5';
-        const marginLeft = document.getElementById('margin-left').value || '1.5';
-        const marginRight = document.getElementById('margin-right').value || '1.5';
-
-        // Créer un objet de configuration avec les marges
-        const config = {
-            margins: {
-                top: parseFloat(marginTop),
-                bottom: parseFloat(marginBottom),
-                left: parseFloat(marginLeft),
-                right: parseFloat(marginRight)
-            },
-            // header_footer: this.getHeaderFooterConfig()  // Header and footer functionality has been removed
-        };
-
-        if (!name) {
-            alert('❌ Veuillez entrer un nom pour le template');
-            return;
-        }
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...';
 
         try {
+            // Save current page content before saving
+            this.saveCurrentPageContent();
+
+            const name = document.getElementById('template-name').value.trim();
+            const pageSize = document.getElementById('page-size').value;
+            const pageOrientation = document.getElementById('page-orientation').value;
+
+            // Créer un objet de configuration sans marges
+            const config = {
+                // header_footer: this.getHeaderFooterConfig()  // Header and footer functionality has been removed
+            };
+
+            if (!name) {
+                showModalMessage('Erreur', 'Veuillez entrer un nom pour le template', 'error');
+                return;
+            }
+
             // Créer un objet FormData pour envoyer les données
             const formData = new FormData();
 
@@ -1245,148 +2516,20 @@ class MultiPageEditorApp {
             const result = await response.json();
             if (result.success) {
                 this.templateId = result.id;
-                alert('✅ Template sauvegardé avec succès!');
+                showModalMessage('Succès', 'Template sauvegardé avec succès!', 'success');
                 this.analyzeVariables();
             } else {
-                alert('❌ Erreur: ' + (result.error || 'Erreur inconnue'));
+                showModalMessage('Erreur', 'Erreur: ' + (result.error || 'Erreur inconnue'), 'error');
             }
         } catch (e) {
-            alert('❌ Erreur de sauvegarde: ' + e.message);
+            showModalMessage('Erreur', 'Erreur de sauvegarde: ' + e.message, 'error');
+        } finally {
+            // Re-enable the save button
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Sauvegarder';
         }
     }
 
-    setupPreviewButton() {
-        document.getElementById('preview-btn').replaceWith(document.getElementById('preview-btn').cloneNode(true)); // Remove old listener
-        document.getElementById('preview-btn').addEventListener('click', () => this.showPreview());
-    }
-
-    async showPreview() {
-        // Save current page content before preview
-        this.saveCurrentPageContent();
-
-        // Récupérer les valeurs des marges
-        const marginTop = document.getElementById('margin-top').value || '2';
-        const marginBottom = document.getElementById('margin-bottom').value || '2.5';
-        const marginLeft = document.getElementById('margin-left').value || '1.5';
-        const marginRight = document.getElementById('margin-right').value || '1.5';
-
-        try {
-            const response = await fetch('{% url "document_manager:preview_template" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    pages: this.pages,  // Send all pages instead of single html_content
-                    // header_footer: this.getHeaderFooterConfig()  // Header and footer functionality has been removed
-                })
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                // Pour l'instant, on affiche le HTML tel quel, mais avec un style CSS pour les numéros de page
-                // La numérotation réelle sera gérée côté serveur ou avec une logique plus complexe
-                const renderedHtml = result.rendered_html;
-
-                const frame = document.getElementById('preview-frame');
-                const doc = frame.contentDocument;
-                doc.open();
-                doc.write(`<!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            body {
-                                padding: 20px;
-                                font-family: Arial, sans-serif;
-                                margin: 0;
-                                background: white;
-                                min-height: 100vh;
-                            }
-                            .jinja-block {
-                                background: #fff3cd;
-                                border: 2px dashed #ffc107;
-                                padding: 2px 6px;
-                                margin: 0 2px;
-                                display: inline-block;
-                                vertical-align: middle;
-                            }
-                            /* Ensure page breaks are visible in the preview */
-                            [style*="page-break-before: always"] {
-                                margin-top: 40px;
-                                padding-top: 20px;
-                                border-top: 2px dashed #ccc;
-                            }
-                            /* Style for page containers */
-                            .page-container {
-                                background: white;
-                                margin: 0 auto 40px auto;
-                                padding: 40px;
-                                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                                min-height: 800px;
-                                max-width: 800px;
-                            }
-                            /* Header and Footer Styles */
-                            .header {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                padding: 10px 20px;
-                                border-bottom: 1px solid #ccc;
-                                margin-bottom: 20px;
-                            }
-                            .footer {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                padding: 10px 20px;
-                                border-top: 1px solid #ccc;
-                                margin-top: 20px;
-                                font-size: 12px;
-                            }
-                            .header-left { text-align: left; }
-                            .header-center { text-align: center; }
-                            .header-right { text-align: right; }
-                            .footer-left { text-align: left; }
-                            .footer-center { text-align: center; }
-                            .footer-right { text-align: right; }
-
-                            /* Règles pour l'impression avec les marges définies */
-                            @media print {
-                                body {
-                                    padding: 0;
-                                    margin: 0;
-                                    background: white;
-                                }
-                                .page-container {
-                                    padding: ${marginTop}cm ${marginRight}cm ${marginBottom}cm ${marginLeft}cm !important;
-                                    margin: 0 !important;
-                                    box-shadow: none !important;
-                                    max-width: 100% !important;
-                                    width: 21cm !important;
-                                    min-height: 29.7cm !important;
-                                }
-                                [data-page-number="true"] {
-                                    background: #e2e8f0 !important;
-                                    padding: 2px 8px !important;
-                                    border-radius: 4px !important;
-                                    font-weight: bold !important;
-                                }
-                            }
-                        </style>
-                    </head>
-                    <body>${renderedHtml}</body>
-                    </html>`);
-                doc.close();
-                new bootstrap.Modal(document.getElementById('previewModal')).show();
-            } else {
-                alert('❌ Erreur aperçu: ' + (result.error || 'Erreur inconnue'));
-            }
-        } catch (e) {
-            alert('❌ Erreur: ' + e.message);
-        }
-    }
 
     setupAnalyzeButton() {
         document.getElementById('analyze-btn').replaceWith(document.getElementById('analyze-btn').cloneNode(true)); // Remove old listener
@@ -1428,13 +2571,350 @@ class MultiPageEditorApp {
             }
         } catch (e) {
             console.error('Erreur analyse:', e);
-            alert('❌ Erreur lors de l\'analyse: ' + e.message);
+            showModalMessage('Erreur', 'Erreur lors de l\'analyse: ' + e.message, 'error');
         }
     }
 }
 
+// Context menu for page numbers
+let currentPageNumberElement = null;
+
+function showPageNumberContextMenu(pageNumberElement, x, y) {
+    const contextMenu = document.getElementById('page-number-context-menu');
+    const fontFamilySelect = document.getElementById('context-font-family-select');
+    const fontSizeInput = document.getElementById('context-font-size-input');
+    const fontColorInput = document.getElementById('context-font-color-input');
+
+    // Get current styles from the page number element
+    const computedStyle = window.getComputedStyle(pageNumberElement.querySelector('.page-number-content'));
+
+    // Set current values in the context menu
+    fontFamilySelect.value = computedStyle.fontFamily.replace(/['"]/g, '').split(',')[0];
+    fontSizeInput.value = parseInt(computedStyle.fontSize);
+    fontColorInput.value = computedStyle.color;
+
+    // Position the context menu
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+    contextMenu.style.display = 'block';
+
+    // Store reference to the page number element being modified
+    currentPageNumberElement = pageNumberElement;
+
+    // Prevent the default context menu
+    return false;
+}
+
+function hidePageNumberContextMenu() {
+    const contextMenu = document.getElementById('page-number-context-menu');
+    contextMenu.style.display = 'none';
+}
+
+// Event listeners for context menu
 document.addEventListener('DOMContentLoaded', () => {
-    new MultiPageEditorApp();
+    // Hide context menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#page-number-context-menu')) {
+            hidePageNumberContextMenu();
+        }
+    });
+
+    // Handle context menu font family change
+    document.getElementById('context-font-family-select').addEventListener('change', (e) => {
+        if (currentPageNumberElement) {
+            const contentSpan = currentPageNumberElement.querySelector('.page-number-content');
+            if (contentSpan) {
+                contentSpan.style.fontFamily = e.target.value || 'inherit';
+            }
+        }
+        hidePageNumberContextMenu();
+    });
+
+    // Handle context menu font size change
+    document.getElementById('context-font-size-input').addEventListener('change', (e) => {
+        if (currentPageNumberElement) {
+            const contentSpan = currentPageNumberElement.querySelector('.page-number-content');
+            if (contentSpan) {
+                contentSpan.style.fontSize = e.target.value ? e.target.value + 'px' : 'inherit';
+            }
+        }
+        hidePageNumberContextMenu();
+    });
+
+    // Handle context menu font color change
+    document.getElementById('context-font-color-input').addEventListener('change', (e) => {
+        if (currentPageNumberElement) {
+            const contentSpan = currentPageNumberElement.querySelector('.page-number-content');
+            if (contentSpan) {
+                contentSpan.style.color = e.target.value;
+            }
+        }
+        hidePageNumberContextMenu();
+    });
+
+    // Handle context menu delete
+    document.getElementById('context-menu-delete').addEventListener('click', () => {
+        if (currentPageNumberElement) {
+            showModalConfirm('Confirmation', 'Voulez-vous supprimer ce numéro de page ?', () => {
+                currentPageNumberElement.remove();
+            });
+        }
+        hidePageNumberContextMenu();
+    });
+});
+
+// Shape context menu functions
+let currentShapeButton = null;
+let currentShapeElement = null;
+
+function showShapeContextMenu(shapeElement, x, y) {
+    const shapeMenu = document.getElementById('shape-context-menu');
+    // Convert viewport coordinates to page coordinates
+    shapeMenu.style.left = (x + window.scrollX) + 'px';
+    shapeMenu.style.top = (y + window.scrollY) + 'px';
+    shapeMenu.style.display = 'block';
+    currentShapeElement = shapeElement; // Store reference to the shape element
+}
+
+function hideShapeContextMenu() {
+    const shapeMenu = document.getElementById('shape-context-menu');
+    shapeMenu.style.display = 'none';
+}
+
+
+// Image context menu functions
+let currentImageElement = null;
+
+function showImageContextMenu(imageElement, x, y) {
+    const imageMenu = document.getElementById('image-context-menu');
+    imageMenu.style.left = (x + window.scrollX) + 'px';
+    imageMenu.style.top = (y + window.scrollY) + 'px';
+    imageMenu.style.display = 'block';
+    currentImageElement = imageElement; // Store reference to the image element
+
+    // Populate the inputs with current dimensions
+    if (imageElement) {
+        // Get current dimensions in pixels and convert to cm (1cm = ~37.8px)
+        const currentWidthPx = parseFloat(window.getComputedStyle(imageElement).width);
+        const currentHeightPx = parseFloat(window.getComputedStyle(imageElement).height);
+        const currentWidthCm = (currentWidthPx / 37.8).toFixed(1);
+        const currentHeightCm = (currentHeightPx / 37.8).toFixed(1);
+
+        document.getElementById('image-width-input').value = currentWidthCm;
+        document.getElementById('image-height-input').value = currentHeightCm;
+    }
+}
+
+function hideImageContextMenu() {
+    const imageMenu = document.getElementById('image-context-menu');
+    imageMenu.style.display = 'none';
+}
+
+// Event listeners for shape context menu
+document.addEventListener('DOMContentLoaded', () => {
+    // Hide shape context menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#shape-context-menu')) {
+            hideShapeContextMenu();
+        }
+    });
+
+    // Handle shape menu line
+    document.getElementById('shape-menu-line').addEventListener('click', () => {
+        if (currentShapeButton) {
+            // Get the editor app instance and call addLine
+            const editorContainer = document.querySelector('.editor-container');
+            if (editorContainer && editorContainer._appInstance) {
+                editorContainer._appInstance.addLine();
+            }
+        }
+        hideShapeContextMenu();
+    });
+
+    // Handle shape menu frame
+    document.getElementById('shape-menu-frame').addEventListener('click', () => {
+        if (currentShapeButton) {
+            // Get the editor app instance and call addFrame
+            const editorContainer = document.querySelector('.editor-container');
+            if (editorContainer && editorContainer._appInstance) {
+                editorContainer._appInstance.addFrame('solid');
+            }
+        }
+        hideShapeContextMenu();
+    });
+
+    // Handle shape menu dashed frame
+    document.getElementById('shape-menu-dashed-frame').addEventListener('click', () => {
+        if (currentShapeButton) {
+            // Get the editor app instance and call addFrame
+            const editorContainer = document.querySelector('.editor-container');
+            if (editorContainer && editorContainer._appInstance) {
+                editorContainer._appInstance.addFrame('dashed');
+            }
+        }
+        hideShapeContextMenu();
+    });
+
+    // Hide image context menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#image-context-menu')) {
+            hideImageContextMenu();
+        }
+    });
+
+    // Handle image dimension changes
+    document.getElementById('image-width-input').addEventListener('change', () => {
+        if (currentImageElement) {
+            const widthCm = parseFloat(document.getElementById('image-width-input').value);
+            if (!isNaN(widthCm) && widthCm > 0) {
+                currentImageElement.style.width = `${widthCm}cm`;
+                // Update the data attribute
+                currentImageElement.setAttribute('data-width', widthCm);
+                // Save the current page content to preserve the change
+                const editorContainer = document.querySelector('.editor-container');
+                if (editorContainer && editorContainer._appInstance) {
+                    editorContainer._appInstance.saveCurrentPageContent();
+                }
+            }
+        }
+    });
+
+    document.getElementById('image-height-input').addEventListener('change', () => {
+        if (currentImageElement) {
+            const heightCm = parseFloat(document.getElementById('image-height-input').value);
+            if (!isNaN(heightCm) && heightCm > 0) {
+                currentImageElement.style.height = `${heightCm}cm`;
+                // Update the data attribute
+                currentImageElement.setAttribute('data-height', heightCm);
+                // Save the current page content to preserve the change
+                const editorContainer = document.querySelector('.editor-container');
+                if (editorContainer && editorContainer._appInstance) {
+                    editorContainer._appInstance.saveCurrentPageContent();
+                }
+            }
+        }
+    });
+
+    // Handle image context menu delete
+    document.getElementById('image-context-menu-delete').addEventListener('click', () => {
+        if (currentImageElement) {
+            showModalConfirm('Confirmation', 'Voulez-vous supprimer cette image ?', () => {
+                currentImageElement.remove();
+                // Save the current page content to preserve the change
+                const editorContainer = document.querySelector('.editor-container');
+                if (editorContainer && editorContainer._appInstance) {
+                    editorContainer._appInstance.saveCurrentPageContent();
+                }
+            });
+        }
+        hideImageContextMenu();
+    });
+
+    // Hide shape context menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#shape-context-menu')) {
+            hideShapeContextMenu();
+        }
+    });
+
+    // Handle shape context menu delete
+    document.getElementById('shape-context-menu-delete').addEventListener('click', () => {
+        if (currentShapeElement) {
+            showModalConfirm('Confirmation', 'Voulez-vous supprimer cette forme ?', () => {
+                currentShapeElement.remove();
+                // Save the current page content to preserve the change
+                const editorContainer = document.querySelector('.editor-container');
+                if (editorContainer && editorContainer._appInstance) {
+                    editorContainer._appInstance.saveCurrentPageContent();
+                }
+            });
+        }
+        hideShapeContextMenu();
+    });
+
+});
+
+// Modal helper functions
+function showModalMessage(title, message, type = 'info') {
+    // Wait for the DOM to be ready before accessing elements
+    setTimeout(() => {
+        const titleEl = document.getElementById('messageModalTitle');
+        const messageEl = document.getElementById('messageModalMessage');
+        const okBtn = document.querySelector('#messageModal .btn-primary');
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+
+        // Change button color based on type
+        if (okBtn) {
+            if (type === 'error') {
+                okBtn.className = 'btn btn-danger';
+                okBtn.textContent = 'OK';
+            } else if (type === 'success') {
+                okBtn.className = 'btn btn-success';
+                okBtn.textContent = 'OK';
+            } else {
+                okBtn.className = 'btn btn-primary';
+                okBtn.textContent = 'OK';
+            }
+        }
+
+        const modalElement = document.getElementById('messageModal');
+        if (modalElement) {
+            // Check if modal is already instantiated
+            const existingModal = bootstrap.Modal.getInstance(modalElement);
+            if (existingModal) {
+                existingModal.dispose(); // Dispose of existing instance
+            }
+            new bootstrap.Modal(modalElement).show();
+        }
+    }, 0);
+}
+
+function showModalConfirm(title, message, callback) {
+    // Wait for the DOM to be ready before accessing elements
+    setTimeout(() => {
+        const titleEl = document.getElementById('confirmModalTitle');
+        const messageEl = document.getElementById('confirmModalMessage');
+        const yesBtn = document.getElementById('confirmModalYes');
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+
+        // Remove any previous event listeners
+        if (yesBtn) {
+            yesBtn.replaceWith(yesBtn.cloneNode(true));
+            document.getElementById('confirmModalYes').addEventListener('click', () => {
+                callback();
+                const modalElement = document.getElementById('confirmModal');
+                if (modalElement) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }
+            });
+        }
+
+        const modalElement = document.getElementById('confirmModal');
+        if (modalElement) {
+            // Check if modal is already instantiated
+            const existingModal = bootstrap.Modal.getInstance(modalElement);
+            if (existingModal) {
+                existingModal.dispose(); // Dispose of existing instance
+            }
+            new bootstrap.Modal(modalElement).show();
+        }
+    }, 0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new MultiPageEditorApp();
+    // Store the app instance in the editor container for access from context menus
+    const editorContainer = document.querySelector('.editor-container');
+    if (editorContainer) {
+        editorContainer._appInstance = app;
+    }
 });
 </script>
 {% endblock %}

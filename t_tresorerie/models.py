@@ -22,7 +22,7 @@ class ClientPaiementsRequest(models.Model):
     paid = models.BooleanField(default=False)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('tranche','Tranche'), ('mensuelle','Mensuelle'), ('totalite','Paiement unique')])
 
-    motif = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f', 'Frais de formation'),('frais', 'Frais d\'admission'),('autre','Autres'),('dette','Module en dette')])
+    motif = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f', 'Frais de formation'),('frais', 'Frais d\'admission'),('autre','Autres'),('dette','Module en dette'),('rach','Rachât de crédit')])
 
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,7 +65,7 @@ class DuePaiements(models.Model):
     is_done = models.BooleanField(default=False)
     is_annulated= models.BooleanField(default=False)
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, blank=True, related_name="due_paiement_promo")
-    type = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f',"Frais de formation"),('dette','Module en dette'),('autre','Autre')])
+    type = models.CharField(max_length=100, null=True, blank=True, choices=[('frais_f',"Frais de formation"),('dette','Module en dette'),('autre','Autre'),('rach','Rachât de crédit')])
     observation = models.CharField(max_length=1000, null=True, blank=True)
 
     entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)

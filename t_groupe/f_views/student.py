@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from t_documents_maker.models import DocumentTemplate
 from t_documents_maker.services.template_processor import TemplateProcessor
-from t_documents_maker.services.pdf_generator import PDFGenerator
+from t_documents_maker.services.pdf_generator import PDFGenerator, MultiPagePDFGenerator
 import json
 from io import BytesIO
 
@@ -124,8 +124,6 @@ def StudentDetails(request, pk):
         return render(request, 'tenant_folder/student/profile_etudiant_double.html',context)
 
 
-
-
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdate_etudiant(request):
@@ -157,8 +155,6 @@ def ApiUpdate_etudiant(request):
     messages.success(request,'Information mises à jours')
     return JsonResponse({'status': 'success'})
 
-  
-
 @login_required
 @require_http_methods(["POST"])
 def generate_student_pdf(request):
@@ -172,7 +168,14 @@ def generate_student_pdf(request):
         etudiant = get_object_or_404(Prospets, pk=student_id)
 
         groupe = GroupeLine.objects.filter(student = etudiant).first()
-        logo = groupe.groupe.specialite.formation.entite_legal.entete_logo.url
+
+        # Safely get the logo URL with error handling
+        logo_url = ""
+        if groupe and groupe.groupe.specialite.formation.entite_legal:
+            try:
+                logo_url = groupe.groupe.specialite.formation.entite_legal.entete_logo.url
+            except:
+                logo_url = ""
 
 
         # ✅ DONNÉES
@@ -180,57 +183,47 @@ def generate_student_pdf(request):
             'nom': str(etudiant.nom or '') or 'Non renseigné',
             'prenom': str(etudiant.prenom or '') or 'Non renseigné',
             'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
-           
+            'email': str(etudiant.email or '') or 'Non renseigné',
+            'telephone': str(etudiant.telephone or '') or 'Non renseigné',
+            'adresse': str(etudiant.adresse or '') or 'Non renseigné',
+            'date_naissance': str(etudiant.date_naissance or '') or 'Non renseigné',
+            'lieu_naissance': str(etudiant.lieu_naissance or '') or 'Non renseigné',
+            'nationnalite': str(etudiant.nationnalite or '') or 'Non renseigné',
+            'niveau_scolaire': str(etudiant.niveau_scolaire or '') or 'Non renseigné',
+            'diplome': str(etudiant.diplome or '') or 'Non renseigné',
+            'etablissement': str(etudiant.etablissement or '') or 'Non renseigné',
+            'prenom_pere': str(etudiant.prenom_pere or '') or 'Non renseigné',
+            'tel_pere': str(etudiant.tel_pere or '') or 'Non renseigné',
+            'nom_mere': str(etudiant.nom_mere or '') or 'Non renseigné',
+            'prenom_mere': str(etudiant.prenom_mere or '') or 'Non renseigné',
+            'tel_mere': str(etudiant.tel_mere or '') or 'Non renseigné',
+            'logo_url': logo_url,  # Include logo URL in the data
         }
 
         # ✅ PROCESS ALL PAGES WITH STUDENT DATA
-        from t_documents_maker.services.pdf_generator import MultiPagePDFGenerator
 
-        if template.pages:
-            # Process all pages with the student data
-            processed_pages = []
-            for page in template.pages:
-                content = page.get('content', '')
-                processor = TemplateProcessor(content)
-                rendered_content = processor.render(student_data)
+        # Process all pages with the student data (always use the multi-page approach)
+        processed_pages = []
+        for page in template.pages:
+            content = page.get('content', '')
+            processor = TemplateProcessor(content)
+            rendered_content = processor.render(student_data)
 
-                # Create a processed page object
-                processed_page = {
-                    'content': rendered_content,
-                    'page_size': page.get('page_size', template.page_size),
-                    'orientation': page.get('orientation', template.page_orientation)
-                }
-                processed_pages.append(processed_page)
+            # Create a processed page object
+            processed_page = {
+                'content': rendered_content,
+                'page_size': page.get('page_size', template.page_size),
+                'orientation': page.get('orientation', template.page_orientation)
+            }
+            processed_pages.append(processed_page)
 
-            # Use MultiPagePDFGenerator for multi-page documents
-            pdf_gen = MultiPagePDFGenerator(processed_pages, {
-                'page_size': template.page_size,
-                'page_orientation': template.page_orientation,
-                'header_footer': template.get_header_footer_config()
-            })
-            pdf_bytes, success, error = pdf_gen.generate()
-        else:
-           
-
-            # ✅ NETTOIE ET REND
-            processor = TemplateProcessor(template.get_first_page_content())
-            rendered_html = processor.render(student_data)
-
-            print(f"\n3️⃣ VÉRIFICATION HTML RENDU:")
-            if rendered_html and rendered_html.strip():
-                print(f"   ✅ HTML NON-VIDE ({len(rendered_html)} chars)")
-                print(f"   Contenu (200 chars): {rendered_html[:200]}")
-            else:
-                print(f"   ❌ ERREUR: HTML VIDE!")
-                return JsonResponse({'error': 'HTML template vide après rendu'}, status=500)
-
-            # ✅ GÉNÈRE PDF
-            print(f"\n4️⃣ GÉNÉRATION PDF...")
-            pdf_gen = PDFGenerator(rendered_html, {
-                'page_size': template.page_size,
-                'page_orientation': template.page_orientation
-            })
-            pdf_bytes, success, error = pdf_gen.generate()
+        # Use MultiPagePDFGenerator for multi-page documents
+        pdf_gen = MultiPagePDFGenerator(processed_pages, {
+            'page_size': template.page_size,
+            'page_orientation': template.page_orientation,
+            'header_footer': template.get_header_footer_config()
+        })
+        pdf_bytes, success, error = pdf_gen.generate()
 
         if not success:
             print(f"   ❌ ERREUR PDF: {error}")
@@ -246,7 +239,7 @@ def generate_student_pdf(request):
 
         return FileResponse(
             pdf_buffer,
-            as_attachment=False,
+            as_attachment=True,
             filename=f"document_{etudiant.id}_{template_id}.pdf",
             content_type='application/pdf'
         )
