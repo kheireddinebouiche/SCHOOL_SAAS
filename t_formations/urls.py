@@ -100,4 +100,7 @@ urlpatterns = [
     path('create_availability', create_availability, name="create_availability"),
     path('get_availability', get_availability, name="get_availability"),
     path('delete_availability', delete_availability, name="delete_availability"),
+
+
+    path('ApiGetSpecialitesFromCombinaison',ApiGetSpecialitesFromCombinaison ,name="ApiGetSpecialitesFromCombinaison"),
 ]

@@ -304,3 +304,28 @@ def ApiLoadSelestDoubleDiplomation(request):
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status":"error"})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiGetSpecialitesFromCombinaison(request):
+    if request.method == "GET":
+        id_combinaison = request.GET.get('id_combinaison')
+
+        obj = DoubleDiplomation.objects.get(id = id_combinaison)
+
+        data_specialite = []
+        
+        data_specialite.append({
+            'id1' : obj.specialite1.id,
+            'id2' : obj.specialite2.id,
+            'specialite_1' : obj.specialite1.label,
+            'specialite_2' : obj.specialite2.label,
+            'module_1' : list(Modules.objects.filter(specialite = obj.specialite1).values('id','label','code')),
+            
+            'module_2' : list(Modules.objects.filter(specialite = obj.specialite2).values('id','label','code')),
+        })
+
+        return JsonResponse(data_specialite, safe=False)
+
+    else:
+        return JsonResponse({"status" : "error"})

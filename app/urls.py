@@ -18,6 +18,7 @@ urlpatterns = [
     path('conseil/', include('t_conseil.urls', namespace='t_conseil')),
     path('remises/', include('t_remise.urls', namespace='t_remise')),
     path('editeur/', include('t_documents_maker.urls', namespace="t_documents_maker")),
+    path('editeur-documents/', include('pdf_editor.urls', namespace="pdf_editor")),
     
     
     

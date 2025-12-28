@@ -63,6 +63,7 @@ TENANT_APPS = [
     't_remise',
     't_timetable',
     't_documents_maker',
+    'pdf_editor',
     'phonenumber_field',
     'django_countries',
     'django.contrib.auth',

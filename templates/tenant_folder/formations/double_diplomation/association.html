@@ -409,6 +409,91 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Association des Modules -->
+    <div class="modal fade" id="associationModuleModal" tabindex="-1" aria-labelledby="associationModuleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+          <div class="modal-header bg-warning bg-opacity-10 border-0">
+            <h5 class="modal-title text-warning" id="associationModuleModalLabel">
+              <i class="ri-file-add-line me-2"></i>Association des Modules
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              {% csrf_token %}
+              <div class="mb-4">
+                <label class="form-label">Sélectionnez les spécialités</label>
+                <div class="row">
+                  <div class="col-md-6">
+                 
+                      <input type="text" id="specialite1" class="form-control">
+                   
+                  </div>
+                  <div class="col-md-6">
+                    <input type="text" id="specialite2" class="form-control">
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">Sélectionnez les modules</label>
+                <div class="row align-items-center">
+                  <div class="col-md-5">
+                    <select class="form-select" id="module1Select">
+                      <option value="">Sélectionnez le premier module</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2 text-center">
+                    <button type="button" class="btn btn-warning btn-sm" id="ValidateassociatationModuleBtn">
+                      <i class="ri-file-add-line me-1"></i>Associer
+                    </button>
+                  </div>
+                  <div class="col-md-5">
+                    <select class="form-select" id="module2Select">
+                      <option value="">Sélectionnez le deuxième module</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="labelModule" class="form-label">Libellé</label>
+                <input type="text" class="form-control" id="labelModule" placeholder="Saisissez le libellé de l'association">
+              </div>
+            </form>
+
+            <div class="mt-4">
+              <h6 class="mb-3 text-muted fw-medium"><i class="ri-list-check me-1"></i>Liste des associations existantes</h6>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="border-0 rounded-start">Module 1</th>
+                      <th class="border-0">Module 2</th>
+                      <th class="border-0">Libellé</th>
+                      <th class="border-0 rounded-end text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listeAssociations">
+                    <tr>
+                      <td colspan="4" class="text-center text-muted py-4">
+                        <i class="ri-folder-info-line display-6 mb-2"></i>
+                        <p class="mb-0">Aucune association enregistrée pour le moment</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- End Page-content -->
 </div>
@@ -502,6 +587,11 @@ $(document).ready(function(){
                                     <li>
                                         <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2" data-bs-toggle="modal" data-bs-target="#consulterCombinaisonModal" data-combinaison-id="${combinaison.id}">
                                             <i class="ri-eye-line text-success me-2"></i>Consulter
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2" id="associatationModuleBtn"  data-combinaison-id="${combinaison.id}">
+                                            <i class="ri-file-add-line text-warning me-2"></i>Association des modules
                                         </a>
                                     </li>
                                     <li>
@@ -1166,6 +1256,49 @@ $(document).ready(function(){
     $('#modifierCombinaisonModal').on('hidden.bs.modal', function() {
         $('#montantModif').val('');
     });
+
+    function loadAssociationSpecialites(id_combinaison){
+      $.ajax({
+        url : "{% url 't_formations:ApiGetSpecialitesFromCombinaison' %}",
+        dataType: "JSON",
+        type : "GET",
+        data : {
+          'id_combinaison' : id_combinaison,
+        },
+        success : function(data){
+          $('#specialite1').val(data[0].specialite_1);
+          $('#specialite2').val(data[0].specialite_2);
+
+          var row1 = "<option value=''>Veuillez sélectionner un module</option>";
+          $.each(data[0].module_1, function(index, p){
+            row1 += "<option value="+p.id+">"+p.code+' - '+p.label+"</option>";
+          });
+          $('#module1Select').html(row1);
+
+          var row2 = "<option value=''>Veuillez sélectionner un module</option>";
+          $.each(data[0].module_2, function(index, p){
+            row2 += "<option value="+p.id+">"+p.code+' - '+p.label+"</option>";
+          });
+          $('#module2Select').html(row2);
+
+        }
+      })
+    }
+
+    $(document).on('click','#associatationModuleBtn', function(){
+
+      var id_combinaison = $(this).data('combinaison-id');
+
+      loadAssociationSpecialites(id_combinaison);
+      $('#associationModuleModal').modal('show');
+    });
+
+    $(document).on('click','#ValidateassociatationModuleBtn', function(){
+      var module1Select = $('#module2Select').val();
+      var module2Select = $('#module1Select').val();
+    });
+
+
 
   });
 
