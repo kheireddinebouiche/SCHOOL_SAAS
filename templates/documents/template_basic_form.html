@@ -1,0 +1,132 @@
+<!-- templates/documents/template_basic_form.html -->
+
+{% extends 'documents/base.html' %}
+
+{% block title %}Créer un Template - Étape 1{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>➕ Créer un Nouveau Template - Étape 1</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Étape 1:</strong> Veuillez remplir les informations de base du template. 
+            Vous pourrez éditer le contenu dans l'étape suivante.
+        </div>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                        <div class="alert alert-danger mt-2">{{ form.title.errors }}</div>
+                        {% endif %}
+                        {% if form.title.help_text %}
+                        <small class="form-text text-muted">{{ form.title.help_text }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.slug.id_for_label }}" class="form-label">{{ form.slug.label }}</label>
+                        {{ form.slug }}
+                        {% if form.slug.errors %}
+                        <div class="alert alert-danger mt-2">{{ form.slug.errors }}</div>
+                        {% endif %}
+                        {% if form.slug.help_text %}
+                        <small class="form-text text-muted">{{ form.slug.help_text }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.template_type.id_for_label }}" class="form-label">{{ form.template_type.label }}</label>
+                        {{ form.template_type }}
+                        {% if form.template_type.errors %}
+                        <div class="alert alert-danger mt-2">{{ form.template_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.is_active.id_for_label }}" class="form-check-label">
+                            {{ form.is_active }}
+                            {{ form.is_active.label }}
+                        </label>
+                        {% if form.is_active.errors %}
+                        <div class="alert alert-danger mt-2">{{ form.is_active.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                {{ form.description }}
+                {% if form.description.help_text %}
+                <small class="form-text text-muted d-block">{{ form.description.help_text }}</small>
+                {% endif %}
+                {% if form.description.errors %}
+                <div class="alert alert-danger mt-2">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    Continuer vers l'édition du contenu
+                </button>
+                <a href="{% url 'pdf_editor:template-list' %}" class="btn btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Ajouter une fonctionnalité pour générer automatiquement le slug à partir du titre
+    const titleField = document.getElementById('{{ form.title.id_for_label }}');
+    const slugField = document.getElementById('{{ form.slug.id_for_label }}');
+
+    // Fonction pour convertir le titre en slug
+    function generateSlug(title) {
+        return title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Supprimer les caractères spéciaux
+            .replace(/[\s_-]+/g, '-') // Remplacer les espaces et underscores par des tirets
+            .replace(/^-+|-+$/g, ''); // Supprimer les tirets en début et fin
+    }
+
+    // Générer le slug automatiquement si le champ slug est vide ou si c'est un nouveau template
+    titleField.addEventListener('input', function() {
+        // Ne générer le slug que si le champ slug est vide ou si c'est un nouveau template (pas d'ID)
+        if (!slugField.value || !slugField.dataset.originalValue) {
+            slugField.value = generateSlug(this.value);
+        }
+    });
+
+    // Stocker la valeur originale du slug pour savoir si l'utilisateur l'a modifié
+    slugField.dataset.originalValue = slugField.value;
+
+    // Désactiver la génération automatique si l'utilisateur modifie manuellement le slug
+    slugField.addEventListener('input', function() {
+        // Si l'utilisateur a modifié le slug, empêcher la génération automatique
+        if (this.value !== generateSlug(titleField.value)) {
+            // Marquer que l'utilisateur a modifié le slug manuellement
+            this.dataset.userModified = 'true';
+        } else {
+            // Si l'utilisateur revient à la valeur générée automatiquement, réinitialiser
+            this.dataset.userModified = 'false';
+        }
+    });
+</script>
+{% endblock %}

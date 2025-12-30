@@ -118,6 +118,7 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
             ordre=ordre,
             montant_due=montant,
             montant_restant=montant,
+            ## Faire pivot par rapport aux date (Si la date est pareille) id 1 -> 2
             date_echeance=date_echeance,
             promo_id = promo,
             type = "frais_f",

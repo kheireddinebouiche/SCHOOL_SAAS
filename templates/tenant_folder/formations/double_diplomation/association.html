@@ -427,14 +427,19 @@
                 <label class="form-label">Sélectionnez les spécialités</label>
                 <div class="row">
                   <div class="col-md-6">
-                 
+
                       <input type="text" id="specialite1" class="form-control">
-                   
+
                   </div>
                   <div class="col-md-6">
                     <input type="text" id="specialite2" class="form-control">
                   </div>
                 </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="labelModule" class="form-label">Libellé</label>
+                <input type="text" class="form-control" id="labelModule" placeholder="Saisissez le libellé de l'association">
               </div>
 
               <div class="mb-4">
@@ -458,10 +463,7 @@
                 </div>
               </div>
 
-              <div class="mb-3">
-                <label for="labelModule" class="form-label">Libellé</label>
-                <input type="text" class="form-control" id="labelModule" placeholder="Saisissez le libellé de l'association">
-              </div>
+
             </form>
 
             <div class="mt-4">
@@ -470,19 +472,13 @@
                 <table class="table table-sm table-hover align-middle mb-0">
                   <thead class="bg-light">
                     <tr>
-                      <th class="border-0 rounded-start">Module 1</th>
-                      <th class="border-0">Module 2</th>
+                      <th class="border-0 rounded-start">Modules</th>
                       <th class="border-0">Libellé</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="listeAssociations">
-                    <tr>
-                      <td colspan="4" class="text-center text-muted py-4">
-                        <i class="ri-folder-info-line display-6 mb-2"></i>
-                        <p class="mb-0">Aucune association enregistrée pour le moment</p>
-                      </td>
-                    </tr>
+                   
                   </tbody>
                 </table>
               </div>
@@ -494,6 +490,34 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Supprimer Association de Modules -->
+    <div class="modal fade" id="supprimerAssociationModal" tabindex="-1" aria-labelledby="supprimerAssociationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-danger bg-opacity-10 border-0">
+            <h5 class="modal-title text-danger" id="supprimerAssociationModalLabel">
+              <i class="ri-delete-bin-line me-2"></i>Confirmer la suppression
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <div class="avatar-sm mx-auto mb-4">
+              <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-4">
+                <i class="ri-delete-bin-line"></i>
+              </div>
+            </div>
+            <p class="mb-2">Êtes-vous sûr de vouloir supprimer cette association de modules ?</p>
+            <p class="text-muted mb-0">Cette action est irréversible et supprimera définitivement l'association sélectionnée.</p>
+          </div>
+          <div class="modal-footer justify-content-center bg-light border-0">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-danger" id="confirmerSuppressionAssocBtn">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <!-- End Page-content -->
 </div>
@@ -1285,19 +1309,170 @@ $(document).ready(function(){
       })
     }
 
+    function LoadAssociatedModules(id_combinaison){
+      $.ajax({
+        url : "{% url 't_formations:ApiLoadAssociatedModules' %}",
+        dataType: "JSON",
+        type : "GET",
+        data : {'id_combinaison' : id_combinaison},
+        success : function(response){
+          var row = "";
+
+          if(response.data.length > 0){
+              $.each(response.data, function(index, c){
+                row += "<tr>";
+                row += "<td>";
+
+                    $.each(c.modules, function(i, m){
+                        row += "<span class='badge bg-info'>"+m.label + "</span><br>";
+                    });
+
+                  row += "</td>";
+                  row += "<td>"+c.label+"</td>";
+                  row += "<td class='text-center'>";
+                  row += "<button type='button' class='btn btn-sm btn-outline-danger supprimer-association' data-association-id='"+c.id+"' data-label='"+c.label+"' >";
+                  row += "<i class='ri-delete-bin-line me-1'></i>Supprimer";
+                  row += "</button>";
+                  row += "</td>";
+                row += "</tr>";
+              });
+          }else{
+                row+='<tr>';
+                  row+='<td colspan="4" class="text-center text-muted py-4">';
+                    row+='<i class="ri-folder-info-line display-6 mb-2"></i>';
+                    row+='<p class="mb-0">Aucune association enregistrée pour le moment</p>';
+                 row+='</td>';
+               row+='</tr>';
+          }
+          
+
+          $('#listeAssociations').html(row);
+
+        }
+      })
+    }
+
     $(document).on('click','#associatationModuleBtn', function(){
 
       var id_combinaison = $(this).data('combinaison-id');
 
       loadAssociationSpecialites(id_combinaison);
+      LoadAssociatedModules(id_combinaison);
+      
+      $('#associationModuleModal').data('id_combinaison', id_combinaison);
       $('#associationModuleModal').modal('show');
     });
 
     $(document).on('click','#ValidateassociatationModuleBtn', function(){
-      var module1Select = $('#module2Select').val();
-      var module2Select = $('#module1Select').val();
+
+      var module1Select = $('#module1Select').val();
+      var module2Select = $('#module2Select').val();
+      var labelModule   = $('#labelModule').val();
+      var id_combinaison = $('#associationModuleModal').data('id_combinaison');
+
+      $.ajax({
+        url: "{% url 't_formations:AssiciateModuleDouble' %}",
+        dataType : "JSON",
+        type : "POST",
+        data : {
+          'module1' : module1Select,
+          'module2' : module2Select,
+          'label' : labelModule,
+          'id_combinaison' : id_combinaison,
+          'csrfmiddlewaretoken': '{{ csrf_token }}',
+
+        },
+        success: function(response){
+          if (response.status === "success"){
+            alertify.success("Les informations ont été enregistrer avec succès");
+            // Recharger les associations après l'ajout
+            LoadAssociatedModules(id_combinaison);
+          }else{
+            alertify.error(response.message);
+          }
+        }
+
+      });
     });
 
+    $(document).on('click', '.supprimer-association', function() {
+      
+      $('#supprimerAssociationModal').modal('show');
+
+      var associationId = $(this).data('association-id');
+      var label = $(this).data('label');
+
+      // Stocker l'ID de l'association à supprimer
+      $('#supprimerAssociationModal').data('association-id', associationId);
+
+      // Mettre à jour le message dans le modal de suppression
+      $('#supprimerAssociationModal .modal-body p.text-muted').html(
+        `Cette action est irréversible et supprimera définitivement l'association "${label}".`
+      );
+    });
+
+    // Gestion de la confirmation de suppression
+    $(document).on('click', '#confirmerSuppressionAssocBtn', function() {
+
+
+      var associationId = $('#supprimerAssociationModal').data('association-id');
+      var id_combinaison = $('#associationModuleModal').data('id_combinaison');
+
+      if (!associationId) {
+        alertify.error('Erreur: ID de l\'association non trouvé.');
+        return;
+      }
+
+      // Désactiver le bouton pendant l'opération
+      const deleteBtn = $(this);
+      deleteBtn.prop('disabled', true).text('Suppression...');
+
+      // Envoyer la requête de suppression
+      $.ajax({
+        url: '{% url "t_formations:ApiDeleteAssociatedModule" %}', // Assurez-vous que cette URL existe
+        type: 'POST',
+        data: {
+          'association_id': associationId,
+          'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(response) {
+          if (response.status === "success") {
+            // Fermer le modal
+            $('#supprimerAssociationModal').modal('hide');
+
+            // Afficher un message de succès
+            alertify.success(response.message);
+
+            // Recharger les associations
+            LoadAssociatedModules(id_combinaison);
+          } else {
+            // Afficher un message d'erreur
+            alertify.error('Erreur : ' + (response.message || 'Une erreur est survenue lors de la suppression'));
+          }
+          // Réactiver le bouton
+          deleteBtn.prop('disabled', false).text('Supprimer');
+        },
+        error: function(xhr, status, error) {
+          // Gérer les erreurs AJAX
+          console.error('Erreur AJAX lors de la suppression:', error);
+          console.error('Réponse:', xhr.responseText);
+
+          let errorMessage = 'Une erreur est survenue lors de la suppression.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+          } else if (xhr.status === 400) {
+            errorMessage = 'Données invalides. Veuillez vérifier les informations.';
+          } else if (xhr.status === 403) {
+            errorMessage = 'Accès refusé. Veuillez vérifier vos autorisations.';
+          }
+
+          alertify.error(errorMessage);
+
+          // Réactiver le bouton
+          deleteBtn.prop('disabled', false).text('Supprimer');
+        }
+      });
+    });
 
 
   });

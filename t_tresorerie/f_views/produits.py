@@ -162,3 +162,174 @@ def ApiGetCategorieProduit(request, pk):
 def PageCategoriesProduits(request):
     """Page to manage payment categories"""
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
+
+@login_required(login_url="institut_app:login")
+def PageAutrePaiements(request):
+    """Page to manage other payments"""
+    return render(request, 'tenant_folder/comptabilite/paiements/liste_autre_paiements.html')
+
+@login_required(login_url="institut_app:login")
+def PageNouveauAutrePaiement(request):
+    """Page to create a new other payment"""
+    return render(request, 'tenant_folder/comptabilite/paiements/nouveau_autre_paiement.html')
+
+@login_required(login_url="institut_app:login")
+def ApiStoreAutrePaiement(request):
+    """API endpoint to create a new other payment"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            label = data.get('label')
+            montant_paiement = data.get('montant_paiement')
+            mode_paiement = data.get('mode_paiement')
+            date_operation = data.get('date_operation')
+            reference = data.get('reference')
+            date_paiement = data.get('date_paiement')
+            compte_id = data.get('compte')
+
+            if not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
+                return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
+
+            # Get the PaymentCategory if provided
+            compte = None
+            if compte_id:
+                compte = PaymentCategory.objects.get(id=compte_id)
+
+            # Create the AutreProduit instance
+            autre_paiement = AutreProduit.objects.create(
+                label=label,
+                montant_paiement=montant_paiement,
+                mode_paiement=mode_paiement,
+                date_operation=date_operation,
+                reference=reference,
+                date_paiement=date_paiement,
+                compte=compte
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Paiement enregistré avec succès',
+                'id': autre_paiement.id
+            })
+        except PaymentCategory.DoesNotExist:
+            return JsonResponse({'error': 'Catégorie de paiement non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+def ApiListeAutrePaiements(request):
+    """API endpoint to list all other payments"""
+    try:
+        autre_paiements = AutreProduit.objects.all().order_by('-date_operation')
+
+        paiements_data = []
+        for paiement in autre_paiements:
+            paiements_data.append({
+                'id': paiement.id,
+                'label': paiement.label,
+                'montant_paiement': float(paiement.montant_paiement) if paiement.montant_paiement else 0,
+                'mode_paiement': paiement.mode_paiement,
+                'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
+                'reference': paiement.reference or '-',
+                'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
+                'compte': paiement.compte.name if paiement.compte else '-',
+                'compte_id': paiement.compte.id if paiement.compte else None
+            })
+
+        return JsonResponse({'data': paiements_data}, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required(login_url="institut_app:login")
+def ApiGetAutrePaiement(request, pk):
+    """API endpoint to get details of a specific other payment"""
+    try:
+        paiement = AutreProduit.objects.get(id=pk)
+
+        return JsonResponse({
+            'id': paiement.id,
+            'label': paiement.label,
+            'montant_paiement': float(paiement.montant_paiement) if paiement.montant_paiement else 0,
+            'mode_paiement': paiement.mode_paiement,
+            'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
+            'reference': paiement.reference or '-',
+            'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
+            'compte_id': paiement.compte.id if paiement.compte else None
+        })
+    except AutreProduit.DoesNotExist:
+        return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateAutrePaiement(request):
+    """API endpoint to update an other payment"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            paiement_id = data.get('id')
+            label = data.get('label')
+            montant_paiement = data.get('montant_paiement')
+            mode_paiement = data.get('mode_paiement')
+            date_operation = data.get('date_operation')
+            reference = data.get('reference')
+            date_paiement = data.get('date_paiement')
+            compte_id = data.get('compte')
+
+            if not paiement_id or not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
+                return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
+
+            paiement = AutreProduit.objects.get(id=paiement_id)
+
+            # Get the PaymentCategory if provided
+            compte = None
+            if compte_id:
+                compte = PaymentCategory.objects.get(id=compte_id)
+
+            # Update the AutreProduit instance
+            paiement.label = label
+            paiement.montant_paiement = montant_paiement
+            paiement.mode_paiement = mode_paiement
+            paiement.date_operation = date_operation
+            paiement.reference = reference
+            paiement.date_paiement = date_paiement
+            paiement.compte = compte
+            paiement.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Paiement mis à jour avec succès'
+            })
+        except AutreProduit.DoesNotExist:
+            return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
+        except PaymentCategory.DoesNotExist:
+            return JsonResponse({'error': 'Catégorie de paiement non trouvée'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+def ApiDeleteAutrePaiement(request):
+    """API endpoint to delete an other payment"""
+    if request.method == 'DELETE':
+        try:
+            data = json.loads(request.body)
+            paiement_id = data.get('id')
+
+            if not paiement_id:
+                return JsonResponse({'error': 'ID du paiement est requis'}, status=400)
+
+            paiement = AutreProduit.objects.get(id=paiement_id)
+            paiement.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Paiement supprimé avec succès'
+            })
+        except AutreProduit.DoesNotExist:
+            return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)

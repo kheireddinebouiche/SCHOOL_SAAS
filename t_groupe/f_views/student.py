@@ -6,15 +6,16 @@ from t_crm.models import *
 from t_tresorerie.models import *
 from django.db.models import Count, Sum
 from django.core.serializers.json import DjangoJSONEncoder
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
-from t_documents_maker.models import DocumentTemplate
-from t_documents_maker.services.template_processor import TemplateProcessor
-from t_documents_maker.services.pdf_generator import PDFGenerator, MultiPagePDFGenerator
 import json
 from io import BytesIO
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views import View
+from django.template import Template, Context
+
 
 @login_required(login_url="institut_app:login")
 def StudentDetails(request, pk):
@@ -155,99 +156,73 @@ def ApiUpdate_etudiant(request):
     messages.success(request,'Information mises à jours')
     return JsonResponse({'status': 'success'})
 
-@login_required
-@require_http_methods(["POST"])
-def generate_student_pdf(request):
-    """Génère le PDF - NOM + PRENOM"""
-    try:
-        data = json.loads(request.body)
-        template_id = data.get('template_id')
-        student_id = data.get('student_id')
 
-        template = get_object_or_404(DocumentTemplate, id=template_id, author=request.user)
-        etudiant = get_object_or_404(Prospets, pk=student_id)
+class generate_student_pdf(LoginRequiredMixin, View):
+    """Génère et imprime la fiche d'un étudiant en utilisant un template"""
 
-        groupe = GroupeLine.objects.filter(student = etudiant).first()
+    def get(self, request, pk, template_slug=None):
+        # Récupération de l'étudiant et de sa fiche
+        student = get_object_or_404(Prospets, pk=pk)
+        fiche = get_object_or_404(FicheDeVoeux, prospect=student)
+        logo = fiche.specialite.formation.entite_legal.entete_logo.url if fiche.specialite.formation.entite_legal.entete_logo else ''
 
-        # Safely get the logo URL with error handling
-        logo_url = ""
-        if groupe and groupe.groupe.specialite.formation.entite_legal:
-            try:
-                logo_url = groupe.groupe.specialite.formation.entite_legal.entete_logo.url
-            except:
-                logo_url = ""
+        specialite = fiche.specialite.label
+        annee_academique = fiche.promo.annee_academique
 
+        # Récupération de l'échéancier et conversion des Decimals en float
+        echeancier_qs = DuePaiements.objects.filter(client=student).order_by('date_echeance')
+    
+        echeancier = []
+        for e in echeancier_qs:
+            echeancier.append({
+                'montant_due': float(e.montant_due) if e.montant_due is not None else 0.0,
+                'date_echeance': e.date_echeance.isoformat() if e.date_echeance else ''
+            })
 
-        # ✅ DONNÉES
-        student_data = {
-            'nom': str(etudiant.nom or '') or 'Non renseigné',
-            'prenom': str(etudiant.prenom or '') or 'Non renseigné',
-            'nom_complet': f"{str(etudiant.nom or '')} {str(etudiant.prenom or '')}".strip() or 'Non renseigné',
-            'email': str(etudiant.email or '') or 'Non renseigné',
-            'telephone': str(etudiant.telephone or '') or 'Non renseigné',
-            'adresse': str(etudiant.adresse or '') or 'Non renseigné',
-            'date_naissance': str(etudiant.date_naissance or '') or 'Non renseigné',
-            'lieu_naissance': str(etudiant.lieu_naissance or '') or 'Non renseigné',
-            'nationnalite': str(etudiant.nationnalite or '') or 'Non renseigné',
-            'niveau_scolaire': str(etudiant.niveau_scolaire or '') or 'Non renseigné',
-            'diplome': str(etudiant.diplome or '') or 'Non renseigné',
-            'etablissement': str(etudiant.etablissement or '') or 'Non renseigné',
-            'prenom_pere': str(etudiant.prenom_pere or '') or 'Non renseigné',
-            'tel_pere': str(etudiant.tel_pere or '') or 'Non renseigné',
-            'nom_mere': str(etudiant.nom_mere or '') or 'Non renseigné',
-            'prenom_mere': str(etudiant.prenom_mere or '') or 'Non renseigné',
-            'tel_mere': str(etudiant.tel_mere or '') or 'Non renseigné',
-            'logo_url': logo_url,  # Include logo URL in the data
+        # Sélection du template
+        if template_slug:
+            template_obj = get_object_or_404(DocumentTemplate, slug=template_slug, is_active=True)
+        else:
+            template_obj = DocumentTemplate.objects.filter(is_active=True).first()
+            if not template_obj:
+                from django.contrib import messages
+                messages.error(request, "Aucun template de fiche étudiant disponible.")
+                return redirect('school:student-detail', pk=pk)
+
+        # Préparer les données de contexte
+        context_data = {
+            
+            'current_date': timezone.now().date().isoformat(),
+            'pk': student.pk,
+            'nom': student.nom,
+            'prenom': student.prenom,
+            'date_naissance': student.date_naissance.isoformat() if student.date_naissance else None,
+            'lieu_naissance': student.lieu_naissance,
+            'email': student.email or '',
+            'telephone': student.telephone or '',
+            'adresse': student.adresse or '',
+            'logo': logo,
+            'specialite': specialite,
+            'annee_academique': annee_academique,
+            'echeancier': echeancier,
         }
 
-        # ✅ PROCESS ALL PAGES WITH STUDENT DATA
+        # Rendu du template
+        try:
+            django_template = Template(template_obj.content)
+            rendered_content = django_template.render(Context(context_data))
 
-        # Process all pages with the student data (always use the multi-page approach)
-        processed_pages = []
-        for page in template.pages:
-            content = page.get('content', '')
-            processor = TemplateProcessor(content)
-            rendered_content = processor.render(student_data)
+            # Enregistrer la génération
+            doc_gen = DocumentGeneration.objects.create(
+                template=template_obj,
+                context_data=context_data,  # JSON serializable maintenant
+                rendered_content=rendered_content,
+                generated_by=request.user
+            )
 
-            # Create a processed page object
-            processed_page = {
-                'content': rendered_content,
-                'page_size': page.get('page_size', template.page_size),
-                'orientation': page.get('orientation', template.page_orientation)
-            }
-            processed_pages.append(processed_page)
+            return redirect('pdf_editor:document-preview', pk=doc_gen.pk)
 
-        # Use MultiPagePDFGenerator for multi-page documents
-        pdf_gen = MultiPagePDFGenerator(processed_pages, {
-            'page_size': template.page_size,
-            'page_orientation': template.page_orientation,
-            'header_footer': template.get_header_footer_config()
-        })
-        pdf_bytes, success, error = pdf_gen.generate()
-
-        if not success:
-            print(f"   ❌ ERREUR PDF: {error}")
-            return JsonResponse({'error': error}, status=500)
-
-        print(f"   ✅ PDF généré ({len(pdf_bytes)} bytes)")
-
-        pdf_buffer = BytesIO(pdf_bytes)
-
-        print(f"\n{'='*80}")
-        print(f"✅ SUCCÈS!")
-        print(f"{'='*80}\n")
-
-        return FileResponse(
-            pdf_buffer,
-            as_attachment=True,
-            filename=f"document_{etudiant.id}_{template_id}.pdf",
-            content_type='application/pdf'
-        )
-
-    except Exception as e:
-        print(f"\n{'='*80}")
-        print(f"❌ ERREUR: {e}")
-        print(f"{'='*80}")
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'error': str(e)}, status=500)
+        except Exception as e:
+            from django.contrib import messages
+            messages.error(request, f"Erreur lors du rendu: {str(e)}")
+            return redirect('pdf_editor:document-preview', pk=pk)

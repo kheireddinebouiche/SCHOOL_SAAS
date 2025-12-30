@@ -46,7 +46,7 @@ urlpatterns = [
    path('commission/nouvelle/', NouvelleCommission, name="NouvelleCommission"),
    path('commission/modification/<int:pk>/', UpdateCommission, name="UpdateCommission"),
    path('commission/details/<int:pk>/', DetailsCommission, name="DetailsCommission"),
-   path('validate_commission/<int:pk>/', validate_commission, name="validate_commission"),
+   path('validate_commission/', validate_commission, name="validate_commission"),
 
    path('delete_commission/<int:pk>/', delete_commission, name="delete_commission"),
    path('ApiGetGroupeDetails', ApiGetGroupeDetails, name="ApiGetGroupeDetails"),

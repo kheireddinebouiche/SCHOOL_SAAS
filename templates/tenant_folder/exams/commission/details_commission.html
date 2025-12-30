@@ -828,33 +828,34 @@
       // Disable the button during request to prevent duplicate submissions
       $(this).prop('disabled', true).text('Validation...');
 
-      if(commissionId) {
-        $.ajax({
-          url: '{% url "t_exam:validate_commission" pk=0 %}'.replace('0', commissionId),
-          type: 'POST',
-          data: {
-            'comment': comment,
-            'csrfmiddlewaretoken': '{{ csrf_token }}'
-          },
-          success: function(response) {
-            if(response.status === 'success') {
-              $('#validateCommissionModal').modal('hide');
-              // Show success message and reload page to update the UI
-              alert(response.message);
-              location.reload();
-            } else {
-              alert(response.message || 'Une erreur est survenue lors de la validation.');
-            }
-          },
-          error: function() {
-            alert('Une erreur est survenue lors de la validation.');
-          },
-          complete: function() {
-            // Re-enable the button after request completes
-            $('#confirmValidateCommissionBtn').prop('disabled', false).html('<i class="ri-check-line me-2"></i>Valider la commission');
+      $.ajax({
+        url: '{% url "t_exam:validate_commission"  %}',
+        type: 'POST',
+        data: {
+          'comment': comment,
+          'commissionId' : commissionId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if(response.status === 'success') {
+            $('#validateCommissionModal').modal('hide');
+            
+            
+            location.reload();
+
+          } else {
+            alert(response.message || 'Une erreur est survenue lors de la validation.');
           }
-        });
-      }
+        },
+        error: function() {
+          alert('Une erreur est survenue lors de la validation.');
+        },
+        complete: function() {
+          // Re-enable the button after request completes
+          $('#confirmValidateCommissionBtn').prop('disabled', false).html('<i class="ri-check-line me-2"></i>Valider la commission');
+        }
+      });
+    
     });
 
     // Gestion du bouton Supprimer
@@ -2117,6 +2118,10 @@
           if(response.status === 'success') {
             $('#closeCommissionModal').modal('hide');
             alertify.success(response.message);
+
+            setTimeout(function () {
+              location.reload();
+            }, 1500); // 2000 ms = 2 secondes
           } else {
             alertify.error(response.message || 'Une erreur est survenue lors de la clôture de la commission.');
           }

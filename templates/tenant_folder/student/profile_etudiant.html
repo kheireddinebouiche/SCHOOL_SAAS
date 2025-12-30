@@ -177,13 +177,9 @@
                                         </button>
                                         <ul class="dropdown-menu" aria-labelledby="impressionDropdown">
                                             {% for doc in documents_available %}
-                                                <li>
-                                                    <a class="dropdown-item generate-pdf" href="#" 
-                                                    data-template-id="{{ doc.id }}" 
-                                                    data-template-name="{{ doc.name }}">
-                                                        <i class="ri-file-pdf-line me-2"></i>{{ doc.name }}
-                                                    </a>
-                                                </li>
+                                                <a class="dropdown-item" target="_blank" href="{% url 't_groupe:generate_student_pdf' pk doc.slug %}">
+                                                    {{ doc.title }}
+                                                </a>
                                             {% empty %}
                                                 <li>
                                                     <a class="dropdown-item" href="#">
@@ -896,7 +892,7 @@
     <!-- End Page-content -->
 </div>
 <!-- end main content-->
- 
+
 
 <!-- Include jsPDF library -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -940,135 +936,5 @@
 
 </script>
 
-<script>
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const studentId = "{{ pk }}";
-        
-        // Gère les clics sur "Générer PDF"
-        document.querySelectorAll('.generate-pdf').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                const templateId = this.getAttribute('data-template-id');
-                const templateName = this.getAttribute('data-template-name');
-                
-                showLoadingSpinner('Génération du document...');
-                
-                fetch('{% url "t_groupe:generate_student_pdf" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({
-                        template_id: templateId,
-                        student_id: studentId
-                    })
-                })
-                .then(response => {
-                    hideLoadingSpinner();
-                    
-                    if (response.headers.get('content-type').includes('application/pdf')) {
-                        // C'est un PDF - affiche et imprime
-                        response.blob().then(blob => {
-                            const pdfUrl = window.URL.createObjectURL(blob);
-                            const iframe = document.createElement('iframe');
-                            iframe.src = pdfUrl;
-                            iframe.style.display = 'none';
-                            document.body.appendChild(iframe);
-                            
-                            setTimeout(() => {
-                                iframe.contentWindow.print();
-                            }, 500);
-                            
-                            showSuccessMessage(`${templateName} généré avec succès!`);
-                        });
-                    } else {
-                        // Erreur
-                        response.json().then(data => {
-                            showErrorMessage('Erreur: ' + (data.error || 'Erreur inconnue'));
-                        });
-                    }
-                })
-                .catch(error => {
-                    hideLoadingSpinner();
-                    showErrorMessage('Erreur: ' + error.message);
-                });
-            });
-        });
-    });
-
-    // Fonction: afficher le spinner
-    function showLoadingSpinner(message = 'Chargement...') {
-        const spinner = document.createElement('div');
-        spinner.id = 'loading-spinner';
-        spinner.innerHTML = `
-            <div class="text-center">
-                <div class="spinner-border text-primary mb-3"></div>
-                <p class="text-muted">${message}</p>
-            </div>
-        `;
-        spinner.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        `;
-        document.body.appendChild(spinner);
-    }
-
-    // Fonction: masquer le spinner
-    function hideLoadingSpinner() {
-        const spinner = document.getElementById('loading-spinner');
-        if (spinner) spinner.remove();
-    }
-
-    // Fonction: message succès
-    function showSuccessMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-success alert-dismissible fade show';
-        alert.innerHTML = `
-            <i class="ri-check-circle-line me-2"></i> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        alert.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9998;
-            min-width: 350px;
-        `;
-        document.body.appendChild(alert);
-        setTimeout(() => alert.remove(), 5000);
-    }
-
-    // Fonction: message erreur
-    function showErrorMessage(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-danger alert-dismissible fade show';
-        alert.innerHTML = `
-            <i class="ri-error-warning-line me-2"></i> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        alert.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9998;
-            min-width: 350px;
-        `;
-        document.body.appendChild(alert);
-        setTimeout(() => alert.remove(), 7000);
-    }
-
-
-</script>
 
 {% endblock content %}

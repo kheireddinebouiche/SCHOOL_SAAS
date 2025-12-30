@@ -329,3 +329,80 @@ def ApiGetSpecialitesFromCombinaison(request):
 
     else:
         return JsonResponse({"status" : "error"})
+    
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def AssiciateModuleDouble(request):
+    if request.method == "POST":
+
+        module1 = request.POST.get('module1')
+        module2 = request.POST.get('module2')
+        label = request.POST.get('label')
+        id_combinaison = request.POST.get('id_combinaison')
+
+        if not module1 or not module2 or not label or not id_combinaison:
+            return JsonResponse({"status" : "error",'message' : "Informations manquates"})
+        
+
+        
+        module_1 = Modules.objects.get(id=module1)
+        module_2 = Modules.objects.get(id=module2)
+
+        double_diplom = DoubleDiplomation.objects.get(id=id_combinaison)
+       
+        # # Créer la correspondance
+        correspondance = CorrepondanceModule.objects.create(label=label,formation=double_diplom)
+        correspondance.modules.add(module_1.id, module_2.id)
+        correspondance.save()
+
+        return JsonResponse({"status": "success", "message": "Modules associés avec succès"})
+        
+    else:
+        return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institut_app:login")
+def ApiLoadAssociatedModules(request):
+    if request.method == "GET":
+        id_combinaison = request.GET.get('id_combinaison')
+
+        if not id_combinaison:
+            return JsonResponse({"status":"error", "message" : "Id manquant"})
+        try:
+            formation = DoubleDiplomation.objects.get(id=id_combinaison)
+        except DoubleDiplomation.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Combinaison introuvable"}, status=404)
+
+        correspondances = CorrepondanceModule.objects.filter(formation=formation)
+
+        data = []
+        for obj in correspondances:
+            data.append({
+                "id": obj.id,
+                "label": obj.label,
+                "modules": list(obj.modules.all().values("id", "label")) 
+            })
+
+        return JsonResponse({
+            "status": "success",
+            "data": data
+        })
+    else:
+        return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteAssociatedModule(request):
+    if request.method == "POST":
+        association_id = request.POST.get('association_id')
+
+        if not association_id:
+            return JsonResponse({"status" : "error","message":"Information manquante"})
+        
+        CorrepondanceModule.objects.get(id = association_id).delete()
+        
+        return JsonResponse({"status" : "success", 'message' : "L'association à été supprimer avec succès"})
+
+    else:
+        return JsonResponse({"status":"error"})

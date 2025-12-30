@@ -62,8 +62,8 @@ TENANT_APPS = [
     't_conseil',
     't_remise',
     't_timetable',
-    't_documents_maker',
     'pdf_editor',
+    'taggit',
     'phonenumber_field',
     'django_countries',
     'django.contrib.auth',
@@ -210,3 +210,52 @@ MESSAGE_TAGS = {
     messages.INFO : 'info',
 }
 
+
+# Configuration TinyMCE
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 500,
+    'width': '100%',
+    'mode': 'textareas',
+    'theme': 'silver',
+    'extended_valid_elements': 'tr[*],td[*],th[*]',
+    'plugins': 'print preview paste importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
+    'toolbar': 'undo redo | formatselect | bold italic underline strikethrough | fontselect fontsizeselect | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | print preview | fullscreen | charmap emoticons',
+    'toolbar_mode': 'floating',
+    'skin': 'oxide',
+    'content_css': [
+        '/static/css/tinymce_document.css',  # CSS impression
+    ],
+    'menu': {
+        'file': {
+            'title': 'File',
+            'items': 'newdocument | print preview | exportpdf exportword'
+        },
+        'edit': {
+            'title': 'Edit',
+            'items': 'undo redo | cut copy paste pastetext | selectall'
+        },
+        'view': {
+            'title': 'View',
+            'items': 'code | visualaid visualchars visualblocks fullscreen'
+        },
+        'insert': {
+            'title': 'Insert',
+            'items': 'image link media codesample inserttable | charmap emoticons'
+        },
+        'format': {
+            'title': 'Format',
+            'items': 'bold italic underline strikethrough superscript subscript | formats | removeformat'
+        },
+        'table': {
+            'title': 'Table',
+            'items': 'inserttable | cell row column | tableprops deletetable'
+        }
+    },
+    'relative_urls': False,
+    'convert_urls': False,
+    'paste_data_images': True,
+    'images_upload_url': '/tinymce/upload/',  # URL pour l'upload d'images
+    'automatic_uploads': True,
+    'object_resizing' : True,
+    'forced_root_block': False,  
+}

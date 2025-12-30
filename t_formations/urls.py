@@ -103,4 +103,7 @@ urlpatterns = [
 
 
     path('ApiGetSpecialitesFromCombinaison',ApiGetSpecialitesFromCombinaison ,name="ApiGetSpecialitesFromCombinaison"),
+    path('ApiLoadAssociatedModules', ApiLoadAssociatedModules, name="ApiLoadAssociatedModules"),
+    path('AssiciateModuleDouble', AssiciateModuleDouble, name="AssiciateModuleDouble"),
+    path('ApiDeleteAssociatedModule', ApiDeleteAssociatedModule, name="ApiDeleteAssociatedModule"),
 ]

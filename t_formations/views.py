@@ -879,14 +879,14 @@ def ApiLoadDocumentTemplate(request):
 
     formation = Formation.objects.get(id=formation_id)
 
-    all_docs = DocumentTemplate.objects.all()
+    all_docs = DocumentTemplate.objects.filter(is_active = True)
     selected_docs = formation.documents.values_list('id', flat=True)
 
     data = {
         "documents": [
             {
                 "id": doc.id,
-                "name": doc.name,
+                "title": doc.title,
                 "checked": doc.id in selected_docs
             }
             for doc in all_docs

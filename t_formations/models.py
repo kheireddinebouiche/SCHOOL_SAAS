@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from institut_app.models import Entreprise
 from t_rh.models import *
 from t_crm.tenant_path import *
-from t_documents_maker.models import *
+from pdf_editor.models import *
 
 
 class Partenaires(models.Model):
@@ -144,14 +144,13 @@ class Modules(models.Model):
 class CorrepondanceModule(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     formation = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
-    modules = models.ManyToManyField(Module)
+    modules = models.ManyToManyField(Modules)
 
     created_at = models.DateField(auto_now_add = True)
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
         return self.label
-
 
 class Formateurs(models.Model):
     nom = models.CharField(max_length=100, null=True, blank=True)

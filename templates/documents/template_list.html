@@ -1,0 +1,240 @@
+{% extends 'documents/base.html' %}
+
+{% block title %}Liste des Templates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="fas fa-file-alt me-2 text-primary"></i>Templates de Documents
+        </h1>
+        <p class="text-muted mb-0">Gérez vos modèles de documents</p>
+    </div>
+    {% if user.is_staff %}
+    <div class="d-flex gap-2">
+        <a href="{% url 'pdf_editor:template-create' %}" class="btn btn-primary d-flex align-items-center justify-content-center">
+            <i class="fas fa-plus me-2"></i>Créer un Template
+        </a>
+        <a href="{% url 'pdf_editor:template-create-full' %}" class="btn btn-outline-primary d-flex align-items-center justify-content-center">
+            <i class="fas fa-edit me-2"></i>Créer (Tout en un)
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Filtres -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-5">
+                <label for="template_type" class="form-label fw-bold">Type de template</label>
+                <select name="template_type" id="template_type" class="form-select">
+                    <option value="">Tous les types</option>
+                    {% for key, display in template_types %}
+                    <option value="{{ key }}" {% if request.GET.template_type == key %}selected{% endif %}>
+                        {{ display }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="search" class="form-label fw-bold">Recherche</label>
+                <input type="text" name="search" id="search" class="form-control" placeholder="Rechercher par titre ou description..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="d-grid gap-2 w-100">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i>Filtrer
+                    </button>
+                    <a href="{% url 'pdf_editor:template-list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-undo me-1"></i>Réinitialiser
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistiques -->
+{% if templates %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ templates|length }}</h4>
+                        <p class="mb-0">Templates</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ active_count }}</h4>
+                        <p class="mb-0">Actifs</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ template_types|length }}</h4>
+                        <p class="mb-0">Types</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tags fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Liste des templates -->
+<div class="row g-4">
+    {% for template in templates %}
+    <div class="col-lg-4 col-md-6">
+        <div class="card h-100 template-card border-light shadow-sm hover-lift">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-light text-dark px-3 py-2">
+                        <i class="fas fa-tag me-1"></i>{{ template.get_template_type_display }}
+                    </span>
+                    <span class="badge {% if template.is_active %}bg-success{% else %}bg-secondary{% endif %} px-3 py-2">
+                        {{ template.is_active|yesno:'Actif,Inactif' }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title mb-3">{{ template.title }}</h5>
+                <p class="card-text text-muted flex-grow-1">{{ template.description|truncatewords:20 }}</p>
+
+                <div class="mt-auto pt-3">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'pdf_editor:document-generate' template.slug %}" class="btn btn-primary d-flex align-items-center justify-content-center">
+                            <i class="fas fa-file-export me-2"></i>Générer
+                        </a>
+                        {% if user.is_staff %}
+                        <div class="btn-group w-100" role="group">
+                            <a href="{% url 'pdf_editor:template-update' template.slug %}" class="btn btn-outline-primary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-edit me-1"></i><span>Éditer</span>
+                            </a>
+                            <a href="{% url 'pdf_editor:template-detail' template.slug %}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-info-circle me-1"></i><span>Détails</span>
+                            </a>
+                            <a href="{% url 'pdf_editor:template-delete' template.slug %}" class="btn btn-outline-danger d-flex align-items-center justify-content-center">
+                                <i class="fas fa-trash me-1"></i><span>Suppr</span>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card text-center border-0">
+            <div class="card-body py-5">
+                <div class="mb-4">
+                    <i class="fas fa-file-alt fa-5x text-muted opacity-50"></i>
+                </div>
+                <h4 class="card-title mb-3">Aucun template disponible</h4>
+                <p class="card-text text-muted mb-4">Il n'y a aucun template de document pour le moment.</p>
+                {% if user.is_staff %}
+                <a href="{% url 'pdf_editor:template-create' %}" class="btn btn-primary btn-lg px-4 d-flex align-items-center justify-content-center">
+                    <i class="fas fa-plus me-2"></i>Créer votre premier template
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Navigation par pages" class="mt-5">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Première">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Précédente">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Suivante">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.template_type %}&template_type={{ request.GET.template_type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Dernière">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+
+    .template-card {
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .template-card:hover {
+        border-color: rgba(67, 97, 238, 0.3);
+    }
+
+    .btn-group .btn {
+        flex: 1;
+    }
+
+    .card-header {
+        background-color: transparent !important;
+    }
+
+    .shadow-sm {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    }
+</style>
+{% endblock %}

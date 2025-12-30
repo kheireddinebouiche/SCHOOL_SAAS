@@ -207,9 +207,13 @@ urlpatterns = [
     path('DeleteSpecialiteCompte',DeleteSpecialiteCompte,name="DeleteSpecialiteCompte"),
 
 
-    path('paiements/autres/liste/', PageAutresPaiement, name="pageautrespaiement"),
-    path('paiements/autres/nouveau/',PageNouveauAutrePaiement, name="PageNouveauAutrePaiement"),
-    path("ApiListeAutresPaiements",ApiListeAutresPaiements, name="ApiListeAutresPaiements"),
+    path('paiements/autres/liste/', PageAutrePaiements, name="pageautrespaiement"),
+    path('paiements/autres/nouveau/', PageNouveauAutrePaiement, name="PageNouveauAutrePaiement"),
+    path('ApiListeAutresPaiements', ApiListeAutrePaiements, name="ApiListeAutresPaiements"),
+    path('ApiStoreAutrePaiement', ApiStoreAutrePaiement, name="ApiStoreAutrePaiement"),
+    path('ApiGetAutrePaiement/<int:pk>/', ApiGetAutrePaiement, name="ApiGetAutrePaiement"),
+    path('ApiUpdateAutrePaiement', ApiUpdateAutrePaiement, name="ApiUpdateAutrePaiement"),
+    path('ApiDeleteAutrePaiement', ApiDeleteAutrePaiement, name="ApiDeleteAutrePaiement"),
 
 
 

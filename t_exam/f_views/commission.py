@@ -94,20 +94,24 @@ def UpdateCommission(request, pk):
     return render(request,'tenant_folder/exams/commission/update_commission.html', context)
 
 @login_required(login_url="institut_app:login")
-def validate_commission(request, pk):
+def validate_commission(request):
     if request.method == "POST":
+        commissionId = request.POST.get('commissionId')
+        comment = request.POST.get('comment', '')
+
+        if not commissionId:
+            return JsonResponse({"status" : "error",'message' : "Informations manquante"})
+
         try:
-            commission = Commissions.objects.get(id=pk)
-            comment = request.POST.get('comment', '')
 
-            # Valider la commission
+            commission = Commissions.objects.get(id=commissionId)
+            
             commission.is_validated = True
+            commission.comment = comment
             commission.save()
-
-            return JsonResponse({
-                "status": "success",
-                "message": "La commission a été validée avec succès"
-            })
+            messages.success(request, "La commission a été valider avec succès")
+            return JsonResponse({"status": "success","message": "La commission a été validée avec succès"})
+        
         except Commissions.DoesNotExist:
             return JsonResponse({
                 "status": "error",
