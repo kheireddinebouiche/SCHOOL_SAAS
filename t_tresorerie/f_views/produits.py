@@ -176,47 +176,42 @@ def PageNouveauAutrePaiement(request):
 @login_required(login_url="institut_app:login")
 def ApiStoreAutrePaiement(request):
     """API endpoint to create a new other payment"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            label = data.get('label')
-            montant_paiement = data.get('montant_paiement')
-            mode_paiement = data.get('mode_paiement')
-            date_operation = data.get('date_operation')
-            reference = data.get('reference')
-            date_paiement = data.get('date_paiement')
-            compte_id = data.get('compte')
 
-            if not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
-                return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
+    data = json.loads(request.body)
+    label = data.get('label')
+    montant_paiement = data.get('montant_paiement')
+    mode_paiement = data.get('mode_paiement')
+    date_operation = data.get('date_operation')
+    reference = data.get('reference')
+    date_paiement = data.get('date_paiement')
+    compte_id = data.get('compte')
 
-            # Get the PaymentCategory if provided
-            compte = None
-            if compte_id:
-                compte = PaymentCategory.objects.get(id=compte_id)
+    if not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
+        return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
 
-            # Create the AutreProduit instance
-            autre_paiement = AutreProduit.objects.create(
-                label=label,
-                montant_paiement=montant_paiement,
-                mode_paiement=mode_paiement,
-                date_operation=date_operation,
-                reference=reference,
-                date_paiement=date_paiement,
-                compte=compte
-            )
+    # Get the PaymentCategory if provided
+    compte = None
+    if compte_id:
+        compte = PaymentCategory.objects.get(id=compte_id)
 
-            return JsonResponse({
-                'success': True,
-                'message': 'Paiement enregistré avec succès',
-                'id': autre_paiement.id
-            })
-        except PaymentCategory.DoesNotExist:
-            return JsonResponse({'error': 'Catégorie de paiement non trouvée'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+    # Create the AutreProduit instance
+    autre_paiement = AutreProduit.objects.create(
+        label=label,
+        montant_paiement=montant_paiement,
+        mode_paiement=mode_paiement,
+        date_operation=date_operation,
+        reference=reference,
+        date_paiement=date_paiement,
+        compte=compte
+    )
 
-    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+    return JsonResponse({
+        'success': True,
+        'message': 'Paiement enregistré avec succès',
+        'id': autre_paiement.id
+    })
+      
+
 
 @login_required(login_url="institut_app:login")
 def ApiListeAutrePaiements(request):

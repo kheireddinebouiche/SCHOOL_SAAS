@@ -174,8 +174,15 @@ class generate_student_pdf(LoginRequiredMixin, View):
         echeancier_qs = DuePaiements.objects.filter(client=student).order_by('date_echeance')
     
         echeancier = []
+
         for e in echeancier_qs:
+            label = e.label
+
+            if label == "Frais d'inscription":
+                label = f"{label} (Non Remboursable)"
+
             echeancier.append({
+                'label': label,
                 'montant_due': float(e.montant_due) if e.montant_due is not None else 0.0,
                 'date_echeance': e.date_echeance.isoformat() if e.date_echeance else ''
             })

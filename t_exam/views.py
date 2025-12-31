@@ -6,6 +6,7 @@ from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from t_etudiants.models import *
+from t_timetable.models import Salle
 from t_groupe.models import *
 from django.db import IntegrityError
 
@@ -159,7 +160,7 @@ def ApiLoadDatasForPlanExam(request):
     id = request.GET.get('id')
     obj = SessionExamLine.objects.get(id = id)
     modules = Modules.objects.filter(specialite = obj.groupe.specialite).values('id','label')
-    salles = SalleClasse.objects.all().values('id','label')
+    salles = Salle.objects.all().values('id','nom')
 
     data = {
         'modules' : list(modules),
@@ -183,55 +184,77 @@ def get_exam_planifications(request):
             "heure_debut": plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
             "heure_fin": plan.heure_fin.strftime("%H:%M") if plan.heure_fin else "",
             "salle_id": plan.salle.id,
-            "salle_nom": plan.salle.label
+            "salle_nom": plan.salle.nom
         })
 
     return JsonResponse({"status": "success", "planifications": data})
 
-@csrf_exempt 
+@transaction.atomic
 def save_exam_plan(request):
-    if request.method == "POST":
-        
+    
+    session_line_id = request.POST.get("session_id")
+    modules = request.POST.getlist("module[]")
+    dates = request.POST.getlist("date[]")
+    heures_debut = request.POST.getlist("heure_debut[]")
+    heures_fin = request.POST.getlist("heure_fin[]")
+    salles = request.POST.getlist("salle[]")
 
-        session_line_id = request.POST.get("session_line_id")
-        modules = request.POST.getlist("module[]")
-        dates = request.POST.getlist("date[]")
-        heures_debut = request.POST.getlist("heure_debut[]")
-        heures_fin = request.POST.getlist("heure_fin[]")
-        salles = request.POST.getlist("salle[]")
+    if not session_line_id:
+        return JsonResponse({"status" : "error", "message" : "Informations manquantes"})
+    
+    obj = SessionExamLine.objects.get(id =session_line_id )
 
-        obj = SessionExamLine.objects.get(id =session_line_id )
+    planifications = []
+    erreurs = []
 
-        planifications = []
-
-        for i in range(len(modules)):
+    for i in range(len(modules)):
+        try:
+            # Conversion date
             date_obj = datetime.strptime(dates[i], "%Y-%m-%d")
-
-            plan, created  = ExamPlanification.objects.update_or_create(
-                exam_line=obj,
-                module = Modules.objects.get(id=modules[i]),
+            
+            # Récupérer module et salle
+            module_obj = Modules.objects.get(id=modules[i])
+            salle_obj = Salle.objects.get(id=salles[i])
+            
+            # Création planification
+            plan, created = ExamPlanification.objects.update_or_create(
+                #exam_line=obj,
+                module=module_obj,
                 defaults={
-                    'date': date_obj,
-                    'heure_debut': heures_debut[i],
-                    'heure_fin': heures_fin[i],
-                    'salle': SalleClasse.objects.get(id=salles[i]),
+                    'date':date_obj,
+                    'heure_debut':heures_debut[i],
+                    'heure_fin':heures_fin[i],
+                    'salle':salle_obj
                 }
+                
             )
+            
+            # Ajouter à la liste des planifications créées
             planifications.append({
                 "module": plan.module.label,
                 "date": plan.date.strftime("%Y-%m-%d"),
                 "heure_debut": str(plan.heure_debut),
                 "heure_fin": str(plan.heure_fin),
-                "salle": plan.salle.label
+                "salle": plan.salle.nom
+            })
+            
+        except Exception as e:
+            # Stocker l'erreur avec l'index ou les données concernées
+            erreurs.append({
+                "index": i,
+                "module_id": modules[i] if i < len(modules) else None,
+                "salle_id": salles[i] if i < len(salles) else None,
+                "error": str(e)
             })
 
-        return JsonResponse({
-            "status": "success",
-            "message": "Planifications enregistrées",
-            "data": planifications
-        })
+    # À la fin, tu peux afficher ou logger les erreurs
+    if erreurs:
+        for err in erreurs:
+            print(f"Erreur à l'index {err['index']}: {err['error']}")
 
-    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
+    return JsonResponse({"status": "success","message": "Planifications enregistrées","data": planifications})
+
+    
 
 def ModelBuilltinPage(request):
     return render(request,'tenant_folder/exams/model-builtins.html',{'tenant' : request.tenant})

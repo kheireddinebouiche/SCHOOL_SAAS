@@ -538,7 +538,7 @@
                         modulesRow += "<option value="+item.id+">"+item.label+"</option>";
                     });
                     $.each(data.salles, function(index, item){
-                        classRow += "<option value="+item.id+">"+item.label+"</option>"; 
+                        classRow += "<option value="+item.id+">"+item.nom+"</option>"; 
                     });
                     $.ajax({
                         url: "{% url 't_exam:get_exam_plans' %}",
@@ -651,27 +651,30 @@
        $(document).on('submit', '#plan-exam-form', function(e){
             e.preventDefault(); // Empêche le rechargement de la page
 
+            
             var form = $(this);
-            var formData = form.serialize(); // Sérialise les champs du formulaire
+            var formData = form.serializeArray(); // array of objects {name, value}
+            var data = {};
+            formData.forEach(item => data[item.name] = item.value);
+            data['session_id'] = "{{pk}}";
+            data['csrfmiddlewaretoken'] = '{{ csrf_token }}';
+
 
             $.ajax({
-                url: "{% url 't_exam:save_exam_plan' %}",  // Remplace ceci par l'URL Django correcte pour sauvegarder les données
+                url: "{% url 't_exam:save_exam_plan' %}",
                 type: "POST",
-                data: formData,
-                headers: {
-                    'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val() // Ajoute le token CSRF
-                },
+                data: data,
                 success: function(response){
                     if(response.status === "success"){
                         
-                        alert("Planification enregistrée avec succès !");
+                        alertify.success("Planification enregistrée avec succès !");
                         
                     } else {
-                        alert("Erreur : " + response.message);
+                        alertify.error("Erreur : " + response.message);
                     }
                 },
                 error: function(xhr, status, error){
-                    alert("Une erreur est survenue lors de l'enregistrement.");
+                    alertify.error("Une erreur est survenue lors de l'enregistrement.");
                     console.error(error);
                 }
             });
