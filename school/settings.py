@@ -213,7 +213,7 @@ MESSAGE_TAGS = {
 
 # Configuration TinyMCE
 TINYMCE_DEFAULT_CONFIG = {
-    'height': 500,
+    'height': 700,
     'width': '100%',
     'mode': 'textareas',
     'theme': 'silver',

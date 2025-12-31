@@ -167,6 +167,7 @@ class generate_student_pdf(LoginRequiredMixin, View):
         logo = fiche.specialite.formation.entite_legal.entete_logo.url if fiche.specialite.formation.entite_legal.entete_logo else ''
 
         specialite = fiche.specialite.label
+        formation = fiche.specialite.label
         annee_academique = fiche.promo.annee_academique
 
         # Récupération de l'échéancier et conversion des Decimals en float
@@ -177,6 +178,14 @@ class generate_student_pdf(LoginRequiredMixin, View):
             echeancier.append({
                 'montant_due': float(e.montant_due) if e.montant_due is not None else 0.0,
                 'date_echeance': e.date_echeance.isoformat() if e.date_echeance else ''
+            })
+
+        formation = FicheDeVoeux.objects.get(prospect = student)
+        documents_qs = DossierInscription.objects.filter(formation  = formation.id)
+        documents = []
+        for i in documents_qs:
+            documents.append({
+                'label' : i.label
             })
 
         # Sélection du template
@@ -205,6 +214,7 @@ class generate_student_pdf(LoginRequiredMixin, View):
             'specialite': specialite,
             'annee_academique': annee_academique,
             'echeancier': echeancier,
+            'documents' : documents,
         }
 
         # Rendu du template
