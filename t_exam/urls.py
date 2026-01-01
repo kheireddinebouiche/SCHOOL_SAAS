@@ -2,7 +2,9 @@ from django.urls import path
 from .views import *
 # Utilise un chemin relatif
 from .f_views.commission import *
+from .f_views.modele_builtins import *
 from .f_views.action_views import examen_action, rachat_action, ajourne_action
+from .f_views.exam_plan import *
 
 app_name="t_exam"
 
@@ -29,15 +31,20 @@ urlpatterns = [
 
    path('NewModelBuilltin', NewModelBuilltin, name="NewModelBuilltin"),
    path('ApiDeleteModelBuitltin' , ApiDeleteModelBuitltin, name="ApiDeleteModelBuitltin"),
-   path('ApiLoadTypeNote', ApiLoadTypeNote, name="ApiLoadTypeNote"),
-   path('ApiAddNewType', ApiAddNewType, name="ApiAddNewType"),
-   path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
 
-   path('ApiGetTypeNoteDetails',ApiGetTypeNoteDetails, name="ApiGetTypeNoteDetails"),
+   # Nouvelles URLs pour la gestion des modèles de bulletins
+   path('ApiGetModelBuilltinDetails', ApiGetModelBuilltinDetails, name="ApiGetModelBuilltinDetails"),
+   path('ApiUpdateModelBuilltin', ApiUpdateModelBuilltin, name="ApiUpdateModelBuilltin"),
+   path('ApiGetTypeNotes', ApiGetTypeNotes, name="ApiGetTypeNotes"),
+   path('ApiAddTypeNote', ApiAddTypeNote, name="ApiAddTypeNote"),
    path('ApiUpdateTypeNote', ApiUpdateTypeNote, name="ApiUpdateTypeNote"),
+   path('ApiDeleteTypeNote', ApiDeleteTypeNote, name="ApiDeleteTypeNote"),
+   path('ApiAddSousNote', ApiAddSousNote, name="ApiAddSousNote"),
+   path('ApiUpdateSousNote', ApiUpdateSousNote, name="ApiUpdateSousNote"),
+   path('ApiDeleteSousNote', ApiDeleteSousNote, name="ApiDeleteSousNote"),
+   path('ApiBulkUpdateSousNotes', ApiBulkUpdateSousNotes, name="ApiBulkUpdateSousNotes"),
+   path('ApiGetSousNotesForType', ApiGetSousNotesForType, name="ApiGetSousNotesForType"),
 
-   path('pv-note/<int:pk>/', ApiExamResult, name="ApiExamResult"),
-   path('SaveNoteAjax', SaveNoteAjax , name="SaveNoteAjax"),
 
    path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
 
@@ -57,5 +64,15 @@ urlpatterns = [
 
    path('ApiGetCommissionResults', ApiGetCommissionResults, name="ApiGetCommissionResults"),
    path('close_commission/<int:pk>', close_commission, name="close_commission"),
+
+   path('ApiLoadDataToPlan', ApiLoadDataToPlan, name="ApiLoadDataToPlan"),
+   path('ApiPlanExam',ApiPlanExam, name="ApiPlanExam"),
+
+   path('preview-pv/<int:pk>/', PreviewPV, name="PreviewPV"),
+
+   path('validate-exam/', validate_exam, name="validate_exam"),
+   path('generate-pv/<int:pk>/', GeneratePv, name="GeneratePv"),
+   path('save_exam_results/<int:pk>/', SaveExamResults, name="save_exam_results"),
+   path('get_exam_history/<int:pk>/', GetExamHistory, name="get_exam_history"),
 
 ]

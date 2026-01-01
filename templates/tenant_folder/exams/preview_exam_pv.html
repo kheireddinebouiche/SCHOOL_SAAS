@@ -1,0 +1,460 @@
+{% load exam_custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prévisualisation PV d'examen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .student-name {
+            font-weight: bold;
+        }
+        .note-cell {
+            text-align: center;
+        }
+        .type-note-header {
+            background-color: #45a049 !important;
+        }
+        .sous-note-header {
+            background-color: #5da05d !important;
+            font-size: 0.9em;
+        }
+        .note-input {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-save {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-print {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-validate {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .history-section {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .history-student {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+        .history-note {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+        }
+        .history-sous-note {
+            margin: 3px 0;
+            padding: 3px 10px;
+            background-color: #e9ecef;
+            border-radius: 2px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prévisualisation PV d'examen</h1>
+
+        <div class="header-info">
+            <p><strong>Groupe:</strong> {{ groupe.groupe.label }}</p>
+            <p><strong>Session:</strong> {{ groupe.session.label }}</p>
+            <p><strong>Module:</strong> {{ modele.formation.label }}</p>
+            <p><strong>Examen:</strong> {{ groupe.exam_planification.get_type_examen_display }} - {{ groupe.exam_planification.module.label }}</p>
+            <p>Est validé: {{pv_examen.est_valide}}</p>
+            <!-- Débogage -->
+            {% comment %}
+            <p>Données étudiants: {{ student_notes_data }}</p>
+            {% endfor %}
+            {% endcomment %}
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+
+        <form id="exam-results-form">
+            {% csrf_token %}
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">N°</th>
+                        <th rowspan="2">Nom de l'étudiant</th>
+                        <th rowspan="2">Prénom</th>
+                        {% for type_note in modele.types_notes.all %}
+                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                <th colspan="{{ type_note.nb_sous_notes }}" class="type-note-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                            {% else %}
+                                <th class="type-note-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for type_note in modele.types_notes.all %}
+                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                {% for sous_note in type_note.sous_notes.all %}
+                                    <th class="sous-note-header">{{ sous_note.label }}</th>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_line in students %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td class="student-name">{{ student_line.student.nom }}</td>
+                            <td>{{ student_line.student.prenom }}</td>
+                            {% for type_note in modele.types_notes.all %}
+                                {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                    {% for sous_note in type_note.sous_notes.all %}
+                                        <td class="note-cell">
+                                            <input type="number"
+                                                   step="0.01"
+                                                   min="0"
+                                                   max="{{ type_note.max_note }}"
+                                                   class="note-input"
+                                                   name="sous_note_{{ student_line.student.id }}_{{ type_note.id }}_{{ forloop.counter0 }}"
+                                                   value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and forloop.counter0 < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:forloop.counter0 %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                                   {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                        </td>
+                                    {% endfor %}
+                                {% else %}
+                                    <td class="note-cell">
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0"
+                                               max="{{ type_note.max_note }}"
+                                               class="note-input"
+                                               name="note_{{ student_line.student.id }}_{{ type_note.id }}"
+                                               value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                               {% if  pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                    </td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </form>
+
+        <div class="action-buttons">
+            <button type="button" class="btn btn-save" id="save-results-btn" {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>Sauvegarder les résultats</button>
+            <button type="button" class="btn btn-print" id="print-btn">Imprimer</button>
+            <button type="button" class="btn" style="background-color: #ffc107; color: #212529;" id="test-send-btn">Tester l'envoi</button>
+            <button type="button" class="btn" style="background-color: #6c757d; color: white;" id="show-history-btn">Afficher l'historique</button>
+            {% if not pv_examen or not pv_examen.est_valide %}
+                <button type="button" class="btn btn-validate" id="validate-btn">Valider l'examen</button>
+            {% endif %}
+        </div>
+
+        <!-- Section pour afficher l'historique -->
+        <div id="history-section" class="history-section" style="display: none; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+            <h3>Historique des notes</h3>
+            <div id="history-content">
+                <p>Chargement de l'historique...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Define URLs using Django template tags
+        const SAVE_EXAM_RESULTS_URL = "{% url 't_exam:save_exam_results' pk %}";
+        const VALIDATE_EXAM_URL = "{% url 't_exam:validate_exam' %}";
+
+        function showStatus(message, isSuccess) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message ' + (isSuccess ? 'status-success' : 'status-error');
+            statusDiv.style.display = 'block';
+
+            setTimeout(function() {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function saveExamResults(pk) {
+            const form = document.getElementById('exam-results-form');
+            const formData = new FormData(form);
+
+            $.ajax({
+                url: SAVE_EXAM_RESULTS_URL,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        showStatus(data.message, true);
+                    } else {
+                        showStatus(data.message, false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showStatus('Erreur de connexion: ' + error, false);
+                }
+            });
+        }
+
+        function testSendData(pk) {
+            const form = document.getElementById('exam-results-form');
+            const formData = new FormData(form);
+
+            $.ajax({
+                url: SAVE_EXAM_RESULTS_URL,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        // Display the received data in an alert or console
+                        console.log('Données reçues par le serveur:', data.received_data);
+                        alert('Test réussi! Données envoyées et reçues. Voir la console pour les détails.');
+                        showStatus('Test réussi! Données envoyées avec succès.', true);
+                    } else {
+                        showStatus(data.message, false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showStatus('Erreur de test: ' + error, false);
+                }
+            });
+        }
+
+        function validateExam(pk) {
+            if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
+                $.ajax({
+                    url: VALIDATE_EXAM_URL,
+                    type: 'POST',
+                    data: {
+                        'exam_plan_id': pk,
+                        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    success: function(data) {
+                        if (data.status === 'success') {
+                            showStatus(data.message, true);
+                            // Disable all input fields after validation
+                            $('input').prop('disabled', true);
+                            // Disable save button
+                            $('#save-results-btn').prop('disabled', true);
+                            // Hide validate button
+                            $('#validate-btn').hide();
+                        } else {
+                            showStatus(data.message, false);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showStatus('Erreur de connexion: ' + error, false);
+                    }
+                });
+            }
+        }
+
+        function loadExamHistory(pk) {
+            // Show loading message
+            $('#history-content').html('<p>Chargement de l\'historique...</p>');
+            $('#history-section').show();
+
+            $.ajax({
+                url: "{% url 't_exam:get_exam_history' pk %}",  // URL pour la nouvelle fonction
+                type: 'GET',
+                success: function(data) {
+                    if (data.status === 'success') {
+                        displayExamHistory(data.history_data);
+                    } else {
+                        $('#history-content').html('<p class="status-error">Erreur lors du chargement de l\'historique: ' + data.message + '</p>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#history-content').html('<p class="status-error">Erreur de connexion lors du chargement de l\'historique: ' + error + '</p>');
+                }
+            });
+        }
+
+        function displayExamHistory(historyData) {
+            let html = '<div class="exam-info">';
+            html += '<h4>Examen: ' + historyData.exam_plan.module + ' (' + historyData.exam_plan.type_examen + ')</h4>';
+            html += '<p>Date: ' + historyData.exam_plan.date + '</p>';
+            html += '</div>';
+
+            html += '<div class="students-history">';
+            historyData.students.forEach(function(student) {
+                html += '<div class="history-student">';
+                html += '<h4>' + student.student_name + '</h4>';
+
+                if (student.notes.length > 0) {
+                    student.notes.forEach(function(note) {
+                        html += '<div class="history-note">';
+                        html += '<strong>' + note.type_note_label + ':</strong> ';
+
+                        if (note.note_value !== null) {
+                            html += note.note_value + ' / ';
+                        } else {
+                            html += 'Non noté / ';
+                        }
+
+                        if (note.has_sous_notes && note.sous_notes.length > 0) {
+                            html += '<div style="margin-left: 15px;">';
+                            note.sous_notes.forEach(function(sousNote, index) {
+                                html += '<div class="history-sous-note">Sous-note ' + (index + 1) + ': ' + (sousNote.valeur !== null ? sousNote.valeur : 'Non noté') + '</div>';
+                            });
+                            html += '</div>';
+                        }
+
+                        html += '</div>';
+                    });
+                } else {
+                    html += '<p>Aucune note enregistrée pour cet étudiant.</p>';
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+            $('#history-content').html(html);
+        }
+        // Add event listeners when the page loads
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Save results button
+            const saveResultsBtn = document.getElementById('save-results-btn');
+            if (saveResultsBtn) {
+                saveResultsBtn.addEventListener('click', function() {
+                    saveExamResults("{{ pk }}");
+                });
+            }
+
+            // Print button
+            const printBtn = document.getElementById('print-btn');
+            if (printBtn) {
+                printBtn.addEventListener('click', function() {
+                    window.print();
+                });
+            }
+
+            // Test send button
+            const testSendBtn = document.getElementById('test-send-btn');
+            if (testSendBtn) {
+                testSendBtn.addEventListener('click', function() {
+                    testSendData("{{ pk }}");
+                });
+            }
+
+            // Show history button
+            const showHistoryBtn = document.getElementById('show-history-btn');
+            if (showHistoryBtn) {
+                showHistoryBtn.addEventListener('click', function() {
+                    loadExamHistory("{{ pk }}");
+                });
+            }
+
+            // Validate button
+            const validateBtn = document.getElementById('validate-btn');
+            if (validateBtn) {
+                validateBtn.addEventListener('click', function() {
+                    validateExam("{{ pk }}");
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -5,13 +5,17 @@ from .forms import *
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
+from django.utils import timezone
 from t_etudiants.models import *
 from t_timetable.models import Salle
 from t_groupe.models import *
 from django.db import IntegrityError
+from django.contrib.auth.decorators import login_required
 
+
+@login_required(login_url="institut_app:login")
 def ListeSession(request):
-    return render(request, 'tenant_folder/exams/liste-session.html', {'tenant' : request.tenant})
+    return render(request, 'tenant_folder/exams/liste-session.html')
 
 @transaction.atomic
 def NewSession(request):
@@ -62,7 +66,7 @@ def ApiDeleteSession(request):
         return JsonResponse({'status' : False, 'message' : str(e)})
     
 
-
+@login_required(login_url="institut_app:login")
 def DetailsSession(request, pk):
     context = {
         'pk' : pk,
@@ -70,11 +74,12 @@ def DetailsSession(request, pk):
     }
     return render(request, 'tenant_folder/exams/details-session.html', context)
 
+@login_required(login_url="institut_app:login")
 def ApiGetSessionDetails(request):
     session_id = request.GET.get("id")
     
     session = SessionExam.objects.filter(id=session_id).values('label','code','date_debut','date_fin','date_fin','created_at')
-    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe__nom','semestre','date_debut','date_fin')
+    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe__nom','groupe__id','semestre','date_debut','date_fin')
 
     data = {
         'session': list(session),  
@@ -169,26 +174,6 @@ def ApiLoadDatasForPlanExam(request):
 
     return JsonResponse(data, safe=False)
 
-def get_exam_planifications(request):
-    session_line_id = request.GET.get("id")
-    
-    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id)
-
-    data = []
-    for plan in plans:
-        data.append({
-            'id' : plan.id,
-            "module_id": plan.module.id,
-            "module_nom": plan.module.label,
-            "date": plan.date.strftime("%Y-%m-%d") if plan.date else "",
-            "heure_debut": plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
-            "heure_fin": plan.heure_fin.strftime("%H:%M") if plan.heure_fin else "",
-            "salle_id": plan.salle.id,
-            "salle_nom": plan.salle.nom
-        })
-
-    return JsonResponse({"status": "success", "planifications": data})
-
 @transaction.atomic
 def save_exam_plan(request):
     
@@ -254,156 +239,3 @@ def save_exam_plan(request):
 
     return JsonResponse({"status": "success","message": "Planifications enregistrées","data": planifications})
 
-    
-
-def ModelBuilltinPage(request):
-    return render(request,'tenant_folder/exams/model-builtins.html',{'tenant' : request.tenant})
-
-def ApiListModeleBuilltins(request):
-    obj = ModelBuilltins.objects.all().values('id','label','formation__nom','is_default')
-    return JsonResponse(list(obj), safe=False)
-
-def NewModelBuilltin(request):
-    if request.method == "POST":
-        form = BuilltinForm(request.POST)
-        if form.is_valid():  
-            instance =  form.save()
-            id = instance.id
-            return JsonResponse({'statut' : 'success','id': id})
-        else:
-            return JsonResponse({'statut' : False, 'message' : "Une erreur c'est produite lors du traitement du formulaire"})
-    else:
-        form = BuilltinForm()
-        return render(request, 'tenant_folder/exams/template-modele-builtins.html', {'form': form})
-    
-def ApiLoadTypeNote(request):
-    id = request.GET.get('id')
-    modele = ModelBuilltins.objects.get(id=id)
-    listeTypeNote = TypeNote.objects.filter(model_builtins = modele).values('id','label', 'eval','affichage','model_builtins__id').order_by('created_at')
-
-    return JsonResponse(list(listeTypeNote), safe=False)
-
-    
-def ApiDeleteModelBuitltin(request):
-    id = request.GET.get('id')
-    obj = ModelBuilltins.objects.get(id = id)
-    obj.delete()
-
-    return JsonResponse({'status' : 'success', 'message' : 'Le modéle de builltin a été supprimer avec succès .'})
-
-@transaction.atomic
-def ApiAddNewType(request):
-    label = request.POST.get('label')
-    evaluation = request.POST.get('evaluation')
-    affichage = request.POST.get('affichage')
-    id_model = request.POST.get('id')
-
-    obj = ModelBuilltins.objects.get(id=id_model)
-
-    new_type_note = TypeNote(
-        label = label,
-        eval = evaluation,
-        affichage = affichage,
-        model_builtins = obj,
-    )
-
-    new_type_note.save()
-    return JsonResponse({'status' : 'success', 'message':"Le type de note a été ajouter avec succès"})
-
-def ApiDeleteTypeNote(request):
-    id = request.GET.get('id')
-
-    obj = TypeNote.objects.get(id = id)
-    obj.delete()
-
-    return JsonResponse({'status' : 'success', 'message' : "Le type de note à été supprimer avec succès."})
-
-def ApiGetTypeNoteDetails(request):
-    id = request.GET.get('id')
-    obj = TypeNote.objects.get(id = id)
-    
-    data = {
-        'label' : obj.label,
-        'eval' : obj.eval,
-        'affichage' : obj.affichage,
-        'id' : id,
-        'id_model' : obj.model_builtins.id
-    }
-
-    return JsonResponse(data, safe=False)
-
-@transaction.atomic
-def ApiUpdateTypeNote(request):
-    label = request.POST.get('label')
-    affichage = request.POST.get('affichage')
-    eval = request.POST.get('eval')
-    id = request.POST.get('id_type')
-
-    type_note = TypeNote.objects.get(id=id)
-    
-
-    type_note.label = label
-    type_note.affichage = affichage
-    type_note.eval = eval
-
-    type_note.save()
-
-    return JsonResponse({'status' : 'success','message' : "Modifications effectuer avec succès",'id_model' : type_note.model_builtins.id})
-
-def ApiExamResult(request, pk):
-    exam_line_obj = ExamPlanification.objects.get(id = pk)
-    formation = SessionExamLine.objects.get(id = exam_line_obj.exam_line.id)
-    groupe = Groupe.objects.get(id = formation.groupe.id)
-    specialite = Specialites.objects.get(id = groupe.specialite.id) 
-    formation_obj = Formation.objects.get(id = specialite.formation.id)
-    model_builtins = ModelBuilltins.objects.get(formation = formation_obj)
-    type_note = TypeNote.objects.filter(model_builtins = model_builtins.id).order_by('created_at')
-    students = GroupeLine.objects.filter(groupe = groupe.id)
-
-    module = exam_line_obj.module
-   
-    pv = PVNotes.objects.filter(groupe=groupe, model_builtin=model_builtins).first()
-    if not pv:
-        pv = PVNotes.objects.create(groupe=groupe, model_builtin=model_builtins, module=module)
-
-    # Récupération des notes existantes
-    notes = Note.objects.filter(pv=pv)
-    notes_dict = {
-    f"{note.etudiant.id}_{note.note_type.id}": float(note.valeur)
-        for note in notes
-    }
-    context = {
-        'type_notes': type_note,
-        'etudiants': students,
-        'notes_dict': notes_dict,
-        'pv_id': pv.id,
-
-    }
-
-    return render(request, 'tenant_folder/exams/exam_results.html', context)
-
-from django.views.decorators.csrf import csrf_exempt
-import json
-
-@csrf_exempt
-def SaveNoteAjax(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        etudiant_id = data.get('etudiant_id')
-        type_note_id = data.get('type_note_id')
-        valeur = float(data.get('valeur'))
-        pv_id = data.get('pv_id')
-
-    
-        note, created = Note.objects.update_or_create(
-            etudiant=Etudiant.objects.get(id= etudiant_id),
-            note_type=TypeNote.objects.get(id=type_note_id),
-            pv=PVNotes.objects.get(id = pv_id),
-            defaults={'valeur': valeur}
-        )
-
-        return JsonResponse({'status': 'success', 'valeur': note.valeur})
-    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
-
-    
-   

@@ -3,246 +3,632 @@
 {% block title %} Examens - Sessions d'examens {% endblock title %}
 
 {% block content %}
-        <!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+  .stats-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .session-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+  .session-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .status-badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+    border-radius: 50px;
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  .dropdown-menu {
+    z-index: 1060 !important;
+  }
+</style>
 
-            <div class="page-content">
-                <div class="container-fluid">
-
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Sessions d'examens</h4>
-
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Examens</a></li>
-                                        <li class="breadcrumb-item active">Sessions d'examens</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- end page title -->
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                        <h5 class="card-title mb-2 mb-md-0">Liste des sessions</h5>
-                                        <div class="d-flex align-items-center">
-                                            <div class="me-2">
-                                                <input type="text" class="form-control " placeholder="Rechercher..." style="height: 30px;" />
-                                            </div>
-                                            <button id="addNewSession" class="btn btn-primary btn-sm" data-url="{% url 't_exam:NewSession' %}">
-                                                <i class='bx bx-plus me-1'></i>Créer une nouvelle session
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>   
-                                <div class="card-body">
-                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                        <thead>
-                                            <tr>
-                                                
-                                                <th>Code #</th>
-                                                <th>Label</th>
-                                                <th>Type</th>
-                                                <th>Date de debut</th>
-                                                <th>Date de fin</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="listItem">
-
-                                        
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- container-fluid -->
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-gradient-to-r from-primary to-info rounded-3 shadow p-4 text-white">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                <i class="ri-calendar-2-line ri-2x"></i>
+              </div>
+              <div>
+                <h4 class="mb-1">Sessions d'examens</h4>
+                <p class="mb-0 opacity-75">Gestion des sessions d'examen</p>
+              </div>
             </div>
-            <!-- End Page-content -->
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 text-white">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-home-4-line me-1"></i>Examens
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active">Sessions d'examens</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-primary-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Total sessions</p>
+                  <h4 class="mb-0" id="totalSessions">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-primary rounded-circle text-white fs-4">
+                    <i class="ri-calendar-2-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div id="createSessionModal" class="modal fade" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true" style="display: none;">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createSessionModalLabel">Formulaire de création d'une nouvelle session d'examens</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body" id="modal-form-content">
-                       
-                    </div>
-                    <div class="modal-footer">
-                        
-                    </div>
-        
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-success-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Actives</p>
+                  <h4 class="mb-0" id="activeSessions">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-success rounded-circle text-white fs-4">
+                    <i class="ri-checkbox-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div class="modal fade alertModal1" tabindex="-1" role="dialog" aria-labelledby="alertModal1Label" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-5">
-                        <script src="https://cdn.lordicon.com/lordicon.js"></script>
-                        <lord-icon
-                            src="https://cdn.lordicon.com/fjvfsqea.json"
-                            trigger="loop"
-                            style="width:120px;height:120px">
-                        </lord-icon>
-                        <div class="mt-4">
-                           
-                            <p class="text-muted mb-4">Souhaitez-vous maintenant passer au paramétrage de cette session (dates, durée, matières, etc.) ?</p>
-                            <div class="hstack gap-2 justify-content-center">
-                                
-                            </div>
-                        </div>
-                    </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-warning-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Passées</p>
+                  <h4 class="mb-0" id="pastSessions">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-warning rounded-circle text-white fs-4">
+                    <i class="ri-time-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-5">
-                        <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
-                        </lord-icon>
-                        <div class="mt-4">
-                            <h4 class="mb-3">Vous étes sur le point de supprimer la session d'examen</h4>
-                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                            <div class="hstack gap-2 justify-content-center">
-                                
-                            </div>
-                        </div>
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-info-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">À venir</p>
+                  <h4 class="mb-0" id="upcomingSessions">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-info rounded-circle text-white fs-4">
+                    <i class="ri-calendar-check-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white p-4 border-bottom">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="ri-filter-line text-info"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 text-info">Filtres avancés</h5>
+                    <p class="text-muted mb-0 small">Affinez votre recherche</p>
+                  </div>
+                </div>
+
+                <div class="ms-auto">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <button id="addNewSession" class="btn btn-primary d-flex align-items-center" data-url="{% url 't_exam:NewSession' %}">
+                      <i class="ri-add-line me-1"></i> Nouvelle session
+                    </button>
+
+                    <div class="d-flex gap-2">
+                      <input type="text" class="form-control rounded-pill" placeholder="Rechercher une session..." id="searchInput">
+
+                      <select id="statusFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Tous les statuts</option>
+                        <option value="active">Actives</option>
+                        <option value="past">Passées</option>
+                        <option value="upcoming">À venir</option>
+                      </select>
                     </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table id="sessionsTable" class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Code</th>
+                      <th scope="col">Libellé</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Date de début</th>
+                      <th scope="col">Date de fin</th>
+                      <th scope="col">Statut</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listItem">
+                    <tr>
+                      <td colspan="7" class="text-center py-5">
+                        <div class="d-flex flex-column align-items-center justify-content-center">
+                          <i class="bx bx-loader bx-spin bx-lg text-primary mb-3"></i>
+                          <p class="text-muted mb-0">Chargement des sessions...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <nav aria-label="Sessions pagination" class="mt-4">
+                <ul class="pagination justify-content-center" id="pagination">
+                  <!-- Pagination will be populated by JavaScript -->
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Session Modal -->
+<div id="createSessionModal" class="modal fade" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-calendar-add-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="createSessionModalLabel">
+              Création d'une nouvelle session d'examens
+            </h5>
+            <p class="text-muted small mb-0">Remplissez les informations de la session</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" id="modal-form-content">
+        <!-- Form content will be loaded via AJAX -->
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="submit" form="sessionModalForm" class="btn btn-primary px-4 py-2">
+          <i class="ri-check-line me-2"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal for Configuration -->
+<div class="modal fade alertModal1" tabindex="-1" role="dialog" aria-labelledby="alertModal1Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-checkbox-circle-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="alertModal1Label">
+              Paramétrer la session maintenant ?
+            </h5>
+            <p class="text-muted small mb-0">Confirmer le paramétrage de la session</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+              <i class="ri-checkbox-circle-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Paramétrer la session maintenant ?</h5>
+          <p class="text-muted mb-4">Souhaitez-vous maintenant passer au paramétrage de cette session (dates, durée, matières, etc.) ?</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Plus tard
+        </button>
+        <button id="confirmParametrage" class="btn btn-success px-4 py-2">
+          <i class="ri-check-line me-2"></i>Oui, paramétrer maintenant
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Suppression de la session
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la suppression de la session</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+              <i class="ri-delete-bin-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer cette session d'examen ?</h5>
+          <p class="text-muted mb-4">Cette action est irréversible et supprimera définitivement la session et toutes ses données associées.</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button id="confirmDeleteBtn" class="btn btn-danger px-4 py-2">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
+  $(document).ready(function(){
+    let sessionsData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
-    $(document).ready(function(){
+    function updateStats() {
+      const today = new Date();
+      const activeCount = sessionsData.filter(session => {
+        const startDate = new Date(session.date_debut.split('T')[0]);
+        const endDate = new Date(session.date_fin.split('T')[0]);
+        return startDate <= today && endDate >= today;
+      }).length;
 
-        function loadSession(){
-            $.ajax({
-                url : "{% url 't_exam:ApiListSession' %}",
-                type : 'GET',
-                dataType : 'JSON',
-                success : function(data){
-                    var row = "";
-                    if (data.length > 0){
-                        $.each(data, function(index, i){
-                            row += '<tr>';
-                                row += '<td><a href="/examens/details-session/'+i.id+'"><b>'+i.code+'</b></a></td>';
-                                row += '<td>'+i.label+'</td>';
-                                row += '<td>'+i.type_session_label+'</td>';
-                                row += '<td>'+i.date_debut.split('T')[0]+'</td>';
-                                row += '<td>'+i.date_fin.split('T')[0]+'</td>';
-                                row += "<td style='align-items:center;'>";
-                                    row += '<div class="dropdown d-inline-block">';
-                                    row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                    row += '<i class="ri-more-fill align-middle"></i>';
-                                    row += '</button>';
-                                    row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                    row += '<li><a href="/examens/details-session/'+i.id+'" data-id='+i.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </a></li>';
-                                    row += '<li><button data-id='+i.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
-                                    row += '<li><button data-id='+i.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
-                                    row += "</ul></div>";
-                                row += "</td>";
-                            row += '</tr>';
-                        });
-                    }else{
-                        row = "<tr><td colspan='5' class='text-muted text-center'>Aucune session trouvé !</td></tr>";
-                    }
+      const pastCount = sessionsData.filter(session => {
+        const endDate = new Date(session.date_fin.split('T')[0]);
+        return endDate < today;
+      }).length;
 
-                    $('#listItem').html(row);
-                }
-            });
+      const upcomingCount = sessionsData.filter(session => {
+        const startDate = new Date(session.date_debut.split('T')[0]);
+        return startDate > today;
+      }).length;
+
+      $('#totalSessions').text(sessionsData.length);
+      $('#activeSessions').text(activeCount);
+      $('#pastSessions').text(pastCount);
+      $('#upcomingSessions').text(upcomingCount);
+    }
+
+    function getStatusClass(session) {
+      const today = new Date();
+      const startDate = new Date(session.date_debut.split('T')[0]);
+      const endDate = new Date(session.date_fin.split('T')[0]);
+
+      if (startDate <= today && endDate >= today) {
+        return 'bg-success-subtle text-success border border-success-subtle';
+      } else if (endDate < today) {
+        return 'bg-warning-subtle text-warning border border-warning-subtle';
+      } else {
+        return 'bg-info-subtle text-info border border-info-subtle';
+      }
+    }
+
+    function getStatusText(session) {
+      const today = new Date();
+      const startDate = new Date(session.date_debut.split('T')[0]);
+      const endDate = new Date(session.date_fin.split('T')[0]);
+
+      if (startDate <= today && endDate >= today) {
+        return 'Active';
+      } else if (endDate < today) {
+        return 'Terminée';
+      } else {
+        return 'À venir';
+      }
+    }
+
+    function renderTable(data) {
+      let row = "";
+      if (data.length > 0) {
+        $.each(data, function(index, i) {
+          row += '<tr>';
+          row += '<td><a href="/examens/details-session/'+i.id+'" class="fw-medium">'+i.code+'</a></td>';
+          row += '<td>'+i.label+'</td>';
+          row += '<td>'+i.type_session_label+'</td>';
+          row += '<td>'+formatDate(i.date_debut.split('T')[0])+'</td>';
+          row += '<td>'+formatDate(i.date_fin.split('T')[0])+'</td>';
+          row += '<td><span class="status-badge '+getStatusClass(i)+'"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(i)+'</span></td>';
+          row += '<td>';
+          row += '<div class="dropdown d-inline-block">';
+          row += '<button class="btn btn-soft-primary btn-sm dropdown-toggle shadow-none" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">';
+          row += '<i class="ri-more-2-fill"></i>';
+          row += '</button>';
+          row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">';
+          row += '<li><a href="/examens/details-session/'+i.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+          row += '<li><button data-id="'+i.id+'" id="btnUpdate" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          row += '<li><hr class="dropdown-divider my-1"></li>';
+          row += '<li><button data-id="'+i.id+'" id="btnDelete" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2 text-danger"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
+          row += '</ul>';
+          row += '</div>';
+          row += '</td>';
+          row += '</tr>';
+        });
+      } else {
+        row = "<tr><td colspan='7' class='text-center py-5 text-muted'><i class='ri-search-off-line me-2'></i>Aucune session trouvée</td></tr>";
+      }
+
+      $('#listItem').html(row);
+    }
+
+    function formatDate(dateString) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString('fr-FR', options);
+    }
+
+    function loadSession() {
+      $.ajax({
+        url : "{% url 't_exam:ApiListSession' %}",
+        type : 'GET',
+        dataType : 'JSON',
+        success : function(data) {
+          sessionsData = data;
+          updateStats();
+          renderTable(data);
+          renderPagination();
+        },
+        error: function() {
+          $('#listItem').html("<tr><td colspan='7' class='text-center py-5 text-danger'><i class='ri-error-warning-line me-2'></i>Erreur de chargement des données</td></tr>");
+        }
+      });
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(sessionsData.length / itemsPerPage);
+      let paginationHtml = '';
+
+      if (totalPages <= 1) {
+        $('#pagination').html('');
+        return;
+      }
+
+      // Previous button
+      paginationHtml += '<li class="page-item '+(currentPage === 1 ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage-1)+'" aria-label="Previous">';
+      paginationHtml += '<i class="ri-arrow-left-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += '<li class="page-item '+(i === currentPage ? 'active' : '')+'">';
+        paginationHtml += '<a class="page-link" href="#" data-page="'+i+'">'+i+'</a>';
+        paginationHtml += '</li>';
+      }
+
+      // Next button
+      paginationHtml += '<li class="page-item '+(currentPage === totalPages ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage+1)+'" aria-label="Next">';
+      paginationHtml += '<i class="ri-arrow-right-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      $('#pagination').html(paginationHtml);
+    }
+
+    function filterSessions() {
+      var statusFilter = $('#statusFilter').val();
+      var searchTerm = $('#searchInput').val().toLowerCase();
+
+      var filteredData = sessionsData.filter(session => {
+        // Check status filter
+        var matchesStatus = statusFilter === '';
+        if (statusFilter === 'active') {
+          const today = new Date();
+          const startDate = new Date(session.date_debut.split('T')[0]);
+          const endDate = new Date(session.date_fin.split('T')[0]);
+          matchesStatus = startDate <= today && endDate >= today;
+        } else if (statusFilter === 'past') {
+          const today = new Date();
+          const endDate = new Date(session.date_fin.split('T')[0]);
+          matchesStatus = endDate < today;
+        } else if (statusFilter === 'upcoming') {
+          const today = new Date();
+          const startDate = new Date(session.date_debut.split('T')[0]);
+          matchesStatus = startDate > today;
         }
 
-        loadSession();
+        // Check search term
+        var matchesSearch = searchTerm === '' ||
+          session.code.toLowerCase().includes(searchTerm) ||
+          session.label.toLowerCase().includes(searchTerm) ||
+          session.type_session_label.toLowerCase().includes(searchTerm);
 
-        $(document).on('click','#addNewSession', function(){
-            const url = $(this).data('url');
-            $.get(url, function(data){
-                $('#modal-form-content').html(data);
-                $('#createSessionModal').modal('show');
-            });
-        });
+        return matchesStatus && matchesSearch;
+      });
 
-        $(document).on('submit', '#sessionModalForm', function(e){
-            e.preventDefault();
-            const formData = $(this).serialize();
-            $.ajax({
-                url: "{% url 't_exam:NewSession' %}",
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function(response){
-                    if(response.statut == "success"){
-                        $('#createSessionModal').modal('hide');
-                        alertify.success("Groupe enregistré !");
-                        loadSession();
-                        var buttons = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Plus tard</button>'+
-                                      '<button id="confirmParametrage" data-id='+response.id+' class="btn btn-success btn-dark">Oui, paramétrer maintenant</a>';
-                        $('.hstack').html(buttons);
-                        $('.alertModal1').modal('show');
-                        
-                    } else {
-                        alertify.error(response.message);
-                    }
-                },
-                error: function(xhr, status, error){
-                    alertify.error("Erreur lors de l'enregistrement.");
-                }
-            });
-        });
+      renderTable(filteredData);
+    }
 
-        $(document).on('click','#btnDelete', function(){
-            const id = $(this).data('id');
+    // Load initial data
+    loadSession();
 
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtn"  type="submit" class="btn btn-danger">Confirmer</a>';
-
-            $('.deleteModal .hstack').html(row);
-            $('.deleteModal').modal('show');
-
-            $(document).on('click', '#confirmDeleteBtn', function(){
-                $.ajax({
-                    url : "{% url 't_exam:ApiDeleteSession' %}",
-                    dataType: 'JSON',
-                    type : 'GET',
-                    data : {'id': id},
-                    success : function(response){
-                        if (response.status){
-                            alertify.success(response.message);
-                            loadSession();
-                            $('.deleteModal').modal('hide');
-                        }else{
-                            alertify.error(response.message);
-                        }
-                    },
-
-                })
-            });
-        });
-
-       
-        
+    // Search functionality
+    $('#searchInput').on('input', function() {
+      filterSessions();
     });
 
+    // Status filter
+    $('#statusFilter').on('change', function() {
+      filterSessions();
+    });
+
+    // Pagination
+    $(document).on('click', '#pagination .page-link', function(e) {
+      e.preventDefault();
+      const page = parseInt($(this).data('page'));
+      if (!isNaN(page)) {
+        currentPage = page;
+        renderPagination();
+      }
+    });
+
+    // Add new session
+    $(document).on('click','#addNewSession', function(){
+      const url = $(this).data('url');
+      $.get(url, function(data){
+        $('#modal-form-content').html(data);
+        $('#createSessionModal').modal('show');
+      });
+    });
+
+    // Handle form submission
+    $(document).on('submit', '#sessionModalForm', function(e){
+      e.preventDefault();
+      const formData = $(this).serialize();
+      $.ajax({
+        url: "{% url 't_exam:NewSession' %}",
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response){
+          if(response.statut == "success"){
+            $('#createSessionModal').modal('hide');
+            alertify.success("Session enregistrée avec succès !");
+            loadSession();
+            var buttons = '<button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal"><i class="ri-close-line me-2"></i>Plus tard</button>'+
+                          '<button id="confirmParametrage" data-id='+response.id+' class="btn btn-success px-4 py-2"><i class="ri-check-line me-2"></i>Oui, paramétrer maintenant</button>';
+            $('.alertModal1 .modal-footer').html(buttons);
+            $('.alertModal1').modal('show');
+
+            // Handle configuration button click
+            $(document).on('click', '#confirmParametrage', function() {
+              window.location.href = '/examens/details-session/' + response.id;
+            });
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function(xhr, status, error){
+          alertify.error("Erreur lors de l'enregistrement.");
+        }
+      });
+    });
+
+    // Delete session
+    $(document).on('click','#btnDelete', function(){
+      const id = $(this).data('id');
+      $('.deleteModal').modal('show');
+
+      $(document).on('click', '#confirmDeleteBtn', function(){
+        $.ajax({
+          url : "{% url 't_exam:ApiDeleteSession' %}",
+          dataType: 'JSON',
+          type : 'GET',
+          data : {'id': id},
+          success : function(response){
+            if (response.status){
+              alertify.success(response.message);
+              loadSession();
+              $('.deleteModal').modal('hide');
+            }else{
+              alertify.error(response.message);
+            }
+          },
+          error: function() {
+            alertify.error("Erreur lors de la suppression.");
+          }
+        });
+      });
+    });
+
+    // Update session
+    $(document).on('click','#btnUpdate', function(){
+      const id = $(this).data('id');
+      // This would typically open an edit form - implementation depends on your backend
+      window.location.href = '/examens/details-session/' + id;
+    });
+  });
 </script>
 {% endblock content %}
            

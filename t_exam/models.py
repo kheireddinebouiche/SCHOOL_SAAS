@@ -5,6 +5,8 @@ from t_groupe.models import Groupe
 from t_etudiants.models import *
 from institut_app.models import SalleClasse
 from t_timetable.models import Salle
+from django.core.exceptions import ValidationError
+
 
 class SessionExam(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, help_text="Code de la session d'examen")
@@ -64,38 +66,24 @@ class ModelBuilltins(models.Model):
     def __str__(self):
         return self.label if self.label else "Modèle de builtins non défini"
     
-class TypeNote(models.Model):
-    model_builtins = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="model_builtins")
-    label = models.CharField(max_length=100, null=True, blank=True, help_text="Nom du type de note")
-    affichage = models.CharField(max_length=100, null=True, blank=True, help_text="Quelle text afficher dans les PV's et builltins")
-    eval = models.CharField(max_length=100, null=True, blank=True)
+class BuiltinTypeNote(models.Model):
+    builtin = models.ForeignKey(ModelBuilltins,on_delete=models.CASCADE,related_name="types_notes")
+    code = models.CharField(max_length=30)
+    libelle = models.CharField(max_length=100)
+    max_note = models.FloatField()
 
-    created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
+    has_sous_notes = models.BooleanField(default=False)
+    nb_sous_notes = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
-        return self.label if self.label else "Type de note non défini"
-    
-class PVNotes(models.Model):
-    model_builtin = models.ForeignKey(ModelBuilltins, on_delete=models.DO_NOTHING, null=True)
-    module = models.ForeignKey(Modules, on_delete=models.CASCADE)
-    groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE)
-    date_creation = models.DateTimeField(auto_now_add=True,null=True, blank=True)
-
-    class Meta:
-        unique_together = ('module', 'groupe')
+    ordre = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f"PV - {self.module.label} - {self.groupe.nom}"
+        return f"{self.libelle} ({self.builtin})"
     
-class Note(models.Model):
-    etudiant = models.ForeignKey(Etudiant, on_delete=models.CASCADE, related_name='notes')
-    note_type = models.ForeignKey(TypeNote, on_delete=models.CASCADE)
-    valeur = models.FloatField()
-    pv = models.ForeignKey(PVNotes, on_delete=models.CASCADE, related_name='notes')
-
-    class Meta:
-        unique_together = ('etudiant', 'note_type', 'pv')
+class BuiltinSousNote(models.Model):
+    type_note = models.ForeignKey(BuiltinTypeNote,on_delete=models.CASCADE,related_name="sous_notes")
+    label = models.CharField(max_length=50)
+    ordre = models.PositiveIntegerField(default=0)
 
 class Commissions(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
@@ -128,6 +116,70 @@ class CommisionResult(models.Model):
     def __str__(self):
         return f'{self.commission.label}'
 
+class PvExamen(models.Model):
+    exam_planification = models.OneToOneField(
+        ExamPlanification,
+        on_delete=models.CASCADE,
+        related_name="pv"
+    )
 
+    est_valide = models.BooleanField(default=False)
+    date_validation = models.DateTimeField(null=True, blank=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"PV - {self.exam_planification.module}"
+    
+class ExamTypeNote(models.Model):
+    pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="exam_types_notes")
+
+    code = models.CharField(max_length=30)
+    libelle = models.CharField(max_length=100)
+    max_note = models.FloatField()
+
+    has_sous_notes = models.BooleanField(default=False)
+    nb_sous_notes = models.PositiveIntegerField(default=0)
+    ordre = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('pv', 'code')
+
+    def __str__(self):
+        return f"{self.libelle} ({self.pv})"
+
+class ExamNote(models.Model):
+    pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="notes")
+    etudiant = models.ForeignKey(Prospets, on_delete=models.CASCADE)
+    type_note = models.ForeignKey(ExamTypeNote, on_delete=models.CASCADE)
+    valeur = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('pv', 'etudiant', 'type_note')
+
+    def save(self, *args, **kwargs):
+        if self.pv.est_valide:
+            raise ValidationError("PV verrouillé : modification interdite")
+        super().save(*args, **kwargs)
+
+    def calculer_valeur(self):
+        if self.sous_notes.exists():
+            self.valeur = round(
+                sum(sn.valeur for sn in self.sous_notes.all()) / self.sous_notes.count(),2)
+            super().save()
+
+    def __str__(self):
+        return f"{self.etudiant} - {self.type_note}"
+    
+class ExamSousNote(models.Model):
+    note = models.ForeignKey(ExamNote, on_delete=models.CASCADE,related_name="sous_notes")
+    valeur = models.FloatField()
+
+    class Meta:
+        ordering = ['id']
+
+    def save(self, *args, **kwargs):
+        if self.note.pv.est_valide:
+            raise ValidationError("PV verrouillé")
+        super().save(*args, **kwargs)
+        self.note.calculer_valeur()

@@ -1,0 +1,169 @@
+<!-- templates/documents/document_preview_fillable.html -->
+
+{% extends 'documents/base.html' %}
+
+{% block title %}Aperçu du Document avec Champs Remplissables{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'pdf_editor:document-export' document.pk %}" class="btn btn-success">
+        <i class="fas fa-download me-2"></i>Télécharger PDF
+    </a>
+    <button id="saveFilledDocument" class="btn btn-primary">
+        <i class="fas fa-save me-2"></i>Enregistrer les modifications
+    </button>
+</div>
+
+<div class="card document-preview">
+    <div class="card-body" id="preview-content">
+        <style>
+            {{ custom_css|safe }}
+            .fillable-field {
+                border: 2px dashed #0d6efd;
+                padding: 5px;
+                margin: 2px;
+                background-color: #f8f9fa;
+                min-height: 24px;
+                border-radius: 4px;
+            }
+            .fillable-field:focus {
+                outline: none;
+                border: 2px solid #0d6efd;
+                background-color: #e7f1ff;
+            }
+            @media print {
+                body { margin: 0; }
+                #preview-content { border: none; }
+                .btn-group, .section-header, .document-info, .fillable-field { 
+                    display: none; 
+                }
+            }
+        </style>
+        
+        <!-- The rendered HTML with fillable fields -->
+        <div id="document-content">
+            {{ rendered_html|safe }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add fillable fields to the document content
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all placeholders in the document and convert them to input fields
+        const contentDiv = document.getElementById('document-content');
+        
+        // Convert placeholders like {{ field_name }} to input fields
+        convertPlaceholdersToInputs(contentDiv);
+        
+        // Améliorer l'expérience d'impression
+        window.addEventListener('beforeprint', function() {
+            document.querySelectorAll('.btn-group, .section-header, .document-info').forEach(function(element) {
+                element.style.display = 'none';
+            });
+        });
+
+        window.addEventListener('afterprint', function() {
+            document.querySelectorAll('.btn-group, .section-header, .document-info').forEach(function(element) {
+                element.style.display = 'flex';
+            });
+        });
+    });
+    
+    function convertPlaceholdersToInputs(element) {
+        // Process all text nodes to find placeholders
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+        
+        textNodes.forEach(function(textNode) {
+            const text = textNode.textContent;
+            // Find placeholders in format {{ field_name }} or [[ field_name ]]
+            const placeholderRegex = /(\{\{[^}]+\}\}|\[\[[^]]+\]\])/g;
+            const matches = text.match(placeholderRegex);
+            
+            if (matches) {
+                const fragments = text.split(placeholderRegex);
+                
+                const container = document.createElement('span');
+                
+                fragments.forEach(function(fragment) {
+                    if (placeholderRegex.test(fragment)) {
+                        // This is a placeholder, create an input field
+                        const cleanField = fragment
+                            .replace(/[\{\[]+/g, '')  // Remove opening brackets
+                            .replace(/[\}\]]+/g, '')  // Remove closing brackets
+                            .trim();
+                        
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'fillable-field';
+                        input.placeholder = cleanField;
+                        input.value = localStorage.getItem(`field_${cleanField}`) || '';
+                        input.dataset.fieldName = cleanField;
+                        
+                        // Save value to localStorage when changed
+                        input.addEventListener('input', function() {
+                            localStorage.setItem(`field_${this.dataset.fieldName}`, this.value);
+                        });
+                        
+                        container.appendChild(input);
+                    } else {
+                        // Regular text
+                        container.appendChild(document.createTextNode(fragment));
+                    }
+                });
+                
+                textNode.parentNode.replaceChild(container, textNode);
+            }
+        });
+    }
+    
+    // Handle save button
+    document.getElementById('saveFilledDocument').addEventListener('click', function() {
+        // Collect all field values
+        const fields = document.querySelectorAll('.fillable-field');
+        const fieldData = {};
+        
+        fields.forEach(function(field) {
+            fieldData[field.dataset.fieldName] = field.value;
+        });
+        
+        // You can implement saving logic here
+        alert('Les données des champs ont été sauvegardées localement. Implémentez la logique de sauvegarde selon vos besoins.');
+        
+        // Example: Send data to server
+        /*
+        fetch('{% url "your-save-endpoint" document.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ fields: fieldData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Document sauvegardé avec succès!');
+            } else {
+                alert('Erreur lors de la sauvegarde du document.');
+            }
+        });
+        */
+    });
+</script>
+{% endblock %}

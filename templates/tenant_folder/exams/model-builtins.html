@@ -1,538 +1,1117 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
-{% block title %} Examens - Modéles de PV {% endblock title %}
+{% block title %} Examens - Modèles de bulletins {% endblock title %}
 
 {% block content %}
-        <!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+  .stats-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .model-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+  .model-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .status-badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+    border-radius: 50px;
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  .dropdown-menu {
+    z-index: 1060 !important;
+  }
+  .type-note-item {
+    border-left: 3px solid #0d6efd;
+    margin-bottom: 10px;
+    padding-left: 15px;
+  }
+  .sous-note-item {
+    border-left: 2px solid #6c757d;
+    margin-left: 20px;
+    margin-bottom: 5px;
+    padding-left: 10px;
+  }
+  .nested-list {
+    margin-left: 20px;
+  }
+  .sortable-item {
+    cursor: move;
+    user-select: none;
+  }
+  .sortable-item:hover {
+    background-color: #f8f9fa;
+  }
+</style>
 
-            <div class="page-content">
-                <div class="container-fluid">
-
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Modéles de PV</h4>
-
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Examens</a></li>
-                                        <li class="breadcrumb-item active">Modéles de PV</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- end page title -->
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                        <h5 class="card-title mb-2 mb-md-0">Liste des modéles</h5>
-                                        <div class="d-flex align-items-center">
-                                            <div class="me-2">
-                                                <input type="text" class="form-control " placeholder="Rechercher..." style="height: 30px;" />
-                                            </div>
-                                            <button id="addNewModele" class="btn btn-primary btn-sm" data-url= "{% url 't_exam:NewModelBuilltin' %}">
-                                                <i class='bx bx-plus me-1'></i>Créer un nouveau modèle
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>   
-                                <div class="card-body">
-                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                        <thead>
-                                            <tr>
-                                                <th>Label</th>
-                                                <th>Formation</th>
-                                                <th>Etat</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="listItem">
-
-                                        
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- container-fluid -->
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-gradient-to-r from-primary to-info rounded-3 shadow p-4 text-white">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                <i class="ri-file-text-line ri-2x"></i>
+              </div>
+              <div>
+                <h4 class="mb-1">Modèles de bulletins</h4>
+                <p class="mb-0 opacity-75">Gestion des modèles de bulletins et types de notes</p>
+              </div>
             </div>
-            <!-- End Page-content -->
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 text-white">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-home-4-line me-1"></i>Examens
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active">Modèles de bulletins</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-primary-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Total modèles</p>
+                  <h4 class="mb-0" id="totalModels">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-primary rounded-circle text-white fs-4">
+                    <i class="ri-file-text-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div id="newModelBuiltinModal" class="modal fade" tabindex="-1" aria-labelledby="newModelBuiltinModalLabel" aria-hidden="true" style="display: none;">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="newModelBuiltinModalLabel">Nouveau modéle de builltin</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-success-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Par défaut</p>
+                  <h4 class="mb-0" id="defaultModels">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-success rounded-circle text-white fs-4">
+                    <i class="ri-checkbox-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-warning-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Avec formations</p>
+                  <h4 class="mb-0" id="modelsWithFormations">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-warning rounded-circle text-white fs-4">
+                    <i class="ri-graduation-cap-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-info-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Types de notes</p>
+                  <h4 class="mb-0" id="totalTypeNotes">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-info rounded-circle text-white fs-4">
+                    <i class="ri-list-check-2"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white p-4 border-bottom">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="ri-filter-line text-info"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 text-info">Filtres avancés</h5>
+                    <p class="text-muted mb-0 small">Affinez votre recherche</p>
+                  </div>
+                </div>
+
+                <div class="ms-auto">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <button id="addNewModel" class="btn btn-primary d-flex align-items-center" data-url="{% url 't_exam:NewModelBuilltin' %}">
+                      <i class="ri-add-line me-1"></i> Nouveau modèle
+                    </button>
+
+                    <div class="d-flex gap-2">
+                      <input type="text" class="form-control rounded-pill" placeholder="Rechercher un modèle..." id="searchInput">
+
+                      <select id="formationFilter" class="form-select rounded-pill" style="min-width: 180px;">
+                        <option value="">Toutes les formations</option>
+                        {% for formation in formations %}
+                        <option value="{{ formation.id }}">{{ formation.nom }}</option>
+                        {% endfor %}
+                      </select>
+                      
+                      <select id="defaultFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Tous les types</option>
+                        <option value="true">Par défaut</option>
+                        <option value="false">Non par défaut</option>
+                      </select>
                     </div>
-                    <div class="modal-body" id="modal-form-content">
-                       
-                    </div>
-                    <div class="modal-footer">
-                        
-                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table id="modelsTable" class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Libellé</th>
+                      <th scope="col">Formation</th>
+                      <th scope="col">Par défaut</th>
+                      <th scope="col">Types de notes</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="listItem">
+                    <tr>
+                      <td colspan="5" class="text-center py-5">
+                        <div class="d-flex flex-column align-items-center justify-content-center">
+                          <i class="bx bx-loader bx-spin bx-lg text-primary mb-3"></i>
+                          <p class="text-muted mb-0">Chargement des modèles...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <nav aria-label="Models pagination" class="mt-4">
+                <ul class="pagination justify-content-center" id="pagination">
+                  <!-- Pagination will be populated by JavaScript -->
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Model Modal -->
+<div id="createModelModal" class="modal fade" tabindex="-1" aria-labelledby="createModelModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-file-add-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="createModelModalLabel">
+              <span id="modalTitle">Création d'un nouveau modèle de bulletin</span>
+            </h5>
+            <p class="text-muted small mb-0">Remplissez les informations du modèle</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="modelForm">
+          {% csrf_token %}
+          <input type="hidden" id="modelId" name="id">
+          
+          <div class="row">
+            <div class="col-md-12">
+              <div class="mb-4">
+                <label for="label" class="form-label">Libellé *</label>
+                <input type="text" class="form-control" id="label" name="label" required>
+                <div class="invalid-feedback">Veuillez entrer un libellé</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-4">
+                <label for="formation" class="form-label">Formation</label>
+                <select class="form-select" id="formation" name="formation">
+                  <option value="">Toutes les formations</option>
+                  {% for formation in formations %}
+                  <option value="{{ formation.id }}">{{ formation.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-4">
+                <div class="form-check mt-4">
+                  <input class="form-check-input" type="checkbox" id="is_default" name="is_default">
+                  <label class="form-check-label" for="is_default">
+                    Définir comme modèle par défaut
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="submit" form="modelForm" class="btn btn-primary px-4 py-2">
+          <i class="ri-check-line me-2"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Model Details Modal -->
+<div id="modelDetailsModal" class="modal fade" tabindex="-1" aria-labelledby="modelDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-file-info-line text-info fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-info mb-1" id="modelDetailsModalLabel">
+              Détails du modèle de bulletin
+            </h5>
+            <p class="text-muted small mb-0" id="modelDetailsTitle">Informations et configuration</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mb-4">
+              <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Informations du modèle</h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p><strong>Libellé:</strong> <span id="detailLabel"></span></p>
+                    <p><strong>Formation:</strong> <span id="detailFormation"></span></p>
+                  </div>
+                  <div class="col-md-6">
+                    <p><strong>Par défaut:</strong> <span id="detailIsDefault"></span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+        <div class="row">
+          <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Types de notes</h5>
+              <button type="button" class="btn btn-success btn-sm" id="addTypeNoteBtn">
+                <i class="ri-add-line me-1"></i> Ajouter un type de note
+              </button>
+            </div>
+            
+            <div class="card">
+              <div class="card-body">
+                <div id="typesNotesList">
+                  <!-- Types of notes will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div id="newTypeNoteModal" class="modal fade" tabindex="-1" aria-labelledby="newTypeNoteModalLabel" aria-hidden="true" style="display: none;">
-            <div class="modal-dialog modal-md">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="newTypeNoteModalLabel">Nouveau type de note</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    
-                    <div class="modal-body">
-                        <div class="row mb-2">
-                            <div class="col-lg-12">
-                                <input type="text" id="type_note_label" class="form-control" placeholder="Veuillez attribuer un nom au type de note" />
-                            </div>
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-lg-12">
-                                <input type="text" id="affichage_note_label" class="form-control" placeholder="Text d'affichage dans les PV's et builltins" />
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <input type="text" id="evaluation_type_note" class="form-control" placeholder="Total des points Ex : 10, 20" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                        <button id="confirmTypeNote"  class="btn btn-success">Confirmer</a>
-                    </div>
-                    
-        
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+<!-- Add/Edit Type Note Modal -->
+<div id="typeNoteModal" class="modal fade" tabindex="-1" aria-labelledby="typeNoteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-list-check-2-line text-success fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-success mb-1" id="typeNoteModalLabel">
+              <span id="typeNoteModalTitle">Ajouter un type de note</span>
+            </h5>
+            <p class="text-muted small mb-0">Configuration du type de note</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="typeNoteForm">
+          {% csrf_token %}
+          <input type="hidden" id="typeNoteId" name="type_note_id">
+          <input type="hidden" id="modelIdForTypeNote" name="model_id">
+          
+          <div class="mb-3">
+            <label for="code" class="form-label">Code *</label>
+            <input type="text" class="form-control" id="code" name="code" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="libelle" class="form-label">Libellé *</label>
+            <input type="text" class="form-control" id="libelle" name="libelle" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="max_note" class="form-label">Note maximale *</label>
+            <input type="number" class="form-control" id="max_note" name="max_note" step="0.01" min="0" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="ordre" class="form-label">Ordre</label>
+            <input type="number" class="form-control" id="ordre" name="ordre" min="0">
+          </div>
+          
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="has_sous_notes" name="has_sous_notes">
+              <label class="form-check-label" for="has_sous_notes">
+                A des sous-notes
+              </label>
+            </div>
+          </div>
+          
+          <div id="nb_sous_notes_container" class="mb-3" style="display: none;">
+            <label for="nb_sous_notes" class="form-label">Nombre de sous-notes</label>
+            <input type="number" class="form-control" id="nb_sous_notes" name="nb_sous_notes" min="0">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="submit" form="typeNoteForm" class="btn btn-success px-4 py-2">
+          <i class="ri-check-line me-2"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div id="updateTypeNoteModal" class="modal fade" tabindex="-1" aria-labelledby="updateTypeNoteModalLabel" aria-hidden="true" style="display: none;">
-            <div class="modal-dialog modal-md">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="updateTypeNoteModalLabel">Mise a jour</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    
-                    <div class="modal-body">
-                        <div class="row mb-2">
-                            <input type="text" id="_updid_type" />
-                            <input type="text" id="_updid_model" />
-                            <div class="col-lg-12">
-                                <label class="form-label" for="upd_type_note_label">Label :</label>
-                                <input type="text" id="upd_type_note_label" class="form-control" placeholder="Veuillez attribuer un nom au type de note" />
-                            </div>
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-lg-12">
-                                <label class="form-label" for="upd_affichage_note_label">Affichage sur les builttins :</label>
-                                <input type="text" id="upd_affichage_note_label" class="form-control" placeholder="Text d'affichage dans les PV's et builltins" />
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <label class="form-label" for="upd_evaluation_type_note">Total des notes :</label>
-                                <input type="text" id="upd_evaluation_type_note" class="form-control" placeholder="Total des points Ex : 10, 20" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                        <button id="confirmUpdateTypeNote"  class="btn btn-warning">Confirmer les modifications</a>
-                    </div>
-                    
-        
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
+<!-- Add/Edit Sous-Note Modal -->
+<div id="sousNoteModal" class="modal fade" tabindex="-1" aria-labelledby="sousNoteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-subtract-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="sousNoteModalLabel">
+              <span id="sousNoteModalTitle">Ajouter une sous-note</span>
+            </h5>
+            <p class="text-muted small mb-0">Configuration de la sous-note</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="sousNoteForm">
+          {% csrf_token %}
+          <input type="hidden" id="sousNoteId" name="sous_note_id">
+          <input type="hidden" id="typeNoteIdForSousNote" name="type_note_id">
+          
+          <div class="mb-3">
+            <label for="sousNoteLabel" class="form-label">Libellé *</label>
+            <input type="text" class="form-control" id="sousNoteLabel" name="label" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="sousNoteOrdre" class="form-label">Ordre</label>
+            <input type="number" class="form-control" id="sousNoteOrdre" name="ordre" min="0">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button type="submit" form="sousNoteForm" class="btn btn-warning px-4 py-2">
+          <i class="ri-check-line me-2"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div id="detailsModelBuiltin" class="modal fade" tabindex="-1" aria-labelledby="detailsModelBuiltinModal" aria-hidden="true" style="display: none;">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title me-2" id="detailsModelBuiltinModal">Détails du modéle</h5>
-                        <button class="btn btn-primary btn-sm " id="addNewNoteType"><i class='bx bx-plus me-1'></i>Nouveau</button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body" id="modal-form-content">
-                        <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>Label</th>
-                                    <th>Text d'affichage</th>
-                                    <th>Mode d'evaluation</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listTypeNote">
+<!-- Delete Confirmation Modal -->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Suppression d'un élément
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la suppression</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+              <i class="ri-delete-bin-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer cet élément ?</h5>
+          <p class="text-muted mb-4" id="deleteConfirmationText">Cette action est irréversible.</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button id="confirmDeleteBtn" class="btn btn-danger px-4 py-2">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-                            
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="modal-footer">
-                        
-                    </div>
-        
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
-
-        <div class="modal fade alertModal1" tabindex="-1" role="dialog" aria-labelledby="alertModal1Label" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-5">
-                        <script src="https://cdn.lordicon.com/lordicon.js"></script>
-                        <lord-icon
-                            src="https://cdn.lordicon.com/fjvfsqea.json"
-                            trigger="loop"
-                            style="width:120px;height:120px">
-                        </lord-icon>
-                        <div class="mt-4">
-                           
-                            <p class="text-muted mb-4">Souhaitez-vous maintenant passer au paramétrage du modèle (Type de note, mode d'evaluation ...) ?</p>
-                            <div class="hstack gap-2 justify-content-center">
-                                
-                            </div>
-                        </div>
-                    </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
-
-        <div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-5">
-                        <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
-                        </lord-icon>
-                        <div class="mt-4">
-                            <h4 class="mb-3">Vous étes sur le point de supprimer le modéle de builltin</h4>
-                            <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                            <div class="hstack gap-2 justify-content-center">
-                                
-                            </div>
-                        </div>
-                    </div>
-                </div><!-- /.modal-content -->
-            </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
-
-        <div class="modal fade deleteTypeNoteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-body text-center p-5">
-                                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
-                                </lord-icon>
-                                <div class="mt-4">
-                                    <h4 class="mb-3">Vous étes sur le point de supprimer le type de note</h4>
-                                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                                    <div class="hstack gap-2 justify-content-center">
-                                        
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- /.modal-content -->
-                    </div><!-- /.modal-dialog -->
-        </div><!-- /.modal -->
 <script>
+  $(document).ready(function(){
+    let modelsData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentModelId = null;
+    let currentTypeNoteId = null;
+    let currentSousNoteId = null;
 
-    $(document).ready(function(){
+    // Update stats
+    function updateStats() {
+      const defaultCount = modelsData.filter(model => model.is_default === 'Oui').length;
+      const withFormationCount = modelsData.filter(model => model.formation !== 'Toutes les formations').length;
+      
+      $('#totalModels').text(modelsData.length);
+      $('#defaultModels').text(defaultCount);
+      $('#modelsWithFormations').text(withFormationCount);
+      
+      // Calculate total type notes
+      let totalTypeNotes = 0;
+      modelsData.forEach(model => {
+        if(model.types_notes) {
+          totalTypeNotes += model.types_notes.length;
+        }
+      });
+      $('#totalTypeNotes').text(totalTypeNotes);
+    }
 
-        function loadList(){
-            $.ajax({
-                url : "{% url 't_exam:ApiListModeleBuilltins' %}",
-                type : 'GET',
-                dataType : 'JSON',
-                success : function(data){
-                    var row = "";
-                    if (data.length > 0){
-                        $.each(data, function(index, i){
-                            row += '<tr>';
-                                row += '<td>'+i.label+'</td>';
-                                row += '<td>'+i.formation__nom+'</td>';
-                                row += '<td>'+(i.is_default ? '<span class="badge bg-success">Par Défaut</span>' : '<span class="badge bg-success">--</span>')+'</td>';
-                                row += "<td style='align-items:center;'>";
-                                    row += '<div class="dropdown d-inline-block">';
-                                    row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                    row += '<i class="ri-more-fill align-middle"></i>';
-                                    row += '</button>';
-                                    row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                    row += '<li><button data-id='+i.id+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
-                                    row += '<li><button data-id='+i.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
-                                    row += '<li><button data-id='+i.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
-                                    row += "</ul></div>";
-                                row += "</td>";
-                            row += '</tr>';
-                        });
-                    }else{
-                        row = "<tr><td colspan='5' class='text-muted text-center'>Aucune session trouvé !</td></tr>";
-                    }
+    // Render table
+    function renderTable(data) {
+      let row = "";
+      if (data.length > 0) {
+        $.each(data, function(index, item) {
+          row += '<tr>';
+          row += '<td>'+item.label+'</td>';
+          row += '<td>'+item.formation+'</td>';
+          row += '<td>'+item.is_default+'</td>';
+          row += '<td>'+(item.types_notes ? item.types_notes.length : 0)+'</td>';
+          row += '<td>';
+          row += '<div class="dropdown d-inline-block">';
+          row += '<button class="btn btn-soft-primary btn-sm dropdown-toggle shadow-none" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">';
+          row += '<i class="ri-more-2-fill"></i>';
+          row += '</button>';
+          row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">';
+          row += '<li><button data-id="'+item.id+'" id="btnViewDetails" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-eye-line text-info me-2"></i>Voir détails</button></li>';
+          row += '<li><button data-id="'+item.id+'" id="btnUpdate" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          row += '<li><hr class="dropdown-divider my-1"></li>';
+          row += '<li><button data-id="'+item.id+'" id="btnDelete" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2 text-danger"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
+          row += '</ul>';
+          row += '</div>';
+          row += '</td>';
+          row += '</tr>';
+        });
+      } else {
+        row = "<tr><td colspan='5' class='text-center py-5 text-muted'><i class='ri-search-off-line me-2'></i>Aucun modèle trouvé</td></tr>";
+      }
 
-                    $('#listItem').html(row);
-                }
-            });
+      $('#listItem').html(row);
+    }
+
+    // Format date
+    function formatDate(dateString) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString('fr-FR', options);
+    }
+
+    // Load models
+    function loadModels() {
+      $.ajax({
+        url : "{% url 't_exam:ApiListModeleBuilltins' %}",
+        type : 'GET',
+        dataType : 'JSON',
+        success : function(data) {
+          modelsData = data;
+          updateStats();
+          renderTable(data);
+          renderPagination();
+        },
+        error: function() {
+          $('#listItem').html("<tr><td colspan='5' class='text-center py-5 text-danger'><i class='ri-error-warning-line me-2'></i>Erreur de chargement des données</td></tr>");
+        }
+      });
+    }
+
+    // Render pagination
+    function renderPagination() {
+      const totalPages = Math.ceil(modelsData.length / itemsPerPage);
+      let paginationHtml = '';
+
+      if (totalPages <= 1) {
+        $('#pagination').html('');
+        return;
+      }
+
+      // Previous button
+      paginationHtml += '<li class="page-item '+(currentPage === 1 ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage-1)+'" aria-label="Previous">';
+      paginationHtml += '<i class="ri-arrow-left-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += '<li class="page-item '+(i === currentPage ? 'active' : '')+'">';
+        paginationHtml += '<a class="page-link" href="#" data-page="'+i+'">'+i+'</a>';
+        paginationHtml += '</li>';
+      }
+
+      // Next button
+      paginationHtml += '<li class="page-item '+(currentPage === totalPages ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage+1)+'" aria-label="Next">';
+      paginationHtml += '<i class="ri-arrow-right-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      $('#pagination').html(paginationHtml);
+    }
+
+    // Filter models
+    function filterModels() {
+      var formationFilter = $('#formationFilter').val();
+      var defaultFilter = $('#defaultFilter').val();
+      var searchTerm = $('#searchInput').val().toLowerCase();
+
+      var filteredData = modelsData.filter(model => {
+        // Check formation filter
+        var matchesFormation = formationFilter === '';
+        if (formationFilter !== '') {
+          matchesFormation = model.formation_id == formationFilter;
         }
 
-        loadList();
-
-        $(document).on('click','#addNewModele', function(){
-            const url = $(this).data('url');
-            $.get(url, function(data){
-                $('#modal-form-content').html(data);
-                $('#newModelBuiltinModal').modal('show');
-            }); 
-        });
-
-        $(document).on('submit', '#newModelBuilltinForm', function(e){
-            e.preventDefault();
-            const formData = $(this).serialize();
-            $.ajax({
-                url: "{% url 't_exam:NewModelBuilltin' %}",
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function(response){
-                    if(response.statut == "success"){
-                        $('#newModelBuiltinModal').modal('hide');
-                        alertify.success("Modéle enregistré !");
-                        loadList();
-                        var buttons = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Plus tard</button>'+
-                                      '<button id="confirmParametrage" data-id='+response.id+' class="btn btn-success btn-dark">Oui, paramétrer maintenant</a>';
-                        $('.hstack').html(buttons);
-                        $('.alertModal1').modal('show');
-                        
-                    } else {
-                        alertify.error(response.message);
-                    }
-                },
-                error: function(xhr, status, error){
-                    alertify.error("Erreur lors de l'enregistrement.");
-                }
-            });
-        });
-
-
-        function LoadTypeNote(id_Model){
-
-            $.ajax({
-                url : "{% url 't_exam:ApiLoadTypeNote' %}",
-                dataType: 'JSON',
-                data : {
-                    'id' : id_Model,
-                },
-                type : 'GET',
-                success: function(data){
-                    var row = "";
-                    if(data.length>0){
-                        $.each(data, function(index, p){
-                            row += "<tr>";
-                                row += "<td>"+p.label+"</td>";
-                                row += "<td>"+p.affichage+"</td>";
-                                row += "<td>"+p.eval+"</td>";
-                                row += "<td style='align-items:center;'>";
-                                    row += '<div class="dropdown d-inline-block">';
-                                    row += '<button class="btn btn-soft-primary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                    row += '<i class="ri-more-fill align-middle"></i>';
-                                    row += '</button>';
-                                    row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                    row += '<li><button data-id='+p.id+' id="btnUpdateTypeNote" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
-                                    row += '<li><button data-id='+p.id+' data-model='+p.model_builtins__id+' id="btnDeleteTypeNote" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
-                                    row += "</ul></div>";
-                                row += "</td>";
-                            row += "</tr>";
-                        });
-                    }else{
-                        row = "<tr><td colspan='4' class='text-center text-muted'>Aucune information disponible</td></tr>";
-                    }
-                    
-                    $('#listTypeNote').html(row);
-                }
-            });
+        // Check default filter
+        var matchesDefault = defaultFilter === '';
+        if (defaultFilter === 'true') {
+          matchesDefault = model.is_default === 'Oui';
+        } else if (defaultFilter === 'false') {
+          matchesDefault = model.is_default === 'Non';
         }
 
-        $(document).on('click', '#btnDetails', function(){
-            var id = $(this).data('id');
-            LoadTypeNote(id);
+        // Check search term
+        var matchesSearch = searchTerm === '' ||
+          model.label.toLowerCase().includes(searchTerm) ||
+          model.formation.toLowerCase().includes(searchTerm);
 
-            $('#detailsModelBuiltin').modal('show');
+        return matchesFormation && matchesDefault && matchesSearch;
+      });
 
-            $(document).on('click', '#addNewNoteType', function(){
-                $('#newTypeNoteModal').modal('show').css('z-index', 1060);
-            });
-            $(document).on('click', '#confirmTypeNote', function(){
-    
-                    var label = $('#type_note_label').val();
-                    var evaluation = $('#evaluation_type_note').val();
-                    var affichage = $('#affichage_note_label').val();
+      renderTable(filteredData);
+    }
 
-                    $.ajax({
-                        url : "{% url 't_exam:ApiAddNewType' %}",
-                        dataType: "JSON",
-                        type: "POST",
-                        data : {
-                            'label' : label,
-                            'evaluation' : evaluation,
-                            'id' : id,
-                            'affichage' : affichage,
-                            'csrfmiddlewaretoken': '{{ csrf_token }}'
-                        },
-                        success : function(response){
-                            if (response.status == "success"){
-                                alertify.success(response.message);
-                                LoadTypeNote(id);
-                                $('#newTypeNoteModal').modal('hide');
-                                $('#newTypeNoteModal').find('input').val('');
-                            }else{
-                                alertify.error(response.message);
-                            }
-                        },
-                    });
-    
-                });
+    // Load initial data
+    loadModels();
 
-        });
-
-        $(document).on('click','#btnDelete', function(){
-            const id = $(this).data('id');
-
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtn"  type="submit" class="btn btn-danger">Confirmer</a>';
-
-            $('.deleteModal .hstack').html(row);
-            $('.deleteModal').modal('show');
-
-            $(document).on('click', '#confirmDeleteBtn', function(){
-                $.ajax({
-                    url : "{% url 't_exam:ApiDeleteModelBuitltin' %}",
-                    dataType: 'JSON',
-                    type : 'GET',
-                    data : {'id': id},
-                    success : function(response){
-                        if (response.status){
-                            alertify.success(response.message);
-                            loadList();
-                            $('.deleteModal').modal('hide');
-                        }else{
-                            alertify.error(response.message);
-                        }
-                    },
-
-                })
-            });
-        });
-
-        $(document).on('click', '#btnDeleteTypeNote', function(){
-            var id_type = $(this).data('id');
-            var id_model= $(this).data('model');
-
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtnTypeNote" data-model='+id_model+' data-id='+id_type+' class="btn btn-danger">Confirmer</a>';
-
-            $('.hstack').html(row);
-            $('.deleteTypeNoteModal').modal('show');
-
-            
-        }); 
-
-        $(document).on('click','#confirmDeleteBtnTypeNote', function(){
-            var id_type = $(this).data('id');
-            var id_model = $(this).data('model');
-
-            $.ajax({
-                url : "{% url 't_exam:ApiDeleteTypeNote' %}",
-                dataType: 'JSON',
-                type : 'GET',
-                data : {'id' : id_type},
-                success : function(response){
-                    if(response.status == "success"){
-                        alertify.success(response.message);
-                        LoadTypeNote(id_model);
-                        $('.deleteTypeNoteModal').modal('hide');
-                    }else{
-                        alertify.error(response.message);
-                    }
-                }
-            });
-        }); 
-       
-
-        $(document).on('click', '#btnUpdateTypeNote', function(){
-            var id_type = $(this).data('id');
-            
-            $.ajax({
-                url : "{% url 't_exam:ApiGetTypeNoteDetails' %}",
-                type: 'GET',
-                dataType: 'JSON',
-                data : {'id' : id_type,},
-                success : function(data){
-                    $('#upd_type_note_label').val(data.label);
-                    $('#upd_affichage_note_label').val(data.affichage);
-                    $('#upd_evaluation_type_note').val(data.eval);
-                    $('#_updid_type').val(data.id);
-                    $('#_updid_model').val(data.id_model);
-                    $('#updateTypeNoteModal').modal('show').css('z-index', 1060);
-                },
-            });
-
-        });
-
-        $(document).on('click', '#confirmUpdateTypeNote', function(){
-
-                var upd_label = $('#upd_type_note_label').val();
-                var upd_affichage = $('#upd_affichage_note_label').val();
-                var upd_eval = $('#upd_evaluation_type_note').val();
-                var id_type = $('#_updid_type').val()
-
-                $.ajax({
-                    url : "{% url 't_exam:ApiUpdateTypeNote' %}",
-                    dataType: 'JSON',
-                    type : 'POST',
-                    data: {
-                        'label' : upd_label,
-                        'affichage' : upd_affichage,
-                        'eval' : upd_eval,
-                        'id_type' : id_type,
-                        'csrfmiddlewaretoken': '{{ csrf_token }}'
-                    },
-                    success: function(response){
-                        if(response.status == "success"){
-                            alertify.success(response.message);
-                            LoadTypeNote(response.id_model);
-                            $('#updateTypeNoteModal').modal('hide')
-
-                        }else{  
-                            alertify.error(response.message);
-                        }
-                    }
-                });
-            });
-
-       
-        
+    // Search functionality
+    $('#searchInput').on('input', function() {
+      filterModels();
     });
 
+    // Formation filter
+    $('#formationFilter').on('change', function() {
+      filterModels();
+    });
+
+    // Default filter
+    $('#defaultFilter').on('change', function() {
+      filterModels();
+    });
+
+    // Pagination
+    $(document).on('click', '#pagination .page-link', function(e) {
+      e.preventDefault();
+      const page = parseInt($(this).data('page'));
+      if (!isNaN(page)) {
+        currentPage = page;
+        renderPagination();
+      }
+    });
+
+    // Add new model
+    $(document).on('click','#addNewModel', function(){
+      $('#modelForm')[0].reset();
+      $('#modelId').val('');
+      $('#modalTitle').text('Création d\'un nouveau modèle de bulletin');
+      $('#createModelModal').modal('show');
+    });
+
+    // Handle model form submission
+    $(document).on('submit', '#modelForm', function(e){
+      e.preventDefault();
+      const formData = $(this).serialize();
+      const modelId = $('#modelId').val();
+      
+      let url = "{% url 't_exam:NewModelBuilltin' %}";
+      if(modelId) {
+        url = "{% url 't_exam:ApiUpdateModelBuilltin' %}";
+      }
+      
+      $.ajax({
+        url: url,
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response){
+          if(response.status == "success" || response.statut == "success"){
+            $('#createModelModal').modal('hide');
+            alertify.success(response.message || "Modèle enregistré avec succès !");
+            loadModels();
+          } else {
+            alertify.error(response.message || "Erreur lors de l'enregistrement.");
+          }
+        },
+        error: function(xhr, status, error){
+          alertify.error("Erreur lors de l'enregistrement.");
+        }
+      });
+    });
+
+    // View model details
+    $(document).on('click','#btnViewDetails', function(){
+      const id = $(this).data('id');
+      currentModelId = id;
+      
+      $.ajax({
+        url: "{% url 't_exam:ApiGetModelBuilltinDetails' %}",
+        type: 'GET',
+        data: { id: id },
+        dataType: 'json',
+        success: function(response) {
+          $('#detailLabel').text(response.label);
+          $('#detailFormation').text(response.formation_nom);
+          $('#detailIsDefault').text(response.is_default ? 'Oui' : 'Non');
+          $('#modelDetailsTitle').text('Modèle: ' + response.label);
+          
+          // Render types of notes
+          let typesNotesHtml = '';
+          if(response.types_notes && response.types_notes.length > 0) {
+            $.each(response.types_notes, function(index, typeNote) {
+              typesNotesHtml += '<div class="type-note-item mb-3">';
+              typesNotesHtml += '<div class="d-flex justify-content-between align-items-center">';
+              typesNotesHtml += '<div>';
+              typesNotesHtml += '<h6 class="mb-1"><strong>' + typeNote.code + '</strong> - ' + typeNote.libelle + '</h6>';
+              typesNotesHtml += '<small class="text-muted">Note max: ' + typeNote.max_note + ', Ordre: ' + typeNote.ordre + '</small>';
+              if(typeNote.has_sous_notes) {
+                typesNotesHtml += '<br><small class="text-success">Avec ' + typeNote.nb_sous_notes + ' sous-note(s)</small>';
+              }
+              typesNotesHtml += '</div>';
+              typesNotesHtml += '<div class="btn-group" role="group">';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-primary btn-sm edit-type-note" data-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-success btn-sm add-sous-note" data-id="' + typeNote.id + '"><i class="ri-add-line"></i></button>';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-danger btn-sm delete-type-note" data-id="' + typeNote.id + '"><i class="ri-delete-bin-line"></i></button>';
+              typesNotesHtml += '</div>';
+              typesNotesHtml += '</div>';
+              
+              // Render sous-notes if they exist
+              if(typeNote.sous_notes && typeNote.sous_notes.length > 0) {
+                typesNotesHtml += '<div class="nested-list mt-2">';
+                $.each(typeNote.sous_notes, function(idx, sousNote) {
+                  typesNotesHtml += '<div class="sous-note-item d-flex justify-content-between align-items-center">';
+                  typesNotesHtml += '<div>';
+                  typesNotesHtml += '<span>' + sousNote.label + ' (Ordre: ' + sousNote.ordre + ')</span>';
+                  typesNotesHtml += '</div>';
+                  typesNotesHtml += '<div class="btn-group" role="group">';
+                  typesNotesHtml += '<button type="button" class="btn btn-outline-warning btn-sm edit-sous-note" data-id="' + sousNote.id + '" data-type-note-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
+                  typesNotesHtml += '<button type="button" class="btn btn-outline-danger btn-sm delete-sous-note" data-id="' + sousNote.id + '"><i class="ri-delete-bin-line"></i></button>';
+                  typesNotesHtml += '</div>';
+                  typesNotesHtml += '</div>';
+                });
+                typesNotesHtml += '</div>';
+              }
+              
+              typesNotesHtml += '</div>';
+            });
+          } else {
+            typesNotesHtml = '<p class="text-muted">Aucun type de note défini pour ce modèle.</p>';
+          }
+          
+          $('#typesNotesList').html(typesNotesHtml);
+          $('#modelDetailsModal').modal('show');
+        },
+        error: function() {
+          alertify.error("Erreur lors du chargement des détails du modèle.");
+        }
+      });
+    });
+
+    // Edit model
+    $(document).on('click','#btnUpdate', function(){
+      const id = $(this).data('id');
+      
+      $.ajax({
+        url: "{% url 't_exam:ApiGetModelBuilltinDetails' %}",
+        type: 'GET',
+        data: { id: id },
+        dataType: 'json',
+        success: function(response) {
+          $('#modelId').val(response.id);
+          $('#label').val(response.label);
+          $('#formation').val(response.formation_id);
+          $('#is_default').prop('checked', response.is_default);
+          $('#modalTitle').text('Modification du modèle de bulletin');
+          $('#createModelModal').modal('show');
+        },
+        error: function() {
+          alertify.error("Erreur lors du chargement des détails du modèle.");
+        }
+      });
+    });
+
+    // Delete model
+    $(document).on('click','#btnDelete', function(){
+      const id = $(this).data('id');
+      currentModelId = id;
+      $('#deleteConfirmationText').text('Souhaitez-vous supprimer ce modèle de bulletin ?');
+      $('.deleteModal').modal('show');
+
+      $(document).on('click', '#confirmDeleteBtn', function(){
+        $.ajax({
+          url : "{% url 't_exam:ApiDeleteModelBuitltin' %}",
+          dataType: 'JSON',
+          type : 'GET',
+          data : {'id': id},
+          success : function(response){
+            if (response.status === 'success'){
+              alertify.success(response.message);
+              loadModels();
+              $('.deleteModal').modal('hide');
+            }else{
+              alertify.error(response.message);
+            }
+          },
+          error: function() {
+            alertify.error("Erreur lors de la suppression.");
+          }
+        });
+      });
+    });
+
+    // Toggle sous-notes container visibility
+    $('#has_sous_notes').on('change', function() {
+      if(this.checked) {
+        $('#nb_sous_notes_container').show();
+      } else {
+        $('#nb_sous_notes_container').hide();
+      }
+    });
+
+    // Add type note button
+    $(document).on('click', '#addTypeNoteBtn', function() {
+      $('#typeNoteForm')[0].reset();
+      $('#typeNoteId').val('');
+      $('#modelIdForTypeNote').val(currentModelId);
+      $('#typeNoteModalTitle').text('Ajouter un type de note');
+      $('#typeNoteModal').modal('show');
+    });
+
+    // Edit type note
+    $(document).on('click', '.edit-type-note', function() {
+      const id = $(this).data('id');
+      currentTypeNoteId = id;
+      
+      $.ajax({
+        url: "{% url 't_exam:ApiGetTypeNotes' %}",
+        type: 'GET',
+        data: { model_id: currentModelId },
+        dataType: 'json',
+        success: function(response) {
+          const typeNote = response.find(tn => tn.id == id);
+          if(typeNote) {
+            $('#typeNoteId').val(typeNote.id);
+            $('#code').val(typeNote.code);
+            $('#libelle').val(typeNote.libelle);
+            $('#max_note').val(typeNote.max_note);
+            $('#ordre').val(typeNote.ordre);
+            $('#has_sous_notes').prop('checked', typeNote.has_sous_notes);
+            $('#nb_sous_notes').val(typeNote.nb_sous_notes);
+            
+            if(typeNote.has_sous_notes) {
+              $('#nb_sous_notes_container').show();
+            } else {
+              $('#nb_sous_notes_container').hide();
+            }
+            
+            $('#modelIdForTypeNote').val(currentModelId);
+            $('#typeNoteModalTitle').text('Modifier le type de note');
+            $('#typeNoteModal').modal('show');
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors du chargement des détails du type de note.");
+        }
+      });
+    });
+
+    // Add sous-note
+    $(document).on('click', '.add-sous-note', function() {
+      const typeNoteId = $(this).data('id');
+      $('#sousNoteId').val('');
+      $('#typeNoteIdForSousNote').val(typeNoteId);
+      $('#sousNoteModalTitle').text('Ajouter une sous-note');
+      $('#sousNoteForm')[0].reset();
+      $('#sousNoteModal').modal('show');
+    });
+
+    // Edit sous-note
+    $(document).on('click', '.edit-sous-note', function() {
+      const id = $(this).data('id');
+      const typeNoteId = $(this).data('type-note-id');
+      currentSousNoteId = id;
+      
+      $.ajax({
+        url: "{% url 't_exam:ApiGetSousNotesForType' %}",
+        type: 'GET',
+        data: { type_note_id: typeNoteId },
+        dataType: 'json',
+        success: function(response) {
+          const sousNote = response.find(sn => sn.id == id);
+          if(sousNote) {
+            $('#sousNoteId').val(sousNote.id);
+            $('#sousNoteLabel').val(sousNote.label);
+            $('#sousNoteOrdre').val(sousNote.ordre);
+            $('#typeNoteIdForSousNote').val(typeNoteId);
+            $('#sousNoteModalTitle').text('Modifier la sous-note');
+            $('#sousNoteModal').modal('show');
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors du chargement des détails de la sous-note.");
+        }
+      });
+    });
+
+    // Delete type note
+    $(document).on('click', '.delete-type-note', function() {
+      const id = $(this).data('id');
+      currentTypeNoteId = id;
+      $('#deleteConfirmationText').text('Souhaitez-vous supprimer ce type de note ?');
+      $('.deleteModal').modal('show');
+
+      $(document).on('click', '#confirmDeleteBtn', function() {
+        $.ajax({
+          url: "{% url 't_exam:ApiDeleteTypeNote' %}",
+          type: 'GET',
+          data: { id: id },
+          dataType: 'json',
+          success: function(response) {
+            if(response.status === 'success') {
+              alertify.success(response.message);
+              $('.deleteModal').modal('hide');
+              // Refresh the model details
+              $('#btnViewDetails[data-id="' + currentModelId + '"]').click();
+            } else {
+              alertify.error(response.message);
+            }
+          },
+          error: function() {
+            alertify.error("Erreur lors de la suppression.");
+          }
+        });
+      });
+    });
+
+    // Delete sous-note
+    $(document).on('click', '.delete-sous-note', function() {
+      const id = $(this).data('id');
+      currentSousNoteId = id;
+      $('#deleteConfirmationText').text('Souhaitez-vous supprimer cette sous-note ?');
+      $('.deleteModal').modal('show');
+
+      $(document).on('click', '#confirmDeleteBtn', function() {
+        $.ajax({
+          url: "{% url 't_exam:ApiDeleteSousNote' %}",
+          type: 'GET',
+          data: { id: id },
+          dataType: 'json',
+          success: function(response) {
+            if(response.status === 'success') {
+              alertify.success(response.message);
+              $('.deleteModal').modal('hide');
+              // Refresh the model details
+              $('#btnViewDetails[data-id="' + currentModelId + '"]').click();
+            } else {
+              alertify.error(response.message);
+            }
+          },
+          error: function() {
+            alertify.error("Erreur lors de la suppression.");
+          }
+        });
+      });
+    });
+
+    // Handle type note form submission
+    $(document).on('submit', '#typeNoteForm', function(e) {
+      e.preventDefault();
+      const formData = $(this).serialize();
+      const typeNoteId = $('#typeNoteId').val();
+      
+      let url = "{% url 't_exam:ApiAddTypeNote' %}";
+      if(typeNoteId) {
+        url = "{% url 't_exam:ApiUpdateTypeNote' %}";
+      }
+      
+      $.ajax({
+        url: url,
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+          if(response.status === 'success') {
+            $('#typeNoteModal').modal('hide');
+            alertify.success(response.message);
+            // Refresh the model details
+            $('#btnViewDetails[data-id="' + currentModelId + '"]').click();
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de l'enregistrement.");
+        }
+      });
+    });
+
+    // Handle sous-note form submission
+    $(document).on('submit', '#sousNoteForm', function(e) {
+      e.preventDefault();
+      const formData = $(this).serialize();
+      const sousNoteId = $('#sousNoteId').val();
+      
+      let url = "{% url 't_exam:ApiAddSousNote' %}";
+      if(sousNoteId) {
+        url = "{% url 't_exam:ApiUpdateSousNote' %}";
+      }
+      
+      $.ajax({
+        url: url,
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+          if(response.status === 'success') {
+            $('#sousNoteModal').modal('hide');
+            alertify.success(response.message);
+            // Refresh the model details
+            $('#btnViewDetails[data-id="' + currentModelId + '"]').click();
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de l'enregistrement.");
+        }
+      });
+    });
+  });
 </script>
 {% endblock content %}
-           
-
-
-
-    

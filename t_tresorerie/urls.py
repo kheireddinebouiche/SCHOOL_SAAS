@@ -214,6 +214,7 @@ urlpatterns = [
     path('ApiGetAutrePaiement/<int:pk>/', ApiGetAutrePaiement, name="ApiGetAutrePaiement"),
     path('ApiUpdateAutrePaiement', ApiUpdateAutrePaiement, name="ApiUpdateAutrePaiement"),
     path('ApiDeleteAutrePaiement', ApiDeleteAutrePaiement, name="ApiDeleteAutrePaiement"),
+    path('api_liste_clients', api_liste_clients, name="api_liste_clients"),
 
 
 

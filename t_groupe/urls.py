@@ -40,6 +40,6 @@ urlpatterns = [
     path('ApiCreateGroupe', ApiCreateGroupe, name="ApiCreateGroupe"),
     path('ApiDeleteGroupe', ApiDeleteGroupe, name="ApiDeleteGroupe"),
 
-
+    
     path('students/<int:pk>/print/<slug:template_slug>/', generate_student_pdf.as_view(), name='generate_student_pdf'),
 ]

@@ -216,26 +216,13 @@ def ApiStoreAutrePaiement(request):
 @login_required(login_url="institut_app:login")
 def ApiListeAutrePaiements(request):
     """API endpoint to list all other payments"""
-    try:
-        autre_paiements = AutreProduit.objects.all().order_by('-date_operation')
+    
+    autre_paiements = AutreProduit.objects.all().values('id')
 
-        paiements_data = []
-        for paiement in autre_paiements:
-            paiements_data.append({
-                'id': paiement.id,
-                'label': paiement.label,
-                'montant_paiement': float(paiement.montant_paiement) if paiement.montant_paiement else 0,
-                'mode_paiement': paiement.mode_paiement,
-                'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
-                'reference': paiement.reference or '-',
-                'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
-                'compte': paiement.compte.name if paiement.compte else '-',
-                'compte_id': paiement.compte.id if paiement.compte else None
-            })
+    print(autre_paiements)
 
-        return JsonResponse({'data': paiements_data}, safe=False)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse(list(autre_paiements), safe=False)
+    
 
 @login_required(login_url="institut_app:login")
 def ApiGetAutrePaiement(request, pk):
@@ -328,3 +315,31 @@ def ApiDeleteAutrePaiement(request):
             return JsonResponse({'error': str(e)}, status=400)
 
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+def api_liste_clients(request):
+    if request.method == "GET":
+        pass
+    else:
+        return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institu_app:login")
+def CreateClientFromTresorerie(request):
+    if request.method == "POST":
+        nom  = request.POST.get('nom')
+        prenom = request.POST.get('prenom')
+        nin = request.POST.get('nin')
+        telephone = request.POST.get('telephone')
+
+
+        if not nom or not prenom or not nin or not telephone:
+            return JsonResponse({"status" : "error"})
+        
+        Prospets.objects.create(
+            
+        )
+
+    else:
+        return JsonResponse({"status" : "error"})

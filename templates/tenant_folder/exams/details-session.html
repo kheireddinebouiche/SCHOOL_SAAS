@@ -203,48 +203,162 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
-<div id="plannificationDesExamens" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesExamensLabel" aria-hidden="true" style="display: none;">
-   
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title me-3" id="plannificationDesExamensLabel">Plannification des modules d'examens</h5>
-              
+<div id="plannificationDesExamens" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesExamensLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-calendar-schedule-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="plannificationDesExamensLabel">
+                            Plannification des modules d'examens
+                        </h5>
+                        <p class="text-muted small mb-0">Planifiez les examens pour cette session</p>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-               
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <form method="post" id="plan-exam-form">
-                        {% csrf_token %}
-                        <input type="hidden" id="session_line_id" name="session_line_id">
-                        <table id="exam-table" class="table table-centered table-nowrap table-hover mb-0">
-                            <thead>
-                            <tr>
-                                <th>Module</th>
-                                <th>Date</th>
-                                <th>Heure début</th>
-                                <th>Heure fin</th>
-                                <th>Salle</th>
-                                <th>Action</th>
-                            </tr>
-                            </thead>
-                            <tbody id="table-body">
-                            
-                            </tbody>
-                        </table>
-                    
-                       <div class="modal-footer">
-                            <button type="button" class="btn btn-success"  onclick="addRow()">Nouvelle ligne</button>
-                            <button type="submit" class="btn btn-primary" >Enregistrer</button>
-                       </div>
-                    </form>                      
-                </div>         
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                            <i class="ri-filter-line text-info"></i>
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0 text-info">Filtres avancés</h5>
+                            <p class="text-muted mb-0 small">Affinez votre recherche</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary d-flex align-items-center" id="btnPlanifier">
+                        <i class="ri-add-line me-1"></i>Planifier
+                    </button>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Module</th>
+                                        <th scope="col">Date examen</th>
+                                        <th scope="col">H. Debut/ H. Fin</th>
+                                        <th scope="col">Type examen</th>
+                                        <th scope="col">Salle</th>
+                                        <th scope="col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="examPlanTableBody">
+                                    <!-- Les lignes seront ajoutées dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-      
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2">
+                    <i class="ri-check-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding new exam plan -->
+<div id="addExamPlanModal" class="modal fade" tabindex="-1" aria-labelledby="addExamPlanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-calendar-add-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="addExamPlanModalLabel">
+                            Planifier un nouvel examen
+                        </h5>
+                        <p class="text-muted small mb-0">Remplissez les informations de l'examen</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="moduleSelect" class="form-label">Module *</label>
+                                <select class="form-select" id="moduleSelect" name="module" required>
+                                    <option value="">Sélectionnez un module</option>
+                                    <!-- Options will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="typeExamenSelect" class="form-label">Type examen *</label>
+                                <select class="form-select" id="typeExamenSelect" name="type_examen" required>
+                                    <option value="">Sélectionnez un type</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="rachat">Rachat de crédit</option>
+                                    <option value="rattrage">Rattrapage</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="dateExamen" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="dateExamen" name="date" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="salleSelect" class="form-label">Salle *</label>
+                                <select class="form-select" id="salleSelect" name="salle" required>
+                                    <option value="">Sélectionnez une salle</option>
+                                    <!-- Options will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="heureDebut" class="form-label">Heure de début *</label>
+                                <input type="time" class="form-control" id="heureDebut" name="heure_debut" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="heureFin" class="form-label">Heure de fin *</label>
+                                <input type="time" class="form-control" id="heureFin" name="heure_fin" required>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" id="examPlanForm" class="btn btn-success px-4 py-2">
+                    <i class="ri-check-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="plannificationDesGroupeModal" class="modal fade" tabindex="-1" aria-labelledby="plannificationDesGroupeModalLabel" aria-hidden="true" style="display: none;">
    
@@ -304,13 +418,53 @@
                     <h4 class="mb-3">Vous étes sur le point de supprimer le groupe</h4>
                     <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
                     <div class="hstack gap-2 justify-content-center">
-                        
+
                     </div>
                 </div>
             </div>
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<!-- Modal for exam validation confirmation -->
+<div id="validateExamModal" class="modal fade" tabindex="-1" aria-labelledby="validateExamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-checkbox-circle-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="validateExamModalLabel">
+                            Valider l'examen
+                        </h5>
+                        <p class="text-muted small mb-0">Confirmez la validation de l'examen</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mt-2">
+                    <i class="ri-alert-line text-warning display-5"></i>
+                </div>
+                <div class="mt-3">
+                    <h5 class="text-primary">Êtes-vous sûr(e) ?</h5>
+                    <p class="text-muted">Voulez-vous vraiment valider cet examen ? Cette action marquera l'examen comme terminé et activera les résultats.</p>
+                    <input type="hidden" id="examPlanIdToValidate" value="">
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-center">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success px-4 py-2" id="confirmValidateExamBtn">
+                    <i class="ri-check-line me-2"></i>Valider
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 
@@ -336,7 +490,7 @@
                     if (data.session_lines.length > 0) {
                         $.each(data.session_lines, function(index, item) {
                             row += "<tr>";
-                            row += "<td><a href='/examens/plannification-examens/"+item.id+"'><b>" + item.groupe__nom + "</b></a></td>";
+                            row += "<td>" + item.groupe__nom + "</b></a></td>";
                             row += "<td>" + item.date_debut + "</td>";
                             row += "<td>" + item.date_fin + "</td>";
                             row += "<td>" + item.semestre + "</td>";
@@ -346,7 +500,7 @@
                                 row += '<i class="ri-more-fill align-middle"></i>';
                                 row += '</button>';
                                 row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                row += '<li><button data-id='+item.id+' data-date-d='+item.date_debut+' data-date-f='+item.date_fin+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
+                                row += '<li><button data-id='+item.id+' data-groupe-id='+item.groupe__id+' data-date-d='+item.date_debut+' data-date-f='+item.date_fin+' id="btnDetails" class="dropdown-item edit-item-btn"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Détails </button></li>';
                                 row += '<li><button data-id='+item.id+' id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier </button></li>';
                                 row += '<li><button data-id='+item.id+' id="btnDelete" class="dropdown-item edit-item-btn"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer </button></li>';
                                 row += "</ul></div>";
@@ -520,11 +674,20 @@
        $(document).on('click', '#btnDetails', function(){
            var id = $(this).data('id');
            const date_d_session = $(this).data('date-d');
-           const date_f_session = $(this).data('date-f'); 
+           const date_f_session = $(this).data('date-f');
 
-           $('#session_line_id').val(id);
+           var groupeId = $(this).data('groupe-id');
 
-           $.ajax({
+           $('#btnPlanifier').data('id_groupe',groupeId);
+           $('#btnPlanifier').data('session_line_id',id);
+
+           LoadExamPlannification(id);
+
+           $("#plannificationDesExamens").modal('show');
+       });
+
+       function LoadExamPlannification(id){
+        $.ajax({
                 url : "{% url 't_exam:ApiLoadDatasForPlanExam' %}",
                 type : "GET",
                 dataType : "JSON",
@@ -538,7 +701,7 @@
                         modulesRow += "<option value="+item.id+">"+item.label+"</option>";
                     });
                     $.each(data.salles, function(index, item){
-                        classRow += "<option value="+item.id+">"+item.nom+"</option>"; 
+                        classRow += "<option value="+item.id+">"+item.nom+"</option>";
                     });
                     $.ajax({
                         url: "{% url 't_exam:get_exam_plans' %}",
@@ -546,88 +709,57 @@
                         dataType: "JSON",
                         data: { 'id': id },
                         success: function (response) {
-                            const tbody = $("#table-body");
+                            const tbody = $("#examPlanTableBody");
                             tbody.empty(); // Vider d'abord le tableau
-                            
+
                             if (response.status === "success" && response.planifications.length > 0) {
                               $.each(response.planifications, function (index, item) {
+                                // Determine button state based on validation status
+                                let validateButton;
+                                if (item.passed) { // Assuming the API returns a 'passed' field
+                                  validateButton = `<button type="button" class="btn btn-info btn-sm result-btn" data-id="${item.id}" title="Résultats">
+                                                      <i class="ri-file-3-line"></i>
+                                                    </button>`;
+                                } else {
+                                  validateButton = `<button type="button" class="btn btn-success btn-sm validate-exam-btn" data-id="${item.id}">
+                                                      <i class="ri-check-line"></i>
+                                                    </button>`;
+                                }
+
                                 tbody.append(`
                                   <tr>
+                                    <td><i class="ri-bookmark-3-line me-2"></i>${item.module_nom}</td>
+                                    <td><i class="ri-calendar-schedule-line me-2"></i>${item.date}</td>
+                                    <td><i class="ri-timer-line me-2"></i>${item.heure_debut} - ${item.heure_fin}</td>
+                                    <td>${item.type_examen}</td>
+                                    <td><i class="ri-home-3-line me-2"></i>${item.salle_nom}</td>
                                     <td>
-                                     
-                                      <select class="form-control module-select" name="module[]">
-                                        ${modulesRow.replace(`value=${item.module_id}`, `value=${item.module_id} selected`)}
-                                      </select>
-                                    </td>
-                                    <td><input class="form-control" type="date" name="date[]" value="${item.date}"></td>
-                                    <td><input class="form-control" type="time" name="heure_debut[]" value="${item.heure_debut}"></td>
-                                    <td><input class="form-control" type="time" name="heure_fin[]" value="${item.heure_fin}"></td>
-                                    <td>
-                                      <select class="form-control" name="salle[]">
-                                        ${classRow.replace(`value=${item.salle_id}`, `value=${item.salle_id} selected`)}
-                                      </select>
-                                    </td>
-                                    <td>
-                                      <button type="button" class="btn btn-light-primary btn-sm" onclick="removeRow(this)">
-                                        <i class='bx bx-trash bx-sm'></i>
-                                      </button>
-                                      <button type="button" class="btn btn-light-primary btn-sm" >
-                                        <i class='bx bx-printer bx-sm'> </i>
-                                      </button>
-
-                                      <a href="/examens/pv-note/${item.id}"  type="button" class="btn btn-light-primary btn-sm" >
-                                         <i class='mdi mdi-google-analytics mdi-18px'></i>
-                                      </a>
-                                     
+                                      <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-danger btn-sm delete-exam-btn" data-id="${item.id}">
+                                          <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-info btn-sm print-exam-btn" data-id="${item.id}">
+                                          <i class="ri-printer-line"></i>
+                                        </button>
+                                        ${validateButton}
+                                      </div>
                                     </td>
                                   </tr>
                                 `);
                               });
 
                             } else {
-                             
                               tbody.append(`
                                 <tr>
-                                  <td>
-                                    
-                                    <select class="form-control module-select" name="module[]">
-                                        ${modulesRow}
-                                    </select>
-                                  </td> 
-                                  <td><input class="form-control" id='date_exam' type="date" name="date[]"></td>
-                                  <td><input class="form-control" type="time" name="heure_debut[]"></td>
-                                  <td><input class="form-control" type="time" name="heure_fin[]"></td>
-                                  <td>
-                                    <select class="form-control" name="salle[]">
-                                         ${classRow}
-                                    </select>
-                                  </td>
-                                  <td>
-                                    <button type="button" class="btn btn-light-primary btn-sm" onclick="removeRow(this)">
-                                      <i class='bx bx-trash bx-sm'></i>
-                                    </button>
-                                  </td>
+                                  <td colspan="6" class="text-center text-muted py-3">Aucune planification d'examen disponible</td>
                                 </tr>
                               `);
-                            }   
+                            }
                         }
                       });
                 }
            });
-
-           $("#plannificationDesExamens").modal('show');
-
-           $(document).on('input', '#date_exam', function(){
-                
-                 var date_exam = $(this).val();
-                 
-                 if (date_exam < date_d_session || date_exam > date_f_session){
-                    alertify.error('La date ne correspond pas a la périiode d\'examen fixé pour le groupe !');
-                    $(this).val("");
-                 }
-                
-            });
-       });
+       }
 
        $(document).on('click', '#btnDelete', function(){
          var id = $(this).data('id');
@@ -696,22 +828,161 @@
             
         }); {% endcomment %}
        
-    
-    
-    
-    function addRow() {
-      const row = document.querySelector("#table-body tr").cloneNode(true);
-      row.querySelectorAll("input").forEach(input => input.value = "");
-      document.querySelector("#table-body").appendChild(row);
-    }
+        // Event handler for the Planifier button
+        $(document).on('click', '#btnPlanifier', function(){
+            // Load modules and rooms data for the form
+            var session_line_id = $(this).data('session_line_id');
+            var groupeId = $(this).data('id_groupe');
 
-    function removeRow(btn) {
-      const row = btn.closest("tr");
-      const rows = document.querySelectorAll("#table-body tr");
-      if (rows.length > 1) row.remove();  // éviter de supprimer la dernière ligne
-    }
-    
-    
+            $('#examPlanForm').data("session_line_id",session_line_id);
+
+            
+            LoadModules(groupeId);
+            
+
+            // Show the modal
+            $('#addExamPlanModal').modal('show');
+                
+        
+        });
+
+        $(document).on('click', '#examPlanForm', function(){
+
+            var session_line_id = $(this).data('session_line_id');
+            var moduleSelect = $('#moduleSelect').val();
+            var typeExamenSelect = $('#typeExamenSelect').val();
+            var dateExamen = $('#dateExamen').val();
+            var salleSelect = $('#salleSelect').val();
+            var heureDebut = $('#heureDebut').val();
+            var heureFin = $('#heureFin').val();
+
+           
+            $.ajax({
+                url : "{% url 't_exam:ApiPlanExam' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'moduleSelect' : moduleSelect,
+                    'typeExamenSelect' : typeExamenSelect,
+                    'dateExamen' : dateExamen,
+                    'salleSelect' : salleSelect,
+                    'heureDebut' : heureDebut,
+                    'heureFin' : heureFin,
+                    'session_line_id' : session_line_id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if (response.status === "success"){
+                        alertify.success("Plannification effectuer avec succès");
+                        LoadExamPlannification(session_line_id);
+                    }else{
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        });
+
+
+        function LoadModules(groupeId){
+            $.ajax({
+                url : "{% url 't_exam:ApiLoadDataToPlan' %}",
+                dataType : "JSON",
+                type : "GET",
+                data : {
+                    'id_groupe' : groupeId,
+                },
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner un module</option>";
+                    $.each(data.modules, function(index, p){
+                        option += "<option value="+p.id+">"+p.label+"</option>";
+                    }); 
+                    $('#moduleSelect').html(option);
+
+                    var option1="<option value=''>Veuillez sélectionner une salle</option>";
+                    $.each(data.salles, function(index, p){
+                        option1 += "<option value="+p.code+">"+p.nom+"</option>";
+                    }); 
+                    $('#salleSelect').html(option1);
+                }
+            });
+        }
+
+        // Validation for time inputs
+        $(document).on('change', '#heureDebut, #heureFin', function(){
+            var heureDebut = $('#heureDebut').val();
+            var heureFin = $('#heureFin').val();
+
+            if(heureDebut && heureFin) {
+                if(heureFin <= heureDebut) {
+                    alertify.error("L'heure de fin doit être supérieure à l'heure de début.");
+                    $('#heureFin').val(''); // Clear the end time field
+                }
+            }
+        });
+
+        $(document).on('click','.print-exam-btn', function(){
+            var id = $(this).data('id');
+
+            window.location.href = "{% url 't_exam:PreviewPV' pk=0 %}".replace('0', id);
+
+        });
+
+        // Event handler for validate exam button - opens confirmation modal
+        $(document).on('click', '.validate-exam-btn', function(){
+            var examPlanId = $(this).data('id');
+            $('#examPlanIdToValidate').val(examPlanId);
+            $('#validateExamModal').modal('show');
+        });
+
+        // Event handler for confirm validation button in modal
+        $(document).on('click', '#confirmValidateExamBtn', function(){
+            var examPlanId = $('#examPlanIdToValidate').val();
+            var validateButton = $(`.validate-exam-btn[data-id="${examPlanId}"]`);
+
+            $.ajax({
+                url: "{% url 't_exam:validate_exam' %}",
+                type: "POST",
+                data: {
+                    'exam_plan_id': examPlanId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if(response.status === "success"){
+                        alertify.success(response.message);
+                        $('#validateExamModal').modal('hide');
+
+                        // Replace the validate button with a result icon button
+                        if(validateButton.length > 0) {
+                            validateButton.removeClass('btn-success').addClass('btn-info');
+                            validateButton.html('<i class="ri-file-3-line"></i>');
+                            validateButton.removeClass('validate-exam-btn');
+                            validateButton.addClass('result-btn');
+                            validateButton.attr('title', 'Résultats');
+                        } else {
+                            // If the original button is not found, reload the table
+                            var session_line_id = $('#btnPlanifier').data('session_line_id');
+                            if(session_line_id) {
+                                LoadExamPlannification(session_line_id);
+                            }
+                        }
+                    } else {
+                        alertify.error(response.message);
+                        $('#validateExamModal').modal('hide');
+                    }
+                },
+                error: function(xhr, status, error){
+                    alertify.error("Une erreur est survenue lors de la validation de l'examen.");
+                    console.error(error);
+                    $('#validateExamModal').modal('hide');
+                }
+            });
+        });
+
+        // Event handler for result button - redirects to notes filling page
+        $(document).on('click', '.result-btn', function(){
+            var examPlanId = $(this).data('id');
+            window.location.href = "{% url 't_exam:GeneratePv' pk=0 %}".replace('0', examPlanId);
+        });
     });
 </script>
 

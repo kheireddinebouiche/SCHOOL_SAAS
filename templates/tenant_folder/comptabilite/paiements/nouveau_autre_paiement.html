@@ -68,10 +68,18 @@
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-lg-6">
+                                            <label class="form-label">Client</label>
+                                            <select class="form-select" id="client" name="client">
+                                                <option value="">Veuillez sélectionner un client</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-6">
                                             <label class="form-label">Libellé *</label>
                                             <input type="text" class="form-control" id="label" name="label" required>
                                             <div class="invalid-feedback">Veuillez entrer le libellé du paiement</div>
                                         </div>
+                                    </div>
+                                    <div class="row g-3 mt-2">
                                         <div class="col-lg-6">
                                             <label class="form-label">Date d'opération *</label>
                                             <input type="date" class="form-control" id="date_operation" name="date_operation" required>
@@ -157,6 +165,26 @@
 <script>
     $(document).ready(function(){
 
+        // Load clients
+        function loadClients(){
+            $.ajax({
+                url: "{% url 't_tresorerie:api_liste_clients' %}", // Replace with your actual API endpoint
+                type: "GET",
+                success: function(response) {
+                    var select = $('#client');
+                    select.empty();
+                    select.append('<option value="">Veuillez sélectionner un client</option>');
+
+                    response.forEach(function(client) {
+                        select.append('<option value="'+client.id+'">'+client.nom+'</option>');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.log("Erreur lors du chargement des clients: " + error);
+                }
+            });
+        }
+
         // Load payment categories
         function loadPaymentCategories(){
             $.ajax({
@@ -166,12 +194,12 @@
                     var select = $('#compte');
                     select.empty();
                     select.append('<option value="">Veuillez sélectionner une catégorie</option>');
-                    
+
                     response.data.forEach(function(category) {
                         // Add parent categories
                         if(category.is_parent) {
                             select.append('<option value="'+category.id+'">'+category.name+'</option>');
-                            
+
                             // Add child categories
                             category.children.forEach(function(child) {
                                 select.append('<option value="'+child.id+'">-- '+child.name+'</option>');
@@ -185,7 +213,8 @@
             });
         }
 
-        // Load categories on page load
+        // Load clients and categories on page load
+        loadClients();
         loadPaymentCategories();
 
         // Set today's date as default for date_operation and date_paiement
@@ -202,6 +231,7 @@
             var reference = $('#reference').val();
             var date_paiement = $('#date_paiement').val();
             var compte = $('#compte').val();
+            var client = $('#client').val();
 
             if(!label || !montant_paiement || !mode_paiement || !date_operation || !date_paiement) {
                 alert('Veuillez remplir tous les champs obligatoires');
@@ -221,7 +251,8 @@
                     date_operation: date_operation,
                     reference: reference,
                     date_paiement: date_paiement,
-                    compte: compte
+                    compte: compte,
+                    client: client
                 },
                 success: function(response) {
                     if(response.success) {

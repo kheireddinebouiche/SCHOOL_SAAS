@@ -88,6 +88,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     
     
 ]
@@ -124,7 +125,7 @@ WSGI_APPLICATION = 'school.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': 'dup',
+        'NAME': 'official',
         'USER': 'postgres',
         'PASSWORD': '1230042690',
         'HOST': 'localhost',
@@ -159,13 +160,14 @@ TENANT_DOMAIN_MODEL = "app.Domaine"  # Modèle Domain
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'fr-fr'
+
 
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
+LANGUAGE_CODE = 'fr'
+USE_L10N = True
+
 
 
 # Static files (CSS, JavaScript, Images)

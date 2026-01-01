@@ -1,0 +1,403 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %} Remplissage des notes - {{ exam_planification.module.label }} {% endblock title %}
+
+{% block content %}
+<style>
+    ._inputDetails {
+       background-color: transparent !important;
+       border : none !important;
+       outline : none;
+       font-weight : 700 !important;
+    }
+
+    .is-valid {
+        border-color: #28a745 !important;
+    }
+
+    .valid-feedback {
+        color: #28a745;
+        display: block;
+    }
+
+    .invalid-feedback {
+        color: #dc3545;
+        display: block;
+    }
+    
+    .note-section {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+    }
+    
+    .sous-note-row {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border-radius: 3px;
+    }
+    
+    .student-row {
+        display: grid;
+        grid-template-columns: 2fr repeat({{ exam_types_notes|length }}, 1fr);
+        gap: 10px;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .student-header {
+        font-weight: bold;
+        background-color: #f0f0f0;
+    }
+    
+    .note-input {
+        width: 80px;
+        text-align: center;
+    }
+    
+    .pv-validation {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Page title -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Remplissage des notes - {{ exam_planification.module.label }}</h4>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Examens</a></li>
+                                <li class="breadcrumb-item active">Remplissage des notes</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Info -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Informations sur l'examen</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Module:</label>
+                                    <input type="text" class="form-control _inputDetails" value="{{ exam_planification.module.label }}" readonly />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Date de l'examen:</label>
+                                    <input type="text" class="form-control _inputDetails" value="{{ exam_planification.date|date:'d/m/Y' }}" readonly />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Groupe:</label>
+                                    <input type="text" class="form-control _inputDetails" value="{{ exam_planification.exam_line.groupe.label }}" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Note Entry Form -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Saisie des notes</h5>
+                            <div>
+                                <button id="saveNotesBtn" class="btn btn-success btn-sm">
+                                    <i class="mdi mdi-content-save me-1"></i> Enregistrer les notes
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Note Types Header -->
+                            <div class="student-row student-header">
+                                <div>Étudiant</div>
+                                {% for type_note in exam_types_notes %}
+                                    <div>
+                                        {{ type_note.libelle }}
+                                        {% if type_note.has_sous_notes %}
+                                            <br><small class="text-muted">(Max: {{ type_note.max_note }})</small>
+                                        {% else %}
+                                            <br><small class="text-muted">(Max: {{ type_note.max_note }})</small>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Student Rows -->
+                            {% for etudiant in etudiants %}
+                                <div class="student-row" data-etudiant-id="{{ etudiant.id }}">
+                                    <div>{{ etudiant.nom }} {{ etudiant.prenom }}</div>
+
+                                    {% for type_note in exam_types_notes %}
+                                        <div class="note-cell" data-type-note-id="{{ type_note.id }}">
+                                            {% if type_note.has_sous_notes %}
+                                                <!-- Expandable sous-notes section -->
+                                                <div class="note-main">
+                                                    {% with note_for_type=etudiant_notes|get_item:etudiant.id|default:""|get_item:type_note.id %}
+                                                    <input type="number"
+                                                           class="form-control note-input"
+                                                           value="{{ note_for_type.valeur|default:'' }}"
+                                                           min="0"
+                                                           max="{{ type_note.max_note }}"
+                                                           readonly
+                                                           data-etudiant-id="{{ etudiant.id }}"
+                                                           data-type-note-id="{{ type_note.id }}"
+                                                           data-main-note="true">
+                                                    {% endwith %}
+                                                    <button class="btn btn-outline-primary btn-sm mt-1"
+                                                            type="button"
+                                                            onclick="toggleSousNotes({{ etudiant.id }}, {{ type_note.id }})">
+                                                        <i class="mdi mdi-chevron-down"></i> Détails
+                                                    </button>
+                                                </div>
+
+                                                <!-- Sous-notes section (hidden by default) -->
+                                                <div class="sous-notes-section" style="display: none; margin-top: 10px; padding: 10px; background-color: #f0f8ff; border-radius: 5px;">
+                                                    {% for sous_note in type_note.exam_sous_notes.all %}
+                                                        {% with note_for_type=etudiant_notes|get_item:etudiant.id|default:""|get_item:type_note.id %}
+                                                        {% with sous_notes_list=sous_notes_mapping|get_item:etudiant.id|default:""|get_item:type_note.id|default:"" %}
+                                                        <div class="sous-note-row">
+                                                            <label>{{ sous_note.label }} ({{ sous_note.ordre }})</label>
+                                                            <input type="number"
+                                                                   class="form-control note-input sous-note-input"
+                                                                   value=""
+                                                                   min="0"
+                                                                   max="{{ type_note.max_note|div:2 }}"
+                                                                   data-etudiant-id="{{ etudiant.id }}"
+                                                                   data-type-note-id="{{ type_note.id }}"
+                                                                   data-sous-note-id="{{ sous_note.id }}"
+                                                                   data-ordre="{{ sous_note.ordre }}">
+                                                        </div>
+                                                        {% endwith %}
+                                                        {% endwith %}
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <!-- Simple note input -->
+                                                {% with note_for_type=etudiant_notes|get_item:etudiant.id|default:""|get_item:type_note.id %}
+                                                <input type="number"
+                                                       class="form-control note-input"
+                                                       value="{{ note_for_type.valeur|default:'' }}"
+                                                       min="0"
+                                                       max="{{ type_note.max_note }}"
+                                                       data-etudiant-id="{{ etudiant.id }}"
+                                                       data-type-note-id="{{ type_note.id }}">
+                                                {% endwith %}
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PV Validation -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Validation du PV</h5>
+                        </div>
+                        <div class="card-body pv-validation">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-0">
+                                        <strong>État du PV:</strong> 
+                                        <span class="badge {% if pv_examen.est_valide %}bg-success{% else %}bg-warning{% endif %}">
+                                            {% if pv_examen.est_valide %}Validé{% else %}En cours de saisie{% endif %}
+                                        </span>
+                                    </p>
+                                    {% if pv_examen.date_validation %}
+                                        <p class="mb-0"><strong>Date de validation:</strong> {{ pv_examen.date_validation|date:'d/m/Y H:i' }}</p>
+                                    {% endif %}
+                                </div>
+                                {% if not pv_examen.est_valide %}
+                                <button id="validatePvBtn" class="btn btn-success">
+                                    <i class="mdi mdi-check-circle me-1"></i> Valider le PV
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSousNotes(etudiantId, typeNoteId) {
+    const section = document.querySelector(`[data-etudiant-id="${etudiantId}"] [data-type-note-id="${typeNoteId}"] .sous-notes-section`);
+    const button = document.querySelector(`[data-etudiant-id="${etudiantId}"] [data-type-note-id="${typeNoteId}"] button`);
+    const icon = button.querySelector('i');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.classList.remove('mdi-chevron-down');
+        icon.classList.add('mdi-chevron-up');
+    } else {
+        section.style.display = 'none';
+        icon.classList.remove('mdi-chevron-up');
+        icon.classList.add('mdi-chevron-down');
+    }
+}
+
+// Calculate main note when sous-notes change
+function calculateMainNote(etudiantId, typeNoteId) {
+    const sousNotes = document.querySelectorAll(`[data-etudiant-id="${etudiantId}"] [data-type-note-id="${typeNoteId}"] .sous-note-input`);
+    if (sousNotes.length === 0) return;
+    
+    let sum = 0;
+    let count = 0;
+    
+    sousNotes.forEach(sousNote => {
+        const value = parseFloat(sousNote.value);
+        if (!isNaN(value)) {
+            sum += value;
+            count++;
+        }
+    });
+    
+    if (count > 0) {
+        const average = sum / count;
+        const mainNoteInput = document.querySelector(`[data-etudiant-id="${etudiantId}"] [data-type-note-id="${typeNoteId}"] input[data-main-note="true"]`);
+        if (mainNoteInput) {
+            mainNoteInput.value = average.toFixed(2);
+        }
+    }
+}
+
+// Add event listeners to sous-note inputs
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for sous-note changes to recalculate main note
+    document.querySelectorAll('.sous-note-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const etudiantId = this.getAttribute('data-etudiant-id');
+            const typeNoteId = this.getAttribute('data-type-note-id');
+            calculateMainNote(etudiantId, typeNoteId);
+        });
+    });
+    
+    // Save notes button
+    document.getElementById('saveNotesBtn').addEventListener('click', function() {
+        saveNotes();
+    });
+    
+    // Validate PV button
+    document.getElementById('validatePvBtn').addEventListener('click', function() {
+        validatePv();
+    });
+});
+
+function saveNotes() {
+    const notesData = [];
+    
+    // Collect all note values
+    document.querySelectorAll('.note-input:not([readonly])').forEach(input => {
+        const etudiantId = input.getAttribute('data-etudiant-id');
+        const typeNoteId = input.getAttribute('data-type-note-id');
+        const value = parseFloat(input.value) || null;
+        
+        if (etudiantId && typeNoteId) {
+            notesData.push({
+                etudiant_id: etudiantId,
+                type_note_id: typeNoteId,
+                valeur: value
+            });
+        }
+    });
+    
+    // Collect sous-note values
+    document.querySelectorAll('.sous-note-input').forEach(input => {
+        const etudiantId = input.getAttribute('data-etudiant-id');
+        const typeNoteId = input.getAttribute('data-type-note-id');
+        const sousNoteId = input.getAttribute('data-sous-note-id');
+        const ordre = input.getAttribute('data-ordre');
+        const value = parseFloat(input.value) || null;
+        
+        if (etudiantId && typeNoteId && sousNoteId) {
+            notesData.push({
+                etudiant_id: etudiantId,
+                type_note_id: typeNoteId,
+                sous_note_id: sousNoteId,
+                ordre: ordre,
+                valeur: value,
+                is_sous_note: true
+            });
+        }
+    });
+    
+    // Send data to server
+    fetch('{% url "save_exam_notes" exam_planification.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ notes: notesData })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Notes enregistrées avec succès!');
+        } else {
+            alert('Erreur lors de l\'enregistrement des notes: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erreur lors de l\'enregistrement des notes');
+    });
+}
+
+function validatePv() {
+    if (!confirm('Êtes-vous sûr de vouloir valider ce PV? Cette action est irréversible.')) {
+        return;
+    }
+    
+    fetch('{% url "validate_pv" exam_planification.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('PV validé avec succès!');
+            location.reload();
+        } else {
+            alert('Erreur lors de la validation du PV: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erreur lors de la validation du PV');
+    });
+}
+
+// Helper function to access dictionary items in template
+function dict_item(dict, key) {
+    return dict[key] || {};
+}
+</script>
+{% endblock content %}
