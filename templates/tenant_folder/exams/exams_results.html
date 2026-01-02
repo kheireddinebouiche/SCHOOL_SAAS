@@ -1,0 +1,529 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Examens - Résultats d'examens {% endblock title %}
+
+{% block content %}
+<style>
+  .stats-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .pv-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+  .pv-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .status-badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+    border-radius: 50px;
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  .dropdown-menu {
+    z-index: 1060 !important;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-gradient-to-r from-primary to-info rounded-3 shadow p-4 text-white">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                <i class="ri-file-text-line ri-2x"></i>
+              </div>
+              <div>
+                <h4 class="mb-1">Résultats d'examens</h4>
+                <p class="mb-0 opacity-75">Gestion des PVs d'examens</p>
+              </div>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 text-white">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-home-4-line me-1"></i>Examens
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active">Résultats d'examens</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-primary-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Total PVs</p>
+                  <h4 class="mb-0" id="totalPvs">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-primary rounded-circle text-white fs-4">
+                    <i class="ri-file-text-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-success-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">PVs Validés</p>
+                  <h4 class="mb-0" id="validatedPvs">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-success rounded-circle text-white fs-4">
+                    <i class="ri-checkbox-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-warning-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">PVs en attente</p>
+                  <h4 class="mb-0" id="pendingPvs">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-warning rounded-circle text-white fs-4">
+                    <i class="ri-time-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-info-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Groupes</p>
+                  <h4 class="mb-0" id="totalGroups">0</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-info rounded-circle text-white fs-4">
+                    <i class="ri-group-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white p-4 border-bottom">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="ri-filter-line text-info"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 text-info">Filtres avancés</h5>
+                    <p class="text-muted mb-0 small">Affinez votre recherche</p>
+                  </div>
+                </div>
+
+                <div class="ms-auto">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div class="d-flex gap-2">
+                      <input type="text" class="form-control rounded-pill" placeholder="Rechercher un PV..." id="searchInput">
+
+                      <select id="statusFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Tous les statuts</option>
+                        <option value="validated">Validés</option>
+                        <option value="pending">En attente</option>
+                      </select>
+                      
+                      <select id="groupFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Tous les groupes</option>
+                        <!-- Options will be populated by JavaScript -->
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-4">
+              <div class="row" id="listItem">
+                <div class="col-12">
+                  <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                    <i class="bx bx-loader bx-spin bx-lg text-primary mb-3"></i>
+                    <p class="text-muted mb-0">Chargement des PVs d'examens...</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pagination -->
+              <nav aria-label="PVs pagination" class="mt-4">
+                <ul class="pagination justify-content-center" id="pagination">
+                  <!-- Pagination will be populated by JavaScript -->
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-1" id="deleteModalLabel">
+              Suppression du PV d'examen
+            </h5>
+            <p class="text-muted small mb-0">Confirmer la suppression du PV</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+              <i class="ri-delete-bin-line"></i>
+            </div>
+          </div>
+          <h5 class="mb-3">Êtes-vous sûr de vouloir supprimer ce PV d'examen ?</h5>
+          <p class="text-muted mb-4">Cette action est irréversible et marquera l'examen comme non validé.</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-close-line me-2"></i>Annuler
+        </button>
+        <button id="confirmDeleteBtn" class="btn btn-danger px-4 py-2">
+          <i class="ri-delete-bin-line me-2"></i>Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function(){
+    let pvData = [];
+    let groupsData = [];
+    let currentPage = 1;
+    const itemsPerPage = 9;
+
+    function updateStats() {
+      const validatedCount = pvData.filter(pv => pv.exam_planification.passed).length;
+      const pendingCount = pvData.filter(pv => !pv.exam_planification.passed).length;
+
+      $('#totalPvs').text(pvData.length);
+      $('#validatedPvs').text(validatedCount);
+      $('#pendingPvs').text(pendingCount);
+      $('#totalGroups').text(groupsData.length);
+    }
+
+    function getStatusClass(pv) {
+      if (pv.exam_planification.passed) {
+        return 'bg-success-subtle text-success border border-success-subtle';
+      } else {
+        return 'bg-warning-subtle text-warning border border-warning-subtle';
+      }
+    }
+
+    function getStatusText(pv) {
+      if (pv.exam_planification.passed) {
+        return 'Validé';
+      } else {
+        return 'En attente';
+      }
+    }
+
+    function renderTable(data) {
+      let row = "";
+      if (data.length > 0) {
+        $.each(data, function(index, pv) {
+          row += '<div class="col-xl-4 col-lg-6 col-md-12 mb-4">';
+          row += '    <div class="card pv-card h-100 border-0 shadow-sm">';
+          row += '        <div class="card-body p-4">';
+          row += '            <div class="d-flex justify-content-between align-items-start mb-3">';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="avatar-sm me-3">';
+          row += '                        <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-4">';
+          row += '                            <i class="ri-file-text-line"></i>';
+          row += '                        </div>';
+          row += '                    </div>';
+          row += '                    <div>';
+          row += '                        <h6 class="mb-1 fw-semibold">'+pv.exam_planification.module.label+'</h6>';
+          row += '                        <p class="text-muted mb-0 small">'+pv.exam_planification.exam_line.groupe.nom+'</p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '                <div class="dropdown">';
+          row += '                    <button class="btn btn-soft-primary btn-sm dropdown-toggle shadow-none" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">';
+          row += '                        <i class="ri-more-2-fill"></i>';
+          row += '                    </button>';
+          row += '                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">';
+          row += '                        <li><a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+          row += '                        <li><a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>';
+          row += '                        <li><hr class="dropdown-divider my-1"></li>';
+          row += '                        <li><button data-id="'+pv.id+'" data-planification-id="'+pv.exam_planification.id+'" id="btnDeletePv" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2 text-danger"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
+          row += '                    </ul>';
+          row += '                </div>';
+          row += '            </div>';
+          row += '            <div class="vstack gap-2 mb-3">';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="flex-shrink-0 me-2 text-muted">';
+          row += '                        <i class="ri-calendar-line"></i>';
+          row += '                    </div>';
+          row += '                    <div class="flex-grow-1">';
+          row += '                        <p class="mb-0"><small>Date: <strong>'+formatDate(pv.exam_planification.date)+'</strong></small></p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="flex-shrink-0 me-2 text-muted">';
+          row += '                        <i class="ri-time-line"></i>';
+          row += '                    </div>';
+          row += '                    <div class="flex-grow-1">';
+          row += '                        <p class="mb-0"><small>Horaire: <strong>'+pv.exam_planification.heure_debut+' - '+pv.exam_planification.heure_fin+'</strong></small></p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="flex-shrink-0 me-2 text-muted">';
+          row += '                        <i class="ri-home-line"></i>';
+          row += '                    </div>';
+          row += '                    <div class="flex-grow-1">';
+          row += '                        <p class="mb-0"><small>Salle: <strong>'+pv.exam_planification.salle.nom+'</strong></small></p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '            </div>';
+          row += '            <div class="d-flex justify-content-between align-items-center">';
+          row += '                <span class="status-badge '+getStatusClass(pv)+'"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(pv)+'</span>';
+          row += '                <a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="btn btn-outline-primary btn-sm">Voir détails</a>';
+          row += '            </div>';
+          row += '        </div>';
+          row += '    </div>';
+          row += '</div>';
+        });
+      } else {
+        row = '<div class="col-12"><div class="text-center py-5"><i class="ri-file-text-line display-4 text-muted"></i><h5 class="mt-3 text-muted">Aucun PV disponible</h5><p class="text-muted">Aucun PV d\'examen trouvé avec les critères sélectionnés</p></div></div>';
+      }
+
+      $('#listItem').html(row);
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString('fr-FR', options);
+    }
+
+    function loadPvData() {
+      $.ajax({
+        url : "{% url 't_exam:ApiListPvExamen' %}",
+        type : 'GET',
+        dataType : 'JSON',
+        success : function(data) {
+          pvData = data.pvs;
+          groupsData = data.groups;
+          
+          // Populate group filter
+          let groupOptions = '<option value="">Tous les groupes</option>';
+          $.each(data.groups, function(index, group) {
+            groupOptions += '<option value="'+group.id+'">'+group.nom+'</option>';
+          });
+          $('#groupFilter').html(groupOptions);
+          
+          updateStats();
+          renderTable(data.pvs);
+          renderPagination();
+        },
+        error: function() {
+          $('#listItem').html("<div class='col-12 text-center py-5 text-danger'><i class='ri-error-warning-line me-2'></i>Erreur de chargement des données</div>");
+        }
+      });
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(pvData.length / itemsPerPage);
+      let paginationHtml = '';
+
+      if (totalPages <= 1) {
+        $('#pagination').html('');
+        return;
+      }
+
+      // Previous button
+      paginationHtml += '<li class="page-item '+(currentPage === 1 ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage-1)+'" aria-label="Previous">';
+      paginationHtml += '<i class="ri-arrow-left-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += '<li class="page-item '+(i === currentPage ? 'active' : '')+'">';
+        paginationHtml += '<a class="page-link" href="#" data-page="'+i+'">'+i+'</a>';
+        paginationHtml += '</li>';
+      }
+
+      // Next button
+      paginationHtml += '<li class="page-item '+(currentPage === totalPages ? 'disabled' : '')+'">';
+      paginationHtml += '<a class="page-link" href="#" data-page="'+(currentPage+1)+'" aria-label="Next">';
+      paginationHtml += '<i class="ri-arrow-right-s-line"></i>';
+      paginationHtml += '</a></li>';
+
+      $('#pagination').html(paginationHtml);
+    }
+
+    function filterPvs() {
+      var statusFilter = $('#statusFilter').val();
+      var groupFilter = $('#groupFilter').val();
+      var searchTerm = $('#searchInput').val().toLowerCase();
+
+      var filteredData = pvData.filter(pv => {
+        // Check status filter
+        var matchesStatus = statusFilter === '';
+        if (statusFilter === 'validated') {
+          matchesStatus = pv.exam_planification.passed;
+        } else if (statusFilter === 'pending') {
+          matchesStatus = !pv.exam_planification.passed;
+        }
+
+        // Check group filter
+        var matchesGroup = groupFilter === '' || 
+          pv.exam_planification.exam_line.groupe.id == groupFilter;
+
+        // Check search term
+        var matchesSearch = searchTerm === '' ||
+          pv.exam_planification.module.label.toLowerCase().includes(searchTerm) ||
+          pv.exam_planification.exam_line.groupe.nom.toLowerCase().includes(searchTerm) ||
+          pv.exam_planification.salle.nom.toLowerCase().includes(searchTerm);
+
+        return matchesStatus && matchesGroup && matchesSearch;
+      });
+
+      renderTable(filteredData);
+    }
+
+    // Load initial data
+    loadPvData();
+
+    // Search functionality
+    $('#searchInput').on('input', function() {
+      filterPvs();
+    });
+
+    // Status filter
+    $('#statusFilter').on('change', function() {
+      filterPvs();
+    });
+
+    // Group filter
+    $('#groupFilter').on('change', function() {
+      filterPvs();
+    });
+
+    // Pagination
+    $(document).on('click', '#pagination .page-link', function(e) {
+      e.preventDefault();
+      const page = parseInt($(this).data('page'));
+      if (!isNaN(page)) {
+        currentPage = page;
+        renderPagination();
+      }
+    });
+
+    // Delete PV
+    $(document).on('click','#btnDeletePv', function(){
+      const pvId = $(this).data('id');
+      const planificationId = $(this).data('planification-id');
+      $('#confirmDeleteBtn').data('pv-id', pvId);
+      $('#confirmDeleteBtn').data('planification-id', planificationId);
+      $('.deleteModal').modal('show');
+    });
+
+    // Confirm delete PV
+    $(document).on('click', '#confirmDeleteBtn', function() {
+      const pvId = $(this).data('pv-id');
+      const planificationId = $(this).data('planification-id');
+      
+      $.ajax({
+        url : "{% url 't_exam:ApiDeletePvExamen' %}",
+        dataType: 'JSON',
+        type : 'POST',
+        data : {
+          'pv_id': pvId,
+          'exam_planification_id': planificationId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success : function(response){
+          if (response.status){
+            alertify.success(response.message);
+            loadPvData();
+            $('.deleteModal').modal('hide');
+          }else{
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de la suppression.");
+        }
+      });
+    });
+  });
+</script>
+{% endblock content %}

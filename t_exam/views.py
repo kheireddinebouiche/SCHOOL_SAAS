@@ -96,7 +96,6 @@ def ApiDeleteGroupeSessionLine(request):
 
     return JsonResponse({'status' : 'success', 'message': "Suppréssion effectuer avec succès"})
 
-
 def ApiUpdateSession(request):
     id = request.POST.get('id')
     label = request.POST.get('label')

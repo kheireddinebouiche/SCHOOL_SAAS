@@ -453,7 +453,25 @@
               </label>
             </div>
           </div>
-          
+
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is_rattrapage" name="is_rattrapage">
+              <label class="form-check-label" for="is_rattrapage">
+                Rattrapage
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="is_rachat" name="is_rachat">
+              <label class="form-check-label" for="is_rachat">
+                Rachat de crédit
+              </label>
+            </div>
+          </div>
+
           <div id="nb_sous_notes_container" class="mb-3" style="display: none;">
             <label for="nb_sous_notes" class="form-label">Nombre de sous-notes</label>
             <input type="number" class="form-control" id="nb_sous_notes" name="nb_sous_notes" min="0">
@@ -500,7 +518,12 @@
             <label for="sousNoteLabel" class="form-label">Libellé *</label>
             <input type="text" class="form-control" id="sousNoteLabel" name="label" required>
           </div>
-          
+
+          <div class="mb-3">
+            <label for="sousNoteMaxNote" class="form-label">Note maximale</label>
+            <input type="number" class="form-control" id="sousNoteMaxNote" name="max_note" min="0" step="0.01">
+          </div>
+
           <div class="mb-3">
             <label for="sousNoteOrdre" class="form-label">Ordre</label>
             <input type="number" class="form-control" id="sousNoteOrdre" name="ordre" min="0">
@@ -803,6 +826,12 @@
               if(typeNote.has_sous_notes) {
                 typesNotesHtml += '<br><small class="text-success">Avec ' + typeNote.nb_sous_notes + ' sous-note(s)</small>';
               }
+              if(typeNote.is_rattrapage) {
+                typesNotesHtml += '<br><small class="text-warning">Rattrapage</small>';
+              }
+              if(typeNote.is_rachat) {
+                typesNotesHtml += '<br><small class="text-info">Rachat de crédit</small>';
+              }
               typesNotesHtml += '</div>';
               typesNotesHtml += '<div class="btn-group" role="group">';
               typesNotesHtml += '<button type="button" class="btn btn-outline-primary btn-sm edit-type-note" data-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
@@ -817,7 +846,8 @@
                 $.each(typeNote.sous_notes, function(idx, sousNote) {
                   typesNotesHtml += '<div class="sous-note-item d-flex justify-content-between align-items-center">';
                   typesNotesHtml += '<div>';
-                  typesNotesHtml += '<span>' + sousNote.label + ' (Ordre: ' + sousNote.ordre + ')</span>';
+                  let maxNoteDisplay = sousNote.max_note !== null ? ' - Max: ' + sousNote.max_note : '';
+                  typesNotesHtml += '<span>' + sousNote.label + ' (Ordre: ' + sousNote.ordre + maxNoteDisplay + ')</span>';
                   typesNotesHtml += '</div>';
                   typesNotesHtml += '<div class="btn-group" role="group">';
                   typesNotesHtml += '<button type="button" class="btn btn-outline-warning btn-sm edit-sous-note" data-id="' + sousNote.id + '" data-type-note-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
@@ -909,6 +939,8 @@
       $('#typeNoteForm')[0].reset();
       $('#typeNoteId').val('');
       $('#modelIdForTypeNote').val(currentModelId);
+      $('#is_rattrapage').prop('checked', false);
+      $('#is_rachat').prop('checked', false);
       $('#typeNoteModalTitle').text('Ajouter un type de note');
       $('#typeNoteModal').modal('show');
     });
@@ -932,14 +964,16 @@
             $('#max_note').val(typeNote.max_note);
             $('#ordre').val(typeNote.ordre);
             $('#has_sous_notes').prop('checked', typeNote.has_sous_notes);
+            $('#is_rattrapage').prop('checked', typeNote.is_rattrapage);
+            $('#is_rachat').prop('checked', typeNote.is_rachat);
             $('#nb_sous_notes').val(typeNote.nb_sous_notes);
-            
+
             if(typeNote.has_sous_notes) {
               $('#nb_sous_notes_container').show();
             } else {
               $('#nb_sous_notes_container').hide();
             }
-            
+
             $('#modelIdForTypeNote').val(currentModelId);
             $('#typeNoteModalTitle').text('Modifier le type de note');
             $('#typeNoteModal').modal('show');
@@ -966,7 +1000,7 @@
       const id = $(this).data('id');
       const typeNoteId = $(this).data('type-note-id');
       currentSousNoteId = id;
-      
+
       $.ajax({
         url: "{% url 't_exam:ApiGetSousNotesForType' %}",
         type: 'GET',
@@ -977,6 +1011,7 @@
           if(sousNote) {
             $('#sousNoteId').val(sousNote.id);
             $('#sousNoteLabel').val(sousNote.label);
+            $('#sousNoteMaxNote').val(sousNote.max_note);
             $('#sousNoteOrdre').val(sousNote.ordre);
             $('#typeNoteIdForSousNote').val(typeNoteId);
             $('#sousNoteModalTitle').text('Modifier la sous-note');

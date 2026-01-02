@@ -74,5 +74,14 @@ urlpatterns = [
    path('generate-pv/<int:pk>/', GeneratePv, name="GeneratePv"),
    path('save_exam_results/<int:pk>/', SaveExamResults, name="save_exam_results"),
    path('get_exam_history/<int:pk>/', GetExamHistory, name="get_exam_history"),
+   path('get_calculated_results/<int:pk>/',get_calculated_results, name="get_calculated_results"),
+
+   # URLs pour les résultats d'examens
+   path('exams-results/', exams_results, name="exams_results"),
+   path('api-list-pv-examen/', ApiListPvExamen, name="ApiListPvExamen"),
+   path('api-delete-pv-examen/', ApiDeletePvExamen, name="ApiDeletePvExamen"),
+
+   path('preview-pv-examen/<int:pk>/', ShowPv, name="ShowPv"),
+   path('ApiDeleteExamPlanification', ApiDeleteExamPlanification, name="ApiDeleteExamPlanification"),
 
 ]

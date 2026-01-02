@@ -66,9 +66,10 @@ def get_exam_planifications(request):
             "date": plan.date.strftime("%Y-%m-%d") if plan.date else "",
             "heure_debut": plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
             "heure_fin": plan.heure_fin.strftime("%H:%M") if plan.heure_fin else "",
-            "salle_id": plan.salle.id,
-            "salle_nom": plan.salle.nom,
-            "passed": plan.passed
+            "salle_id": plan.salle.id if plan.salle else '-',
+            "salle_nom": plan.salle.nom if plan.salle else '-',
+            "passed": plan.passed,
+            "statut" : plan.statut,
         })
 
     return JsonResponse({"status": "success", "planifications": data})
@@ -80,6 +81,7 @@ def ApiPlanExam(request):
     if request.method == "POST":
         moduleSelect = request.POST.get('moduleSelect')
         typeExamenSelect = request.POST.get('typeExamenSelect')
+        modeExamenSelect = request.POST.get('modeExamenSelect')
         dateExamen = request.POST.get('dateExamen')
         salleSelect = request.POST.get('salleSelect')
         heureDebut = request.POST.get('heureDebut')
@@ -87,19 +89,32 @@ def ApiPlanExam(request):
         session_line_id = request.POST.get('session_line_id')
 
         try:
-            salle = Salle.objects.get(code=salleSelect)
-        except:
-            return JsonResponse({"status":"error","message":"error"})
+            # Only get salle if mode is 'exam' (not 'tr' or 'ligne')
+            salle = None
+            if modeExamenSelect == 'exam' and salleSelect:
+                salle = Salle.objects.get(code=salleSelect)
+            elif modeExamenSelect in ['tr', 'ligne']:
+                # For 'tr' and 'ligne' modes, salle should be None
+                salle = None
+            else:
+                # For 'exam' mode but no salle selected
+                if salleSelect:
+                    salle = Salle.objects.get(code=salleSelect)
+                else:
+                    return JsonResponse({"status":"error","message":"Veuillez sélectionner une salle pour le mode examen"})
+        except Salle.DoesNotExist:
+            return JsonResponse({"status":"error","message":"Salle non trouvée"})
 
         try:
-            ExamPlanification.objects.create(
+            exam_planification = ExamPlanification.objects.create(
                 exam_line = SessionExamLine.objects.get(id = session_line_id),
                 salle = salle,
                 date = dateExamen,
                 module = Modules.objects.get(id = moduleSelect),
-                heure_debut = heureDebut,
-                heure_fin = heureFin,
+                heure_debut = heureDebut if modeExamenSelect == 'exam' else None,
+                heure_fin = heureFin if modeExamenSelect == 'exam' else None,
                 type_examen = typeExamenSelect,
+                mode_examination = modeExamenSelect,
             )
 
             return JsonResponse({"status" : "success" , "message" : "Examen planifier avec succès"})
@@ -132,9 +147,23 @@ def PreviewPV(request, pk):
 def validate_exam(request):
     if request.method == "POST":
         exam_plan_id = request.POST.get('exam_plan_id')
+        comment = request.POST.get('comment')
+        decision = request.POST.get('decision')
+        
+        if not exam_plan_id:
+            return JsonResponse({"status" : "error", "message" : "Informations manquante"})
 
         exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
-        exam_plan.passed = True
+
+        if decision == "termine":
+            exam_plan.passed = True
+            exam_plan.statut = "termine"
+
+        elif decision == "nabouti":
+            exam_plan.passed = False
+            exam_plan.comment = comment
+            exam_plan.statut = "nabouti"
+
         exam_plan.save()
         return JsonResponse({
             "status": "success",
@@ -273,8 +302,260 @@ def TestExamResults(request, pk):
             "message": "Méthode non autorisée"
         })
 
+@login_required(login_url="institut_app:login")
+def get_calculated_results(request, pk):
+    """
+    API pour récupérer les résultats calculés avec les moyennes des sous-notes
+    """
+    
+    exam_plan = ExamPlanification.objects.get(id=pk)
+    pv_examen = PvExamen.objects.get(exam_planification=exam_plan)
+
+    # Récupérer les étudiants
+    groupe = SessionExamLine.objects.get(id=exam_plan.exam_line.id)
+    students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
+
+    # Récupérer les types de notes
+    exam_type_notes = pv_examen.exam_types_notes.all().order_by('ordre')
+
+    # Préparer les données
+    results_data = []
+    for student_line in students:
+        student_data = {
+            'id': student_line.student.id,
+            'nom': student_line.student.nom,
+            'prenom': student_line.student.prenom,
+            'notes': []
+        }
+
+        for exam_type_note in exam_type_notes:
+            # Récupérer la note principale pour cet étudiant et ce type de note
+            exam_note = ExamNote.objects.filter(
+                pv=pv_examen,
+                etudiant=student_line.student,
+                type_note=exam_type_note
+            ).first()
+
+            note_data = {
+                'type_note_id': exam_type_note.id,
+                'type_note_libelle': exam_type_note.libelle,
+                'type_note_max': exam_type_note.max_note,
+                'has_sous_notes': exam_type_note.has_sous_notes,
+                'nb_sous_notes': exam_type_note.nb_sous_notes,
+                'valeur': exam_note.valeur if exam_note else None,
+                'sous_notes': []
+            }
+
+            # Si ce type de note a des sous-notes, les récupérer
+            if exam_type_note.has_sous_notes and exam_type_note.nb_sous_notes > 0:
+                if exam_note:
+                    sous_notes = exam_note.sous_notes.all()
+                    for sous_note in sous_notes:
+                        note_data['sous_notes'].append({
+                            'valeur': sous_note.valeur
+                        })
+
+            student_data['notes'].append(note_data)
+
+        results_data.append(student_data)
+
+    return JsonResponse({
+        "status": "success",
+        "results_data": results_data
+    })
 
 @login_required(login_url="institut_app:login")
+def ApiListPvExamen(request):
+    """
+    API pour récupérer la liste des PVs d'examens avec les informations associées
+    """
+    try:
+        # Récupérer tous les PvExamen avec les relations nécessaires
+        pv_examens = PvExamen.objects.select_related('exam_planification').all()
+
+        # Préparer les données des PVs
+        pvs_data = []
+        for pv in pv_examens:
+            # Check if related objects exist before accessing them
+            if pv.exam_planification:
+                exam_plan = pv.exam_planification
+                # Fetch related objects individually to avoid issues
+                try:
+                    exam_line = exam_plan.exam_line
+                    groupe = exam_line.groupe if exam_line else None
+                    salle = exam_plan.salle
+                    module = exam_plan.module
+                except:
+                    # If there are issues with relationships, set to None
+                    exam_line = None
+                    groupe = None
+                    salle = None
+                    module = None
+
+                pvs_data.append({
+                    'id': pv.id,
+                    'exam_planification': {
+                        'id': exam_plan.id,
+                        'module': {
+                            'id': module.id if module else None,
+                            'label': module.label if module else "",
+                            'code': module.code if module else "",
+                        },
+                        'date': exam_plan.date.strftime("%Y-%m-%d") if exam_plan.date else "",
+                        'heure_debut': exam_plan.heure_debut.strftime("%H:%M") if exam_plan.heure_debut else "",
+                        'heure_fin': exam_plan.heure_fin.strftime("%H:%M") if exam_plan.heure_fin else "",
+                        'salle': {
+                            'id': salle.id if salle else None,
+                            'nom': salle.nom if salle else "",
+                        },
+                        'type_examen': exam_plan.get_type_examen_display(),
+                        'passed': exam_plan.passed,
+                        'exam_line': {
+                            'id': exam_line.id if exam_line else None,
+                            'groupe': {
+                                'id': groupe.id if groupe else None,
+                                'nom': groupe.nom if groupe else "",
+                            }
+                        }
+                    }
+                })
+
+        # Récupérer les groupes uniques
+        groupe_ids = set()
+        for pv in pv_examens:
+            if pv.exam_planification:
+                try:
+                    exam_line = pv.exam_planification.exam_line
+                    groupe = exam_line.groupe if exam_line else None
+                    if groupe:
+                        groupe_ids.add(groupe.id)
+                except:
+                    # Skip if there are issues with relationships
+                    continue
+
+        groupes = Groupe.objects.filter(id__in=groupe_ids) if groupe_ids else Groupe.objects.none()
+
+        groups_data = []
+        for groupe in groupes:
+            groups_data.append({
+                'id': groupe.id,
+                'nom': groupe.nom,
+            })
+
+        return JsonResponse({
+            "status": "success",
+            "pvs": pvs_data,
+            "groups": groups_data
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        })
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeletePvExamen(request):
+    """
+    API pour supprimer un PV d'examen et remettre le statut passed de l'exam planification à False
+    """
+    if request.method == "POST":
+        try:
+            pv_id = request.POST.get('pv_id')
+            exam_planification_id = request.POST.get('exam_planification_id')
+
+            # Récupérer le PV et la planification
+            pv = PvExamen.objects.get(id=pv_id)
+            exam_plan = ExamPlanification.objects.get(id=exam_planification_id)
+
+            # Supprimer le PV
+            pv.delete()
+
+            # Mettre à jour le statut passed à False
+            exam_plan.passed = False
+            exam_plan.save()
+
+            return JsonResponse({
+                "status": "success",
+                "message": "PV supprimé avec succès et examen marqué comme non validé"
+            })
+        except PvExamen.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "PV non trouvé"
+            })
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Planification d'examen non trouvée"
+            })
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": str(e)
+            })
+    else:
+        return JsonResponse({
+            "status": "error",
+            "message": "Méthode non autorisée"
+        })
+    
+def exams_results(request):
+    """
+    Vue pour afficher la liste des PVs d'examens
+    """
+    return render(request, 'tenant_folder/exams/exams_results.html')
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteExamPlanification(request):
+    """
+    API pour supprimer une planification d'examen
+    """
+    if request.method == "POST":
+        try:
+            exam_planification_id = request.POST.get('exam_planification_id')
+
+            # Récupérer la planification d'examen
+            exam_plan = ExamPlanification.objects.get(id=exam_planification_id)
+
+            # Vérifier s'il y a un PV associé
+            pv_examen = PvExamen.objects.filter(exam_planification=exam_plan).first()
+
+            if pv_examen:
+                # Si un PV existe et est validé, on ne peut pas supprimer
+                if pv_examen.est_valide:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Impossible de supprimer cette planification : un PV est déjà validé pour cet examen."
+                    })
+                # Sinon, supprimer le PV associé
+                pv_examen.delete()
+
+            # Supprimer la planification d'examen
+            exam_plan.delete()
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Planification d'examen supprimée avec succès"
+            })
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Planification d'examen non trouvée"
+            })
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": str(e)
+            })
+    else:
+        return JsonResponse({
+            "status": "error",
+            "message": "Méthode non autorisée"
+        })
+
 def SaveExamResults(request, pk):
     if request.method == 'POST':
         try:
@@ -607,7 +888,6 @@ def SaveExamResults(request, pk):
             "message": "Méthode non autorisée"
         })
 
-
 def GetExamHistory(request, pk):
     """
     Function to retrieve the history of exam results for a given exam planification
@@ -673,3 +953,44 @@ def GetExamHistory(request, pk):
             "status": "error",
             "message": f"Erreur lors de la récupération de l'historique: {str(e)}"
         })
+
+@login_required(login_url="institut_app:login")
+def ShowPv(request, pk):
+    obj = ExamPlanification.objects.get(id = pk)
+    groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
+
+    exam_type = obj.type_examen  # Get the actual type, not the display value
+    exam_type_display = obj.get_type_examen_display()
+
+    modeleBuiltin = ModelBuilltins.objects.get(formation = groupe.groupe.specialite.formation)
+
+    # Filter type notes based on exam type
+    if exam_type == 'normal':
+        # For normal exam, show all types where both is_rattrapage and is_rachat are False
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rattrapage=False, is_rachat=False).order_by('ordre')
+    elif exam_type == 'rattrage':
+        # For rattrapage exam, show only types where is_rattrapage is True
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rattrapage=True).order_by('ordre')
+    elif exam_type == 'rachat':
+        # For rachat exam, show only types where is_rachat is True
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rachat=True).order_by('ordre')
+    else:
+        # Default case: show all type notes
+        filtered_types_notes = modeleBuiltin.types_notes.all().order_by('ordre')
+
+    students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+
+    groupe_nom = groupe.groupe.nom
+    module = obj.module.label
+    context = {
+        'pk' : pk,
+        'groupe' : groupe,
+        'modele' : modeleBuiltin,
+        'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
+        'students' : students,
+        'groupe_nom' : groupe_nom,
+        'exam_type' : exam_type_display,
+        'module' : module,
+    }
+    return render(request,'tenant_folder/exams/print_pv_examn.html',context)
+

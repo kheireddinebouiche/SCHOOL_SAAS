@@ -1,0 +1,606 @@
+{% extends "tenant_folder/base.html" %}
+{% load exam_custom_filters %}
+{% block title %}Prévisualisation PV {{exam_type}} {% endblock title %}
+
+{% block content %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .header-info {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: left;
+    }
+    th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: bold;
+    }
+    tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+    
+    /* Harmonized CRM styling */
+    .page-header {
+        background: white;
+        color: #495057;
+        border-radius: 8px;
+        padding: 0;
+        margin-bottom: 1.5rem;
+        box-shadow: none;
+        border: none;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 0.75rem 6rem rgba(56,65,74,.03);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(0);
+        box-shadow: 0 0.75rem 6rem rgba(56,65,74,.03);
+    }
+    
+    .card-header {
+        background: #f8f9fa;
+        color: #495057;
+        border: none;
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        padding: 1rem 1.5rem;
+    }
+    
+    .table-modern {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+    
+    .table-modern thead th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .table-modern tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-modern tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table-modern tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-control-modern {
+        border-radius: 8px;
+        border: 1px solid #e1e5e9;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .input-group-modern {
+        position: relative;
+        margin-bottom: 1.25rem;
+    }
+    
+    .input-group-modern label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .input-group-modern .form-control {
+        border-radius: 8px;
+        border: 1px solid #e1e5e9;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .input-group-modern .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .action-dropdown .btn {
+        border-radius: 8px;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .action-dropdown .dropdown-menu {
+        border-radius: 8px;
+        box-shadow: 0 0.5rem 1rem rgba(56,65,74,.15);
+        border: none;
+        padding: 0.5rem 0;
+    }
+    
+    .action-dropdown .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .action-dropdown .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #2d3748;
+    }
+    
+    .card-title {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    /* Additional styles for the exam results page */
+    .student-name {
+        font-weight: bold;
+    }
+    .note-cell {
+        text-align: center;
+    }
+    .type-note-header {
+        background-color: #f8f9fa !important;
+        color: #495057;
+    }
+    .sous-note-header {
+        background-color: #f8f9fa !important;
+        color: #495057;
+        font-size: 0.9em;
+    }
+    .note-display {
+        width: 60px;
+        padding: 5px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background-color: #f8f9fa;
+    }
+    .action-buttons {
+        margin-top: 20px;
+        text-align: center;
+    }
+    .btn {
+        padding: 10px 20px;
+        margin: 0 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    .btn-print {
+        background-color: #28a745;
+        color: white;
+    }
+    .btn:hover {
+        opacity: 0.9;
+    }
+    .status-message {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        text-align: center;
+        display: none;
+    }
+    .status-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .status-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    .history-section {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .history-student {
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: white;
+        border-radius: 4px;
+        border-left: 3px solid #007bff;
+    }
+    .history-note {
+        margin: 5px 0;
+        padding: 5px;
+        background-color: #f8f9fa;
+        border-radius: 3px;
+    }
+    .history-sous-note {
+        margin: 3px 0;
+        padding: 3px 10px;
+        background-color: #e9ecef;
+        border-radius: 2px;
+        font-size: 0.9em;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-file-text-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Prévisualisation PV d'examen {{exam_type}}</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item">
+                                        <a href="javascript: void(0);">Examens</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Prévisualisation PV</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-file-text-line text-info fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title fw-semibold text-info mb-1">Prévisualisation PV d'examen {{exam_type}}</h5>
+                                <p class="text-muted small mb-0">Visualisation des résultats d'examens</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="header-info mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                        <i class="ri-group-line text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block mb-1">Groupe</small>
+                                        <span class="fw-semibold">{{ groupe_nom }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                        <i class="ri-calendar-line text-info"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block mb-1">Session</small>
+                                        <span class="fw-semibold">{{ groupe.session.get_type_session_display }} - {{ groupe.session.date_debut }} / {{ groupe.session.date_fin }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                        <i class="ri-book-2-line text-success"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block mb-1">Module</small>
+                                        <span class="fw-semibold">{{ module }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">N°</th>
+                                    <th rowspan="2">Nom de l'étudiant</th>
+                                    <th rowspan="2">Prénom</th>
+                                    {% for type_note in filtered_types_notes %}
+                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                            <th colspan="{{ type_note.nb_sous_notes }}" class="type-note-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                        {% else %}
+                                            <th class="type-note-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    {% for type_note in filtered_types_notes %}
+                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                            {% for sous_note in type_note.sous_notes.all %}
+                                                <th class="sous-note-header">{{ sous_note.label }} (Max: {{ sous_note.max_note|default:"N/A" }})</th>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student_line in students %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td class="student-name">{{ student_line.student.nom }}</td>
+                                        <td>{{ student_line.student.prenom }}</td>
+                                        {% for type_note in filtered_types_notes %}
+                                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                {% for sous_note in type_note.sous_notes.all %}
+                                                    <td class="note-cell">
+                                                        </td>
+                                                {% endfor %}
+                                            {% else %}
+                                                <td class="note-cell">
+                                                </td>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="action-buttons mt-4">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <button type="button" class="btn btn-success" id="print-btn">
+                                <i class="ri-printer-line me-2"></i>Imprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal pour afficher les résultats calculés -->
+            <div id="calculatedResultsModal" class="modal fade" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-fullscreen modal-dialog-scrollable" role="document">
+                    <div class="modal-content rounded-0 shadow-lg border-0 h-100">
+                        <div class="modal-header bg-primary text-white p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-calculator" viewBox="0 0 16 16">
+                                        <path d="M12 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h8zM4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4z"/>
+                                        <path d="M4 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-2zm0 4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title mb-0">Résultats Calculés</h5>
+                                    <p class="mb-0 opacity-75 small">Visualisation des notes et moyennes</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="table-responsive rounded-3 overflow-hidden shadow-sm h-100">
+                                <table class="table table-hover mb-0 border table-bordered" style="border: 2px solid #dee2e6;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">N°</th>
+                                            <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">Nom</th>
+                                            <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">Prénom</th>
+                                            {% for type_note in filtered_types_notes %}
+                                                {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                    <th colspan="{{ type_note.nb_sous_notes|add:2 }}" class="text-center py-3 border" style="border: 2px solid #495057 !important;">{{ type_note.libelle }} <span class="badge bg-primary bg-opacity-25 text-primary">Max: {{ type_note.max_note }}</span></th>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <th rowspan="2" class="align-middle text-center border" style="border: 2px solid #495057 !important; vertical-align: middle;">
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold">Moyenne Générale</span>
+                                                    <small class="opacity-75">des types avec sous-notes</small>
+                                                </div>
+                                            </th>
+                                            {% for type_note in filtered_types_notes %}
+                                                {% if not type_note.has_sous_notes or type_note.nb_sous_notes == 0 %}
+                                                    <th class="text-center py-3 border" style="border: 2px solid #495057 !important;">{{ type_note.libelle }} <span class="badge bg-secondary bg-opacity-25 text-secondary">Max: {{ type_note.max_note }}</span></th>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tr>
+                                        <tr>
+                                            {% for type_note in filtered_types_notes %}
+                                                {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                    {% for sous_note in type_note.sous_notes.all %}
+                                                        <th class="text-center py-2 small border" style="border: 2px solid #495057 !important;">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="fw-medium">{{ sous_note.label }}</span>
+                                                                <small class="opacity-75">Max: {{ sous_note.max_note|default:"N/A" }}</small>
+                                                            </div>
+                                                        </th>
+                                                    {% endfor %}
+                                                    <th class="text-center py-2 small text-success border" style="border: 2px solid #495057 !important;">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-bold">Moyenne</span>
+                                                            <small class="opacity-75">des sous-notes</small>
+                                                        </div>
+                                                    </th>
+                                                    <th class="text-center py-2 small text-primary border" style="border: 2px solid #495057 !important;">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-bold">Note Finale</span>
+                                                            <small class="opacity-75">du type</small>
+                                                        </div>
+                                                    </th>
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% for type_note in filtered_types_notes %}
+                                                {% if not type_note.has_sous_notes or type_note.nb_sous_notes == 0 %}
+                                                    <!-- Cette cellule est vide car il n'y a pas de sous-ligne pour les types de notes sans sous-notes -->
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody id="calculated-results-body" class="align-middle">
+                                        <!-- Les résultats seront insérés ici dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light p-4">
+                            <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-2"></i>Fermer
+                            </button>
+                            <button type="button" class="btn btn-primary px-4" onclick="window.print()">
+                                <i class="bi bi-printer me-2"></i>Imprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include jsPDF library and AutoTable plugin -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+<script>
+    // Import jsPDF
+    const jsPDF = window.jspdf.jsPDF;
+
+    // Function to generate PDF
+    function generatePDF() {
+        // Create a new jsPDF instance with A4 format
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Prévisualisation PV d\'examen {{exam_type}}', 105, 15, null, null, 'center');
+
+        // Add header info
+        doc.setFontSize(12);
+        doc.text('Groupe: {{ groupe_nom }}', 15, 25);
+        doc.text('Session: {{ groupe.session.get_type_session_display }} - {{ groupe.session.date_debut }} / {{ groupe.session.date_fin }}', 15, 30);
+        doc.text('Module: {{ module }}', 15, 35);
+
+        // Get the table element
+        const table = document.querySelector('.table-modern');
+        if (table) {
+            // Extract headers with proper structure for multi-row headers
+            const headRows = [];
+            const headerTrs = table.querySelectorAll('thead tr');
+
+            headerTrs.forEach(tr => {
+                const row = [];
+                const ths = tr.querySelectorAll('th');
+                ths.forEach(th => {
+                    row.push(th.innerText.trim());
+                });
+                headRows.push(row);
+            });
+
+            // Extract data rows
+            const bodyRows = [];
+            const dataRows = table.querySelectorAll('tbody tr');
+            dataRows.forEach(row => {
+                const rowData = [];
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    rowData.push(cell.innerText.trim());
+                });
+                bodyRows.push(rowData);
+            });
+
+            // Add table to PDF starting below the header info
+            if (bodyRows.length > 0) {
+                doc.autoTable({
+                    head: headRows,
+                    body: bodyRows,
+                    startY: 40,
+                    margin: { left: 15, right: 15 },
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 3,
+                        valign: 'middle'
+                    },
+                    headStyles: {
+                        fillColor: [220, 220, 220], // Light gray header
+                        textColor: [0, 0, 0],
+                        fontStyle: 'bold',
+                        halign: 'center'
+                    },
+                    bodyStyles: {
+                        valign: 'middle'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [245, 245, 245] // Light gray for alternating rows
+                    },
+                    // Use the column width calculation based on content
+                    columnStyles: {
+                        0: { cellWidth: 15 }, // N° column narrower
+                        1: { cellWidth: 35 }, // Name columns
+                        2: { cellWidth: 35 }  // Name columns
+                    }
+                });
+            }
+        }
+
+        // Save the PDF
+        doc.save('PV_Examen_{{ module }}_{{ groupe_nom }}.pdf');
+    }
+
+    // Event listeners
+    $(document).ready(function() {
+        $('#print-btn').click(function() {
+            generatePDF();
+        });
+    });
+</script>
+{% endblock content %}

@@ -94,12 +94,15 @@ def ApiGetModelBuilltinDetails(request):
             'libelle': type_note.libelle,
             'max_note': type_note.max_note,
             'has_sous_notes': type_note.has_sous_notes,
+            'is_rattrapage': type_note.is_rattrapage,
+            'is_rachat': type_note.is_rachat,
             'nb_sous_notes': type_note.nb_sous_notes,
             'ordre': type_note.ordre,
             'sous_notes': [
                 {
                     'id': sn.id,
                     'label': sn.label,
+                    'max_note' : sn.max_note,
                     'ordre': sn.ordre
                 } for sn in sous_notes
             ]
@@ -141,7 +144,7 @@ def ApiGetTypeNotes(request):
     """API pour obtenir les types de notes d'un modèle"""
     model_id = request.GET.get('model_id')
     types_notes = BuiltinTypeNote.objects.filter(builtin_id=model_id).order_by('ordre')
-    
+
     data = []
     for type_note in types_notes:
         data.append({
@@ -150,10 +153,12 @@ def ApiGetTypeNotes(request):
             'libelle': type_note.libelle,
             'max_note': type_note.max_note,
             'has_sous_notes': type_note.has_sous_notes,
+            'is_rattrapage': type_note.is_rattrapage,
+            'is_rachat': type_note.is_rachat,
             'nb_sous_notes': type_note.nb_sous_notes,
             'ordre': type_note.ordre
         })
-    
+
     return JsonResponse(data, safe=False)
 
 
@@ -166,27 +171,31 @@ def ApiAddTypeNote(request):
         libelle = request.POST.get('libelle')
         max_note = request.POST.get('max_note')
         has_sous_notes = request.POST.get('has_sous_notes') == 'on'
+        is_rattrapage = request.POST.get('is_rattrapage') == 'on'
+        is_rachat = request.POST.get('is_rachat') == 'on'
         nb_sous_notes = request.POST.get('nb_sous_notes', 0)
         ordre = request.POST.get('ordre', 0)
-        
+
         builtin = ModelBuilltins.objects.get(id=model_id)
-        
+
         type_note = BuiltinTypeNote.objects.create(
             builtin=builtin,
             code=code,
             libelle=libelle,
             max_note=float(max_note),
             has_sous_notes=has_sous_notes,
+            is_rattrapage=is_rattrapage,
+            is_rachat=is_rachat,
             nb_sous_notes=int(nb_sous_notes),
             ordre=int(ordre)
         )
-        
+
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Type de note ajouté avec succès',
             'id': type_note.id
         })
-    
+
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 
@@ -199,23 +208,27 @@ def ApiUpdateTypeNote(request):
         libelle = request.POST.get('libelle')
         max_note = request.POST.get('max_note')
         has_sous_notes = request.POST.get('has_sous_notes') == 'on'
+        is_rattrapage = request.POST.get('is_rattrapage') == 'on'
+        is_rachat = request.POST.get('is_rachat') == 'on'
         nb_sous_notes = request.POST.get('nb_sous_notes', 0)
         ordre = request.POST.get('ordre', 0)
-        
+
         type_note = BuiltinTypeNote.objects.get(id=type_note_id)
         type_note.code = code
         type_note.libelle = libelle
         type_note.max_note = float(max_note)
         type_note.has_sous_notes = has_sous_notes
+        type_note.is_rattrapage = is_rattrapage
+        type_note.is_rachat = is_rachat
         type_note.nb_sous_notes = int(nb_sous_notes)
         type_note.ordre = int(ordre)
         type_note.save()
-        
+
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Type de note mis à jour avec succès'
         })
-    
+
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 
@@ -237,22 +250,24 @@ def ApiAddSousNote(request):
     if request.method == 'POST':
         type_note_id = request.POST.get('type_note_id')
         label = request.POST.get('label')
+        max_note = request.POST.get('max_note')
         ordre = request.POST.get('ordre', 0)
-        
+
         type_note = BuiltinTypeNote.objects.get(id=type_note_id)
-        
+
         sous_note = BuiltinSousNote.objects.create(
             type_note=type_note,
             label=label,
+            max_note=float(max_note) if max_note else None,
             ordre=int(ordre)
         )
-        
+
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Sous-note ajoutée avec succès',
             'id': sous_note.id
         })
-    
+
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 
@@ -262,18 +277,20 @@ def ApiUpdateSousNote(request):
     if request.method == 'POST':
         sous_note_id = request.POST.get('sous_note_id')
         label = request.POST.get('label')
+        max_note = request.POST.get('max_note')
         ordre = request.POST.get('ordre', 0)
-        
+
         sous_note = BuiltinSousNote.objects.get(id=sous_note_id)
         sous_note.label = label
+        sous_note.max_note = float(max_note) if max_note else None
         sous_note.ordre = int(ordre)
         sous_note.save()
-        
+
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Sous-note mise à jour avec succès'
         })
-    
+
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 
@@ -304,17 +321,20 @@ def ApiBulkUpdateSousNotes(request):
         i = 0
         while f'sous_note_labels[{i}][label]' in request.POST:
             label = request.POST.get(f'sous_note_labels[{i}][label]')
+            max_note = request.POST.get(f'sous_note_labels[{i}][max_note]')
             ordre = request.POST.get(f'sous_note_labels[{i}][ordre]', i)
 
             if label:  # Ne créer que si le label n'est pas vide
                 sous_note = BuiltinSousNote.objects.create(
                     type_note=type_note,
                     label=label,
+                    max_note=float(max_note) if max_note else None,
                     ordre=int(ordre)
                 )
                 sous_notes_data.append({
                     'id': sous_note.id,
                     'label': sous_note.label,
+                    'max_note': sous_note.max_note,
                     'ordre': sous_note.ordre
                 })
             i += 1
@@ -340,6 +360,7 @@ def ApiGetSousNotesForType(request):
         data.append({
             'id': sous_note.id,
             'label': sous_note.label,
+            'max_note': sous_note.max_note,
             'ordre': sous_note.ordre
         })
 
