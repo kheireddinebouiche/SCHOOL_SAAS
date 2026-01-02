@@ -123,7 +123,6 @@ def ApiPlanExam(request):
     else:
         return JsonResponse({"status":"error"})
 
-
 @login_required(login_url="institut_app:login")
 def PreviewPV(request, pk):
     obj = ExamPlanification.objects.get(id = pk)
@@ -140,7 +139,6 @@ def PreviewPV(request, pk):
     }
 
     return render(request,'tenant_folder/exams/preview_exam_pv.html',context)
-
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -293,7 +291,6 @@ def GeneratePv(request, pk):
 
     return render(request, 'tenant_folder/exams/preview_exam_pv.html', context)
 
-
 @login_required(login_url="institut_app:login")
 def GeneratePvModal(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
@@ -306,6 +303,7 @@ def GeneratePvModal(request, pk):
     date_debut = groupe.session.date_debut.date()
     date_fin = groupe.session.date_fin.date()
     module = obj.module.label
+    note_eliminatoire = obj.module.n_elimate
 
     # Get or create the PvExamen record
     pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
@@ -404,10 +402,10 @@ def GeneratePvModal(request, pk):
         'student_notes_data': student_notes_data,
         'session' : f"{session} - {date_debut}/{date_fin}",
         "module" : module,
+        'note_eliminatoire' : note_eliminatoire,
     }
 
     return render(request, 'tenant_folder/exams/preview_exam_pv_modal.html', context)
-
 
 @login_required(login_url="institut_app:login")
 def ShowPvModal(request, pk):
@@ -448,7 +446,6 @@ def ShowPvModal(request, pk):
         'module' : module,
     }
     return render(request,'tenant_folder/exams/print_pv_examn_modal.html',context)
-
 
 def TestExamResults(request, pk):
     """

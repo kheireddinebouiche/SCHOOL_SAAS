@@ -20,7 +20,7 @@
             <div class="modal-body p-4">
                 <div class="header-info mb-4">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="d-flex align-items-start">
                                 <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-people text-white"></i>
@@ -31,7 +31,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="d-flex align-items-start">
                                 <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-calendar text-info"></i>
@@ -42,7 +42,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="d-flex align-items-start">
                                 <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-book text-success"></i>
@@ -53,7 +53,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="d-flex align-items-start">
                                 <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-check-circle text-secondary"></i>
@@ -61,6 +61,17 @@
                                 <div>
                                     <small class="text-muted d-block mb-1">Validé</small>
                                     <span class="fw-semibold">{{ pv_examen.est_valide|yesno:"Oui,Non" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="d-flex align-items-start">
+                                <div class="icon-circle bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1">Note éliminatoire</small>
+                                    <span class="fw-semibold text-danger">{{ note_eliminatoire|default:"N/A" }}</span>
                                 </div>
                             </div>
                         </div>
@@ -146,7 +157,8 @@
                                                            class="form-control form-control-sm text-success"
                                                            id="sum_{{ student_line.student.id }}_{{ type_note.id }}"
                                                            value="0"
-                                                           readonly>
+                                                           readonly
+                                                           data-max-note="{{ type_note.max_note }}">
                                                 </td>
                                             {% else %}
                                                 <td class="note-cell">
@@ -360,8 +372,8 @@
     }
 
     function calculateAverage(studentId) {
-        let total = 0;
-        let count = 0;
+        let totalNotes = 0;      // Somme des notes obtenues
+        let totalMaxNotes = 0;   // Somme des notes maximales
 
         // Find all main note inputs for this student (for types without sub-notes)
         const noteInputs = document.querySelectorAll(`input[name^="note_${studentId}_"]`);
@@ -370,8 +382,18 @@
         noteInputs.forEach(function(input) {
             const value = parseFloat(input.value);
             if (!isNaN(value) && input.value.trim() !== '') {
-                total += value;
-                count++;
+                // Extract type note ID from input name: note_studentId_typeNoteId
+                const nameParts = input.name.split('_');
+                if (nameParts.length >= 3) {
+                    const typeNoteId = nameParts[2];
+
+                    // Get the max_note for this type from the input's max attribute
+                    const maxNote = parseFloat(input.max);
+                    if (!isNaN(maxNote) && maxNote > 0) {
+                        totalNotes += value;
+                        totalMaxNotes += maxNote;
+                    }
+                }
             }
         });
 
@@ -380,21 +402,93 @@
         sumInputs.forEach(function(input) {
             const value = parseFloat(input.value);
             if (!isNaN(value) && input.value.trim() !== '') {
-                total += value;
-                count++;
+                // For sum fields, get the max_note from the data attribute
+                const maxNote = parseFloat(input.dataset.maxNote || input.getAttribute('data-max-note'));
+                if (!isNaN(maxNote) && maxNote > 0) {
+                    totalNotes += value;
+                    totalMaxNotes += maxNote;
+                }
             }
         });
 
-        // Calculate average (sum of types with values / count of types with values)
-        let average = 0;
-        if (count > 0) {
-            average = total / count;
+        // Calculate weighted average: (sum of obtained notes) / (sum of max notes) * 20
+        let weightedAverage = 0;
+        if (totalMaxNotes > 0) {
+            weightedAverage = (totalNotes / totalMaxNotes) * 20;
         }
 
         // Update the average field
         const averageField = document.getElementById(`moyenne_${studentId}`);
         if (averageField) {
-            averageField.value = average.toFixed(2);
+            averageField.value = weightedAverage.toFixed(2);
+        }
+
+        // Color the row based on the average compared to the elimination note
+        colorRowBasedOnAverage(studentId, weightedAverage);
+    }
+
+    function colorRowBasedOnAverage(studentId, average) {
+        // Get the note éliminatoire from the page
+        const noteEliminatoireElement = document.querySelector('span.fw-semibold.text-danger');
+        let noteEliminatoire = 0;
+
+        if (noteEliminatoireElement) {
+            const noteText = noteEliminatoireElement.textContent.trim();
+            noteEliminatoire = parseFloat(noteText);
+        }
+
+        // If we couldn't parse the note éliminatoire, use a default value
+        if (isNaN(noteEliminatoire)) {
+            noteEliminatoire = parseFloat('{{ module.note_eliminatoire|default:0 }}');
+        }
+
+        // Find the row for this student
+        // We'll look for the row that contains the average input for this student
+        const averageInput = document.getElementById(`moyenne_${studentId}`);
+        if (!averageInput) return; // If average input not found, exit
+
+        // Find the parent row
+        const row = averageInput.closest('tr');
+        if (!row) return; // If row not found, exit
+
+        // Remove existing color classes
+        row.classList.remove('table-danger', 'table-success');
+
+        // Color the row based on comparison with elimination note
+        if (average < noteEliminatoire) {
+            // Average is below elimination note - color red (danger)
+            row.classList.add('table-danger');
+
+            // Also color the input fields in the row to red with black text
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.style.backgroundColor = '#f8d7da'; // light red background
+                input.style.color = '#000'; // black text for better readability
+            });
+
+            // Color the average field specifically
+            const avgInput = document.getElementById(`moyenne_${studentId}`);
+            if (avgInput) {
+                avgInput.style.backgroundColor = '#f1b0b7'; // slightly darker red for average
+                avgInput.style.color = '#000'; // black text
+            }
+        } else {
+            // Average is above or equal to elimination note - color green with black text
+            row.classList.add('table-success');
+
+            // Also color the input fields in the row to green with black text
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.style.backgroundColor = '#d4edda'; // light green background
+                input.style.color = '#000'; // black text for better readability
+            });
+
+            // Color the average field specifically
+            const avgInput = document.getElementById(`moyenne_${studentId}`);
+            if (avgInput) {
+                avgInput.style.backgroundColor = '#c3e6cb'; // slightly darker green for average
+                avgInput.style.color = '#000'; // black text
+            }
         }
     }
 
@@ -644,7 +738,34 @@
                     // Format: note_studentId_typeNoteId
                     const parts = name.split('_');
                     if (parts.length >= 3) {
+                        const studentId = parts[1];  // studentId is at index 1, not 2
+                        calculateAverage(studentId);
+                    }
+                }
+            });
+
+            // Also add input event listener for real-time updates
+            input.addEventListener('input', function() {
+                // Check if this is a sub-note input and update the sum
+                const name = input.name;
+                if (name.startsWith('sous_note_')) {
+                    // Extract studentId and typeNoteId from the input name
+                    // Format: sous_note_studentId_typeNoteId_index
+                    const parts = name.split('_');
+                    if (parts.length >= 4) {
                         const studentId = parts[2];
+                        const typeNoteId = parts[3];
+                        calculateSum(studentId, typeNoteId);
+                        // After updating sum, recalculate average for this student
+                        calculateAverage(studentId);
+                    }
+                } else if (name.startsWith('note_')) {
+                    // For regular note inputs, recalculate average
+                    // Extract studentId from the input name
+                    // Format: note_studentId_typeNoteId
+                    const parts = name.split('_');
+                    if (parts.length >= 3) {
+                        const studentId = parts[1];  // studentId is at index 1, not 2
                         calculateAverage(studentId);
                     }
                 }
@@ -680,7 +801,7 @@
                         // Extract studentId from regular note input: note_studentId_typeNoteId
                         const parts = input.name.split('_');
                         if (parts.length >= 3) {
-                            studentId = parts[2];
+                            studentId = parts[1];  // studentId is at index 1, not 2
                             break;
                         }
                     }
@@ -706,6 +827,15 @@
 
                 // Calculate average for this student after initializing sums
                 calculateAverage(studentId);
+
+                // Also color the row based on the average
+                const averageField = document.getElementById(`moyenne_${studentId}`);
+                if (averageField) {
+                    const average = parseFloat(averageField.value);
+                    if (!isNaN(average)) {
+                        colorRowBasedOnAverage(studentId, average);
+                    }
+                }
             }
         });
     });

@@ -210,3 +210,23 @@ class ExamSousNote(models.Model):
         self.note.calculer_valeur()
 
 
+class ExamDecisionEtudiant(models.Model):
+    STATUT_CHOICES = [
+        ('valide', 'Validé'),
+        ('rattrapage', 'Rattrapage'),
+        ('absent', 'Absent'),
+    ]
+
+    pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="decisions")
+    etudiant = models.ForeignKey(Prospets,on_delete=models.CASCADE)
+
+    moyenne = models.FloatField(null=True, blank=True)
+    statut = models.CharField(max_length=20,choices=STATUT_CHOICES)
+
+    commentaire = models.TextField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('pv', 'etudiant')
+
+    def __str__(self):
+        return f"{self.etudiant} - {self.statut}"
