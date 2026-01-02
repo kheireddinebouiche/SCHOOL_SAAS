@@ -294,6 +294,162 @@ def GeneratePv(request, pk):
     return render(request, 'tenant_folder/exams/preview_exam_pv.html', context)
 
 
+@login_required(login_url="institut_app:login")
+def GeneratePvModal(request, pk):
+    obj = ExamPlanification.objects.get(id=pk)
+    groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
+
+    modeleBuiltin = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
+    students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
+
+    session = groupe.session.get_type_session_display()
+    date_debut = groupe.session.date_debut.date()
+    date_fin = groupe.session.date_fin.date()
+    module = obj.module.label
+
+    # Get or create the PvExamen record
+    pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+
+    # If this is the first time creating the PV, create the ExamTypeNote records based on BuiltinTypeNote
+    if created:
+        for builtin_type_note in modeleBuiltin.types_notes.all().order_by('ordre'):
+            exam_type_note = ExamTypeNote.objects.create(
+                pv=pv_examen,
+                code=builtin_type_note.code,
+                libelle=builtin_type_note.libelle,
+                max_note=builtin_type_note.max_note,
+                has_sous_notes=builtin_type_note.has_sous_notes,
+                nb_sous_notes=builtin_type_note.nb_sous_notes,
+                ordre=builtin_type_note.ordre
+            )
+
+            # Create ExamNote records for each student for this type of note
+            for student_line in students:
+                exam_note = ExamNote.objects.create(
+                    pv=pv_examen,
+                    etudiant=student_line.student,
+                    type_note=exam_type_note,
+                    valeur=None
+                )
+
+                # If this type note has sous-notes, create them
+                if builtin_type_note.has_sous_notes and builtin_type_note.nb_sous_notes > 0:
+                    for builtin_sous_note in builtin_type_note.sous_notes.all().order_by('ordre'):
+                        ExamSousNote.objects.create(
+                            note=exam_note,
+                            valeur=0.0  # Use 0.0 instead of None to avoid NOT NULL constraint
+                        )
+
+    # Get the builtin model to match the IDs used in the template
+    modele_builtins = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
+
+    # Filter type notes based on exam type
+    exam_type = obj.type_examen  # Get the actual type, not the display value
+    if exam_type == 'normal':
+        # For normal exam, show all types where both is_rattrapage and is_rachat are False
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rattrapage=False, is_rachat=False).order_by('ordre')
+    elif exam_type == 'rattrage':
+        # For rattrapage exam, show only types where is_rattrapage is True
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rattrapage=True).order_by('ordre')
+    elif exam_type == 'rachat':
+        # For rachat exam, show only types where is_rachat is True
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rachat=True).order_by('ordre')
+    else:
+        # Default case: show all type notes
+        filtered_types_notes = modele_builtins.types_notes.all().order_by('ordre')
+
+    # Create a mapping between builtin type note IDs and exam type note objects
+    builtin_to_exam_mapping = {}
+    for exam_type_note in pv_examen.exam_types_notes.all():
+        # Find the corresponding builtin type note by code
+        builtin_type_note = modele_builtins.types_notes.filter(code=exam_type_note.code).first()
+        if builtin_type_note:
+            builtin_to_exam_mapping[builtin_type_note.id] = exam_type_note
+
+    # Prepare data for the template - use builtin IDs as keys to match template
+    student_notes_data = {}
+    for student_line in students:
+        student_notes_data[student_line.student.id] = {}
+        for builtin_type_note in filtered_types_notes:  # Use filtered types instead of all
+            # Get the corresponding exam type note
+            exam_type_note = builtin_to_exam_mapping.get(builtin_type_note.id)
+            if exam_type_note:
+                exam_note = ExamNote.objects.filter(
+                    pv=pv_examen,
+                    etudiant=student_line.student,
+                    type_note=exam_type_note
+                ).first()
+
+                if exam_note:
+                    sous_notes_list = list(exam_note.sous_notes.all())
+
+                    student_notes_data[student_line.student.id][builtin_type_note.id] = {
+                        'value': exam_note.valeur if exam_note.valeur is None else float(exam_note.valeur),
+                        'sous_notes': [{'valeur': float(sn.valeur) if sn.valeur is not None else None} for sn in sous_notes_list] if exam_type_note.has_sous_notes else []
+                    }
+                else:
+                    # If no exam note exists yet, create empty data structure
+                    student_notes_data[student_line.student.id][builtin_type_note.id] = {
+                        'value': None,
+                        'sous_notes': []
+                    }
+
+    context = {
+        'pk': pk,
+        'groupe': groupe,
+        'modele': modeleBuiltin,
+        'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
+        'students': students,
+        'pv_examen': pv_examen,
+        'student_notes_data': student_notes_data,
+        'session' : f"{session} - {date_debut}/{date_fin}",
+        "module" : module,
+    }
+
+    return render(request, 'tenant_folder/exams/preview_exam_pv_modal.html', context)
+
+
+@login_required(login_url="institut_app:login")
+def ShowPvModal(request, pk):
+    obj = ExamPlanification.objects.get(id = pk)
+    groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
+
+    exam_type = obj.type_examen  # Get the actual type, not the display value
+    exam_type_display = obj.get_type_examen_display()
+
+    modeleBuiltin = ModelBuilltins.objects.get(formation = groupe.groupe.specialite.formation)
+
+    # Filter type notes based on exam type
+    if exam_type == 'normal':
+        # For normal exam, show all types where both is_rattrapage and is_rachat are False
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rattrapage=False, is_rachat=False).order_by('ordre')
+    elif exam_type == 'rattrage':
+        # For rattrapage exam, show only types where is_rattrapage is True
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rattrapage=True).order_by('ordre')
+    elif exam_type == 'rachat':
+        # For rachat exam, show only types where is_rachat is True
+        filtered_types_notes = modeleBuiltin.types_notes.filter(is_rachat=True).order_by('ordre')
+    else:
+        # Default case: show all type notes
+        filtered_types_notes = modeleBuiltin.types_notes.all().order_by('ordre')
+
+    students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+
+    groupe_nom = groupe.groupe.nom
+    module = obj.module.label
+    context = {
+        'pk' : pk,
+        'groupe' : groupe,
+        'modele' : modeleBuiltin,
+        'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
+        'students' : students,
+        'groupe_nom' : groupe_nom,
+        'exam_type' : exam_type_display,
+        'module' : module,
+    }
+    return render(request,'tenant_folder/exams/print_pv_examn_modal.html',context)
+
+
 def TestExamResults(request, pk):
     """
     Test function that returns the submitted data as JSON without saving to database

@@ -76,6 +76,9 @@ urlpatterns = [
    path('get_exam_history/<int:pk>/', GetExamHistory, name="get_exam_history"),
    path('get_calculated_results/<int:pk>/',get_calculated_results, name="get_calculated_results"),
 
+   path('ShowPvModal/<int:pk>', ShowPvModal, name="ShowPvModal"),
+   path('GeneratePvModal/<int:pk>/', GeneratePvModal, name="GeneratePvModal"),
+   
    # URLs pour les résultats d'examens
    path('exams-results/', exams_results, name="exams_results"),
    path('api-list-pv-examen/', ApiListPvExamen, name="ApiListPvExamen"),

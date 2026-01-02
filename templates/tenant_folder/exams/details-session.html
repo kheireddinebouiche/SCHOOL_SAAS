@@ -1438,8 +1438,22 @@
         $(document).on('click','.print-exam-btn', function(){
             var id = $(this).data('id');
 
-            window.location.href = "{% url 't_exam:ShowPv' pk=0 %}".replace('0', id);
+            // Remove any existing modal content to prevent duplicates
+            $('#printPvExamModal').remove();
 
+            // Load the modal content via AJAX
+            $.get("{% url 't_exam:ShowPvModal' pk=0 %}".replace('0', id), function(data) {
+                // Add the new modal content to the body
+                $('body').append(data);
+
+                // Show the modal
+                $('#printPvExamModal').modal('show');
+
+                // Initialize any necessary JavaScript after modal is loaded
+                // The JavaScript is included in the modal template itself
+            }).fail(function() {
+                alertify.error("Erreur lors du chargement du PV d'examen.");
+            });
         });
 
         // Event handler for validate exam button - opens confirmation modal
@@ -1498,10 +1512,26 @@
             });
         });
 
-        // Event handler for result button - redirects to notes filling page
+        // Event handler for result button - opens modal for notes filling
         $(document).on('click', '.result-btn', function(){
             var examPlanId = $(this).data('id');
-            window.location.href = "{% url 't_exam:GeneratePv' pk=0 %}".replace('0', examPlanId);
+
+            // Remove any existing modal content to prevent duplicates
+            $('#previewExamPvModal').remove();
+
+            // Load the modal content via AJAX
+            $.get("{% url 't_exam:GeneratePvModal' pk=0 %}".replace('0', examPlanId), function(data) {
+                // Add the new modal content to the body
+                $('body').append(data);
+
+                // Show the modal
+                $('#previewExamPvModal').modal('show');
+
+                // Initialize any necessary JavaScript after modal is loaded
+                // The JavaScript is included in the modal template itself
+            }).fail(function() {
+                alertify.error("Erreur lors du chargement du formulaire de résultats.");
+            });
         });
 
         // Event handler for delete exam button - opens confirmation modal

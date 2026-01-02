@@ -53,7 +53,7 @@ class ExamPlanification(models.Model):
     statut = models.CharField(max_length=100, null=True, blank=True, choices=[('termine','Terminer'),('nabouti','Non abouti')])
 
     passed = models.BooleanField(default=False)
-    
+
     comment = models.TextField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
@@ -208,3 +208,5 @@ class ExamSousNote(models.Model):
             raise ValidationError("PV verrouillé")
         super().save(*args, **kwargs)
         self.note.calculer_valeur()
+
+
