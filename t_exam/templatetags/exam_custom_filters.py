@@ -39,3 +39,13 @@ def format_number_for_input(value):
         return f"{float_value:g}"  # Use 'g' format to avoid unnecessary trailing zeros
     except (ValueError, TypeError):
         return str(value) if value is not None else ''
+
+@register.filter
+def lookup(dictionary, key):
+    """
+    Get an item from a dictionary using a variable key
+    Usage: {{ mydict|lookup:key_variable }}
+    """
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

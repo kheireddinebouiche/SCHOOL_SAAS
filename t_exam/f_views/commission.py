@@ -231,16 +231,57 @@ def ApiGetCommissionResults(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def close_commission(request, pk):
-    
-    obj = Commissions.objects.get(id = pk)
+    from ..models import SessionExam, SessionExamLine
+    from t_timetable.models import Timetable
+
+    obj = Commissions.objects.get(id=pk)
 
     if not pk:
-        return JsonResponse({"status" : "error",'message' : "Information manquante"})
-    
+        return JsonResponse({"status": "error", 'message': "Information manquante"})
+
+    # Récupérer les données de planification d'examen si elles existent
+    planifier_session = request.POST.get('planifier_session')
+    session_nom = request.POST.get('session_nom')
+    type_session = request.POST.get('type_session')
+    date_debut = request.POST.get('date_debut')
+    date_fin = request.POST.get('date_fin')
+
     obj.is_closed = True
 
     try:
         obj.save()
-        return JsonResponse({"status" : "success",'message' : "La commission a été close avec succès."})
+
+        # Si la planification de session est demandée, créer les enregistrements
+        if planifier_session == 'true':
+            # Convertir le type de session pour correspondre aux choix du modèle
+            type_session_mapping = {
+                'ordinaire': 'normal',
+                'rattrapage': 'rattrapage'
+            }
+            mapped_type_session = type_session_mapping.get(type_session, 'normal')
+
+            # Créer la session d'examen
+            session_exam = SessionExam.objects.create(
+                label=session_nom,
+                type_session=mapped_type_session,
+                date_debut=date_debut,
+                date_fin=date_fin,
+                commission=obj
+            )
+
+            # Pour chaque groupe de la commission, créer une ligne de session d'examen
+            for groupe in obj.groupes.all():
+                # Récupérer le semestre du groupe à partir du modèle Timetable
+                timetable = Timetable.objects.filter(groupe=groupe, status="enc").first()
+                semestre = timetable.semestre if timetable else None
+
+                # Créer la ligne de session d'examen
+                SessionExamLine.objects.create(
+                    session=session_exam,
+                    groupe=groupe,
+                    semestre=semestre
+                )
+
+        return JsonResponse({"status": "success", 'message': "La commission a été close avec succès."})
     except Exception as e:
-        return JsonResponse({"status" : "error",'message' : str(e)})
+        return JsonResponse({"status": "error", 'message': str(e)})

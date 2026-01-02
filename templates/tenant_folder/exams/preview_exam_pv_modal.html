@@ -109,7 +109,7 @@
                                         {% endif %}
                                     {% endfor %}
                                     <th rowspan="2" class="align-middle border text-center" style="border: 2px solid #495057 !important; vertical-align: middle;">Moyenne</th>
-                                    <th rowspan="2" class="align-middle border text-center" style="border: 2px solid #495057 !important; vertical-align: middle;">Décision</th>
+                                    <th rowspan="2" class="align-middle border text-center" style="border: 2px solid #495057 !important; vertical-align: middle;">Observation</th>
                                 </tr>
                                 <tr>
                                     {% for type_note in filtered_types_notes %}
@@ -182,12 +182,13 @@
                                                    style="background-color: #e6f3ff;">
                                         </td>
                                         <td class="decision-cell">
-                                            <select class="form-select form-select-sm" name="decision_{{ student_line.student.id }}" id="decision_{{ student_line.student.id }}">
+                                            {% with student_decision=decisions_existantes|exam_get_item:student_line.student.id %}
+                                            <select class="form-select form-select-sm" name="decision_{{ student_line.student.id }}" id="decision_{{ student_line.student.id }}" {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
                                                 <option value="">Sélectionner...</option>
-                                                <option value="valider">Valider</option>
-                                                <option value="rattrapage">Rattrapage</option>
-                                                <option value="absent">Absent</option>
+                                                <option value="valide" {% if student_decision and student_decision.statut == 'valide' %}selected{% endif %}>Validé</option>
+                                                <option value="rattrapage" {% if student_decision and student_decision.statut == 'rattrapage' %}selected{% endif %}>Rattrapage</option>
                                             </select>
+                                            {% endwith %}
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -209,7 +210,7 @@
                     </button>
                     {% if not pv_examen or not pv_examen.est_valide %}
                         <button type="button" class="btn btn-danger px-4 py-2" id="validate-btn-modal">
-                            <i class="bi bi-check me-2"></i>Valider l'examen
+                            <i class="bi bi-check me-2"></i>Valider le PV
                         </button>
                     {% endif %}
                 </div>
@@ -560,6 +561,37 @@
         });
     }
 
+    function collectStudentDecisions() {
+        const decisions = {};
+        const decisionInputs = document.querySelectorAll('select[name^="decision_"]');
+
+        decisionInputs.forEach(function(select) {
+            // Extract student ID from the select name: decision_studentId
+            const nameParts = select.name.split('_');
+            if (nameParts.length >= 2) {
+                const studentId = nameParts[1];
+                const decision = select.value;
+
+                if (studentId && decision) {
+                    // Get the average for this student
+                    const averageInput = document.getElementById(`moyenne_${studentId}`);
+                    let moyenne = null;
+
+                    if (averageInput && averageInput.value) {
+                        moyenne = parseFloat(averageInput.value);
+                    }
+
+                    decisions[studentId] = {
+                        statut: decision,
+                        moyenne: moyenne
+                    };
+                }
+            }
+        });
+
+        return decisions;
+    }
+
     function validateExam(pk) {
         if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
             $.ajax({
@@ -567,6 +599,44 @@
                 type: 'POST',
                 data: {
                     'exam_plan_id': pk,
+                    'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        showStatus(data.message, true);
+                        // Disable all input fields after validation
+                        $('input').prop('disabled', true);
+                        // Disable save button
+                        $('#save-results-btn-modal').prop('disabled', true);
+                        // Hide validate button
+                        $('#validate-btn-modal').hide();
+                    } else {
+                        showStatus(data.message, false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showStatus('Erreur de connexion: ' + error, false);
+                }
+            });
+        }
+    }
+
+    function validatePvExam(pk) {
+        if (confirm('Êtes-vous sûr de vouloir valider ce PV d\'examen ? Cette action est irréversible.')) {
+            // Collect student decisions
+            const decisions = collectStudentDecisions();
+
+            // Define the PV validation URL if not already defined
+            if (typeof VALIDATE_PV_EXAM_URL === 'undefined') {
+                window.VALIDATE_PV_EXAM_URL = "{% url 't_exam:validate_pv_exam' %}";
+            }
+
+            $.ajax({
+                url: window.VALIDATE_PV_EXAM_URL,
+                type: 'POST',
+                data: {
+                    'exam_plan_id': pk,
+                    'decisions': JSON.stringify(decisions),  // Include decisions in the request
                     'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 success: function(data) {
@@ -709,7 +779,7 @@
                         return;
                     }
                 }
-                validateExam("{{ pk }}");
+                validatePvExam("{{ pk }}");
             });
         }
 

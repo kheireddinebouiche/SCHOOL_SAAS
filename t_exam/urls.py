@@ -71,6 +71,8 @@ urlpatterns = [
    path('preview-pv/<int:pk>/', PreviewPV, name="PreviewPV"),
 
    path('validate-exam/', validate_exam, name="validate_exam"),
+   path('validate_pv_exam/', validate_pv_exam, name="validate_pv_exam"),
+
    path('generate-pv/<int:pk>/', GeneratePv, name="GeneratePv"),
    path('save_exam_results/<int:pk>/', SaveExamResults, name="save_exam_results"),
    path('get_exam_history/<int:pk>/', GetExamHistory, name="get_exam_history"),
@@ -78,7 +80,7 @@ urlpatterns = [
 
    path('ShowPvModal/<int:pk>', ShowPvModal, name="ShowPvModal"),
    path('GeneratePvModal/<int:pk>/', GeneratePvModal, name="GeneratePvModal"),
-   
+
    # URLs pour les résultats d'examens
    path('exams-results/', exams_results, name="exams_results"),
    path('api-list-pv-examen/', ApiListPvExamen, name="ApiListPvExamen"),

@@ -18,6 +18,7 @@ class SessionExam(models.Model):
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_updated_by")
+    commission = models.ForeignKey("Commissions", on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         verbose_name = "Session d'examen"
@@ -142,15 +143,9 @@ class CommisionResult(models.Model):
         return f'{self.commission.label}'
 
 class PvExamen(models.Model):
-    exam_planification = models.OneToOneField(
-        ExamPlanification,
-        on_delete=models.CASCADE,
-        related_name="pv"
-    )
-
+    exam_planification = models.OneToOneField(ExamPlanification,on_delete=models.CASCADE,related_name="pv")
     est_valide = models.BooleanField(default=False)
     date_validation = models.DateTimeField(null=True, blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -214,7 +209,6 @@ class ExamDecisionEtudiant(models.Model):
     STATUT_CHOICES = [
         ('valide', 'Validé'),
         ('rattrapage', 'Rattrapage'),
-        ('absent', 'Absent'),
     ]
 
     pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="decisions")

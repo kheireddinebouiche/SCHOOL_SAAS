@@ -66,7 +66,7 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                  
+
                   <a href="{% url 't_exam:PageCommission' %}" class="btn btn-secondary">
                     <i class="ri-arrow-left-line me-1"></i>Retour
                   </a>
@@ -90,6 +90,7 @@
                       <i class="ri-lock-line label-icon align-middle fs-16 me-2"></i>
                       Clôturer la commission
                     </button>
+
                   {% endif %}
                 </div>
               </div>
@@ -482,6 +483,7 @@
   </div>
 </div>
 
+
 <!-- Modales pour les détails des groupes -->
 <div class="modal fade" id="groupeModal" tabindex="-1" aria-labelledby="groupeModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-full-width">
@@ -615,7 +617,7 @@
         </div>
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3">
-        <input type="hidden" id="commissionToValidate" value="">
+        <input type="hidden" id="commissionToValidate" value="{{commission.id}}">
         <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
           <i class="ri-close-line me-2"></i>Annuler
         </button>
@@ -789,6 +791,38 @@
             <strong>Attention :</strong> Cette action est irréversible et verrouillera définitivement la commission.
           </div>
         </div>
+
+        <!-- Checkbox pour planifier la session d'examen -->
+        <div class="form-check mb-4">
+          <input class="form-check-input" type="checkbox" id="planifierSessionCheck">
+          <label class="form-check-label fw-semibold" for="planifierSessionCheck">
+            Voulez-vous planifier la session d'examen maintenant ?
+          </label>
+        </div>
+
+        <!-- Champs pour la planification de la session d'examen -->
+        <div id="planifierSessionFields" style="display: none;">
+          <div class="mb-3">
+            <label for="sessionNom" class="form-label fw-semibold">Nom</label>
+            <input type="text" class="form-control" id="sessionNom" placeholder="Entrez le nom de la session">
+          </div>
+          <div class="mb-3">
+            <label for="typeSession" class="form-label fw-semibold">Type de session</label>
+            <select class="form-select" id="typeSession">
+              <option value="">Sélectionnez le type</option>
+              <option value="ordinaire">Ordinaire</option>
+              <option value="rattrapage">Rattrapage</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="dateDebut" class="form-label fw-semibold">Date de début</label>
+            <input type="date" class="form-control" id="dateDebut">
+          </div>
+          <div class="mb-3">
+            <label for="dateFin" class="form-label fw-semibold">Date de fin</label>
+            <input type="date" class="form-control" id="dateFin">
+          </div>
+        </div>
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3">
         <input type="hidden" id="commissionToClose" value="">
@@ -812,6 +846,7 @@
     if(commissionIsValidate === "True"){
       document.getElementById('displayClosedNotification').style.setProperty('display','flex','important')
     }
+
 
     // Gestion du bouton Valider
     $('.validate-commission-btn').on('click', function(){
@@ -2103,6 +2138,21 @@
     // Handle the confirmation for closing the commission
     $('#confirmCloseCommissionBtn').on('click', function() {
       var commissionId = $('#commissionId').val();
+      var planifierSessionCheck = $('#planifierSessionCheck').is(':checked');
+
+      // Préparer les données à envoyer
+      var dataToSend = {
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+      };
+
+      // Si la case est cochée, ajouter les données de planification
+      if (planifierSessionCheck) {
+        dataToSend.planifier_session = 'true';
+        dataToSend.session_nom = $('#sessionNom').val();
+        dataToSend.type_session = $('#typeSession').val();
+        dataToSend.date_debut = $('#dateDebut').val();
+        dataToSend.date_fin = $('#dateFin').val();
+      }
 
       // Disable the button during request to prevent duplicate submissions
       $(this).prop('disabled', true).text('Clôture en cours...');
@@ -2111,9 +2161,7 @@
       $.ajax({
         url: '{% url "t_exam:close_commission" pk=0 %}'.replace('0', commissionId),
         type: 'POST',
-        data: {
-          'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        },
+        data: dataToSend,
         success: function(response) {
           if(response.status === 'success') {
             $('#closeCommissionModal').modal('hide');
@@ -2147,5 +2195,23 @@
 </script>
 
 
+
+<!-- Script pour gérer l'affichage des champs de planification -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const planifierSessionCheck = document.getElementById('planifierSessionCheck');
+  const planifierSessionFields = document.getElementById('planifierSessionFields');
+
+  if (planifierSessionCheck && planifierSessionFields) {
+    planifierSessionCheck.addEventListener('change', function() {
+      if (this.checked) {
+        planifierSessionFields.style.display = 'block';
+      } else {
+        planifierSessionFields.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
 
 {% endblock content %}
