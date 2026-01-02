@@ -198,7 +198,7 @@ def GeneratePv(request, pk):
                 nb_sous_notes=builtin_type_note.nb_sous_notes,
                 ordre=builtin_type_note.ordre
             )
-            
+
             # Create ExamNote records for each student for this type of note
             for student_line in students:
                 exam_note = ExamNote.objects.create(
@@ -207,7 +207,7 @@ def GeneratePv(request, pk):
                     type_note=exam_type_note,
                     valeur=None
                 )
-                
+
                 # If this type note has sous-notes, create them
                 if builtin_type_note.has_sous_notes and builtin_type_note.nb_sous_notes > 0:
                     for builtin_sous_note in builtin_type_note.sous_notes.all().order_by('ordre'):
@@ -218,6 +218,21 @@ def GeneratePv(request, pk):
 
     # Get the builtin model to match the IDs used in the template
     modele_builtins = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
+
+    # Filter type notes based on exam type
+    exam_type = obj.type_examen  # Get the actual type, not the display value
+    if exam_type == 'normal':
+        # For normal exam, show all types where both is_rattrapage and is_rachat are False
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rattrapage=False, is_rachat=False).order_by('ordre')
+    elif exam_type == 'rattrage':
+        # For rattrapage exam, show only types where is_rattrapage is True
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rattrapage=True).order_by('ordre')
+    elif exam_type == 'rachat':
+        # For rachat exam, show only types where is_rachat is True
+        filtered_types_notes = modele_builtins.types_notes.filter(is_rachat=True).order_by('ordre')
+    else:
+        # Default case: show all type notes
+        filtered_types_notes = modele_builtins.types_notes.all().order_by('ordre')
 
     # Create a mapping between builtin type note IDs and exam type note objects
     builtin_to_exam_mapping = {}
@@ -234,7 +249,7 @@ def GeneratePv(request, pk):
     student_notes_data = {}
     for student_line in students:
         student_notes_data[student_line.student.id] = {}
-        for builtin_type_note in modele_builtins.types_notes.all().order_by('ordre'):
+        for builtin_type_note in filtered_types_notes:  # Use filtered types instead of all
             print(f"DEBUG - Processing builtin_type_note id: {builtin_type_note.id}, code: {builtin_type_note.code}")
 
             # Get the corresponding exam type note
@@ -270,6 +285,7 @@ def GeneratePv(request, pk):
         'pk': pk,
         'groupe': groupe,
         'modele': modeleBuiltin,
+        'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
         'students': students,
         'pv_examen': pv_examen,
         'student_notes_data': student_notes_data,
