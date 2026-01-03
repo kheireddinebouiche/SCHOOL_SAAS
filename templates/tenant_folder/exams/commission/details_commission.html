@@ -1381,6 +1381,23 @@
               </div>
 
               <div class="mb-4">
+                <h6 class="mb-3 fw-semibold">Sélectionnez les modules pour l'examen :</h6>
+                <div class="alert alert-light border mb-0" id="examensModulesList">
+                  <!-- Les modules seront chargés dynamiquement ici -->
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAllExamensModules">
+                  <label class="form-check-label" for="selectAllExamensModules">
+                    Sélectionner tous les modules
+                  </label>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle border-opacity-25" id="selectedExamensModulesCount">0 module(s) sélectionné(s)</span>
+              </div>
+
+              <div class="mb-4">
                 <label for="examensComment" class="form-label fw-semibold">Commentaire (optionnel)</label>
                 <textarea class="form-control" id="examensComment" rows="3" placeholder="Ajoutez un commentaire concernant l'examen..."></textarea>
               </div>
@@ -1654,6 +1671,89 @@
       $('#confirmRachatModal').modal('show');
     }
 
+    // Helper function to build the module list for examens
+    function buildModuleListForExamens(studentId, studentName) {
+      var moduleListHtml = '';
+
+      // Find the presence container for this student in the presence row
+      var presenceRow = $('tr.presence-row[data-etudiant-id="' + studentId + '"]');
+      var modulesStats = {};
+
+      // We'll need to get the module information from the original data
+      // First, let me update the way we store and access student data
+      var studentData = getStudentDataById(studentId);
+
+      if (studentData && studentData.historique && Array.isArray(studentData.historique) && studentData.historique.length > 0) {
+        // Process the historique data to extract unique modules
+        studentData.historique.forEach(function(historique) {
+          if (historique && typeof historique === 'object' && historique.data && Array.isArray(historique.data)) {
+            // For the new data format
+            historique.data.forEach(function(data) {
+              var moduleLabel = data.module || data.label || data.libelle || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.label) || 'Module inconnu';
+              var moduleCode = data.code || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.code) || '';
+              var moduleId = (data.id || (data.ligne_presence && data.ligne_presence.module && data.ligne_presence.module.id) || moduleLabel).toString();
+
+              // Add to modules if not already present
+              if (!modulesStats[moduleId]) {
+                modulesStats[moduleId] = {
+                  id: moduleId,
+                  label: moduleLabel,
+                  code: moduleCode
+                };
+              }
+            });
+          } else {
+            // For the old data format
+            var moduleLabel = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__label || historique.module__label || historique.module || historique.label || historique.libelle || 'Module inconnu') :
+              (typeof historique === 'string' ? historique : 'Module inconnu');
+
+            var moduleCode = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__code || historique.module__code || '') :
+              '';
+
+            var moduleId = (historique && typeof historique === 'object') ?
+              (historique.ligne_presence__module__id || historique.module__id || moduleLabel) : moduleLabel;
+
+            moduleId = moduleId.toString();
+
+            // Add to modules if not already present
+            if (!modulesStats[moduleId]) {
+              modulesStats[moduleId] = {
+                id: moduleId,
+                label: moduleLabel,
+                code: moduleCode
+              };
+            }
+          }
+        });
+      }
+
+      // Build the HTML for module selection for examens
+      for (var moduleId in modulesStats) {
+        if (modulesStats.hasOwnProperty(moduleId)) {
+          var module = modulesStats[moduleId];
+          var uniqueId = 'examens_module_' + moduleId + '_' + Date.now(); // Ensure unique ID
+
+          moduleListHtml += '<div class="form-check mb-2">' +
+            '<input class="form-check-input examens-module-checkbox" type="checkbox" value="' + module.code + '" id="' + uniqueId + '" checked>' +
+            '<label class="form-check-label" for="' + uniqueId + '">' +
+              module.label + (module.code ? ' (' + module.code + ')' : '') +
+            '</label>' +
+          '</div>';
+        }
+      }
+
+      // If no modules were found, show a message
+      if (moduleListHtml === '') {
+        moduleListHtml = '<div class="text-center text-muted py-3">Aucun module disponible pour l\'examen</div>';
+      }
+
+      $('#examensModulesList').html(moduleListHtml);
+      updateSelectedExamensModulesCount();
+      $('#confirmExamensModal').modal('show');
+    }
+
     // Helper function to get student data by ID from the loaded data
     function getStudentDataById(studentId) {
       // We need to maintain the original data loaded by loadStudents function
@@ -1697,10 +1797,17 @@
       }
       window.commissionId = commissionId;
 
-      // Show the examens modal
+      // Show the examens modal and load modules
       $('#examensStudentName').text(studentName);
-      $('#confirmExamensModal').modal('show');
+      // Load modules for examens before showing the modal
+      loadExamensModules(selectedStudentId, studentName);
     });
+
+    // Function to load modules for examens
+    function loadExamensModules(studentId, studentName) {
+      // Load modules for examens before showing the modal
+      buildModuleListForExamens(studentId, studentName);
+    }
 
     // Separate event listener for Rachat button
     $(document).on('click', '.btn-action[data-action="rachat"]', function() {
@@ -1709,7 +1816,7 @@
       selectedAction = 'rachat';
 
       $('#confirmRachatBtn').data('historique', historiqueAbsence);
-      
+
       // Find the student name by traversing to the student row
       var studentRow = $(this).closest('tr.etudiant-row');
       var studentName = studentRow.find('h6').text();
@@ -1786,6 +1893,27 @@
       var allChecked = (count === totalCheckboxes && totalCheckboxes > 0);
       $('#selectAllModules').prop('checked', allChecked);
     }
+
+    // Handle module selection in Examens modal
+    $(document).on('change', '.examens-module-checkbox', function() {
+      updateSelectedExamensModulesCount();
+    });
+
+    $(document).on('change', '#selectAllExamensModules', function() {
+      var isChecked = $(this).is(':checked');
+      $('.examens-module-checkbox').prop('checked', isChecked);
+      updateSelectedExamensModulesCount();
+    });
+
+    function updateSelectedExamensModulesCount() {
+      var count = $('.examens-module-checkbox:checked').length;
+      $('#selectedExamensModulesCount').text(count + ' module(s) sélectionné(s)');
+
+      // Update the select all checkbox state
+      var totalCheckboxes = $('.examens-module-checkbox').length;
+      var allChecked = (count === totalCheckboxes && totalCheckboxes > 0);
+      $('#selectAllExamensModules').prop('checked', allChecked);
+    }
     
     const VarCommission = "{{commission.id}}";
     
@@ -1794,7 +1922,13 @@
       // Get the comment
       var comment = $('#examensComment').val().trim();
       var historiqueAbsence = $(this).data('historique');
-      
+
+      // Get the selected modules
+      var selectedModules = [];
+      $('.examens-module-checkbox:checked').each(function() {
+        selectedModules.push($(this).val());
+      });
+
       // Perform the examens action via API
       $.ajax({
         url: '{% url "t_exam:examen_action" %}',
@@ -1805,6 +1939,7 @@
         data: JSON.stringify({
           student_id: selectedStudentId,
           commission_id: VarCommission,
+          modules: selectedModules,
           historiqueAbsence : historiqueAbsence,
           comment: comment
         }),

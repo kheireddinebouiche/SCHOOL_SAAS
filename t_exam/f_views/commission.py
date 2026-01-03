@@ -304,46 +304,19 @@ def close_commission(request, pk):
 
                     type_examen = type_mapping.get(result.result, 'normal')
 
-                    # Pour les résultats "rach" et "ajou", utiliser les modules spécifiques du résultat
-                    # Pour les résultats "exam", il faut probablement utiliser tous les modules du programme
-                    modules_a_traiter = result.modules.all()
-
-                    # Si aucun module spécifique n'est défini pour un résultat "exam",
-                    # on récupère les modules du programme de l'étudiant
-                    if result.result == 'exam' and not modules_a_traiter.exists():
-                        # Récupérer les modules du programme de l'étudiant via sa promotion
-                        from t_formations.models import Modules
-                        modules_programme = Modules.objects.filter(
-                            formation__promos=result.etudiants.promo
-                        ).distinct()
-
-                        # Créer une planification pour chaque module du programme
-                        for module in modules_programme:
-                            # Créer l'ExamPlanification
-                            from ..models import ExamPlanification
-                            exam_planification = ExamPlanification.objects.create(
-                                exam_line=session_exam_line,
-                                module=module,
-                                type_examen=type_examen
-                                # Les champs date, salle, heures et mode_examination sont laissés vides
-                                # comme demandé
-                            )
-                            # Pour déboguer, on peut voir ce qui est créé
-                            print(f"Création d'ExamPlanification: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
-                    else:
-                        # Pour chaque module dans le résultat (ou module spécifique), créer une planification
-                        for module in modules_a_traiter:
-                            # Créer l'ExamPlanification
-                            from ..models import ExamPlanification
-                            exam_planification = ExamPlanification.objects.create(
-                                exam_line=session_exam_line,
-                                module=module,
-                                type_examen=type_examen
-                                # Les champs date, salle, heures et mode_examination sont laissés vides
-                                # comme demandé
-                            )
-                            # Pour déboguer, on peut voir ce qui est créé
-                            print(f"Création d'ExamPlanification: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
+                    # Pour chaque module dans le résultat, créer une planification
+                    for module in result.modules.all():
+                        # Créer l'ExamPlanification
+                        from ..models import ExamPlanification
+                        exam_planification = ExamPlanification.objects.create(
+                            exam_line=session_exam_line,
+                            module=module,
+                            type_examen=type_examen
+                            # Les champs date, salle, heures et mode_examination sont laissés vides
+                            # comme demandé
+                        )
+                        # Pour déboguer, on peut voir ce qui est créé
+                        print(f"Création d'ExamPlanification: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
 
         return JsonResponse({"status": "success", 'message': "La commission a été close avec succès."})
     except Exception as e:

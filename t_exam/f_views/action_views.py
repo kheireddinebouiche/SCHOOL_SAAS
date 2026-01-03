@@ -12,12 +12,13 @@ from t_etudiants.models import HistoriqueAbsence
 @csrf_exempt
 @transaction.atomic
 def examen_action(request):
-    
+
     if request.method == 'POST':
-        
+
         data = json.loads(request.body)
         student_id = data.get('student_id')
         commission_id = data.get('commission_id')  # This might be derived from the group context
+        selected_modules = data.get('modules', [])  # Récupérer les modules sélectionnés
         comment = data.get('comment', '')
         historiqueAbs = data.get('historiqueAbsence')
 
@@ -32,6 +33,9 @@ def examen_action(request):
         commission = Commissions.objects.get(id=commission_id)
 
         HistoriqueAbsence.objects.filter(id__in=historiqueAbs).update(etat=True)
+
+        # Récupérer les modules sélectionnés
+        modules = list(Modules.objects.filter(code__in=selected_modules))
 
         # Create or update the CommissionResult record
         result, created = CommisionResult.objects.get_or_create(
@@ -48,7 +52,11 @@ def examen_action(request):
             result.commentaire = comment
             result.save()
 
-        return JsonResponse({'status': 'success','message': f'Action "Examen" enregistrée pour {student.prenom} {student.nom}','result_id': result.id})
+        # Associer les modules sélectionnés au résultat
+        result.modules.clear()
+        result.modules.add(*modules)
+
+        return JsonResponse({'status': 'success','message': f'Action "Examen" enregistrée pour {student.prenom} {student.nom} ({len(modules)} module(s) sélectionné(s))','result_id': result.id,'module_count': len(modules)})
 
     return JsonResponse({'status': 'error','message': 'Method not allowed'}, status=405)
 
