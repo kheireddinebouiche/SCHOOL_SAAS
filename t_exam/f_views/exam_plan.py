@@ -661,93 +661,108 @@ def validate_pv_exam(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListPvExamen(request):
-    """
-    API pour récupérer la liste des PVs d'examens avec les informations associées
-    """
-    try:
-        # Récupérer tous les PvExamen avec les relations nécessaires
-        pv_examens = PvExamen.objects.select_related('exam_planification').all()
+    if request.method == "GET":
+        # Get status filter from request parameters
+        status_filter = request.GET.get('status', 'validated')  # Default to validated only
 
-        # Préparer les données des PVs
-        pvs_data = []
-        for pv in pv_examens:
-            # Check if related objects exist before accessing them
-            if pv.exam_planification:
-                exam_plan = pv.exam_planification
-                # Fetch related objects individually to avoid issues
-                try:
-                    exam_line = exam_plan.exam_line
-                    groupe = exam_line.groupe if exam_line else None
-                    salle = exam_plan.salle
-                    module = exam_plan.module
-                except:
-                    # If there are issues with relationships, set to None
-                    exam_line = None
-                    groupe = None
-                    salle = None
-                    module = None
+        # Build the query based on the status filter
+        if status_filter == 'validated':
+            # Only get validated exam planifications
+            exam_planifications = ExamPlanification.objects.select_related(
+                'exam_line',
+                'exam_line__groupe',
+                'module',
+                'salle'
+            ).filter(
+                passed=True  # Only get validated exam planifications
+            ).all()
+        elif status_filter == 'pending':
+            # Only get pending exam planifications
+            exam_planifications = ExamPlanification.objects.select_related(
+                'exam_line',
+                'exam_line__groupe',
+                'module',
+                'salle'
+            ).filter(
+                passed=False  # Only get pending exam planifications
+            ).all()
+        else:
+            # Get all exam planifications
+            exam_planifications = ExamPlanification.objects.select_related(
+                'exam_line',
+                'exam_line__groupe',
+                'module',
+                'salle'
+            ).all()
 
-                pvs_data.append({
-                    'id': pv.id,
-                    'exam_planification': {
-                        'id': exam_plan.id,
-                        'module': {
-                            'id': module.id if module else None,
-                            'label': module.label if module else "",
-                            'code': module.code if module else "",
+        # Prepare PV data
+        pv_data = []
+        for plan in exam_planifications:
+            # Try to get the related PV - since it's OneToOne, we access it directly
+            # We need to handle the case where PV doesn't exist
+            try:
+                pv_obj = PvExamen.objects.select_related('exam_planification').get(exam_planification=plan)
+                pv_exists = True
+            except PvExamen.DoesNotExist:
+                pv_obj = None
+                pv_exists = False
+
+            pv_data.append({
+                'id': pv_obj.id if pv_obj else None,
+                'exam_planification': {
+                    'id': plan.id,
+                    'module': {
+                        'id': plan.module.id,
+                        'label': plan.module.label,
+                        'code': plan.module.code,
+                    },
+                    'exam_line': {
+                        'id': plan.exam_line.id,
+                        'groupe': {
+                            'id': plan.exam_line.groupe.id,
+                            'nom': plan.exam_line.groupe.nom,
                         },
-                        'date': exam_plan.date.strftime("%Y-%m-%d") if exam_plan.date else "",
-                        'heure_debut': exam_plan.heure_debut.strftime("%H:%M") if exam_plan.heure_debut else "",
-                        'heure_fin': exam_plan.heure_fin.strftime("%H:%M") if exam_plan.heure_fin else "",
-                        'salle': {
-                            'id': salle.id if salle else None,
-                            'nom': salle.nom if salle else "",
-                        },
-                        'type_examen': exam_plan.get_type_examen_display(),
-                        'passed': exam_plan.passed,
-                        'exam_line': {
-                            'id': exam_line.id if exam_line else None,
-                            'groupe': {
-                                'id': groupe.id if groupe else None,
-                                'nom': groupe.nom if groupe else "",
-                            }
-                        }
-                    }
-                })
-
-        # Récupérer les groupes uniques
-        groupe_ids = set()
-        for pv in pv_examens:
-            if pv.exam_planification:
-                try:
-                    exam_line = pv.exam_planification.exam_line
-                    groupe = exam_line.groupe if exam_line else None
-                    if groupe:
-                        groupe_ids.add(groupe.id)
-                except:
-                    # Skip if there are issues with relationships
-                    continue
-
-        groupes = Groupe.objects.filter(id__in=groupe_ids) if groupe_ids else Groupe.objects.none()
-
-        groups_data = []
-        for groupe in groupes:
-            groups_data.append({
-                'id': groupe.id,
-                'nom': groupe.nom,
+                        'semestre': plan.exam_line.semestre,
+                    },
+                    'date': plan.date.strftime("%Y-%m-%d") if plan.date else "",
+                    'heure_debut': plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
+                    'heure_fin': plan.heure_fin.strftime("%H:%M") if plan.heure_fin else "",
+                    'salle': {
+                        'id': plan.salle.id if plan.salle else None,
+                        'nom': plan.salle.nom if plan.salle else "Non spécifié",
+                    } if plan.salle else {'id': None, 'nom': "Non spécifié"},
+                    'type_examen': plan.get_type_examen_display(),
+                    'mode_examination': plan.mode_examination,
+                    'statut': plan.statut,
+                    'passed': plan.passed,
+                    'comment': plan.comment,
+                },
+                'pv_exists': pv_exists,
+                'est_valide': pv_obj.est_valide if pv_obj else False,
+                'date_validation': pv_obj.date_validation.strftime("%Y-%m-%d %H:%M") if pv_obj and pv_obj.date_validation else "",
             })
 
-        return JsonResponse({
-            "status": "success",
-            "pvs": pvs_data,
-            "groups": groups_data
-        })
+        # Get unique groups from the exam planifications
+        groups_data = []
+        group_ids = set()
+        for plan in exam_planifications:
+            if plan.exam_line and plan.exam_line.groupe and plan.exam_line.groupe.id not in group_ids:
+                group_ids.add(plan.exam_line.groupe.id)
+                groups_data.append({
+                    'id': plan.exam_line.groupe.id,
+                    'nom': plan.exam_line.groupe.nom,
+                })
 
-    except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            "message": str(e)
-        })
+        # Return structured data as expected by the template
+        response_data = {
+            'pvs': pv_data,
+            'groups': groups_data,
+        }
+
+        return JsonResponse(response_data)
+
+    else:
+        return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -795,7 +810,8 @@ def ApiDeletePvExamen(request):
             "status": "error",
             "message": "Méthode non autorisée"
         })
-    
+
+@login_required(login_url="institut_app:login")    
 def exams_results(request):
     """
     Vue pour afficher la liste des PVs d'examens
@@ -851,6 +867,7 @@ def ApiDeleteExamPlanification(request):
             "message": "Méthode non autorisée"
         })
 
+@login_required(login_url="institut_app:login")
 def SaveExamResults(request, pk):
     if request.method == 'POST':
         try:

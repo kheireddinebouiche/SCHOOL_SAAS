@@ -183,11 +183,23 @@
                       <select id="statusFilter" class="form-select rounded-pill" style="min-width: 160px;">
                         <option value="">Tous les statuts</option>
                         <option value="validated">Validés</option>
-                        <option value="pending">En attente</option>
                       </select>
-                      
+
                       <select id="groupFilter" class="form-select rounded-pill" style="min-width: 160px;">
                         <option value="">Tous les groupes</option>
+                        <!-- Options will be populated by JavaScript -->
+                      </select>
+
+                      <select id="semesterFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Tous les semestres</option>
+                        <option value="1">Semestre 1</option>
+                        <option value="2">Semestre 2</option>
+                        <option value="3">Semestre 3</option>
+                        <option value="4">Semestre 4</option>
+                      </select>
+
+                      <select id="yearFilter" class="form-select rounded-pill" style="min-width: 160px;">
+                        <option value="">Toutes les années</option>
                         <!-- Options will be populated by JavaScript -->
                       </select>
                     </div>
@@ -269,8 +281,8 @@
     const itemsPerPage = 9;
 
     function updateStats() {
-      const validatedCount = pvData.filter(pv => pv.exam_planification.passed).length;
-      const pendingCount = pvData.filter(pv => !pv.exam_planification.passed).length;
+      const validatedCount = pvData.filter(pv => pv.exam_planification && pv.exam_planification.passed).length;
+      const pendingCount = pvData.filter(pv => pv.exam_planification && !pv.exam_planification.passed).length;
 
       $('#totalPvs').text(pvData.length);
       $('#validatedPvs').text(validatedCount);
@@ -279,7 +291,7 @@
     }
 
     function getStatusClass(pv) {
-      if (pv.exam_planification.passed) {
+      if (pv.exam_planification && pv.exam_planification.passed) {
         return 'bg-success-subtle text-success border border-success-subtle';
       } else {
         return 'bg-warning-subtle text-warning border border-warning-subtle';
@@ -287,7 +299,7 @@
     }
 
     function getStatusText(pv) {
-      if (pv.exam_planification.passed) {
+      if (pv.exam_planification && pv.exam_planification.passed) {
         return 'Validé';
       } else {
         return 'En attente';
@@ -298,6 +310,21 @@
       let row = "";
       if (data.length > 0) {
         $.each(data, function(index, pv) {
+          // Safety check for pv and its nested properties
+          if (!pv || !pv.exam_planification) return true; // continue to next iteration
+
+          // Extract values with fallbacks
+          const moduleLabel = pv.exam_planification.module ? pv.exam_planification.module.label : 'N/A';
+          const moduleId = pv.exam_planification.module ? pv.exam_planification.module.id : '';
+          const groupeNom = pv.exam_planification.exam_line && pv.exam_planification.exam_line.groupe ?
+                           pv.exam_planification.exam_line.groupe.nom : 'N/A';
+          const planId = pv.exam_planification.id;
+          const date = pv.exam_planification.date;
+          const heureDebut = pv.exam_planification.heure_debut;
+          const heureFin = pv.exam_planification.heure_fin;
+          const salleNom = pv.exam_planification.salle ? pv.exam_planification.salle.nom : 'Non spécifié';
+          const typeExamen = pv.exam_planification.type_examen;
+
           row += '<div class="col-xl-4 col-lg-6 col-md-12 mb-4">';
           row += '    <div class="card pv-card h-100 border-0 shadow-sm">';
           row += '        <div class="card-body p-4">';
@@ -309,8 +336,8 @@
           row += '                        </div>';
           row += '                    </div>';
           row += '                    <div>';
-          row += '                        <h6 class="mb-1 fw-semibold">'+pv.exam_planification.module.label+'</h6>';
-          row += '                        <p class="text-muted mb-0 small">'+pv.exam_planification.exam_line.groupe.nom+'</p>';
+          row += '                        <h6 class="mb-1 fw-semibold">'+moduleLabel+'</h6>';
+          row += '                        <p class="text-muted mb-0 small">'+groupeNom+'</p>';
           row += '                    </div>';
           row += '                </div>';
           row += '                <div class="dropdown">';
@@ -318,10 +345,10 @@
           row += '                        <i class="ri-more-2-fill"></i>';
           row += '                    </button>';
           row += '                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">';
-          row += '                        <li><a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
-          row += '                        <li><a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>';
+          row += '                        <li><a href="/examens/generate-pv/'+planId+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
+          row += '                        <li><a href="/examens/generate-pv/'+planId+'" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>';
           row += '                        <li><hr class="dropdown-divider my-1"></li>';
-          row += '                        <li><button data-id="'+pv.id+'" data-planification-id="'+pv.exam_planification.id+'" id="btnDeletePv" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2 text-danger"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
+          row += '                        <li><button data-id="'+(pv.id || '')+'" data-planification-id="'+planId+'" id="btnDeletePv" class="dropdown-item d-flex align-items-center px-3 py-2 rounded-2 text-danger"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
           row += '                    </ul>';
           row += '                </div>';
           row += '            </div>';
@@ -331,7 +358,7 @@
           row += '                        <i class="ri-calendar-line"></i>';
           row += '                    </div>';
           row += '                    <div class="flex-grow-1">';
-          row += '                        <p class="mb-0"><small>Date: <strong>'+formatDate(pv.exam_planification.date)+'</strong></small></p>';
+          row += '                        <p class="mb-0"><small>Date: <strong>'+formatDate(date)+'</strong></small></p>';
           row += '                    </div>';
           row += '                </div>';
           row += '                <div class="d-flex align-items-center">';
@@ -339,7 +366,7 @@
           row += '                        <i class="ri-time-line"></i>';
           row += '                    </div>';
           row += '                    <div class="flex-grow-1">';
-          row += '                        <p class="mb-0"><small>Horaire: <strong>'+pv.exam_planification.heure_debut+' - '+pv.exam_planification.heure_fin+'</strong></small></p>';
+          row += '                        <p class="mb-0"><small>Horaire: <strong>'+heureDebut+' - '+heureFin+'</strong></small></p>';
           row += '                    </div>';
           row += '                </div>';
           row += '                <div class="d-flex align-items-center">';
@@ -347,13 +374,32 @@
           row += '                        <i class="ri-home-line"></i>';
           row += '                    </div>';
           row += '                    <div class="flex-grow-1">';
-          row += '                        <p class="mb-0"><small>Salle: <strong>'+pv.exam_planification.salle.nom+'</strong></small></p>';
+          row += '                        <p class="mb-0"><small>Salle: <strong>'+salleNom+'</strong></small></p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="flex-shrink-0 me-2 text-muted">';
+          row += '                        <i class="ri-file-text-line"></i>';
+          row += '                    </div>';
+          row += '                    <div class="flex-grow-1">';
+          row += '                        <p class="mb-0"><small>Type: <strong>'+typeExamen+'</strong></small></p>';
+          row += '                    </div>';
+          row += '                </div>';
+          row += '                <div class="d-flex align-items-center">';
+          row += '                    <div class="flex-shrink-0 me-2 text-muted">';
+          row += '                        <i class="ri-checkbox-circle-line"></i>';
+          row += '                    </div>';
+          row += '                    <div class="flex-grow-1">';
+          row += '                        <p class="mb-0"><small>Validé: <strong>'+(pv.est_valide ? 'Oui' : 'Non')+'</strong></small></p>';
           row += '                    </div>';
           row += '                </div>';
           row += '            </div>';
           row += '            <div class="d-flex justify-content-between align-items-center">';
-          row += '                <span class="status-badge '+getStatusClass(pv)+'"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(pv)+'</span>';
-          row += '                <a href="/examens/generate-pv/'+pv.exam_planification.id+'" class="btn btn-outline-primary btn-sm">Voir détails</a>';
+          row += '                <div>';
+          row += '                    <span class="status-badge '+getStatusClass(pv)+'"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(pv)+'</span>';
+          row += '                    '+((pv.est_valide) ? '<span class="badge bg-primary ms-2"><i class="ri-lock-line me-1"></i>Verrouillé</span>' : '<span class="badge bg-secondary ms-2"><i class="ri-lock-unlock-line me-1"></i>Modifiable</span>');
+          row += '                </div>';
+          row += '                <a href="/examens/generate-pv/'+planId+'" class="btn btn-outline-primary btn-sm">Voir détails</a>';
           row += '            </div>';
           row += '        </div>';
           row += '    </div>';
@@ -373,24 +419,55 @@
     }
 
     function loadPvData() {
+      // Get the current status filter
+      var statusFilter = $('#statusFilter').val();
+
+      // Build the URL with the status parameter
+      var apiUrl = "{% url 't_exam:ApiListPvExamen' %}";
+      var separator = apiUrl.includes('?') ? '&' : '?';
+      var fullUrl = apiUrl + separator + 'status=' + (statusFilter || 'all');
+
       $.ajax({
-        url : "{% url 't_exam:ApiListPvExamen' %}",
+        url : fullUrl,
         type : 'GET',
         dataType : 'JSON',
         success : function(data) {
-          pvData = data.pvs;
-          groupsData = data.groups;
-          
-          // Populate group filter
-          let groupOptions = '<option value="">Tous les groupes</option>';
-          $.each(data.groups, function(index, group) {
-            groupOptions += '<option value="'+group.id+'">'+group.nom+'</option>';
-          });
-          $('#groupFilter').html(groupOptions);
-          
-          updateStats();
-          renderTable(data.pvs);
-          renderPagination();
+          // Check if the response has the expected structure
+          if (data && data.pvs && data.groups) {
+            pvData = data.pvs;
+            groupsData = data.groups;
+
+            // Populate group filter
+            let groupOptions = '<option value="">Tous les groupes</option>';
+            $.each(data.groups, function(index, group) {
+              groupOptions += '<option value="'+group.id+'">'+group.nom+'</option>';
+            });
+            $('#groupFilter').html(groupOptions);
+
+            // Populate year filter based on unique years from exam dates
+            let yearSet = new Set();
+            $.each(data.pvs, function(index, pv) {
+              if (pv.exam_planification && pv.exam_planification.date) {
+                let year = new Date(pv.exam_planification.date).getFullYear();
+                if (!isNaN(year)) {
+                  yearSet.add(year);
+                }
+              }
+            });
+
+            let yearOptions = '<option value="">Toutes les années</option>';
+            let years = Array.from(yearSet).sort((a, b) => b - a); // Sort in descending order
+            $.each(years, function(index, year) {
+              yearOptions += '<option value="'+year+'">'+year+'</option>';
+            });
+            $('#yearFilter').html(yearOptions);
+
+            updateStats();
+            renderTable(data.pvs);
+            renderPagination();
+          } else {
+            $('#listItem').html("<div class='col-12 text-center py-5 text-danger'><i class='ri-error-warning-line me-2'></i>Format de données incorrect</div>");
+          }
         },
         error: function() {
           $('#listItem').html("<div class='col-12 text-center py-5 text-danger'><i class='ri-error-warning-line me-2'></i>Erreur de chargement des données</div>");
@@ -430,36 +507,54 @@
     }
 
     function filterPvs() {
-      var statusFilter = $('#statusFilter').val();
       var groupFilter = $('#groupFilter').val();
+      var semesterFilter = $('#semesterFilter').val();
+      var yearFilter = $('#yearFilter').val();
       var searchTerm = $('#searchInput').val().toLowerCase();
 
       var filteredData = pvData.filter(pv => {
-        // Check status filter
-        var matchesStatus = statusFilter === '';
-        if (statusFilter === 'validated') {
-          matchesStatus = pv.exam_planification.passed;
-        } else if (statusFilter === 'pending') {
-          matchesStatus = !pv.exam_planification.passed;
-        }
+        // Safety check for pv and its nested properties
+        if (!pv || !pv.exam_planification) return false;
 
         // Check group filter
-        var matchesGroup = groupFilter === '' || 
-          pv.exam_planification.exam_line.groupe.id == groupFilter;
+        var matchesGroup = groupFilter === '' ||
+          (pv.exam_planification.exam_line && pv.exam_planification.exam_line.groupe &&
+           pv.exam_planification.exam_line.groupe.id == groupFilter);
+
+        // Check semester filter
+        var matchesSemester = semesterFilter === '' ||
+          (pv.exam_planification.exam_line && pv.exam_planification.exam_line.semestre == semesterFilter);
+
+        // Check year filter
+        var matchesYear = yearFilter === '';
+        if (yearFilter !== '') {
+          if (pv.exam_planification.date) {
+            var examYear = new Date(pv.exam_planification.date).getFullYear();
+            matchesYear = examYear == yearFilter;
+          }
+        }
 
         // Check search term
-        var matchesSearch = searchTerm === '' ||
-          pv.exam_planification.module.label.toLowerCase().includes(searchTerm) ||
-          pv.exam_planification.exam_line.groupe.nom.toLowerCase().includes(searchTerm) ||
-          pv.exam_planification.salle.nom.toLowerCase().includes(searchTerm);
+        var moduleLabel = pv.exam_planification.module ? pv.exam_planification.module.label : '';
+        var groupeNom = pv.exam_planification.exam_line && pv.exam_planification.exam_line.groupe ?
+                        pv.exam_planification.exam_line.groupe.nom : '';
+        var salleNom = pv.exam_planification.salle ? pv.exam_planification.salle.nom : '';
 
-        return matchesStatus && matchesGroup && matchesSearch;
+        var matchesSearch = searchTerm === '' ||
+          (moduleLabel && moduleLabel.toLowerCase().includes(searchTerm)) ||
+          (groupeNom && groupeNom.toLowerCase().includes(searchTerm)) ||
+          (salleNom && salleNom.toLowerCase().includes(searchTerm));
+
+        return matchesGroup && matchesSemester && matchesYear && matchesSearch;
       });
 
       renderTable(filteredData);
     }
 
-    // Load initial data
+    // Set default status filter to "validated" to only show validated PVs
+    $('#statusFilter').val('validated');
+
+    // Load initial data with default filter
     loadPvData();
 
     // Search functionality
@@ -469,11 +564,21 @@
 
     // Status filter
     $('#statusFilter').on('change', function() {
-      filterPvs();
+      loadPvData(); // Reload data from API with new status filter
     });
 
     // Group filter
     $('#groupFilter').on('change', function() {
+      filterPvs();
+    });
+
+    // Semester filter
+    $('#semesterFilter').on('change', function() {
+      filterPvs();
+    });
+
+    // Year filter
+    $('#yearFilter').on('change', function() {
       filterPvs();
     });
 
@@ -491,6 +596,13 @@
     $(document).on('click','#btnDeletePv', function(){
       const pvId = $(this).data('id');
       const planificationId = $(this).data('planification-id');
+
+      // Only proceed if both IDs are valid
+      if (!pvId || !planificationId) {
+        alertify.error("Impossible de supprimer : informations manquantes");
+        return;
+      }
+
       $('#confirmDeleteBtn').data('pv-id', pvId);
       $('#confirmDeleteBtn').data('planification-id', planificationId);
       $('.deleteModal').modal('show');
@@ -500,7 +612,7 @@
     $(document).on('click', '#confirmDeleteBtn', function() {
       const pvId = $(this).data('pv-id');
       const planificationId = $(this).data('planification-id');
-      
+
       $.ajax({
         url : "{% url 't_exam:ApiDeletePvExamen' %}",
         dataType: 'JSON',

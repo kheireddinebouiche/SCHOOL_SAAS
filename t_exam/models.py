@@ -19,6 +19,7 @@ class SessionExam(models.Model):
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
     updated_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_updated_by")
     commission = models.ForeignKey("Commissions", on_delete=models.CASCADE, null=True, blank=True)
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('clo','Clôturé'),('att','En attente')], default="att")
 
     class Meta:
         verbose_name = "Session d'examen"

@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 def ListeSession(request):
     return render(request, 'tenant_folder/exams/liste-session.html')
 
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def NewSession(request):
     if request.method == "POST":
@@ -40,6 +41,7 @@ def NewSession(request):
         form = SessionForm()
         return render(request, 'tenant_folder/exams/template-session-form.html', {'form': form})
 
+@login_required(login_url="institut_app:login")
 def ApiListSession(request):
     session = SessionExam.objects.all()
     data = []
@@ -51,6 +53,7 @@ def ApiListSession(request):
             'date_debut': s.date_debut,
             'date_fin': s.date_fin,
             'type_session': s.type_session,
+            'status' : s.status,
             'type_session_label': s.get_type_session_display()
         })
     return JsonResponse(data, safe=False)
