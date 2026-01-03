@@ -55,6 +55,25 @@ def ApiListSession(request):
         })
     return JsonResponse(data, safe=False)
 
+@login_required(login_url="institut_app:login")
+def ApiGetSessionDetailsById(request):
+    session_id = request.GET.get("id")
+
+    try:
+        session = SessionExam.objects.get(id=session_id)
+        data = {
+            'id': session.id,
+            'code': session.code,
+            'label': session.label,
+            'date_debut': session.date_debut,
+            'date_fin': session.date_fin,
+            'type_session': session.type_session,
+            'type_session_label': session.get_type_session_display()
+        }
+        return JsonResponse({'status': 'success', 'data': data})
+    except SessionExam.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Session non trouvée'})
+
 def ApiDeleteSession(request):
     id = request.GET.get('id')
     obj = SessionExam.objects.get(id = id)
@@ -88,6 +107,7 @@ def ApiGetSessionDetails(request):
 
     return JsonResponse(data)
 
+@login_required(login_url="institut_app:login")
 def ApiDeleteGroupeSessionLine(request):
     id = request.GET.get('id')
 
@@ -102,17 +122,128 @@ def ApiUpdateSession(request):
     code = request.POST.get('code')
     date_debut = request.POST.get('date_debut')
     date_fin = request.POST.get('date_fin')
-    
+    type_session = request.POST.get('type_session')
+
     if not id:
         return JsonResponse({'status' : 'error', 'message' : "ID session manquant"})
-    else:    
+    else:
         obj = SessionExam.objects.get(id=id)
         obj.label = label
         obj.code = code
         obj.date_debut = date_debut
         obj.date_fin = date_fin
+        if type_session:  # Only update if type_session is provided
+            obj.type_session = type_session
         obj.save()
         return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session on été mis à jours avec succès'})
+
+@login_required(login_url="institut_app:login")
+def ApiGetSessionLineDetails(request):
+    id = request.GET.get('id')
+
+    if not id:
+        return JsonResponse({'status': 'error', 'message': 'ID manquant'})
+
+    try:
+        session_line = SessionExamLine.objects.get(id=id)
+        data = {
+            'id': session_line.id,
+            'semestre': session_line.semestre,
+            'date_debut': session_line.date_debut.strftime('%Y-%m-%d') if session_line.date_debut else '',
+            'date_fin': session_line.date_fin.strftime('%Y-%m-%d') if session_line.date_fin else '',
+        }
+        return JsonResponse({'status': 'success', 'data': data})
+    except SessionExamLine.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Ligne de session non trouvée'})
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateGroupeSessionLine(request):
+    if request.method == 'POST':
+        id = request.POST.get('id')
+        semestre = request.POST.get('semestre')
+        date_debut = request.POST.get('date_debut')
+        date_fin = request.POST.get('date_fin')
+
+        if not id:
+            return JsonResponse({'status': 'error', 'message': 'ID manquant'})
+
+        try:
+            session_line = SessionExamLine.objects.get(id=id)
+            session_line.semestre = semestre
+            session_line.date_debut = date_debut
+            session_line.date_fin = date_fin
+            session_line.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Les informations du groupe de session ont été mises à jour avec succès'})
+        except SessionExamLine.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Ligne de session non trouvée'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@login_required(login_url="institut_app:login")
+def ApiGetExamPlanificationDetails(request):
+    exam_plan_id = request.GET.get('id')
+
+    if not exam_plan_id:
+        return JsonResponse({'status': 'error', 'message': 'ID manquant'})
+
+    try:
+        exam_plan = ExamPlanification.objects.select_related('module', 'salle').get(id=exam_plan_id)
+        data = {
+            'id': exam_plan.id,
+            'module_id': exam_plan.module.id,
+            'module_nom': exam_plan.module.label,
+            'type_examen': exam_plan.type_examen,
+            'type_examen_label': exam_plan.get_type_examen_display(),
+            'mode_examination': exam_plan.mode_examination,
+            'date': exam_plan.date.strftime('%Y-%m-%d') if exam_plan.date else '',
+            'salle_id': exam_plan.salle.id if exam_plan.salle else '',
+            'salle_nom': exam_plan.salle.nom if exam_plan.salle else '',
+            'heure_debut': exam_plan.heure_debut.strftime('%H:%M') if exam_plan.heure_debut else '',
+            'heure_fin': exam_plan.heure_fin.strftime('%H:%M') if exam_plan.heure_fin else '',
+        }
+        return JsonResponse({'status': 'success', 'data': data})
+    except ExamPlanification.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Planification d\'examen non trouvée'})
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateExamPlanification(request):
+    if request.method == 'POST':
+        exam_plan_id = request.POST.get('exam_planification_id')
+        mode_examen = request.POST.get('mode_examen')
+        date = request.POST.get('date')
+        salle_id = request.POST.get('salle')
+        heure_debut = request.POST.get('heure_debut')
+        heure_fin = request.POST.get('heure_fin')
+
+        if not exam_plan_id:
+            return JsonResponse({'status': 'error', 'message': 'ID de planification manquant'})
+
+        try:
+            exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
+
+            if mode_examen:
+                exam_plan.mode_examination = mode_examen
+            if date:
+                exam_plan.date = date
+            if salle_id:
+                exam_plan.salle = Salle.objects.get(id=salle_id)
+            if heure_debut:
+                exam_plan.heure_debut = heure_debut
+            if heure_fin:
+                exam_plan.heure_fin = heure_fin
+
+            exam_plan.save()
+
+            return JsonResponse({'status': 'success', 'message': 'La planification d\'examen a été mise à jour avec succès'})
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Planification d\'examen non trouvée'})
+        except Salle.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Salle non trouvée'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 def ApiCheckLabelDisponibility(request):
     label = request.GET.get('newLabel')

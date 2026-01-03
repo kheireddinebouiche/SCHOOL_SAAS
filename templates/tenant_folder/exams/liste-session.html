@@ -335,6 +335,113 @@
   </div>
 </div>
 
+<!-- Update Session Modal -->
+<div id="updateSessionModal" class="modal fade" tabindex="-1" aria-labelledby="updateSessionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-edit-line text-primary fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-primary mb-1" id="updateSessionModalLabel">
+              Modifier la session d'examen
+            </h5>
+            <p class="text-muted small mb-0">Modification des informations de la session</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="avatar-lg mx-auto mb-3">
+            <div class="avatar-title bg-primary bg-opacity-10 text-primary display-5 rounded-circle">
+              <i class="ri-edit-line"></i>
+            </div>
+          </div>
+          <h4 class="text-primary mb-3">Modification de la session</h4>
+          <p class="text-muted mb-4">
+            Veuillez remplir les informations ci-dessous pour modifier les détails de la session.
+          </p>
+        </div>
+        <input type="hidden" id="update_session_id" />
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="u_label" class="form-label fw-medium">Label *</label>
+              <div class="input-group">
+                <span class="input-group-text border-0 bg-light">
+                  <i class="ri-tag-line text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-0 bg-light py-2" id="u_label" required />
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="u_code" class="form-label fw-medium">Code session *</label>
+              <div class="input-group">
+                <span class="input-group-text border-0 bg-light">
+                  <i class="ri-hash text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-0 bg-light py-2" id="u_code" required />
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="u_type_session" class="form-label fw-medium">Type de session *</label>
+              <div class="input-group">
+                <span class="input-group-text border-0 bg-light">
+                  <i class="ri-file-text-line text-muted"></i>
+                </span>
+                <select class="form-select border-0 bg-light py-2" id="u_type_session" required>
+                  <option value="">Sélectionnez un type</option>
+                  <option value="normal">Session Ordinaire</option>
+                  <option value="rattrapage">Session de rattrapage (Spéciale)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="u_date_debut" class="form-label fw-medium">Date de début *</label>
+              <div class="input-group">
+                <span class="input-group-text border-0 bg-light">
+                  <i class="ri-calendar-line text-muted"></i>
+                </span>
+                <input type="date" class="form-control border-0 bg-light py-2" id="u_date_debut" required />
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="u_date_fin" class="form-label fw-medium">Date de fin *</label>
+              <div class="input-group">
+                <span class="input-group-text border-0 bg-light">
+                  <i class="ri-calendar-check-line text-muted"></i>
+                </span>
+                <input type="date" class="form-control border-0 bg-light py-2" id="u_date_fin" required />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-center w-100">
+          <button type="button" class="btn btn-light px-4 py-2 w-100" data-bs-dismiss="modal">
+            <i class="ri-close-line me-2"></i>Annuler
+          </button>
+          <button class="btn btn-primary px-4 py-2 w-100" id="ConfirmUpdateBtn">
+            <i class="ri-save-line me-2"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function(){
     let sessionsData = [];
@@ -644,11 +751,71 @@
       });
     });
 
-    // Update session
+    // Update session - opens the update modal
     $(document).on('click','#btnUpdate', function(){
       const id = $(this).data('id');
-      // This would typically open an edit form - implementation depends on your backend
-      window.location.href = '/examens/details-session/' + id;
+
+      // Get the current session data to populate the form
+      $.ajax({
+        url: "{% url 't_exam:ApiGetSessionDetailsById' %}",
+        type: "GET",
+        data: {'id': id},
+        dataType: "JSON",
+        success: function(response) {
+          if (response.status === 'success') {
+            const session = response.data;
+            $('#update_session_id').val(session.id);
+            $('#u_label').val(session.label);
+            $('#u_code').val(session.code);
+            $('#u_type_session').val(session.type_session);
+            $('#u_date_debut').val(session.date_debut.split('T')[0]);
+            $('#u_date_fin').val(session.date_fin.split('T')[0]);
+
+            $('#updateSessionModal').modal('show');
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de la récupération des données de la session");
+        }
+      });
+    });
+
+    // Handle update session form submission
+    $(document).on('click', '#ConfirmUpdateBtn', function(){
+      const id = $('#update_session_id').val();
+      const label = $('#u_label').val();
+      const code = $('#u_code').val();
+      const type_session = $('#u_type_session').val();
+      const date_debut = $('#u_date_debut').val();
+      const date_fin = $('#u_date_fin').val();
+
+      $.ajax({
+        url: "{% url 't_exam:ApiUpdateSession' %}",
+        type: "POST",
+        data: {
+          'id': id,
+          'label': label,
+          'code': code,
+          'type_session': type_session,
+          'date_debut': date_debut,
+          'date_fin': date_fin,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if (response.status === 'success') {
+            alertify.success(response.message);
+            $('#updateSessionModal').modal('hide');
+            loadSession(); // Reload the session list
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de la mise à jour de la session");
+        }
+      });
     });
   });
 </script>

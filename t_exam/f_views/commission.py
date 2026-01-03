@@ -305,18 +305,24 @@ def close_commission(request, pk):
                     type_examen = type_mapping.get(result.result, 'normal')
 
                     # Pour chaque module dans le résultat, créer une planification
-                    for module in result.modules.all():
-                        # Créer l'ExamPlanification
+                    # Utiliser distinct() pour éviter les doublons
+                    for module in result.modules.all().distinct():
+                        # Vérifier si une ExamPlanification existe déjà pour cette combinaison
                         from ..models import ExamPlanification
-                        exam_planification = ExamPlanification.objects.create(
+                        exam_planification, created = ExamPlanification.objects.get_or_create(
                             exam_line=session_exam_line,
                             module=module,
-                            type_examen=type_examen
-                            # Les champs date, salle, heures et mode_examination sont laissés vides
-                            # comme demandé
+                            type_examen=type_examen,
+                            defaults={
+                                # Les champs date, salle, heures et mode_examination sont laissés vides
+                                # comme demandé
+                            }
                         )
                         # Pour déboguer, on peut voir ce qui est créé
-                        print(f"Création d'ExamPlanification: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
+                        if created:
+                            print(f"Création d'ExamPlanification: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
+                        else:
+                            print(f"ExamPlanification existe déjà: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
 
         return JsonResponse({"status": "success", 'message': "La commission a été close avec succès."})
     except Exception as e:

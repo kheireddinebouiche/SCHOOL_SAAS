@@ -47,7 +47,8 @@ urlpatterns = [
 
 
    path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
-
+   path('ApiGetSessionLineDetails',ApiGetSessionLineDetails, name="ApiGetSessionLineDetails"), 
+   path('ApiUpdateGroupeSessionLine', ApiUpdateGroupeSessionLine, name="ApiUpdateGroupeSessionLine"),
 
    path('commission/liste/', PageCommission, name="PageCommission"),
    path('commission/nouvelle/', NouvelleCommission, name="NouvelleCommission"),
@@ -57,6 +58,11 @@ urlpatterns = [
 
    path('delete_commission/<int:pk>/', delete_commission, name="delete_commission"),
    path('ApiGetGroupeDetails', ApiGetGroupeDetails, name="ApiGetGroupeDetails"),
+
+   path('ApiGetSessionDetailsById',ApiGetSessionDetailsById, name="ApiGetSessionDetailsById"),
+
+   path('ApiGetExamPlanificationDetails', ApiGetExamPlanificationDetails, name="ApiGetExamPlanificationDetails"),
+   path('ApiUpdateExamPlanification',ApiUpdateExamPlanification, name="ApiUpdateExamPlanification"),
 
    path('examen_action', examen_action, name="examen_action"),
    path('rachat_action', rachat_action, name="rachat_action"),
