@@ -201,78 +201,123 @@
               </div>
             </div>
             <div class="card-body p-3" id="cardContentBody">
-              <div class="table-responsive" style="overflow-x: visible;">
-                <table id="example" class="table table-hover align-middle mb-0">
-                  <thead class="bg-light">
-                    <tr>
-                      <th class="border-0">Désignation</th>
-                      <th class="border-0">Groupe</th>
-                      <th class="border-0">Semestre</th>
-                      <th class="border-0">Année Scolaire</th>
-                      <th class="border-0">Source</th>
-                      <th class="border-0">Est validé ?</th>
-                      <th class="border-0">Etat</th>
-                      <th class="border-0 text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="listeItem" class="border-top-0">
-                    {% if registres %}
-                      {% for registre in registres %}
-                        <tr data-status="{{ registre.status }}">
-
-                          <td><b>{{registre.label}}</b></td>
-                          <td>{{registre.groupe.nom}}</td>
-                          <td><span class="badge bg-info">{{registre.get_semestre_display}}</span></td>
-                          <td>{{ registre.annee_academique|default:"N/A" }}</td>
-                          <td><span class="badge bg-success">{{registre.context}}</span></td>
-                          <td> {% if registre.is_validate %} <span class='badge bg-success'>Valider</span> {% else %} <span class='badge bg-warning'>En attente de validation {% endif %}</span></td>
-                          <td><span class="badge bg-success">{{registre.get_status_display}}</span></td>
-                          <td class="text-end">
-                            <div class="dropdown d-inline-block">
-                              <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="ri-more-fill align-middle"></i>
-                              </button>
-                              <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{% url 't_etudiants:DetailsRegistrePresence' pk=registre.id %}">
-                                  <i class="ri-eye-line align-bottom me-2 text-muted"></i> Voir Détails
-                                </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                  <i class="ri-file-pdf-line align-bottom me-2 text-muted"></i> Exporter PDF
-                                </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                  <i class="ri-file-excel-line align-bottom me-2 text-muted"></i> Exporter Excel
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% if registre.status == "enc" %}
-                                  <li><a class="dropdown-item text-danger" href="#">
-                                    <i class="ri-close-circle-fill me-2"></i> Cloturer
+              <!-- Card View -->
+              <div id="cardView">
+                <div id="registresCardsContainer" class="row g-4">
+                  {% if registres %}
+                    {% for registre in registres %}
+                      <div class="col-xl-4 col-md-6" data-status="{{ registre.status }}">
+                        <div class="card border-0 shadow-sm h-100">
+                          <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                              <div>
+                                <h6 class="card-title mb-1 fw-semibold">{{ registre.label }}</h6>
+                                <span class="badge bg-success">{{ registre.get_status_display }}</span>
+                              </div>
+                              <div class="dropdown">
+                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                  <i class="ri-more-fill align-middle"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                  <li><a class="dropdown-item" href="{% url 't_etudiants:DetailsRegistrePresence' pk=registre.id %}">
+                                    <i class="ri-eye-line align-bottom me-2 text-muted"></i> Voir Détails
                                   </a></li>
-                                {% endif %}
-                                <li><a class="dropdown-item text-danger delete-item-btn" href="#" data-id="{{ registre.id }}">
-                                  <i class="ri-delete-bin-line align-bottom me-2"></i> Supprimer
-                                </a></li>
-                              </ul>
+                                  <li><a class="dropdown-item" href="#">
+                                    <i class="ri-file-pdf-line align-bottom me-2 text-muted"></i> Exporter PDF
+                                  </a></li>
+                                  <li><a class="dropdown-item" href="#">
+                                    <i class="ri-file-excel-line align-bottom me-2 text-muted"></i> Exporter Excel
+                                  </a></li>
+                                  <li><hr class="dropdown-divider"></li>
+                                  {% if registre.status == "enc" %}
+                                    <li><a class="dropdown-item text-danger" href="#">
+                                      <i class="ri-close-circle-fill me-2"></i> Cloturer
+                                    </a></li>
+                                  {% endif %}
+                                  <li><a class="dropdown-item text-danger delete-item-btn" href="#" data-id="{{ registre.id }}">
+                                    <i class="ri-delete-bin-line align-bottom me-2"></i> Supprimer
+                                  </a></li>
+                                </ul>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      {% endfor %}
-                    {% else %}
-                        <tr>
-                          <td colspan="7">
-                             <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                                <div class="avatar-sm mb-4">
-                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                        <i class="ri-calendar-check-fill"></i>
-                                    </div>
+
+                            <div class="vstack gap-2">
+                              <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 text-muted me-2">
+                                  <i class="ri-group-line"></i>
                                 </div>
-                                <h5 class="mb-2">Aucun registre trouvé</h5>
-                                <p class="text-muted mb-0">Il n'y a aucun registre enregistré pour le moment</p>
+                                <div class="flex-grow-1">
+                                  <small class="mb-0">{{ registre.groupe.nom }}</small>
+                                </div>
+                              </div>
+
+                              <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 text-muted me-2">
+                                  <i class="ri-calendar-line"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <small class="mb-0">{{ registre.get_semestre_display }}</small>
+                                </div>
+                              </div>
+
+                              <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 text-muted me-2">
+                                  <i class="ri-apps-line"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <small class="mb-0">
+                                    <span class="badge bg-success">{{ registre.context }}</span>
+                                  </small>
+                                </div>
+                              </div>
+
+                              <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 text-muted me-2">
+                                  <i class="ri-checkbox-circle-line"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <small class="mb-0">
+                                    {% if registre.is_validate %}
+                                      <span class='badge bg-success'>Validé</span>
+                                    {% else %}
+                                      <span class='badge bg-warning'>En attente</span>
+                                    {% endif %}
+                                  </small>
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                    {% endif %}
-                  </tbody>
-                </table>
+                          </div>
+
+                          <div class="card-footer bg-light border-top py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <small class="text-muted">
+                                <i class="ri-time-line me-1"></i>{{ registre.created_at|date:"d M" }}
+                              </small>
+                              <a href="{% url 't_etudiants:DetailsRegistrePresence' pk=registre.id %}" class="btn btn-primary btn-sm">
+                                Gérer
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="col-12">
+                      <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="avatar-lg mb-4">
+                          <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                            <i class="ri-calendar-check-line"></i>
+                          </div>
+                        </div>
+                        <h5 class="mb-2">Aucun registre trouvé</h5>
+                        <p class="text-muted mb-4">Il n'y a aucun registre enregistré pour le moment</p>
+                        <button class="btn btn-info px-4" data-bs-toggle="modal" data-bs-target="#createRegisterModal">
+                          <i class="ri-add-line me-1"></i> Créer un registre
+                        </button>
+                      </div>
+                    </div>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </div>
