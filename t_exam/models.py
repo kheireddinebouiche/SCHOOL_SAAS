@@ -206,7 +206,7 @@ class ExamSousNote(models.Model):
 
 class ExamDecisionEtudiant(models.Model):
     STATUT_CHOICES = [
-        ('valide', 'Validé'),
+        ('valide', 'Admis'),
         ('rattrapage', 'Rattrapage'),
         ('rach', 'Rachat de crédit'),
         ('ajou', 'Ajourné'),
