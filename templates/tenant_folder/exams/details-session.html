@@ -1190,47 +1190,69 @@
                             tbody.empty(); // Vider d'abord le tableau
 
                             if (response.status === "success" && response.planifications.length > 0) {
+                              // Regrouper les planifications par type d'examen
+                              const planificationsByType = {};
                               $.each(response.planifications, function (index, item) {
-                                // Determine button state based on validation status
-                                let validateButton;
-                                if (item.passed) { // Assuming the API returns a 'passed' field
-                                  validateButton = `<button type="button" class="btn btn-info btn-sm result-btn" data-id="${item.id}" title="Résultats">
-                                                      <i class="ri-file-3-line"></i>
-                                                    </button>`;
-                                } else {
-                                  validateButton = `<button type="button" class="btn btn-success btn-sm validate-exam-btn" data-id="${item.id}">
-                                                      <i class="ri-check-line"></i>
-                                                    </button>`;
+                                if (!planificationsByType[item.type_examen]) {
+                                  planificationsByType[item.type_examen] = [];
                                 }
+                                planificationsByType[item.type_examen].push(item);
+                              });
 
-                                if (item.statut === "termine" && item.passed == true) {
-                                    deleteBTn = `<button disabled style='display: none !important;' type="button" class="btn btn-danger-modern btn-sm delete-exam-btn" data-id="${item.id}">
-                                                    <i class="ri-delete-bin-line"></i>
-                                                </button>`;
-                                }else{
-                                    deleteBTn = `<button type="button" class="btn btn-danger-modern btn-sm delete-exam-btn" data-id="${item.id}">
-                                                    <i class="ri-delete-bin-line"></i>
-                                                </button>`;
-                                }   
-
+                              // Créer une section pour chaque type d'examen
+                              $.each(planificationsByType, function (type_examen, items) {
+                                // Ajouter un en-tête pour le type d'examen
                                 tbody.append(`
-                                  <tr>
-                                    <td><i class="ri-bookmark-3-line me-2"></i>${item.module_nom}</td>
-                                    <td><i class="ri-calendar-schedule-line me-2"></i>${item.date}</td>
-                                    <td><i class="ri-timer-line me-2"></i>${item.heure_debut} - ${item.heure_fin}</td>
-                                    <td>${item.type_examen}</td>
-                                    <td><i class="ri-home-3-line me-2"></i>${item.salle_nom}</td>
-                                    <td>
-                                      <div class="d-flex gap-2">
-                                        ${deleteBTn}
-                                        <button type="button" class="btn btn-info-modern btn-sm print-exam-btn" data-id="${item.id}">
-                                          <i class="ri-printer-line"></i>
-                                        </button>
-                                        ${validateButton}
-                                      </div>
+                                  <tr class="table-info">
+                                    <td colspan="6" class="fw-bold text-info">
+                                      <i class="ri-file-text-line me-2"></i>${type_examen}
                                     </td>
                                   </tr>
                                 `);
+
+                                // Ajouter les lignes pour chaque planification de ce type
+                                $.each(items, function (index, item) {
+                                  // Determine button state based on validation status
+                                  let validateButton;
+                                  if (item.passed) { // Assuming the API returns a 'passed' field
+                                    validateButton = `<button type="button" class="btn btn-info btn-sm result-btn" data-id="${item.id}" title="Résultats">
+                                                        <i class="ri-file-3-line"></i>
+                                                      </button>`;
+                                  } else {
+                                    validateButton = `<button type="button" class="btn btn-success btn-sm validate-exam-btn" data-id="${item.id}">
+                                                        <i class="ri-check-line"></i>
+                                                      </button>`;
+                                  }
+
+                                  if (item.statut === "termine" && item.passed == true) {
+                                      deleteBTn = `<button disabled style='display: none !important;' type="button" class="btn btn-danger-modern btn-sm delete-exam-btn" data-id="${item.id}">
+                                                      <i class="ri-delete-bin-line"></i>
+                                                  </button>`;
+                                  }else{
+                                      deleteBTn = `<button type="button" class="btn btn-danger-modern btn-sm delete-exam-btn" data-id="${item.id}">
+                                                      <i class="ri-delete-bin-line"></i>
+                                                  </button>`;
+                                  }
+
+                                  tbody.append(`
+                                    <tr>
+                                      <td><i class="ri-bookmark-3-line me-2"></i>${item.module_nom}</td>
+                                      <td><i class="ri-calendar-schedule-line me-2"></i>${item.date}</td>
+                                      <td><i class="ri-timer-line me-2"></i>${item.heure_debut} - ${item.heure_fin}</td>
+                                      <td>${item.type_examen}</td>
+                                      <td><i class="ri-home-3-line me-2"></i>${item.salle_nom}</td>
+                                      <td>
+                                        <div class="d-flex gap-2">
+                                          ${deleteBTn}
+                                          <button type="button" class="btn btn-info-modern btn-sm print-exam-btn" data-id="${item.id}">
+                                            <i class="ri-printer-line"></i>
+                                          </button>
+                                          ${validateButton}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  `);
+                                });
                               });
 
                             } else {
