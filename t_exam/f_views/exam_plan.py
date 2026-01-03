@@ -54,7 +54,7 @@ def ApiLoadDataToPlan(request):
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
 
-    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id)
+    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('id')
 
     data = []
     for plan in plans:

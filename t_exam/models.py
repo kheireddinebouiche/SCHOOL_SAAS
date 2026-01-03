@@ -204,7 +204,6 @@ class ExamSousNote(models.Model):
         super().save(*args, **kwargs)
         self.note.calculer_valeur()
 
-
 class ExamDecisionEtudiant(models.Model):
     STATUT_CHOICES = [
         ('valide', 'Validé'),

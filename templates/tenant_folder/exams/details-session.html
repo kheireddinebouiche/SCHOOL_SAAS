@@ -1,6 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
-{% block title %} Formations - Liste des spécialitées {% endblock title %}
+{% block title %} Examens - Liste des séssions {% endblock title %}
 
 {% block content %}
 <style>
@@ -1424,11 +1424,11 @@
                                   let validateButton;
                                   if (item.passed) { // Assuming the API returns a 'passed' field
                                     validateButton = `<button type="button" class="btn btn-info btn-sm result-btn" data-id="${item.id}" title="Résultats">
-                                                        <i class="ri-file-3-line"></i>
+                                                        <i class="ri-file-text-line"></i>
                                                       </button>`;
                                   } else {
                                     validateButton = `<button type="button" class="btn btn-success btn-sm validate-exam-btn" data-id="${item.id}">
-                                                        <i class="ri-check-line"></i>
+                                                        <i class="ri-checkbox-circle-line"></i>
                                                       </button>`;
                                   }
 
@@ -1442,23 +1442,48 @@
                                                   </button>`;
                                   }
 
+                                  // Check if exam date is empty and disable buttons accordingly
+                                  const hasExamDate = item.date && item.date.trim() !== '';
+
+                                  // Check if exam is validated (passed)
+                                  const isExamPassed = item.passed === true;
+
+                                  // Determine button states based on validation status
+                                  const editBtnDisabled = isExamPassed ? 'disabled' : '';
+                                  const printBtnDisabledFinal = !hasExamDate || isExamPassed ? 'disabled' : '';
+
+                                  // Handle validate button (when not passed) or result button (when passed)
+                                  let processedValidateButton = validateButton;
+                                  if (!hasExamDate) {
+                                    if (item.passed) {
+                                      // For result button when no date
+                                      processedValidateButton = processedValidateButton.replace('result-btn', 'result-btn" disabled');
+                                    } else {
+                                      // For validate button when no date
+                                      processedValidateButton = processedValidateButton.replace('validate-exam-btn', 'validate-exam-btn" disabled');
+                                    }
+                                  }
+
                                   tbody.append(`
                                     <tr>
                                       <td><i class="ri-bookmark-3-line me-2"></i>${item.module_nom}</td>
-                                      <td><i class="ri-calendar-schedule-line me-2"></i>${item.date}</td>
+                                      <td><i class="ri-calendar-schedule-line me-2"></i>${item.date || 'Non spécifiée'}</td>
                                       <td><i class="ri-timer-line me-2"></i>${item.heure_debut} - ${item.heure_fin}</td>
                                       <td>${item.type_examen}</td>
                                       <td><i class="ri-home-3-line me-2"></i>${item.salle_nom}</td>
                                       <td>
                                         <div class="d-flex gap-2">
-                                          <button type="button" class="btn btn-primary-modern btn-sm edit-exam-btn" data-id="${item.id}">
-                                            <i class="ri-edit-line"></i>
+                                          <button type="button" class="btn btn-primary-modern btn-sm edit-exam-btn" data-id="${item.id}" title="Modifier" ${editBtnDisabled}>
+                                            <i class="ri-pencil-line"></i>
                                           </button>
                                           ${deleteBTn}
-                                          <button type="button" class="btn btn-info-modern btn-sm print-exam-btn" data-id="${item.id}">
+                                          <button type="button" class="btn btn-info-modern btn-sm print-exam-btn" data-id="${item.id}" ${printBtnDisabledFinal} title="Imprimer">
                                             <i class="ri-printer-line"></i>
                                           </button>
-                                          ${validateButton}
+                                          <button type="button" class="btn btn-warning-modern btn-sm details-exam-btn" data-id="${item.id}" title="Détails">
+                                            <i class="ri-information-line"></i>
+                                          </button>
+                                          ${processedValidateButton}
                                         </div>
                                       </td>
                                     </tr>
@@ -1481,6 +1506,9 @@
                             }
                         }
                       });
+
+                      // Update button states after table is populated
+                      setTimeout(updateButtonStates, 50);
                 }
            });
        }
@@ -1962,6 +1990,82 @@
                 }
             });
         });
+
+        // Function to update button states based on exam date
+        function updateButtonStates() {
+            $('#examPlanTableBody tr').each(function() {
+                const $row = $(this);
+                const dateCell = $row.find('td:eq(1)').text(); // Date is in the second column
+                const hasDate = dateCell.trim() !== '' && dateCell.trim() !== 'Non spécifiée';
+
+                const $printBtn = $row.find('.print-exam-btn');
+                const $validateBtn = $row.find('.validate-exam-btn');
+                const $resultBtn = $row.find('.result-btn');
+
+                if (hasDate) {
+                    $printBtn.prop('disabled', false);
+                    $validateBtn.prop('disabled', false);
+                    $resultBtn.prop('disabled', false);
+                } else {
+                    $printBtn.prop('disabled', true);
+                    $validateBtn.prop('disabled', true);
+                    $resultBtn.prop('disabled', true);
+                }
+            });
+        }
+
+        // Call updateButtonStates after loading exam planification data
+        $(document).on('shown.bs.modal', '#plannificationDesExamens', function() {
+            // Small delay to ensure the table is fully loaded
+            setTimeout(updateButtonStates, 100);
+        });
+
+        // Also update button states after updating an exam plan
+        $(document).on('click', '#confirmUpdateExamPlanBtn', function() {
+            setTimeout(updateButtonStates, 100);
+        });
+
+
+        // Event handler for details exam button
+        $(document).on('click', '.details-exam-btn', function(){
+            var examPlanId = $(this).data('id');
+
+            // Get the current exam plan data to show details
+            $.ajax({
+                url: "{% url 't_exam:ApiGetExamPlanificationDetails' %}",
+                type: "GET",
+                data: {'id': examPlanId},
+                dataType: "JSON",
+                success: function(response) {
+                    if(response.status === "success") {
+                        var data = response.data;
+
+                        // Show details in an alert or modal
+                        var detailsHtml = `
+                            <div class="text-start">
+                                <h6>Détails de l'examen</h6>
+                                <p><strong>Module:</strong> ${data.module_nom}</p>
+                                <p><strong>Type d'examen:</strong> ${data.type_examen_label || data.type_examen}</p>
+                                <p><strong>Date:</strong> ${data.date || 'Non spécifiée'}</p>
+                                <p><strong>Heure:</strong> ${data.heure_debut} - ${data.heure_fin}</p>
+                                <p><strong>Salle:</strong> ${data.salle_nom}</p>
+                                <p><strong>Mode:</strong> ${data.mode_examination}</p>
+                            </div>
+                        `;
+
+                        // Show in a temporary modal or alert
+                        alertify.alert("Détails de l'examen", detailsHtml);
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function(xhr, status, error){
+                    alertify.error("Une erreur est survenue lors de la récupération des détails.");
+                    console.error(error);
+                }
+            });
+        });
+
     });
 </script>
 

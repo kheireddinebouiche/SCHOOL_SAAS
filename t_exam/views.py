@@ -291,6 +291,7 @@ def ExamConfiguration(request, pk):
 def ApiGetExamLineDetails(request):
     pass
 
+@login_required(login_url="institut_app:login")
 def ApiLoadDatasForPlanExam(request):
     id = request.GET.get('id')
     obj = SessionExamLine.objects.get(id = id)

@@ -5,8 +5,9 @@ from ..models import ModelBuilltins, BuiltinTypeNote, BuiltinSousNote
 from t_formations.models import Formation
 from django.db import transaction
 import json
+from django.contrib.auth.decorators import login_required
 
-
+@login_required(login_url="institut_app:login")
 def ModelBuilltinPage(request):
     """Page principale pour la gestion des modèles de bulletins"""
     formations = Formation.objects.all()
@@ -16,7 +17,7 @@ def ModelBuilltinPage(request):
     }
     return render(request, 'tenant_folder/exams/model-builtins.html', context)
 
-
+@login_required(login_url="institut_app:login")
 def ApiListModeleBuilltins(request):
     """API pour lister tous les modèles de bulletins"""
     obj = ModelBuilltins.objects.all().values('id', 'label', 'formation__nom', 'is_default')
@@ -30,7 +31,7 @@ def ApiListModeleBuilltins(request):
         })
     return JsonResponse(data, safe=False)
 
-
+@login_required(login_url="institut_app:login")
 def NewModelBuilltin(request):
     """Vue pour créer un nouveau modèle de bulletin"""
     if request.method == "POST":
@@ -61,7 +62,7 @@ def NewModelBuilltin(request):
         }
         return render(request, 'tenant_folder/exams/template-modele-builtins.html', context)
 
-
+@login_required(login_url="institut_app:login")
 def ApiDeleteModelBuitltin(request):
     """API pour supprimer un modèle de bulletin"""
     id = request.GET.get('id')
@@ -69,7 +70,7 @@ def ApiDeleteModelBuitltin(request):
     obj.delete()
     return JsonResponse({'status': 'success', 'message': 'Le modèle de bulletin a été supprimé avec succès.'})
 
-
+@login_required(login_url="institut_app:login")
 def ApiGetModelBuilltinDetails(request):
     """API pour obtenir les détails d'un modèle de bulletin avec ses types de notes et sous-notes"""
     model_id = request.GET.get('id')
@@ -110,7 +111,7 @@ def ApiGetModelBuilltinDetails(request):
     
     return JsonResponse(data)
 
-
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdateModelBuilltin(request):
     """API pour mettre à jour un modèle de bulletin"""
@@ -139,7 +140,7 @@ def ApiUpdateModelBuilltin(request):
     
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-
+@login_required(login_url="institut_app:login")
 def ApiGetTypeNotes(request):
     """API pour obtenir les types de notes d'un modèle"""
     model_id = request.GET.get('model_id')
@@ -161,7 +162,7 @@ def ApiGetTypeNotes(request):
 
     return JsonResponse(data, safe=False)
 
-
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiAddTypeNote(request):
     """API pour ajouter un type de note à un modèle"""
@@ -198,7 +199,7 @@ def ApiAddTypeNote(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdateTypeNote(request):
     """API pour mettre à jour un type de note"""
@@ -231,7 +232,7 @@ def ApiUpdateTypeNote(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiDeleteTypeNote(request):
     """API pour supprimer un type de note"""
@@ -243,7 +244,7 @@ def ApiDeleteTypeNote(request):
         'message': 'Type de note supprimé avec succès'
     })
 
-
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiAddSousNote(request):
     """API pour ajouter une sous-note à un type de note"""
