@@ -78,6 +78,17 @@
                     </div>
                 </div>
 
+                {% if exam_planification.type_examen == 'normal' %}
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading mb-2"><i class="bi bi-info-circle me-2"></i> Légende des couleurs</h6>
+                    <ul class="mb-0">
+                        <li><span class="badge bg-success" style="background-color: #d4edda !important; color: #000 !important; border: 1px solid #c3e6cb;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #155724;">Moyenne ≥ Note éliminatoire</strong> - Étudiant admis</li>
+                        <li><span class="badge bg-danger" style="background-color: #f8d7da !important; color: #000 !important; border: 1px solid #f1b0b7;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #721c24;">Moyenne &lt; Note éliminatoire</strong> - Étudiant non admis</li>
+                        <li><span class="badge" style="background-color: #fff !important; color: #000 !important; border: 1px solid #ccc;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #000;">Ligne blanche</strong> - Étudiant avec statut 'rachat' ou 'ajourné', champs désactivés</li>
+                    </ul>
+                </div>
+                {% endif %}
+
                 <div id="status-message" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
                     <div id="status-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
                         <div class="toast-header bg-primary text-white">
@@ -134,7 +145,9 @@
                             </thead>
                             <tbody>
                                 {% for student_line in students %}
-                                    <tr>
+                                    {% with commission_result=commission_results|exam_get_item:student_line.student.id %}
+                                    {% with exam_type=exam_planification.type_examen %}
+                                    <tr {% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}class="no-elimination-check"{% endif %}>
                                         <td>{{ forloop.counter }}</td>
                                         <td class="student-name">{{ student_line.student.nom }}</td>
                                         <td>{{ student_line.student.prenom }}</td>
@@ -148,15 +161,15 @@
                                                                max="{{ sous_note.max_note|default:type_note.max_note }}"
                                                                class="note-input form-control form-control-sm"
                                                                name="sous_note_{{ student_line.student.id }}_{{ type_note.id }}_{{ forloop.counter0 }}"
-                                                               value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and forloop.counter0 < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:forloop.counter0 %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
-                                                               {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                               value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and forloop.counter0 < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:forloop.counter0 %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endif %}"
+                                                               {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
                                                     </td>
                                                 {% endfor %}
                                                 <td class="note-cell">
                                                     <input type="text"
                                                            class="form-control form-control-sm text-success"
                                                            id="sum_{{ student_line.student.id }}_{{ type_note.id }}"
-                                                           value="0"
+                                                           value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}0{% endif %}"
                                                            readonly
                                                            data-max-note="{{ type_note.max_note }}">
                                                 </td>
@@ -168,8 +181,8 @@
                                                            max="{{ type_note.max_note }}"
                                                            class="note-input form-control form-control-sm"
                                                            name="note_{{ student_line.student.id }}_{{ type_note.id }}"
-                                                           value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
-                                                           {% if  pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                           value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endif %}"
+                                                           {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
                                                 </td>
                                             {% endif %}
                                         {% endfor %}
@@ -177,13 +190,13 @@
                                             <input type="text"
                                                    class="form-control form-control-sm text-center fw-bold"
                                                    id="moyenne_{{ student_line.student.id }}"
-                                                   value="0.00"
+                                                   value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0.00{% else %}0.00{% endif %}"
                                                    readonly
                                                    style="background-color: #e6f3ff;">
                                         </td>
                                         <td class="decision-cell">
                                             {% with student_decision=decisions_existantes|exam_get_item:student_line.student.id %}
-                                            <select class="form-select form-select-sm" name="decision_{{ student_line.student.id }}" id="decision_{{ student_line.student.id }}" {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                            <select class="form-select form-select-sm" name="decision_{{ student_line.student.id }}" id="decision_{{ student_line.student.id }}" {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
                                                 <option value="">Sélectionner...</option>
                                                 <option value="valide" {% if student_decision and student_decision.statut == 'valide' %}selected{% endif %}>Validé</option>
                                                 <option value="rattrapage" {% if student_decision and student_decision.statut == 'rattrapage' %}selected{% endif %}>Rattrapage</option>
@@ -191,6 +204,8 @@
                                             {% endwith %}
                                         </td>
                                     </tr>
+                                    {% endwith %}
+                                    {% endwith %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -451,6 +466,23 @@
         // Find the parent row
         const row = averageInput.closest('tr');
         if (!row) return; // If row not found, exit
+
+        // Check if this is a student with 'rach' or 'ajou' status in a normal exam
+        // If so, don't apply elimination note checking
+        if (row.classList.contains('no-elimination-check')) {
+            // For students with 'rach' or 'ajou' status, reset to default styling
+            row.classList.remove('table-danger', 'table-success');
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.style.backgroundColor = '';
+                input.style.color = '#000';
+            });
+            if (averageInput) {
+                averageInput.style.backgroundColor = '';
+                averageInput.style.color = '#000';
+            }
+            return; // Don't apply elimination note checking for these students
+        }
 
         // Remove existing color classes
         row.classList.remove('table-danger', 'table-success');
@@ -907,6 +939,16 @@
                     }
                 }
             }
+        });
+
+        // Prevent recalculation of averages for students with 'rach' status in normal exams
+        // These students should always have an average of 0
+        document.querySelectorAll('tr.table-warning input.note-input').forEach(function(input) {
+            input.addEventListener('input', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            });
         });
     });
 </script>

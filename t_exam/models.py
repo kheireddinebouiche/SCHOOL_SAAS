@@ -208,6 +208,8 @@ class ExamDecisionEtudiant(models.Model):
     STATUT_CHOICES = [
         ('valide', 'Validé'),
         ('rattrapage', 'Rattrapage'),
+        ('rach', 'Rachat de crédit'),
+        ('ajou', 'Ajourné'),
     ]
 
     pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="decisions")

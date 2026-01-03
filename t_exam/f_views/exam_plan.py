@@ -297,7 +297,47 @@ def GeneratePvModal(request, pk):
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
 
     modeleBuiltin = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
-    students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
+
+    # Get students from the group
+    all_students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
+
+    # Get the commission results for the session if it exists
+    commission_results = {}
+    if groupe.session.commission:
+        commission_results = {
+            result.etudiants.id: result.result
+            for result in CommisionResult.objects.filter(
+                commission=groupe.session.commission,
+                modules__id=obj.module.id  # Filter by the current module
+            ).distinct()
+        }
+
+    # Filter students based on commission results and exam type
+    exam_type = obj.type_examen
+    filtered_students = []
+
+    for student_line in all_students:
+        student_id = student_line.student.id
+        commission_result = commission_results.get(student_id, None)
+
+        # Apply filtering based on exam type and commission result
+        if exam_type == 'normal':
+            # For normal exam, show ALL students regardless of commission result
+            # But handle their status differently in the template
+            filtered_students.append(student_line)
+        elif exam_type == 'rachat':
+            # For rachat exam, show students with 'rach' result
+            if commission_result == 'rach':
+                filtered_students.append(student_line)
+        elif exam_type == 'rattrage':
+            # For rattrapage exam, show students with 'ajou' result
+            if commission_result == 'ajou':
+                filtered_students.append(student_line)
+        else:
+            # Default: show all students
+            filtered_students.append(student_line)
+
+    students = filtered_students
 
     session = groupe.session.get_type_session_display()
     date_debut = groupe.session.date_debut.date()
@@ -400,6 +440,7 @@ def GeneratePvModal(request, pk):
             'moyenne': decision.moyenne
         }
 
+    # Pass commission results to template for special handling
     context = {
         'pk': pk,
         'groupe': groupe,
@@ -412,6 +453,8 @@ def GeneratePvModal(request, pk):
         "module" : module,
         'note_eliminatoire' : note_eliminatoire,
         'decisions_existantes': decisions_existantes,
+        'commission_results': commission_results,  # Pass commission results to template
+        'exam_planification': obj,  # Pass the exam planification object to template
     }
 
     return render(request, 'tenant_folder/exams/preview_exam_pv_modal.html', context)
