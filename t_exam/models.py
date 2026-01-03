@@ -34,6 +34,7 @@ class SessionExamLine(models.Model):
 
     date_debut = models.DateField(null=True)
     date_fin = models.DateField(null=True)
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('att','En attente'),('clo','Clôturé')], default="att")
 
     created_at = models.DateTimeField(auto_now_add=True,null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
