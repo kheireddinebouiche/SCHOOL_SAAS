@@ -109,4 +109,7 @@ urlpatterns = [
     path('groupe-deliberation-results/<int:groupe_id>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
     path('api/groupe-deliberation-results/', get_groupe_deliberation_results_ajax, name="get_groupe_deliberation_results_ajax"),
 
+
+    path('details-session/exams/plannification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
+
 ]

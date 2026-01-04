@@ -51,6 +51,13 @@ def ApiLoadDataToPlan(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+def PageDetailsSessionExamPlan(request, pk):
+    context = {
+        'pk' : pk,
+    }
+    return render(request, 'tenant_folder/exams/details_sessions_exams_plan.html', context)
+
+@login_required(login_url="institut_app:login")
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
 
@@ -76,7 +83,6 @@ def get_exam_planifications(request):
         })
 
     return JsonResponse({"status": "success", "planifications": data})
-
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -290,6 +296,7 @@ def GeneratePv(request, pk):
     }
 
     return render(request, 'tenant_folder/exams/preview_exam_pv.html', context)
+
 
 @login_required(login_url="institut_app:login")
 def GeneratePvModal(request, pk):

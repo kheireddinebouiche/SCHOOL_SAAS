@@ -1,0 +1,323 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Examens - Détails des sessions{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="ri-file-text-line text-info"></i>
+              </div>
+              <h4 class="mb-0 text-info">Détails des sessions d'examens</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);">Examens</a>
+                  </li>
+                  <li class="breadcrumb-item active">Sessions d'examens</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Information Section -->
+      <div class="row mb-4">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="ri-information-line text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Informations sur la session</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3">
+              <div class="d-flex flex-wrap align-items-center justify-content-between">
+                <div class="d-flex align-items-center me-4 mb-2">
+                  <span class="text-muted me-2">Nom:</span>
+                  <strong>Session d'examen de fin de semestre</strong>
+                </div>
+                <div class="d-flex align-items-center me-4 mb-2">
+                  <span class="text-muted me-2">Période:</span>
+                  <span>15 Janvier 2026 - 28 Janvier 2026</span>
+                </div>
+                <div class="d-flex align-items-center me-4 mb-2">
+                  <span class="text-muted me-2">Type:</span>
+                  <span class="fw-semibold">Session normale</span>
+                </div>
+                <div class="d-flex align-items-center me-4 mb-2">
+                  <span class="text-muted me-2">Statut:</span>
+                  <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                  <span class="text-muted me-2">Examens:</span>
+                  <span>8 programmés</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Section -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-white p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <i class="ri-table-line text-info me-2"></i>
+                  <h5 class="card-title mb-0 text-info">Planification des examens</h5>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                  <div class="search-box">
+                    <input type="text" placeholder="Rechercher..." class="form-control rounded-pill" style="width: 220px;"/>
+                    <i class="ri-search-line text-muted search-icon"></i>
+                  </div>
+                  <select class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Filtrer par statut</option>
+                    <option value="programme">Programmé</option>
+                    <option value="termine">Terminé</option>
+                    <option value="annule">Annulé</option>
+                  </select>
+
+                  <select class="form-select rounded-pill" style="width: 220px;">
+                    <option value="0">Trier par date</option>
+                    <option value="croissant">Date croissante</option>
+                    <option value="decroissant">Date décroissante</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-3">
+              <div id="exam-plans-container">
+                <!-- Data will be loaded via AJAX -->
+                <div class="text-center text-muted py-5">
+                  <div class="spinner-border text-info mb-3" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                  </div>
+                  <p>Chargement des données...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+
+<script>
+    $(document).ready(function(){
+        const idExamLine = "{{pk}}";
+
+        function loadExamPlanification(){
+            $.ajax({
+                url : "{% url 't_exam:get_exam_plans' %}",
+                dataType:  "JSON",
+                type : "GET",
+                data : {
+                    'id' : idExamLine,
+                },
+                success: function(data){
+                    if(data.status === "success"){
+                        const plans = data.planifications;
+                        const container = $('#exam-plans-container');
+                        container.empty();
+
+                        if(plans.length === 0){
+                            container.html(`
+                                <div class="text-center text-muted py-5">
+                                    <div class="avatar-sm mx-auto mb-4">
+                                        <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                            <i class="ri-folder-cloud-line"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="mb-2">Aucune planification d'examen trouvée</h5>
+                                    <p class="text-muted mb-0">Il n'y a aucune planification d'examen enregistrée pour cette session</p>
+                                </div>
+                            `);
+                        } else {
+                            // Group plans by exam type
+                            const groupedPlans = {};
+                            plans.forEach(function(plan) {
+                                if (!groupedPlans[plan.type_examen]) {
+                                    groupedPlans[plan.type_examen] = [];
+                                }
+                                groupedPlans[plan.type_examen].push(plan);
+                            });
+
+                            // Create a table for each exam type
+                            for (const [examType, typePlans] of Object.entries(groupedPlans)) {
+                                // Create a card for this exam type
+                                const examTypeCard = $(`
+                                    <div class="mb-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <h5 class="card-title mb-0 text-info">${examType}</h5>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th class="border-0 rounded-start">Matière</th>
+                                                        <th class="border-0">Date</th>
+                                                        <th class="border-0">Heure</th>
+                                                        <th class="border-0">Salle</th>
+                                                        <th class="border-0">Statut</th>
+                                                        <th class="border-0 rounded-end text-end">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="border-top-0">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                `);
+
+                                const tbody = examTypeCard.find('tbody');
+
+                                typePlans.forEach(function(plan){
+                                    // Determine status badge
+                                    let statusBadge = '';
+                                    if(plan.statut === 'termine'){
+                                        statusBadge = '<span class="badge bg-success bg-opacity-10 text-success">Terminé</span>';
+                                    } else if(plan.statut === 'encours'){
+                                        statusBadge = '<span class="badge bg-info bg-opacity-10 text-info">En cours</span>';
+                                    } else {
+                                        statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning">Planifié</span>';
+                                    }
+
+                                    const row = `
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-grow-1">
+                                                        <a href="#" class="text-decoration-none">
+                                                            ${plan.module_nom}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-body">
+                                                    <i class="ri-calendar-line text-muted me-2"></i>${plan.date}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-body">
+                                                    <i class="ri-time-line text-muted me-2"></i>${plan.heure_debut || '--'}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="text-body">
+                                                    ${plan.salle_nom}
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                ${statusBadge}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <button class="btn btn-sm btn-outline-primary" title="Modification">
+                                                        <i class="ri-edit-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-success" title="Impression">
+                                                        <i class="ri-printer-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" title="Suppression">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-info" title="Validation">
+                                                        <i class="ri-checkbox-circle-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-warning" title="Résultat">
+                                                        <i class="ri-bar-chart-line"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                    tbody.append(row);
+                                });
+
+                                container.append(examTypeCard);
+                            }
+                        }
+                    } else {
+                        container.html(`
+                            <div class="text-center text-danger py-5">
+                                <p>Erreur lors du chargement des données</p>
+                            </div>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error){
+                    const container = $('#exam-plans-container');
+                    container.html(`
+                        <div class="text-center text-danger py-5">
+                            <p>Erreur de connexion: ${error}</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        loadExamPlanification();
+
+        
+
+
+    });
+</script>
+{% endblock content %}
