@@ -1373,7 +1373,7 @@ def PagePvDeliberation(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadDeliberationPv(request):
     if request.method == "GET":
-        liste = SessionExam.objects.filter(status = "clo")
+        liste = SessionExam.objects.all()
         data = []
 
         for i in liste:
@@ -1383,9 +1383,52 @@ def ApiLoadDeliberationPv(request):
                 'code' : i.code,
                 'label' : i.label,
                 'status' : i.get_status_display(),
+                'id' : i.id,
             })
     
 
         return JsonResponse(list(data), safe=False)
     else:
         return JsonResponse({"status" : "error"})
+
+
+
+@login_required(login_url="insitut_app:login")
+def PageDeliberationResult(request, pk):
+    context = {
+        'pk' : pk
+    }
+    return render(request, 'tenant_folder/exams/deliberation_results.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadSessionExamLines(request):
+    if request.method == "GET":
+        session_id = request.GET.get("session_id")
+        if not session_id:
+            return JsonResponse({"status": "error", "message": "ID de session manquant"})
+
+        try:
+            session = SessionExam.objects.get(id=session_id)
+            exam_lines = SessionExamLine.objects.filter(session=session)
+            data = []
+
+            for line in exam_lines:
+                data.append({
+                    'id': line.id,
+                    'groupe_code': line.groupe.code_partenaire,
+                    'groupe_label': line.groupe.nom,
+                    'date_creation': line.created_at.strftime("%Y-%m-%d %H:%M:%S") if line.created_at else None,
+                    'session_code': session.code,
+                    'session_label': session.label,
+                    'session_type': session.get_type_session_display(),
+                    'session_date_debut': session.date_debut.strftime("%Y-%m-%d") if session.date_debut else None,
+                    'session_date_fin': session.date_fin.strftime("%Y-%m-%d") if session.date_fin else None,
+                    'session_status': session.get_status_display(),
+                })
+
+            return JsonResponse({"status": "success", "data": data}, safe=False)
+        except SessionExam.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Session non trouvée"})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+    

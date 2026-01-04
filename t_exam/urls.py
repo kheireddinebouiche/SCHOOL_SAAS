@@ -101,4 +101,7 @@ urlpatterns = [
     path('deliberation/liste/', PagePvDeliberation, name="PagePvDeliberation"),
     path('ApiLoadDeliberationPv', ApiLoadDeliberationPv, name="ApiLoadDeliberationPv"),
 
+    path('deliberation/results/liste/<int:pk>/',PageDeliberationResult, name="PageDeliberationResult"),
+    path('ApiLoadSessionExamLines', ApiLoadSessionExamLines, name="ApiLoadSessionExamLines"),
+
 ]
