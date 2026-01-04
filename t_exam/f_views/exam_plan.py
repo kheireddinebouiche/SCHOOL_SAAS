@@ -483,7 +483,43 @@ def ShowPvModal(request, pk):
         # Default case: show all type notes
         filtered_types_notes = modeleBuiltin.types_notes.all().order_by('ordre')
 
-    students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+    # Get students from the group
+    all_students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+
+    # Get the commission results for the session if it exists
+    commission_results = {}
+    if groupe.session.commission:
+        commission_results = {
+            result.etudiants.id: result.result
+            for result in CommisionResult.objects.filter(
+                commission=groupe.session.commission,
+                modules__id=obj.module.id  # Filter by the current module
+            ).distinct()
+        }
+
+    # Filter students based on commission results and exam type
+    filtered_students = []
+
+    for student_line in all_students:
+        student_id = student_line.student.id
+        commission_result = commission_results.get(student_id, None)
+
+        # Apply filtering based on exam type and commission result
+        if exam_type == 'normal':
+            # For normal exam, show ALL students regardless of commission result
+            # But handle their status differently in the template
+            filtered_students.append(student_line)
+        elif exam_type == 'rachat':
+            # For rachat exam, show students with 'rach' result
+            if commission_result == 'rach':
+                filtered_students.append(student_line)
+        elif exam_type == 'rattrage':
+            # For rattrapage exam, show students with 'ajou' result
+            if commission_result == 'ajou':
+                filtered_students.append(student_line)
+        else:
+            # For other exam types, show all students
+            filtered_students.append(student_line)
 
     groupe_nom = groupe.groupe.nom
     module = obj.module.label
@@ -492,10 +528,13 @@ def ShowPvModal(request, pk):
         'groupe' : groupe,
         'modele' : modeleBuiltin,
         'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
-        'students' : students,
+        'students' : filtered_students,
         'groupe_nom' : groupe_nom,
         'exam_type' : exam_type_display,
         'module' : module,
+        'date_examen' : obj.date.date(),
+        "salle" : obj.salle.nom,
+        'commission_results': commission_results,  # Pass commission results to template
     }
     return render(request,'tenant_folder/exams/modal-impression-pv.html',context)
 

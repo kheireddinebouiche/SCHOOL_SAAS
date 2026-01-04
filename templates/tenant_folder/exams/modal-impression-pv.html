@@ -1,0 +1,255 @@
+{% load static %}
+{% load exam_custom_filters %}
+<!-- Modal for printing PV -->
+<div id="showPvModal" class="modal fade" tabindex="-1" aria-labelledby="showPvModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-printer-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="showPvModalLabel">
+                            Impression du PV - {{ module }} ({{ exam_type }})
+                        </h5>
+                        <p class="text-muted small mb-0">Groupe: {{ groupe_nom }}</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Exam Information -->
+                <div class="exam-info mb-4 p-3 bg-light rounded">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item mb-2">
+                                <strong>Module:</strong> {{ module }}
+                            </div>
+                            <div class="info-item mb-2">
+                                <strong>Type d'examen:</strong> {{ exam_type }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Groupe:</strong> {{ groupe_nom }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item mb-2">
+                                <strong>Session:</strong> {{ groupe.session.label }}
+                            </div>
+                            <div class="info-item mb-2">
+                                <strong>Date de l'examen:</strong>
+                                {{date_examen}}
+                            </div>
+                            <div class="info-item mb-2">
+                                <strong>Salle:</strong>
+                                {{salle}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Liste des étudiants</h6>
+                    <div class="text-muted">
+                        <small>Total: {{ students|length }} étudiants</small>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 5%;"></th>
+                                <th></th>
+                                {% for type_note in filtered_types_notes %}
+                                    {% if type_note.has_sous_notes and type_note.sous_notes.all %}
+                                        <th colspan="{{ type_note.sous_notes.all|length|add:1 }}" class="text-center">{{ type_note.libelle }}<br><small class="text-muted">Max: {{ type_note.max_note }}</small></th>
+                                    {% else %}
+                                        <th class="text-center">{{ type_note.libelle }}<br><small class="text-muted">Max: {{ type_note.max_note }}</small></th>
+                                    {% endif %}
+                                {% endfor %}
+                                <th class="text-center">Moyenne</th>
+                                <th class="text-center">Observation</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center" style="width: 5%;">N°</th>
+                                <th>Nom & Prénom</th>
+                                {% for type_note in filtered_types_notes %}
+                                    {% if type_note.has_sous_notes and type_note.sous_notes.all %}
+                                        {% for sous_note in type_note.sous_notes.all|dictsort:"ordre" %}
+                                            <th class="text-center"><small>{{ sous_note.label }}<br><span class="text-muted">Max: {{ sous_note.max_note }}</span></small></th>
+                                        {% endfor %}
+                                        <th class="text-center"><small>Total<br><span class="text-muted">Max: {{ type_note.max_note }}</span></small></th>
+                                    {% else %}
+                                        <th class="text-center">{{ type_note.libelle }}<br><small class="text-muted">Max: {{ type_note.max_note }}</small></th>
+                                    {% endif %}
+                                {% endfor %}
+                                <th class="text-center">Moyenne</th>
+                                <th class="text-center">Observation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student_line in students %}
+                            {% with student_status=commission_results|lookup:student_line.student.id %}
+                            <tr data-student-id="{{ student_line.student.id }}" {% if student_status == 'rach' %}class="student-rach"{% elif student_status == 'ajou' %}class="student-ajou"{% endif %}>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>{{ student_line.student.nom }} {{ student_line.student.prenom }}</td>
+                                {% for type_note in filtered_types_notes %}
+                                    {% if type_note.has_sous_notes and type_note.sous_notes.all %}
+                                        {% for sous_note in type_note.sous_notes.all|dictsort:"ordre" %}
+                                            <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                        {% endfor %}
+                                        <td class="text-center fw-bold">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                    {% else %}
+                                        <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                    {% endif %}
+                                {% endfor %}
+                                <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                <td class="text-center">
+                                    {% if student_status == 'rach' %}
+                                        Rachat de crédit
+                                    {% elif student_status == 'ajou' %}
+                                        Ajourné
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+                <button class="btn btn-info px-4 py-2" id="printPvBtn">
+                    <i class="ri-printer-line me-2"></i>Imprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+    // Add styling for grayed out rows
+    $(document).ready(function() {
+        $('<style>.student-rach, .student-ajou { background-color: #f0f0f0 !important; opacity: 0.7; }</style>').appendTo('head');
+    });
+
+    // Add print functionality using jsPDF
+    $(document).off('click', '#printPvBtn').on('click', '#printPvBtn', function() {
+        // Check if jsPDF is available
+        if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+            // If jsPDF is not loaded, show an alert or fallback to browser print
+            alert('La bibliothèque jsPDF est requise pour cette fonctionnalité.');
+            return;
+        }
+
+        // Create a new jsPDF instance with A4 landscape orientation
+        const doc = new window.jspdf.jsPDF('l', 'mm', 'a4'); // 'l' for landscape, 'mm' for millimeters, 'a4' for paper size
+
+        // Add title with modern styling - properly centered
+        const title = $('#showPvModalLabel').text();
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+
+        // Calculate text width to center it properly
+        const titleWidth = doc.getTextWidth(title);
+        const pageWidth = doc.internal.pageSize.getWidth(); // A4 width in landscape
+        const xPosition = (pageWidth - titleWidth) / 2;
+        doc.text(title, xPosition, 15);
+
+        // Add exam information in a modern box layout
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+
+        // Draw a box for exam information
+        const boxStartX = 10;
+        const boxStartY = 24; // Moved down by 2mm
+        const boxWidth = 277; // Full width in landscape
+        const boxHeight = 25;
+
+        // Draw border for the information box
+        doc.setDrawColor(0); // Black border
+        doc.setFillColor(245, 245, 245); // Light gray background
+        doc.rect(boxStartX, boxStartY, boxWidth, boxHeight, 'FD'); // Fill and stroke
+
+        // Add section title
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0, 0, 139); // Dark blue
+        doc.text('Informations de l\'examen', boxStartX + 5, boxStartY + 4);
+
+        // Add exam information on a single line with better formatting
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(0, 0, 0); // Black
+
+        // Format all information on one line with appropriate spacing
+        const infoText = `Module: {{ module }} | Type: {{ exam_type }} | Groupe: {{ groupe_nom }} | Session: {{ groupe.session.label }} | Dates: {% if groupe.session.date_debut %}{{ groupe.session.date_debut|date:"d/m/Y" }}{% endif %}{% if groupe.session.date_fin %} - {{ groupe.session.date_fin|date:"d/m/Y" }}{% endif %} | Statut: {% if groupe.session.status == 'clo' %}Clôturé{% else %}En attente{% endif %}`;
+
+        // Split the text if it's too long for the page
+        const splitText = doc.splitTextToSize(infoText, boxWidth - 15); // Account for padding
+
+        // Add the information text
+        splitText.forEach((line, index) => {
+            doc.text(line, boxStartX + 8, boxStartY + 12 + (index * 5));
+        });
+
+        let yPosition = boxStartY + boxHeight + 5; // Start after the info box
+
+        // Use the HTML table directly for better formatting
+        const tableElement = $('#showPvModal table')[0];
+
+        // Add table using autoTable plugin with HTML table if available
+        if (typeof doc.autoTable !== 'undefined') {
+            doc.autoTable({
+                html: tableElement,
+                startY: yPosition + 5,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [211, 211, 211], // Light gray
+                    textColor: [0, 0, 0],
+                    fontSize: 8,
+                    halign: 'center'
+                },
+                bodyStyles: {
+                    fontSize: 7,
+                    cellPadding: 1
+                },
+                styles: {
+                    cellPadding: 2,
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    // Make the first column (N°) narrower
+                    0: { cellWidth: 10, halign: 'center' },
+                    // Make the Nom & Prénom column wider
+                    1: { cellWidth: 30 },
+                    // Center align other columns
+                    2: { halign: 'center' },
+                    // Apply to all other columns as needed
+                },
+                // Adjust column widths to fit landscape A4
+                margin: { left: 5, right: 5 },
+                tableWidth: 'auto'
+            });
+
+            // Save the PDF
+            doc.save(`PV_${$('#showPvModalLabel').text()}.pdf`);
+        } else {
+            // Fallback if autoTable is not available
+            alert('L\'extension autoTable de jsPDF est requise pour imprimer le tableau.');
+        }
+    });
+
+    // Clean up the modal when it's hidden
+    $('#showPvModal').on('hidden.bs.modal', function () {
+        $(this).remove();
+    });
+</script>
