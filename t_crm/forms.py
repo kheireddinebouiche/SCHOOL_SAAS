@@ -80,7 +80,7 @@ class NewProspecFormParticulier(forms.ModelForm):
         labels = {
             'nom' : "Nom :",
             'prenom' : "Prénom :",
-            "lead_source" : "Source du lead (Quelle action à conduit le prospect a venir à l'insim) :"
+            "canal" : "Source du lead (Comment avez-vous connu l'INSIM) :"
         }
         widgets = {
             "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name'}),

@@ -1377,6 +1377,9 @@
                     alertify.success(response.message);
                     loadData();
                     $('#updateSessionModal').modal('hide');
+
+                    // After successful update, hide the update button
+                    $('#updateSessionBtn').hide();
                 }else{
                     alertify.error(response.message);
                 }
@@ -1948,10 +1951,9 @@
             $.get("{% url 't_exam:GeneratePvModal' pk=0 %}".replace('0', examPlanId), function(data) {
                 // Add the new modal content to the body
                 $('body').append(data);
-
+                $('#plannificationDesExamens').modal('hide');
                 // Show the modal
                 $('#previewExamPvModal').modal('show');
-
                 // Initialize any necessary JavaScript after modal is loaded
                 // The JavaScript is included in the modal template itself
             }).fail(function() {
@@ -2168,6 +2170,33 @@
             setTimeout(updateButtonStates, 100);
         });
 
+        // Function to update session-level button states after successful update
+        function updateSessionButtonStates() {
+            // Show the update button again after a successful update
+            $('#updateSessionBtn').show();
+        }
+
+        // Function to check if session has valid dates and update UI accordingly
+        function checkSessionDatesAndValidateButtons() {
+            const dateDebut = $('#date_debut').val();
+            const dateFin = $('#date_fin').val();
+
+            // If session dates are not configured, disable validation buttons
+            if (!dateDebut || !dateFin) {
+                // Disable any validation buttons at the session level if they exist
+                $('.validate-session-btn').prop('disabled', true);
+            } else {
+                // Enable validation buttons if dates are configured
+                $('.validate-session-btn').prop('disabled', false);
+            }
+        }
+
+        // Call the function when session data is loaded
+        $(document).ready(function() {
+            // Small delay to ensure data is loaded
+            setTimeout(checkSessionDatesAndValidateButtons, 100);
+        });
+
 
         // Event handler for details exam button
         $(document).on('click', '.details-exam-btn', function(){
@@ -2209,38 +2238,37 @@
             });
         });
 
-    });
+        // Handle the btnClose click event to show the close session modal
+        $(document).on('click', '#btnClose', function() {
+            const session_exam_line = $(this).data('id');
+            $('#closeSessionModal').data('group-id', session_exam_line);
+            $('#closeSessionModal').modal('show');
+        });
 
-    // Handle the btnClose click event to show the close session modal
-    $(document).on('click', '#btnClose', function() {
-        const session_exam_line = $(this).data('id');
-        $('#closeSessionModal').data('group-id', session_exam_line);
-        $('#closeSessionModal').modal('show');
-    });
+        // Handle the confirm close session button
+        $('#confirmCloseSessionBtn').on('click', function() {
+            const session_exam_line = $('#closeSessionModal').data('group-id');
+            
+            $('#closeSessionModal').modal('hide');
 
-    // Handle the confirm close session button
-    $('#confirmCloseSessionBtn').on('click', function() {
-        const session_exam_line = $('#closeSessionModal').data('group-id');
-        
-        $('#closeSessionModal').modal('hide');
-
-        $.ajax({
-            url : "{% url 't_exam:close_session_line' %}",
-            dataType: "JSON",
-            type : "GET",
-            data : {
-                "session_line" : session_exam_line,
-            },
-            success : function(response){
-                if (response.status === "success"){
-                    alertify.success(response.message);
-                    $('#closeSessionModal').modal('show');
-                    loadData();
-                }else{
-                    alertify.error(response.message);
+            $.ajax({
+                url : "{% url 't_exam:close_session_line' %}",
+                dataType: "JSON",
+                type : "GET",
+                data : {
+                    "session_line" : session_exam_line,
+                },
+                success : function(response){
+                    if (response.status === "success"){
+                        alertify.success(response.message);
+                        $('#closeSessionModal').modal('show');
+                        loadData();
+                    }else{
+                        alertify.error(response.message);
+                    }
                 }
-            }
-        })
+            })
+        });
     });
 
 </script>
