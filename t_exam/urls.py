@@ -95,4 +95,10 @@ urlpatterns = [
    path('preview-pv-examen/<int:pk>/', ShowPv, name="ShowPv"),
    path('ApiDeleteExamPlanification', ApiDeleteExamPlanification, name="ApiDeleteExamPlanification"),
 
+   
+
+
+    path('deliberation/liste/', PagePvDeliberation, name="PagePvDeliberation"),
+    path('ApiLoadDeliberationPv', ApiLoadDeliberationPv, name="ApiLoadDeliberationPv"),
+
 ]

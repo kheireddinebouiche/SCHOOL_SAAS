@@ -1367,4 +1367,25 @@ def close_session_line(request):
 
 @login_required(login_url="institut_app:login")
 def PagePvDeliberation(request):
-    return render(request, 'tenant_folder/exams/')
+    return render(request, 'tenant_folder/exams/deliberation.html')
+
+
+@login_required(login_url="institut_app:login")
+def ApiLoadDeliberationPv(request):
+    if request.method == "GET":
+        liste = SessionExam.objects.filter(status = "clo")
+        data = []
+
+        for i in liste:
+            data.append({
+                'date_debut' : i.date_debut,
+                'date_fin' : i.date_fin,
+                'code' : i.code,
+                'label' : i.label,
+                'status' : i.get_status_display(),
+            })
+    
+
+        return JsonResponse(list(data), safe=False)
+    else:
+        return JsonResponse({"status" : "error"})
