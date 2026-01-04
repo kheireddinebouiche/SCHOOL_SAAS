@@ -54,7 +54,7 @@ def ApiLoadDataToPlan(request):
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
 
-    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('id')
+    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('id').select_related('pv','module','salle')
 
     data = []
     for plan in plans:
@@ -70,6 +70,9 @@ def get_exam_planifications(request):
             "salle_nom": plan.salle.nom if plan.salle else '-',
             "passed": plan.passed,
             "statut" : plan.statut,
+            "est_valide": plan.pv.est_valide if hasattr(plan, 'pv') else False,
+            "pv_existe": hasattr(plan, 'pv'),
+            "pv_id": plan.pv.id if hasattr(plan, 'pv') else None,
         })
 
     return JsonResponse({"status": "success", "planifications": data})
@@ -163,10 +166,7 @@ def validate_exam(request):
             exam_plan.statut = "nabouti"
 
         exam_plan.save()
-        return JsonResponse({
-            "status": "success",
-            "message": "Valider avec succès"
-        })
+        return JsonResponse({"status": "success","message": "Valider avec succès"})
     else:
         return JsonResponse({
             "status": "error",
@@ -497,7 +497,7 @@ def ShowPvModal(request, pk):
         'exam_type' : exam_type_display,
         'module' : module,
     }
-    return render(request,'tenant_folder/exams/print_pv_examn_modal.html',context)
+    return render(request,'tenant_folder/exams/modal-impression-pv.html',context)
 
 def TestExamResults(request, pk):
     """
@@ -1303,3 +1303,23 @@ def ShowPv(request, pk):
     }
     return render(request,'tenant_folder/exams/print_pv_examn.html',context)
 
+@login_required(login_url="institut_app:login")
+def close_session_line(request):
+    if request.method == "GET":
+        session_line = request.GET.get('session_line')
+        if not session_line:
+            return JsonResponse({"status" : "error", "message" : "Informations manquantes"})
+        
+        try:
+            obj = SessionExamLine.objects.get(id = session_line)
+            obj.status = "clo"
+            obj.save()
+
+            return JsonResponse({"status" : "success", "message" : "Supression effectué avec succès"})
+        
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message" : str(e)})
+
+    
+    else:
+        return JsonResponse({"status" : "error"})
