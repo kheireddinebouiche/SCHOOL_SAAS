@@ -38,12 +38,13 @@
                                 <strong>Session:</strong> {{ groupe.session.label }}
                             </div>
                             <div class="info-item mb-2">
-                                <strong>Date de l'examen:</strong>
-                                {{date_examen}}
+                                <strong>Date de session:</strong>
+                                {% if groupe.session.date_debut %}{{ groupe.session.date_debut|date:"d/m/Y" }}{% endif %}
+                                {% if groupe.session.date_fin %} - {{ groupe.session.date_fin|date:"d/m/Y" }}{% endif %}
                             </div>
-                            <div class="info-item mb-2">
-                                <strong>Salle:</strong>
-                                {{salle}}
+                            <div class="info-item">
+                                <strong>Statut de session:</strong>
+                                {% if groupe.session.status == 'clo' %}Clôturé{% else %}En attente{% endif %}
                             </div>
                         </div>
                     </div>
@@ -98,19 +99,21 @@
                                 {% for type_note in filtered_types_notes %}
                                     {% if type_note.has_sous_notes and type_note.sous_notes.all %}
                                         {% for sous_note in type_note.sous_notes.all|dictsort:"ordre" %}
-                                            <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                            <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
                                         {% endfor %}
-                                        <td class="text-center fw-bold">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                        <td class="text-center fw-bold">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
                                     {% else %}
-                                        <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                        <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
                                     {% endif %}
                                 {% endfor %}
-                                <td class="text-center">{% if student_status == 'rach' or student_status == 'ajou' %}-{% endif %}</td>
+                                <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
                                 <td class="text-center">
-                                    {% if student_status == 'rach' %}
-                                        Rachat de crédit
-                                    {% elif student_status == 'ajou' %}
-                                        Ajourné
+                                    {% if exam_type_key != 'rachat' %}
+                                        {% if student_status == 'rach' %}
+                                            Rachat de crédit
+                                        {% elif student_status == 'ajou' %}
+                                            Ajourné
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>

@@ -531,6 +531,7 @@ def ShowPvModal(request, pk):
         'students' : filtered_students,
         'groupe_nom' : groupe_nom,
         'exam_type' : exam_type_display,
+        'exam_type_key' : exam_type,
         'module' : module,
         'date_examen' : obj.date.date(),
         "salle" : obj.salle.nom,
@@ -1362,3 +1363,8 @@ def close_session_line(request):
     
     else:
         return JsonResponse({"status" : "error"})
+    
+
+@login_required(login_url="institut_app:login")
+def PagePvDeliberation(request):
+    return render(request, 'tenant_folder/exams/')
