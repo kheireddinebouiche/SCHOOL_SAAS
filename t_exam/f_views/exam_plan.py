@@ -1364,11 +1364,9 @@ def close_session_line(request):
     else:
         return JsonResponse({"status" : "error"})
     
-
 @login_required(login_url="institut_app:login")
 def PagePvDeliberation(request):
     return render(request, 'tenant_folder/exams/deliberation.html')
-
 
 @login_required(login_url="institut_app:login")
 def ApiLoadDeliberationPv(request):
@@ -1390,8 +1388,6 @@ def ApiLoadDeliberationPv(request):
         return JsonResponse(list(data), safe=False)
     else:
         return JsonResponse({"status" : "error"})
-
-
 
 @login_required(login_url="insitut_app:login")
 def PageDeliberationResult(request, pk):

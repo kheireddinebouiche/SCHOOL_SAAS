@@ -5,6 +5,7 @@ from .f_views.commission import *
 from .f_views.modele_builtins import *
 from .f_views.action_views import examen_action, rachat_action, ajourne_action
 from .f_views.exam_plan import *
+from .f_views.deliberation import *
 
 app_name="t_exam"
 
@@ -103,5 +104,9 @@ urlpatterns = [
 
     path('deliberation/results/liste/<int:pk>/',PageDeliberationResult, name="PageDeliberationResult"),
     path('ApiLoadSessionExamLines', ApiLoadSessionExamLines, name="ApiLoadSessionExamLines"),
+
+    # URLs for group deliberation results
+    path('groupe-deliberation-results/<int:groupe_id>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
+    path('api/groupe-deliberation-results/', get_groupe_deliberation_results_ajax, name="get_groupe_deliberation_results_ajax"),
 
 ]

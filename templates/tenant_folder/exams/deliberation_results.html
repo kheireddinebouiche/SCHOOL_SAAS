@@ -227,7 +227,7 @@
             var display="";
             if (!i.groupe_code){
                 display = "hidden";
-            }   
+            }
           row += '<div class="col-xl-4 col-lg-6 col-md-12 mb-4">';
           row += '    <div class="card session-card h-100 border-0 shadow-sm">';
           row += '        <div class="card-body p-4">';
@@ -281,7 +281,7 @@
           row += '            </div>';
           row += '            <div class="d-flex justify-content-between align-items-center">';
           row += '                <span class="status-badge bg-success-subtle text-success border border-success-subtle"><i class="ri-checkbox-circle-fill me-1"></i>Actif</span>';
-          row += '                <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm">Voir détails</a>';
+          row += '                <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm view-details" data-groupe-id="'+i.id+'">Voir détails</a>';
           row += '            </div>';
           row += '        </div>';
           row += '    </div>';
@@ -385,6 +385,83 @@
         renderPagination();
       }
     });
+    // Add event listener for "Voir détails" buttons
+    
+    $(document).on('click', '.view-details', function() {
+      const groupeId = $(this).data('groupe-id');
+
+      // Show loading state in modal
+      $('#groupeDetailsModal .modal-body').html(`
+        <div class="d-flex justify-content-center align-items-center p-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      `);
+
+      // Show the modal
+      $('#groupeDetailsModal').modal('show');
+
+      // Load the group details via AJAX
+      $.ajax({
+        url: '{% url "t_exam:groupe_deliberation_results_view" groupe_id=0 %}'.replace('0', groupeId),
+        type: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(response) {
+          if (response.status === 'success' && response.html) {
+            // Update modal content with the loaded HTML
+            $('#groupeDetailsModal .modal-content').html(response.html);
+          } else {
+            $('#groupeDetailsModal .modal-body').html(`
+              <div class="text-center p-5">
+                <div class="text-danger">
+                  <i class="ri-error-warning-line ri-2x"></i>
+                  <p>` + (response.error || 'Erreur de chargement des détails') + `</p>
+                </div>
+              </div>
+            `);
+          }
+        },
+        error: function() {
+          $('#groupeDetailsModal .modal-body').html(`
+            <div class="text-center p-5">
+              <div class="text-danger">
+                <i class="ri-error-warning-line ri-2x"></i>
+                <p>Erreur de chargement des données</p>
+              </div>
+            </div>
+          `);
+        }
+      });
+    });
   });
+
+  // Add modal HTML structure
 </script>
+
+<!-- Modal for group deliberation results -->
+<div class="modal fade" id="groupeDetailsModal" tabindex="-1" aria-labelledby="groupeDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="groupeDetailsModalLabel">Résultats de délibération</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-center align-items-center p-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+        <button type="button" class="btn btn-primary">Imprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock content %}
