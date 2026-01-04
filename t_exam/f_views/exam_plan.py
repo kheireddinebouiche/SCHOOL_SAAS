@@ -330,9 +330,25 @@ def GeneratePvModal(request, pk):
             if commission_result == 'rach':
                 filtered_students.append(student_line)
         elif exam_type == 'rattrage':
-            # For rattrapage exam, show students with 'ajou' result
-            if commission_result == 'ajou':
-                filtered_students.append(student_line)
+            # For rattrapage exam, we need to find the original exam's PV to check ExamDecisionEtudiant
+            # Look for the original normal exam for this module and group
+            original_planification = ExamPlanification.objects.filter(
+                exam_line=groupe,
+                module=obj.module,
+                type_examen='normal'  # Original normal exam
+            ).first()
+
+            if original_planification:
+                original_pv = PvExamen.objects.filter(exam_planification=original_planification).first()
+                if original_pv:
+                    # Show students who have 'rattrapage' status in the original exam's decisions
+                    if ExamDecisionEtudiant.objects.filter(pv=original_pv, etudiant=student_line.student, statut='rattrapage').exists():
+                        filtered_students.append(student_line)
+            else:
+                # If no original exam found, check the current PV as fallback
+                pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+                if ExamDecisionEtudiant.objects.filter(pv=pv_examen, etudiant=student_line.student, statut='rattrapage').exists():
+                    filtered_students.append(student_line)
         else:
             # Default: show all students
             filtered_students.append(student_line)
@@ -434,11 +450,32 @@ def GeneratePvModal(request, pk):
 
     # Récupérer les décisions existantes pour ce PV
     decisions_existantes = {}
+
+    # Récupérer les décisions pour ce PV spécifique
     for decision in ExamDecisionEtudiant.objects.filter(pv=pv_examen):
         decisions_existantes[decision.etudiant.id] = {
             'statut': decision.statut,
             'moyenne': decision.moyenne
         }
+
+    # Pour les examens de rattrapage, on devrait chercher les décisions des examens originaux pour ce module et groupe
+    if exam_type == 'rattrage':
+        # Trouver les examens normaux originaux pour ce module et ce groupe
+        original_planifications = ExamPlanification.objects.filter(
+            exam_line=groupe,
+            module=obj.module,
+            type_examen='normal'  # Examen normal original
+        )
+
+        for original_plan in original_planifications:
+            original_pv = PvExamen.objects.filter(exam_planification=original_plan).first()
+            if original_pv:
+                for decision in ExamDecisionEtudiant.objects.filter(pv=original_pv, statut='rattrapage'):
+                    # Ajouter les décisions de rattrapage de l'examen original
+                    decisions_existantes[decision.etudiant.id] = {
+                        'statut': decision.statut,
+                        'moyenne': decision.moyenne
+                    }
 
     # Pass commission results to template for special handling
     context = {
@@ -514,12 +551,58 @@ def ShowPvModal(request, pk):
             if commission_result == 'rach':
                 filtered_students.append(student_line)
         elif exam_type == 'rattrage':
-            # For rattrapage exam, show students with 'ajou' result
-            if commission_result == 'ajou':
-                filtered_students.append(student_line)
+            # For rattrapage exam, we need to find the original exam's PV to check ExamDecisionEtudiant
+            # Look for the original normal exam for this module and group
+            original_planification = ExamPlanification.objects.filter(
+                exam_line=groupe,
+                module=obj.module,
+                type_examen='normal'  # Original normal exam
+            ).first()
+
+            if original_planification:
+                original_pv = PvExamen.objects.filter(exam_planification=original_planification).first()
+                if original_pv:
+                    # Show students who have 'rattrapage' status in the original exam's decisions
+                    if ExamDecisionEtudiant.objects.filter(pv=original_pv, etudiant=student_line.student, statut='rattrapage').exists():
+                        filtered_students.append(student_line)
+            else:
+                # If no original exam found, check the current PV as fallback
+                pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+                if ExamDecisionEtudiant.objects.filter(pv=pv_examen, etudiant=student_line.student, statut='rattrapage').exists():
+                    filtered_students.append(student_line)
         else:
             # For other exam types, show all students
             filtered_students.append(student_line)
+
+    # Récupérer les décisions existantes pour ce PV
+    decisions_existantes = {}
+    pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+
+    # Récupérer les décisions pour ce PV spécifique
+    for decision in ExamDecisionEtudiant.objects.filter(pv=pv_examen):
+        decisions_existantes[decision.etudiant.id] = {
+            'statut': decision.statut,
+            'moyenne': decision.moyenne
+        }
+
+    # Pour les examens de rattrapage, on devrait chercher les décisions des examens originaux pour ce module et groupe
+    if exam_type == 'rattrage':
+        # Trouver les examens normaux originaux pour ce module et ce groupe
+        original_planifications = ExamPlanification.objects.filter(
+            exam_line=groupe,
+            module=obj.module,
+            type_examen='normal'  # Examen normal original
+        )
+
+        for original_plan in original_planifications:
+            original_pv = PvExamen.objects.filter(exam_planification=original_plan).first()
+            if original_pv:
+                for decision in ExamDecisionEtudiant.objects.filter(pv=original_pv, statut='rattrapage'):
+                    # Ajouter les décisions de rattrapage de l'examen original
+                    decisions_existantes[decision.etudiant.id] = {
+                        'statut': decision.statut,
+                        'moyenne': decision.moyenne
+                    }
 
     groupe_nom = groupe.groupe.nom
     module = obj.module.label
@@ -536,6 +619,7 @@ def ShowPvModal(request, pk):
         'date_examen' : obj.date.date(),
         "salle" : obj.salle.nom,
         'commission_results': commission_results,  # Pass commission results to template
+        'decisions_existantes': decisions_existantes,  # Pass decisions to template
     }
     return render(request,'tenant_folder/exams/modal-impression-pv.html',context)
 
@@ -1327,7 +1411,92 @@ def ShowPv(request, pk):
         # Default case: show all type notes
         filtered_types_notes = modeleBuiltin.types_notes.all().order_by('ordre')
 
-    students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+    # Get students from the group
+    all_students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
+
+    # Get the commission results for the session if it exists
+    commission_results = {}
+    if groupe.session.commission:
+        commission_results = {
+            result.etudiants.id: result.result
+            for result in CommisionResult.objects.filter(
+                commission=groupe.session.commission,
+                modules__id=obj.module.id  # Filter by the current module
+            ).distinct()
+        }
+
+    # Filter students based on commission results and exam type
+    exam_type = obj.type_examen
+    filtered_students = []
+
+    for student_line in all_students:
+        student_id = student_line.student.id
+        commission_result = commission_results.get(student_id, None)
+
+        # Apply filtering based on exam type and commission result
+        if exam_type == 'normal':
+            # For normal exam, show ALL students regardless of commission result
+            # But handle their status differently in the template
+            filtered_students.append(student_line)
+        elif exam_type == 'rachat':
+            # For rachat exam, show students with 'rach' result
+            if commission_result == 'rach':
+                filtered_students.append(student_line)
+        elif exam_type == 'rattrage':
+            # For rattrapage exam, we need to find the original exam's PV to check ExamDecisionEtudiant
+            # Look for the original normal exam for this module and group
+            original_planification = ExamPlanification.objects.filter(
+                exam_line=groupe,
+                module=obj.module,
+                type_examen='normal'  # Original normal exam
+            ).first()
+
+            if original_planification:
+                original_pv = PvExamen.objects.filter(exam_planification=original_planification).first()
+                if original_pv:
+                    # Show students who have 'rattrapage' status in the original exam's decisions
+                    if ExamDecisionEtudiant.objects.filter(pv=original_pv, etudiant=student_line.student, statut='rattrapage').exists():
+                        filtered_students.append(student_line)
+            else:
+                # If no original exam found, check the current PV as fallback
+                pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+                if ExamDecisionEtudiant.objects.filter(pv=pv_examen, etudiant=student_line.student, statut='rattrapage').exists():
+                    filtered_students.append(student_line)
+        else:
+            # For other exam types, show all students
+            filtered_students.append(student_line)
+
+    # Récupérer les décisions existantes pour ce PV
+    decisions_existantes = {}
+    pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
+
+    # Récupérer les décisions pour ce PV spécifique
+    for decision in ExamDecisionEtudiant.objects.filter(pv=pv_examen):
+        decisions_existantes[decision.etudiant.id] = {
+            'statut': decision.statut,
+            'moyenne': decision.moyenne
+        }
+
+    # Pour les examens de rattrapage, on devrait chercher les décisions des examens originaux pour ce module et groupe
+    if exam_type == 'rattrage':
+        # Trouver les examens normaux originaux pour ce module et ce groupe
+        original_planifications = ExamPlanification.objects.filter(
+            exam_line=groupe,
+            module=obj.module,
+            type_examen='normal'  # Examen normal original
+        )
+
+        for original_plan in original_planifications:
+            original_pv = PvExamen.objects.filter(exam_planification=original_plan).first()
+            if original_pv:
+                for decision in ExamDecisionEtudiant.objects.filter(pv=original_pv, statut='rattrapage'):
+                    # Ajouter les décisions de rattrapage de l'examen original
+                    decisions_existantes[decision.etudiant.id] = {
+                        'statut': decision.statut,
+                        'moyenne': decision.moyenne
+                    }
+
+    students = filtered_students
 
     groupe_nom = groupe.groupe.nom
     module = obj.module.label
@@ -1340,6 +1509,7 @@ def ShowPv(request, pk):
         'groupe_nom' : groupe_nom,
         'exam_type' : exam_type_display,
         'module' : module,
+        'decisions_existantes': decisions_existantes,  # Pass decisions to template
     }
     return render(request,'tenant_folder/exams/print_pv_examn.html',context)
 

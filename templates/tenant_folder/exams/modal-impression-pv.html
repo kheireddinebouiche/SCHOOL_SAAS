@@ -93,22 +93,31 @@
                         <tbody>
                             {% for student_line in students %}
                             {% with student_status=commission_results|lookup:student_line.student.id %}
-                            <tr data-student-id="{{ student_line.student.id }}" {% if student_status == 'rach' %}class="student-rach"{% elif student_status == 'ajou' %}class="student-ajou"{% endif %}>
+                            {% with decision_status=decisions_existantes|lookup:student_line.student.id %}
+                            <tr data-student-id="{{ student_line.student.id }}" {% if student_status == 'rach' %}class="student-rach"{% elif student_status == 'ajou' %}class="student-ajou"{% elif decision_status and decision_status.statut == 'rattrapage' %}class="student-rattrapage"{% endif %}>
                                 <td class="text-center">{{ forloop.counter }}</td>
                                 <td>{{ student_line.student.nom }} {{ student_line.student.prenom }}</td>
                                 {% for type_note in filtered_types_notes %}
                                     {% if type_note.has_sous_notes and type_note.sous_notes.all %}
                                         {% for sous_note in type_note.sous_notes.all|dictsort:"ordre" %}
-                                            <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
+                                            <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' or exam_type_key == 'rattrage' and decision_status and decision_status.statut != 'rattrapage' %}-{% endif %}</td>
                                         {% endfor %}
-                                        <td class="text-center fw-bold">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
+                                        <td class="text-center fw-bold">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' or exam_type_key == 'rattrage' and decision_status and decision_status.statut != 'rattrapage' %}-{% endif %}</td>
                                     {% else %}
-                                        <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
+                                        <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' or exam_type_key == 'rattrage' and decision_status and decision_status.statut != 'rattrapage' %}-{% endif %}</td>
                                     {% endif %}
                                 {% endfor %}
-                                <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' %}-{% endif %}</td>
+                                <td class="text-center">{% if exam_type_key != 'rachat' and student_status == 'rach' or exam_type_key != 'rachat' and student_status == 'ajou' or exam_type_key == 'rattrage' and decision_status and decision_status.statut != 'rattrapage' %}-{% endif %}</td>
                                 <td class="text-center">
-                                    {% if exam_type_key != 'rachat' %}
+                                    {% if exam_type_key == 'rachat' %}
+                                        {% if student_status == 'rach' %}
+                                            Rachat de crédit
+                                        {% endif %}
+                                    {% elif exam_type_key == 'rattrage' %}
+                                        {% if decision_status and decision_status.statut == 'rattrapage' %}
+                                            Rattrapage
+                                        {% endif %}
+                                    {% else %}
                                         {% if student_status == 'rach' %}
                                             Rachat de crédit
                                         {% elif student_status == 'ajou' %}
@@ -117,6 +126,7 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            {% endwith %}
                             {% endwith %}
                             {% endfor %}
                         </tbody>
@@ -141,7 +151,7 @@
 <script>
     // Add styling for grayed out rows
     $(document).ready(function() {
-        $('<style>.student-rach, .student-ajou { background-color: #f0f0f0 !important; opacity: 0.7; }</style>').appendTo('head');
+        $('<style>.student-rach, .student-ajou, .student-rattrapage { background-color: #f0f0f0 !important; opacity: 0.7; }</style>').appendTo('head');
     });
 
     // Add print functionality using jsPDF

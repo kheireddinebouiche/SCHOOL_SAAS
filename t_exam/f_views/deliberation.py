@@ -36,8 +36,10 @@ def groupe_deliberation_results_view(request, groupe_id):
                 modules_dict[module_id] = {
                     'module': exam_plan.module,
                     'normal_exam': None,
+                    'rachat_exam': None,
                     'rattrapage_exam': None,
                     'normal_note_count': 0,
+                    'rachat_note_count': 0,
                     'rattrapage_note_count': 0
                 }
 
@@ -45,7 +47,11 @@ def groupe_deliberation_results_view(request, groupe_id):
                 modules_dict[module_id]['normal_exam'] = exam_plan
                 # Count the number of note types for this exam
                 modules_dict[module_id]['normal_note_count'] = exam_plan.pv.exam_types_notes.count()
-            elif exam_plan.type_examen in ['rachat', 'rattrage']:
+            elif exam_plan.type_examen == 'rachat':
+                modules_dict[module_id]['rachat_exam'] = exam_plan
+                # Count the number of note types for this exam
+                modules_dict[module_id]['rachat_note_count'] = exam_plan.pv.exam_types_notes.count()
+            elif exam_plan.type_examen == 'rattrage':
                 modules_dict[module_id]['rattrapage_exam'] = exam_plan
                 # Count the number of note types for this exam
                 modules_dict[module_id]['rattrapage_note_count'] = exam_plan.pv.exam_types_notes.count()
@@ -119,7 +125,57 @@ def groupe_deliberation_results_view(request, groupe_id):
                         'avg_note': normal_avg_note
                     }
 
-                # Handle rattrapage/rachat exam if exists
+                # Handle rachat exam if exists
+                if module_data['rachat_exam']:
+                    rachat_exam_plan = module_data['rachat_exam']
+                    rachat_decision = ExamDecisionEtudiant.objects.filter(
+                        pv=rachat_exam_plan.pv,
+                        etudiant=student
+                    ).first()
+
+                    rachat_notes = ExamNote.objects.filter(
+                        pv=rachat_exam_plan.pv,
+                        etudiant=student
+                    ).select_related('type_note')
+
+                    # Calculate average note for rachat exam
+                    rachat_avg_note = 0
+                    if rachat_notes.exists():
+                        total_notes = 0
+                        count_notes = 0
+                        for note in rachat_notes:
+                            if note.valeur is not None:
+                                total_notes += note.valeur
+                                count_notes += 1
+                        if count_notes > 0:
+                            rachat_avg_note = round(total_notes / count_notes, 2)
+
+                    # Organize rachat notes by type
+                    rachat_notes_by_type = {}
+                    for note in rachat_notes:
+                        rachat_notes_by_type[note.type_note.id] = note
+
+                    # Create structured rachat notes
+                    rachat_structured_notes = []
+                    if rachat_exam_plan.pv.exam_types_notes.exists():
+                        for note_type in rachat_exam_plan.pv.exam_types_notes.all():
+                            note_value = rachat_notes_by_type.get(note_type.id)
+                            rachat_structured_notes.append({
+                                'type_note': note_type,
+                                'note': note_value,
+                                'valeur': note_value.valeur if note_value else '-'
+                            })
+
+                    result_entry['rachat_result'] = {
+                        'exam_plan': rachat_exam_plan,
+                        'decision': rachat_decision,
+                        'notes': rachat_notes,
+                        'notes_by_type': rachat_notes_by_type,
+                        'structured_notes': rachat_structured_notes,
+                        'avg_note': rachat_avg_note
+                    }
+
+                # Handle rattrapage exam if exists
                 if module_data['rattrapage_exam']:
                     rattrapage_exam_plan = module_data['rattrapage_exam']
                     rattrapage_decision = ExamDecisionEtudiant.objects.filter(
@@ -173,8 +229,9 @@ def groupe_deliberation_results_view(request, groupe_id):
 
             results_data.append(student_data)
 
-        # Check if there are any rattrapage exams
-        has_rachat = any(module_data['rattrapage_exam'] for module_data in grouped_modules)
+        # Check if there are any rachat or rattrapage exams
+        has_rachat = any(module_data['rachat_exam'] for module_data in grouped_modules)
+        has_rattrapage = any(module_data['rattrapage_exam'] for module_data in grouped_modules)
 
         context = {
             'groupe': groupe,
@@ -182,7 +239,8 @@ def groupe_deliberation_results_view(request, groupe_id):
             'results_data': results_data,
             'grouped_modules': grouped_modules,
             'students': students,
-            'has_rachat': has_rachat
+            'has_rachat': has_rachat,
+            'has_rattrapage': has_rattrapage
         }
 
         # Check if the request is AJAX to return only the modal content
@@ -235,8 +293,10 @@ def get_groupe_deliberation_results_ajax(request):
                 modules_dict[module_id] = {
                     'module': exam_plan.module,
                     'normal_exam': None,
+                    'rachat_exam': None,
                     'rattrapage_exam': None,
                     'normal_note_count': 0,
+                    'rachat_note_count': 0,
                     'rattrapage_note_count': 0
                 }
 
@@ -244,7 +304,11 @@ def get_groupe_deliberation_results_ajax(request):
                 modules_dict[module_id]['normal_exam'] = exam_plan
                 # Count the number of note types for this exam
                 modules_dict[module_id]['normal_note_count'] = exam_plan.pv.exam_types_notes.count()
-            elif exam_plan.type_examen in ['rachat', 'rattrage']:
+            elif exam_plan.type_examen == 'rachat':
+                modules_dict[module_id]['rachat_exam'] = exam_plan
+                # Count the number of note types for this exam
+                modules_dict[module_id]['rachat_note_count'] = exam_plan.pv.exam_types_notes.count()
+            elif exam_plan.type_examen == 'rattrage':
                 modules_dict[module_id]['rattrapage_exam'] = exam_plan
                 # Count the number of note types for this exam
                 modules_dict[module_id]['rattrapage_note_count'] = exam_plan.pv.exam_types_notes.count()
@@ -269,6 +333,7 @@ def get_groupe_deliberation_results_ajax(request):
                     'module_id': module_data['module'].id,
                     'module_label': module_data['module'].libelle,
                     'normal_result': None,
+                    'rachat_result': None,
                     'rattrapage_result': None
                 }
 
@@ -323,7 +388,58 @@ def get_groupe_deliberation_results_ajax(request):
                         'avg_note': normal_avg_note
                     }
 
-                # Handle rattrapage/rachat exam if exists
+                # Handle rachat exam if exists
+                if module_data['rachat_exam']:
+                    rachat_exam_plan = module_data['rachat_exam']
+                    rachat_decision = ExamDecisionEtudiant.objects.filter(
+                        pv=rachat_exam_plan.pv,
+                        etudiant=student
+                    ).first()
+
+                    rachat_notes = ExamNote.objects.filter(
+                        pv=rachat_exam_plan.pv,
+                        etudiant=student
+                    ).select_related('type_note')
+
+                    # Calculate average note for rachat exam
+                    rachat_avg_note = 0
+                    if rachat_notes.exists():
+                        total_notes = 0
+                        count_notes = 0
+                        for note in rachat_notes:
+                            if note.valeur is not None:
+                                total_notes += note.valeur
+                                count_notes += 1
+                        if count_notes > 0:
+                            rachat_avg_note = round(total_notes / count_notes, 2)
+
+                    # Organize rachat notes by type
+                    rachat_notes_by_type = {}
+                    for note in rachat_notes:
+                        rachat_notes_by_type[note.type_note.id] = note
+
+                    # Create structured rachat notes
+                    rachat_structured_notes = []
+                    if rachat_exam_plan.pv.exam_types_notes.exists():
+                        for note_type in rachat_exam_plan.pv.exam_types_notes.all():
+                            note_value = rachat_notes_by_type.get(note_type.id)
+                            rachat_structured_notes.append({
+                                'type_note': note_type,
+                                'note': note_value,
+                                'valeur': note_value.valeur if note_value else '-'
+                            })
+
+                    result_entry['rachat_result'] = {
+                        'exam_plan_id': rachat_exam_plan.id,
+                        'date': rachat_exam_plan.date.strftime('%Y-%m-%d') if rachat_exam_plan.date else '',
+                        'decision_statut': rachat_decision.statut if rachat_decision else '',
+                        'decision_moyenne': rachat_decision.moyenne if rachat_decision else '',
+                        'notes': [{'type': note.type_note.libelle, 'valeur': note.valeur, 'type_note_id': note.type_note.id} for note in rachat_notes],
+                        'structured_notes': rachat_structured_notes,
+                        'avg_note': rachat_avg_note
+                    }
+
+                # Handle rattrapage exam if exists
                 if module_data['rattrapage_exam']:
                     rattrapage_exam_plan = module_data['rattrapage_exam']
                     rattrapage_decision = ExamDecisionEtudiant.objects.filter(
@@ -378,8 +494,9 @@ def get_groupe_deliberation_results_ajax(request):
 
             results_data.append(student_data)
 
-        # Check if there are any rattrapage exams
-        has_rachat = any(module_data['rattrapage_exam'] for module_data in grouped_modules)
+        # Check if there are any rachat or rattrapage exams
+        has_rachat = any(module_data['rachat_exam'] for module_data in grouped_modules)
+        has_rattrapage = any(module_data['rattrapage_exam'] for module_data in grouped_modules)
 
         response_data = {
             'status': 'success',
@@ -392,6 +509,7 @@ def get_groupe_deliberation_results_ajax(request):
                 'id': session_exam_line.id,
             },
             'has_rachat': has_rachat,
+            'has_rattrapage': has_rattrapage,
             'results_data': results_data,
             'exam_planifications': [
                 {
