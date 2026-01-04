@@ -89,7 +89,7 @@ def crm_dashboard(request):
         total_prospects = 305
         
     # Répartition des prospects par source (lead_source)
-    prospects_by_lead_source = Prospets.objects.values('lead_source').annotate(count=Count('lead_source')).order_by('-count')
+    prospects_by_lead_source = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')
     
     # Ajout des labels pour l'affichage des sources
     lead_source_labels = {
@@ -100,7 +100,7 @@ def crm_dashboard(request):
     
     lead_source_data = []
     for source in prospects_by_lead_source:
-        source_code = source['lead_source']
+        source_code = source['canal']
         count = source['count']
         # Only include sources that have a count > 0
         if count > 0 and source_code is not None:
@@ -120,7 +120,58 @@ def crm_dashboard(request):
     prospects_by_speciality = FicheDeVoeux.objects.values('specialite__label').annotate(
         count=Count('prospect', distinct=True)
     ).order_by('-count')
-    
+
+    # Données pour le graphique des prospects par période (derniers 7 jours)
+    from django.db.models.functions import TruncDate
+
+    # Calcul des prospects par jour pour les 7 derniers jours
+    seven_days_ago = datetime.now() - timedelta(days=6)  # 7 jours incluant aujourd'hui
+    prospects_by_date = Prospets.objects.filter(
+        created_at__gte=seven_days_ago
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+
+    # Création des données pour le graphique
+    chart_dates = []
+    chart_counts = []
+
+    # Remplir les dates manquantes avec 0
+    for i in range(7):
+        date = (datetime.now() - timedelta(days=6-i)).date()
+        chart_dates.append(date.strftime('%b %d'))  # Format 'Jan 01'
+
+        # Trouver le compte pour cette date ou 0 si non trouvé
+        count = 0
+        for item in prospects_by_date:
+            if item['date'] == date:
+                count = item['count']
+                break
+        chart_counts.append(count)
+
+    # Données pour le graphique des rappels
+    reminders_by_date = RendezVous.objects.filter(
+        created_at__gte=seven_days_ago
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+
+    reminder_counts = []
+    for i in range(7):
+        date = (datetime.now() - timedelta(days=6-i)).date()
+
+        # Trouver le compte pour cette date ou 0 si non trouvé
+        count = 0
+        for item in reminders_by_date:
+            if item['date'] == date:
+                count = item['count']
+                break
+        reminder_counts.append(count)
+
     context = {
         'tenant': request.tenant,
         'total_prospects': total_prospects,
@@ -133,6 +184,9 @@ def crm_dashboard(request):
         'lead_source_data': lead_source_data,
         'prospects_by_promo': prospects_by_promo,
         'prospects_by_speciality': prospects_by_speciality,
+        'chart_dates': chart_dates,
+        'chart_counts': chart_counts,
+        'reminder_counts': reminder_counts,
     }
     
     return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)

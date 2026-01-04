@@ -169,8 +169,6 @@ class Prospets(models.Model):
     nin = models.CharField(max_length=255, null=True, blank=True)
     nom = models.CharField(max_length=255, null=True)
     photo = models.ImageField(upload_to=tenant_directory_path_for_image, null=True, blank=True)
-
-    lead_source = models.CharField(max_length=100, null=True, blank=True, choices=[('viste','Visite'),('appel','Appel'),('prospectus','Prospectus')])
     
     prenom = models.CharField(max_length=255, null=True)
     email = models.EmailField(null=True)
@@ -229,7 +227,7 @@ class Prospets(models.Model):
 
     context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Acceuil'),('con','Conseil')])
 
-    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premier passage'),('a_appeler','Appelle téléphonique'),('est_passer','Visiste (Le prospect est déja passer à l\'insim)')])
+    contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premier passage'),('a_appeler','Après Appel'),('est_passer','Après visite')])
 
     has_refund = models.BooleanField(default=False)
 

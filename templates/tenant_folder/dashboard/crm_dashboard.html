@@ -525,11 +525,11 @@
             series: [{
                 name: 'Nouveaux prospects',
                 type: 'area',
-                data: [31, 40, 28, 51, 42, 109, 100]
+                data: {{ chart_counts|safe }}
             }, {
                 name: 'Rappels effectués',
                 type: 'line',
-                data: [11, 32, 45, 32, 34, 52, 41]
+                data: {{ reminder_counts|safe }}
             }],
             fill: {
                 type:'gradient',
@@ -555,18 +555,10 @@
                     right: 0
                 }
             },
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+            labels: {{ chart_dates|safe }},
             xaxis: {
-                type: 'datetime',
-                categories: [
-                    '2024-01-01T00:00:00',
-                    '2024-02-01T00:00:00',
-                    '2024-03-01T00:00:00',
-                    '2024-04-01T00:00:00',
-                    '2024-05-01T00:00:00',
-                    '2024-06-01T00:00:00',
-                    '2024-07-01T00:00:00'
-                ],
+                type: 'category',
+                categories: {{ chart_dates|safe }},
             },
             tooltip: {
                 x: {
@@ -591,8 +583,16 @@
                 height: 280,
                 type: 'pie',
             },
-            labels: ['Nouveau', 'Contacté', 'En négociation', 'Contrat envoyé', 'Converted', 'Perdu'],
-            series: [44, 55, 13, 43, 22, 30],
+            labels: [
+                {% for status_data in prospects_by_status %}
+                    "{{ status_data.label|default:status_data.status }}"{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            ],
+            series: [
+                {% for status_data in prospects_by_status %}
+                    {{ status_data.count|default:0 }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            ],
             colors: ['#34c38f', '#556ee6', '#f46a6a', '#f1b44c', '#50a5f1', '#74788d'],
             legend: {
                 position: 'bottom'

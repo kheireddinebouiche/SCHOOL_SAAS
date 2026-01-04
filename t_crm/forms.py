@@ -62,7 +62,7 @@ class VisiteurForm(forms.ModelForm):
 
 class NewProspecFormParticulier(forms.ModelForm):
     contact_situation = forms.ChoiceField(
-        choices=[('fist_contact','Prémier passage'),('a_appeler','Aprés Appel'),('est_passer','Visite')],
+        choices=[('fist_contact','Premier passage'),('a_appeler','Après Appel'),('est_passer','Après visite')],
         widget=forms.RadioSelect(attrs={'class': 'form-check-inline'}),
         required=True
     )
@@ -90,7 +90,6 @@ class NewProspecFormParticulier(forms.ModelForm):
             "indic" : forms.Select(attrs={"class" : "form-control"}),
             "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "observation" : forms.Textarea(attrs={'class':'form-control', "rows" : "3"}),
-            "lead_source" : forms.Select(attrs={'class' : "form-control"}),
             'is_double' : forms.CheckboxInput(attrs={"class" : "form-control",'id':'IdSelectDoubleDiplomation'})
         }
 
