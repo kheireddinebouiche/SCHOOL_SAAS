@@ -36,6 +36,43 @@
   .modal-header .btn-close:focus {
     box-shadow: none;
   }
+  .modal .form-control.is-invalid {
+    border-color: #dc3545;
+  }
+  .modal .form-select.is-invalid {
+    border-color: #dc3545;
+  }
+  .input-group .form-control:focus,
+  .input-group .form-select:focus {
+    z-index: 3;
+  }
+  .form-control-lg, .form-select-lg {
+    padding: .75rem 1rem;
+    font-size: 1rem;
+  }
+  .btn i {
+    vertical-align: middle;
+  }
+  .modal-content {
+    border-radius: 1rem;
+  }
+  .modal-header {
+    border-bottom: none;
+  }
+  .modal-footer {
+    border-top: none;
+  }
+  .input-group-text {
+    transition: all 0.2s;
+  }
+  .input-group:focus-within .input-group-text {
+    background-color: #17a2b8;
+    color: white;
+  }
+  .input-group:focus-within .form-control,
+  .input-group:focus-within .form-select {
+    border-color: #17a2b8;
+  }
 </style>
 
 <div class="main-content">
@@ -157,6 +194,210 @@
   <!-- End Page-content -->
 </div>
 
+<!-- Modal de modification des plannifications d'examen -->
+<div class="modal fade" id="editExamPlanModal" tabindex="-1" aria-labelledby="editExamPlanModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-info text-white rounded-top-3 p-4">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+            <i class="ri-edit-line fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="editExamPlanModalLabel">Modifier la planification d'examen</h5>
+            <small class="opacity-75">Mettez à jour les détails de l'examen</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="editExamPlanForm">
+          {% csrf_token %}
+          <input type="hidden" id="examPlanId" name="exam_plan_id">
+
+          <!-- Section Informations de base -->
+          <div class="mb-4 exam-field">
+            <h6 class="text-muted mb-3">Informations de base</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="editModule" class="form-label fw-medium">Matière</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-book-line text-info"></i>
+                  </span>
+                  <input type="text" class="form-control form-control-lg bg-light" id="editModule" name="module" readonly>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="editTypeExamen" class="form-label fw-medium">Type d'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-file-text-line text-info"></i>
+                  </span>
+                  <input type="text" class="form-control form-control-lg bg-light" id="editTypeExamen" name="type_examen" readonly>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-2">
+              <div class="col-md-12">
+                <label for="editModeExamen" class="form-label fw-medium">Mode d'examination</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-settings-2-line text-info"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="editModeExamen" name="mode_examen">
+                    <option value="exam">Examen</option>
+                    <option value="tr">Travail à remettre</option>
+                    <option value="ligne">Examen en ligne</option>
+                    <option value="orale">Présentation orale</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Date et Heure -->
+          <div class="mb-4 exam-field" id="date-heure-section">
+            <h6 class="text-muted mb-3">Date et heure</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="editDate" class="form-label fw-medium">Date de l'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-calendar-2-line text-info"></i>
+                  </span>
+                  <input type="date" class="form-control form-control-lg" id="editDate" name="date" required>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label for="editHeureDebut" class="form-label fw-medium">Heure de début</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-time-line text-info"></i>
+                  </span>
+                  <input type="time" class="form-control form-control-lg" id="editHeureDebut" name="heure_debut" required>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label for="editHeureFin" class="form-label fw-medium">Heure de fin</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-time-line text-info"></i>
+                  </span>
+                  <input type="time" class="form-control form-control-lg" id="editHeureFin" name="heure_fin">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Salle et Surveillant -->
+          <div class="mb-4 exam-field">
+            <h6 class="text-muted mb-3">Salle et surveillance</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="editSalle" class="form-label fw-medium">Salle d'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-building-2-line text-info"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="editSalle" name="salle" required>
+                    <option value="">Sélectionner une salle</option>
+                    <!-- Les options seront chargées dynamiquement -->
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="editSurveillant" class="form-label fw-medium">Surveillant</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-user-line text-info"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="editSurveillant" name="surveillant">
+                    <option value="">Sélectionner un surveillant</option>
+                    <!-- Les options seront chargées dynamiquement -->
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Observations -->
+          <div class="mb-4 exam-field">
+            <h6 class="text-muted mb-3">Observations</h6>
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label for="editObservations" class="form-label fw-medium">Observations</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-sticky-note-line text-info"></i>
+                  </span>
+                  <textarea class="form-control form-control-lg" id="editObservations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-3 p-4">
+        <div class="d-flex w-100">
+          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-info flex-fill text-white" id="saveExamPlanBtn">
+            <i class="ri-save-3-line me-1"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-danger text-white rounded-top-3 p-4">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+            <i class="ri-delete-bin-line fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="deleteConfirmationModalLabel">Confirmer la suppression</h5>
+            <small class="opacity-75">Êtes-vous sûr de vouloir supprimer cet examen ?</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-2">
+              <i class="ri-alert-line"></i>
+            </div>
+          </div>
+          <p class="text-muted mb-4">
+            Cette action est irréversible. L'examen sera définitivement supprimé de la planification.
+          </p>
+          <div class="alert alert-warning bg-warning bg-opacity-10 border-0" role="alert">
+            <i class="ri-information-line me-2"></i>
+            <strong>Attention:</strong> Toutes les données associées à cet examen seront perdues.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-3 p-4">
+        <div class="d-flex w-100">
+          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-danger flex-fill" id="confirmDeleteBtn">
+            <i class="ri-delete-bin-line me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
     $(document).ready(function(){
@@ -215,6 +456,7 @@
                                                         <th class="border-0">Heure</th>
                                                         <th class="border-0">Salle</th>
                                                         <th class="border-0">Statut</th>
+                                                        <th class="border-0">PV validé</th>
                                                         <th class="border-0 rounded-end text-end">Actions</th>
                                                     </tr>
                                                 </thead>
@@ -231,15 +473,24 @@
                                     // Determine status badge
                                     let statusBadge = '';
                                     if(plan.statut === 'termine'){
-                                        statusBadge = '<span class="badge bg-success bg-opacity-10 text-success">Terminé</span>';
-                                    } else if(plan.statut === 'encours'){
-                                        statusBadge = '<span class="badge bg-info bg-opacity-10 text-info">En cours</span>';
+                                        statusBadge = '<span class="badge bg-success bg-opacity-10 text-white">Terminé</span>';
+                                    } else if(plan.statut === 'att'){
+                                        statusBadge = '<span class="badge bg-warning bg-opacity-10 text-white">En cours</span>';
                                     } else {
-                                        statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning">Planifié</span>';
+                                        statusBadge = '<span class="badge bg-danger bg-opacity-10 text-warning">Non abouti</span>';
                                     }
 
+                                    let existePv = '';
+                                    if(plan.pv_existe && plan.est_valide){
+                                      existePv = '<span class="badge bg-info bg-opacity-10 text-white">PV enregistré et validé</span>';
+                                    }else if (plan.pv_existe && !plan.est_valide){
+                                      existePv = '<span class="badge bg-warning bg-opacity-10 text-white">PV en attente de validation</span>';
+                                    }else{
+                                      existePv = '<span class="badge bg-success bg-opacity-10 text-white">Aucun PV généré</span>';
+                                    } 
+
                                     const row = `
-                                        <tr>
+                                        <tr data-plan-id="${plan.id}">
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="flex-grow-1">
@@ -256,7 +507,7 @@
                                             </td>
                                             <td>
                                                 <div class="text-body">
-                                                    <i class="ri-time-line text-muted me-2"></i>${plan.heure_debut || '--'}
+                                                    <i class="ri-time-line text-muted me-2"></i>${plan.heure_debut || '--'} - ${plan.heure_fin || '--' }
                                                 </div>
                                             </td>
                                             <td>
@@ -267,15 +518,18 @@
                                             <td class="text-center">
                                                 ${statusBadge}
                                             </td>
+                                             <td class="text-center">
+                                                ${existePv}
+                                            </td>
                                             <td class="text-end">
                                                 <div class="d-flex justify-content-end gap-2">
-                                                    <button class="btn btn-sm btn-outline-primary" title="Modification">
+                                                    <button class="btn btn-sm btn-outline-primary edit-btn" data-plan-id="${plan.id}" data-module="${plan.module_nom}" data-type="${plan.type_examen}" data-mode="${plan.mode_examen || 'exam'}" data-date="${plan.date}" data-heure-debut="${plan.heure_debut || ''}" data-heure-fin="${plan.heure_fin || ''}" data-salle="${plan.salle_nom}" data-surveillant="${plan.surveillant || ''}" data-observations="${plan.observations || ''}" title="Modification">
                                                         <i class="ri-edit-line"></i>
                                                     </button>
                                                     <button class="btn btn-sm btn-outline-success" title="Impression">
                                                         <i class="ri-printer-line"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-outline-danger" title="Suppression">
+                                                    <button class="btn btn-sm btn-outline-danger delete-btn" data-plan-id="${plan.id}" data-module="${plan.module_nom}" title="Suppression">
                                                         <i class="ri-delete-bin-line"></i>
                                                     </button>
                                                     <button class="btn btn-sm btn-outline-info" title="Validation">
@@ -315,9 +569,361 @@
 
         loadExamPlanification();
 
-        
+        function loadSalle(){
+          $.ajax({
+            url : "{% url 't_exam:ApiLoadSalle' %}",
+            dataType: "JSON",
+            type: "GET",
+            success : function(data){
+              var option ="<option value=''>Veuillez sélectionner une salle</option>";
+              $.each(data, function(index, p){
+                option += "<option value="+p.id+">"+p.label+"</label>";
+              });
+            }
+          })
+        }
 
+
+        // Fonction pour charger les salles
+        function loadSalles() {
+            // Ici, vous pouvez charger les salles depuis une API ou une liste prédéfinie
+            // Pour l'exemple, je vais ajouter quelques salles de démonstration
+            const salles = [
+                { id: 'salle1', nom: 'Salle A101' },
+                { id: 'salle2', nom: 'Salle A102' },
+                { id: 'salle3', nom: 'Salle B201' },
+                { id: 'salle4', nom: 'Salle B202' },
+                { id: 'salle5', nom: 'Salle C301' }
+            ];
+
+            const select = $('#editSalle');
+            select.empty();
+            select.append('<option value="">Sélectionner une salle</option>');
+
+            salles.forEach(function(salle) {
+                select.append(`<option value="${salle.id}">${salle.nom}</option>`);
+            });
+        }
+
+        // Fonction pour charger les surveillants
+        function loadSurveillants() {
+            // Ici, vous pouvez charger les surveillants depuis une API ou une liste prédéfinie
+            // Pour l'exemple, je vais ajouter quelques surveillants de démonstration
+            const surveillants = [
+                { id: 'surv1', nom: 'M. Dupont' },
+                { id: 'surv2', nom: 'Mme. Martin' },
+                { id: 'surv3', nom: 'M. Bernard' },
+                { id: 'surv4', nom: 'Mme. Petit' }
+            ];
+
+            const select = $('#editSurveillant');
+            select.empty();
+            select.append('<option value="">Sélectionner un surveillant</option>');
+
+            surveillants.forEach(function(surveillant) {
+                select.append(`<option value="${surveillant.id}">${surveillant.nom}</option>`);
+            });
+        }
+
+        // Fonction pour gérer l'affichage conditionnel des champs selon le mode d'examen
+        function updateFieldVisibility() {
+            const selectedMode = $('#editModeExamen').val();
+
+            // Cacher tous les champs sauf la date et le mode d'examen
+            $('.exam-field').hide();
+
+            // Toujours afficher la date et le mode d'examen
+            $('#date-heure-section').show();
+            $('#editModeExamen').closest('.mb-4').show(); // Show the section containing mode selection
+
+            switch(selectedMode) {
+                case 'exam': // Examen
+                case 'orale': // Présentation orale
+                    // Afficher tous les champs sauf le mode d'examen (déjà affiché)
+                    $('.exam-field').show();
+                    // S'assurer que les champs d'heure sont visibles
+                    $('#editHeureDebut').closest('.col-md-3').show();
+                    $('#editHeureFin').closest('.col-md-3').show();
+                    break;
+                case 'tr': // Travail à remettre
+                case 'ligne': // Examen en ligne
+                    // Afficher seulement la date et le mode d'examen
+                    $('#date-heure-section').show();
+                    $('#editModeExamen').closest('.mb-4').show();
+                    // Cacher les champs d'heure
+                    $('#editHeureDebut').closest('.col-md-3').hide();
+                    $('#editHeureFin').closest('.col-md-3').hide();
+                    // Mais montrer le champ de date
+                    $('#editDate').closest('.col-md-6').show();
+                    break;
+            }
+        }
+
+        // Écouter les changements sur le mode d'examen
+        $('#editModeExamen').change(function() {
+            updateFieldVisibility();
+        });
+
+        // Réinitialiser le formulaire quand le modal est fermé
+        $('#editExamPlanModal').on('hidden.bs.modal', function () {
+            // Réinitialiser tous les champs
+            $('#editExamPlanForm')[0].reset();
+
+            // Réinitialiser les sélections
+            $('#editModeExamen').val('exam');
+
+            // Réinitialiser la visibilité des champs
+            $('.exam-field').show();
+            updateFieldVisibility();
+
+            // Réinitialiser les classes d'erreur
+            $('.is-invalid').removeClass('is-invalid');
+
+            // Réinitialiser les boutons
+            $('#saveExamPlanBtn').prop('disabled', false).html('<i class="ri-save-3-line me-1"></i>Enregistrer');
+        });
+
+        // Gestion du clic sur le bouton de modification
+        $(document).on('click', '.edit-btn', function() {
+            const planId = $(this).data('plan-id');
+            const module = $(this).data('module');
+            const typeExamen = $(this).data('type');
+            const modeExamen = $(this).data('mode');
+            const date = $(this).data('date');
+            const heureDebut = $(this).data('heure-debut');
+            const heureFin = $(this).data('heure-fin');
+            const salle = $(this).data('salle');
+            const surveillant = $(this).data('surveillant');
+            const observations = $(this).data('observations');
+
+            // Remplir le formulaire avec les données
+            $('#examPlanId').val(planId);
+            $('#editModule').val(module);
+            $('#editTypeExamen').val(typeExamen);
+            $('#editModeExamen').val(modeExamen);
+
+            // Formater la date pour le champ input date (YYYY-MM-DD)
+            if(date) {
+                const formattedDate = new Date(date).toISOString().split('T')[0];
+                $('#editDate').val(formattedDate);
+            }
+
+            $('#editHeureDebut').val(heureDebut);
+            $('#editHeureFin').val(heureFin);
+            $('#editSalle').val(salle);
+            $('#editSurveillant').val(surveillant);
+            $('#editObservations').val(observations);
+
+            // Charger les salles et surveillants dynamiquement
+            loadSalles();
+            loadSurveillants();
+
+            // Mettre à jour la visibilité des champs selon le mode sélectionné
+            updateFieldVisibility();
+
+            // Afficher le modal
+            $('#editExamPlanModal').modal('show');
+        });
+
+        // Gestion de la soumission du formulaire de modification
+        $('#saveExamPlanBtn').click(function() {
+            // Validation simple du formulaire
+            let isValid = true;
+            const requiredFields = ['#editDate', '#editHeureDebut', '#editSalle'];
+
+            requiredFields.forEach(function(field) {
+                if ($(field).val() === '') {
+                    $(field).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(field).removeClass('is-invalid');
+                }
+            });
+
+            // Vérifier que l'heure de début est avant l'heure de fin si les deux sont spécifiées
+            const heureDebut = $('#editHeureDebut').val();
+            const heureFin = $('#editHeureFin').val();
+
+            if (heureDebut && heureFin) {
+                if (heureDebut >= heureFin) {
+                    $('#editHeureDebut').addClass('is-invalid');
+                    $('#editHeureFin').addClass('is-invalid');
+                    isValid = false;
+                    // Afficher un message d'erreur plus élégant
+                    showNotification('L\'heure de début doit être antérieure à l\'heure de fin.', 'error');
+                } else {
+                    $('#editHeureDebut').removeClass('is-invalid');
+                    $('#editHeureFin').removeClass('is-invalid');
+                }
+            }
+
+            if (!isValid) {
+                showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
+                return;
+            }
+
+            // Désactiver le bouton pour éviter les soumissions multiples et ajouter un effet de chargement
+            const originalText = $(this).html();
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Enregistrement...');
+
+            // Récupérer les données du formulaire
+            const formData = {
+                id: $('#examPlanId').val(),
+                module: $('#editModule').val(),
+                type_examen: $('#editTypeExamen').val(),
+                mode_examen: $('#editModeExamen').val(),
+                date: $('#editDate').val(),
+                heure_debut: $('#editHeureDebut').val(),
+                heure_fin: $('#editHeureFin').val(),
+                salle: $('#editSalle').val(),
+                surveillant: $('#editSurveillant').val(),
+                observations: $('#editObservations').val()
+            };
+
+            // Envoyer les données au serveur
+            $.ajax({
+                url: "{% url 't_exam:update_exam_plan' %}", // URL à adapter selon votre configuration
+                type: 'POST',
+                data: formData,
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val() // Pour Django CSRF
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        // Fermer le modal
+                        $('#editExamPlanModal').modal('hide');
+
+                        // Réinitialiser le bouton
+                        $('#saveExamPlanBtn').prop('disabled', false).html(originalText);
+
+                        // Recharger les données
+                        loadExamPlanification();
+
+                        // Afficher un message de succès
+                        showNotification('La planification d\'examen a été modifiée avec succès.', 'success');
+                    } else {
+                        // Réinitialiser le bouton
+                        $('#saveExamPlanBtn').prop('disabled', false).html(originalText);
+
+                        // Afficher un message d'erreur
+                        showNotification('Erreur lors de la modification: ' + (response.message || 'Données invalides'), 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Réinitialiser le bouton
+                    $('#saveExamPlanBtn').prop('disabled', false).html(originalText);
+
+                    // Afficher un message d'erreur
+                    showNotification('Erreur de connexion: ' + error, 'error');
+                }
+            });
+        });
+
+        // Fonction pour afficher des notifications élégantes
+        function showNotification(message, type) {
+            // Supprimer les notifications existantes
+            $('.notification-toast').remove();
+
+            // Créer une notification toast
+            const toastHtml = `
+                <div class="position-fixed top-0 end-0 p-3" style="z-index: 100000; margin-top: 80px;">
+                    <div class="toast notification-toast show align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="ri-${type === 'error' ? 'alert-line' : 'check-line'} me-2"></i>
+                                ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $('body').append(toastHtml);
+
+            // Fermer automatiquement après 5 secondes
+            setTimeout(function() {
+                $('.notification-toast').fadeOut('slow', function() {
+                    $(this).remove();
+                });
+            }, 5000);
+        }
+
+        // Gestion du clic sur le bouton de suppression
+        $(document).on('click', '.delete-btn', function() {
+            const planId = $(this).data('plan-id');
+            const module = $(this).data('module');
+
+            // Stocker l'ID de l'élément à supprimer
+            $('#confirmDeleteBtn').data('plan-id', planId);
+
+            // Mettre à jour le message dans le modal
+            $('#deleteConfirmationModal .modal-body .text-muted').first().html(
+                `Êtes-vous sûr de vouloir supprimer l'examen <strong>${module}</strong> ?<br><br>
+                Cette action est irréversible. L'examen sera définitivement supprimé de la planification.`
+            );
+
+            // Afficher le modal de confirmation
+            $('#deleteConfirmationModal').modal('show');
+        });
+
+        // Gestion de la confirmation de suppression
+        $('#confirmDeleteBtn').click(function() {
+            const planId = $(this).data('plan-id');
+
+            // Désactiver le bouton pour éviter les clics multiples
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Suppression...');
+
+            // Envoyer la requête de suppression
+            $.ajax({
+                url: "{% url 't_exam:delete_exam_plan' %}", // URL à adapter selon votre configuration
+                type: 'POST',
+                data: {
+                    id: planId
+                },
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val() // Pour Django CSRF
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        // Fermer le modal
+                        $('#deleteConfirmationModal').modal('hide');
+
+                        // Réinitialiser le bouton
+                        $('#confirmDeleteBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                        // Recharger les données
+                        loadExamPlanification();
+
+                        // Afficher un message de succès
+                        showNotification('L\'examen a été supprimé avec succès.', 'success');
+                    } else {
+                        // Réinitialiser le bouton
+                        $('#confirmDeleteBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                        // Afficher un message d'erreur
+                        showNotification('Erreur lors de la suppression: ' + (response.message || 'Données invalides'), 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Réinitialiser le bouton
+                    $('#confirmDeleteBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                    // Afficher un message d'erreur
+                    showNotification('Erreur de connexion: ' + error, 'error');
+                }
+            });
+        });
+
+        // Réinitialiser le modal de suppression quand il est fermé
+        $('#deleteConfirmationModal').on('hidden.bs.modal', function () {
+            // Réinitialiser le bouton
+            $('#confirmDeleteBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+        });
 
     });
 </script>
+
+
+
 {% endblock content %}

@@ -26,6 +26,10 @@ urlpatterns = [
 
    path("get-exam-plans/", get_exam_planifications, name="get_exam_plans"),
    path("save_exam_plan", save_exam_plan, name="save_exam_plan"),
+   path("update_exam/",update_exam_plan, name="update_exam_plan"),
+   path('ApiLoadSalle',ApiLoadSalle, name="ApiLoadSalle"),
+   path('delete_exam_plan',delete_exam_plan, name="delete_exam_plan"),
+
    path('close_session_line',close_session_line, name="close_session_line"), 
    path('models-pv/', ModelBuilltinPage, name="ModelBuilltinPage"),
    path('ApiListModeleBuilltins', ApiListModeleBuilltins, name="ApiListModeleBuilltins"),
@@ -97,8 +101,6 @@ urlpatterns = [
    path('ApiDeleteExamPlanification', ApiDeleteExamPlanification, name="ApiDeleteExamPlanification"),
 
    
-
-
     path('deliberation/liste/', PagePvDeliberation, name="PagePvDeliberation"),
     path('ApiLoadDeliberationPv', ApiLoadDeliberationPv, name="ApiLoadDeliberationPv"),
 

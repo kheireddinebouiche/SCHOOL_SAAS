@@ -27,7 +27,7 @@ def ApiSaveDouble(request):
             specialite2_id = request.POST.get('specialite2_id')
             label = request.POST.get('label', '')  # Le label est maintenant fourni par l'utilisateur
             description = request.POST.get('description', '')
-            frais = request.POST.get('frais')
+            # frais = request.POST.get('frais')
 
             # Validation des données
             if not specialite1_id or not specialite2_id:
@@ -77,7 +77,7 @@ def ApiSaveDouble(request):
                     specialite1=specialite1,
                     specialite2=specialite2,
                     label=label,
-                    frais_inscription = frais
+                    # frais_inscription = frais
                 )
 
             # Retourner une réponse de succès

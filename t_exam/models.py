@@ -51,9 +51,10 @@ class ExamPlanification(models.Model):
     heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début de l'examen")
     heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin de l'examen")
     type_examen = models.CharField(max_length=100, null=True, blank=True, choices=[('normal','Ordinaire'),('rachat','Rachat de credit'),('rattrage','Rattrapage')])
-    mode_examination = models.CharField(max_length=100, null=True, blank=True, choices=[('tr','Travail à remettre'),('exam','Examen'),('ligne','Examen en ligne')])
+    mode_examination = models.CharField(max_length=100, null=True, blank=True, choices=[('tr','Travail à remettre'),('exam','Examen'),('ligne','Examen en ligne'),('orale','Présentation orale')])
 
-    statut = models.CharField(max_length=100, null=True, blank=True, choices=[('termine','Terminer'),('nabouti','Non abouti')])
+    statut = models.CharField(max_length=100, null=True, blank=True, choices=[('termine','Termine'),('nabouti','Non abouti'),('att','En attente')], default="att")
+    surveillant = models.ForeignKey(Formateurs, on_delete=models.SET_NULL, null=True, blank=True)
 
     passed = models.BooleanField(default=False)
 

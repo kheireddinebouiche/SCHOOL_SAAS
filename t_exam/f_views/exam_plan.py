@@ -77,6 +77,7 @@ def get_exam_planifications(request):
             "salle_nom": plan.salle.nom if plan.salle else '-',
             "passed": plan.passed,
             "statut" : plan.statut,
+            "status_display": plan.get_statut_display(),
             "est_valide": plan.pv.est_valide if hasattr(plan, 'pv') else False,
             "pv_existe": hasattr(plan, 'pv'),
             "pv_id": plan.pv.id if hasattr(plan, 'pv') else None,
@@ -296,7 +297,6 @@ def GeneratePv(request, pk):
     }
 
     return render(request, 'tenant_folder/exams/preview_exam_pv.html', context)
-
 
 @login_required(login_url="institut_app:login")
 def GeneratePvModal(request, pk):
@@ -1604,4 +1604,29 @@ def ApiLoadSessionExamLines(request):
             return JsonResponse({"status": "error", "message": "Session non trouvée"})
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+##############" Mise a jours des plannifications d'examens"######################
+@login_required(login_url="institut_app:login")
+def update_exam_plan(request):
+    if request.method == "POST":
+        pass
+    else:
+        return JsonResponse({"status":"error"})   
+
+@login_required(login_url="institut_app:login")
+def ApiLoadSalle(request):
+    if request.method =="GET":
+        liste = Salle.objects.all().values('id','label')
+        return JsonResponse(list(liste), safe=False)
+
+    else:
+        return JsonResponse({"status":"error"})
     
+@login_required(login_url="institut_app:login")
+def delete_exam_plan(request):
+    if request.method == "POST":
+        pass
+
+    else:
+        return JsonResponse({"status":"error"})
