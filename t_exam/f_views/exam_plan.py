@@ -61,7 +61,7 @@ def PageDetailsSessionExamPlan(request, pk):
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
 
-    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('id').select_related('pv','module','salle')
+    plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('created_at').select_related('pv','module','salle')
 
     data = []
     for plan in plans:
@@ -154,9 +154,8 @@ def PreviewPV(request, pk):
 @transaction.atomic
 def validate_exam(request):
     if request.method == "POST":
-        exam_plan_id = request.POST.get('exam_plan_id')
-        comment = request.POST.get('comment')
-        decision = request.POST.get('decision')
+        exam_plan_id = request.POST.get('planId')
+        decision = request.POST.get('examStatus')
         
         if not exam_plan_id:
             return JsonResponse({"status" : "error", "message" : "Informations manquante"})
@@ -169,16 +168,12 @@ def validate_exam(request):
 
         elif decision == "nabouti":
             exam_plan.passed = False
-            exam_plan.comment = comment
             exam_plan.statut = "nabouti"
 
         exam_plan.save()
         return JsonResponse({"status": "success","message": "Valider avec succès"})
     else:
-        return JsonResponse({
-            "status": "error",
-            "message": "Méthode non autorisée"
-        })
+        return JsonResponse({"status": "error","message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 def GeneratePv(request, pk):
@@ -500,8 +495,7 @@ def GeneratePvModal(request, pk):
         'commission_results': commission_results,  # Pass commission results to template
         'exam_planification': obj,  # Pass the exam planification object to template
     }
-
-    return render(request, 'tenant_folder/exams/preview_exam_pv_modal.html', context)
+    return render(request, 'tenant_folder/exams/remplissage_notes.html', context)
 
 @login_required(login_url="institut_app:login")
 def ShowPvModal(request, pk):
@@ -1008,10 +1002,7 @@ def SaveExamResults(request, pk):
 
             # Check if PV is already validated
             if pv_examen.est_valide:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "PV déjà validé, modification impossible"
-                })
+                return JsonResponse({"status": "error","message": "PV déjà validé, modification impossible"})
 
             # Get all students for this exam
             groupe = SessionExamLine.objects.get(id=exam_plan.exam_line.id)
@@ -1610,14 +1601,41 @@ def ApiLoadSessionExamLines(request):
 @login_required(login_url="institut_app:login")
 def update_exam_plan(request):
     if request.method == "POST":
-        pass
+        id = request.POST.get('id')
+        mode_examen = request.POST.get('mode_examen')
+        date = request.POST.get('date')
+        heure_debut = request.POST.get('heure_debut')
+        heure_fin = request.POST.get('heure_fin')
+        salle = request.POST.get('salle')
+        surveillant = request.POST.get('surveillant')
+        observations = request.POST.get('observations')
+
+
+        if not id:
+            return JsonResponse({"status":"error",'message':"Informations manquante"})
+        
+        obj = ExamPlanification.objects.get(id = id)
+        try:
+            obj.mode_examination = mode_examen
+            obj.date = date
+            obj.heure_debut = heure_debut
+            obj.heure_fin = heure_fin
+            obj.salle_id = salle if salle else None
+            obj.surveillant_id = surveillant if surveillant else None
+            obj.comment = observations
+            obj.save()
+
+            return JsonResponse({"status" : "success", "message": "success"})
+        except Exception as e:
+            return JsonResponse({"status":"error","message":str(e)})
+        
     else:
         return JsonResponse({"status":"error"})   
 
 @login_required(login_url="institut_app:login")
 def ApiLoadSalle(request):
     if request.method =="GET":
-        liste = Salle.objects.all().values('id','label')
+        liste = Salle.objects.all().values('id','nom')
         return JsonResponse(list(liste), safe=False)
 
     else:
@@ -1626,7 +1644,23 @@ def ApiLoadSalle(request):
 @login_required(login_url="institut_app:login")
 def delete_exam_plan(request):
     if request.method == "POST":
-        pass
+        id = request.POST.get('id')
+        if not id:
+            return JsonResponse({"status":"error","message":"Informations manquantes"})
+        try:
+            ExamPlanification.objects.get(id = id).delete()
+            return JsonResponse({"status":"success","message":"Ligne de plannification supprimé avec succès"})
+        except Exception as e:
+            return JsonResponse({"status":"error",'message':str(e)})
 
+    else:
+        return JsonResponse({"status":"error"})
+    
+@login_required(login_url="insitut_app:login")
+def ApiLoadFormateur(request):
+    if request.method == "GET":
+        liste = Formateurs.objects.all().values('id','nom','prenom')
+        return JsonResponse(list(liste), safe=False)
+    
     else:
         return JsonResponse({"status":"error"})

@@ -114,4 +114,6 @@ urlpatterns = [
 
     path('details-session/exams/plannification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
 
+    path('ApiLoadFormateur',ApiLoadFormateur ,name="ApiLoadFormateur"),
+
 ]
