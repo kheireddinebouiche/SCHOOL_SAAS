@@ -243,6 +243,13 @@ class ExamNote(models.Model):
 
     class Meta:
         unique_together = ('pv', 'etudiant', 'type_note')
+    
+    def calculer_valeur(self):
+        if self.sous_notes.exists(): 
+            self.valeur = round( sum(sn.valeur for sn in self.sous_notes.all() if sn.valeur is not None),2) 
+            super().save(update_fields=['valeur'])
+
+        self.save(update_fields=['valeur'])
 
     def save(self, *args, **kwargs):
         if self.pv.est_valide:

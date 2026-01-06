@@ -215,14 +215,18 @@ def GeneratePvModal(request, pk):
     if blocs_with_types['no_bloc']['types']:
         ordered_blocs_with_types.append(blocs_with_types['no_bloc'])
 
-    # Create a mapping between builtin type note IDs and exam type note objects
+    # Create mappings between builtin type note IDs and exam type note objects
     builtin_to_exam_mapping = {}
+    exam_to_builtin_mapping = {}  # This will map exam_type_note.id to builtin_type_note.id
+
     for exam_type_note in pv_examen.exam_types_notes.all():
         # Find the corresponding builtin type note by code
         builtin_type_note = modele_builtins.types_notes.filter(code=exam_type_note.code).first()
         if builtin_type_note:
             # Use the builtin type note ID as key to match template expectations
             builtin_to_exam_mapping[builtin_type_note.id] = exam_type_note
+            # Also create reverse mapping for template access
+            exam_to_builtin_mapping[exam_type_note.id] = builtin_type_note.id
 
     # Prepare data for the template - use builtin IDs as keys to match template
     student_notes_data = {}
@@ -335,5 +339,6 @@ def GeneratePvModal(request, pk):
         'exam_planification': obj,  # Pass the exam planification object to template
         'dependencies_data': dependencies_data_json,  # Pass dependency data as JSON string for frontend calculations
         'builtin_types_to_include': builtin_types_to_include,  # Pass builtin types for template
+        'exam_to_builtin_mapping': exam_to_builtin_mapping,  # Pass mapping for template access
     }
     return render(request, 'tenant_folder/exams/remplissage_notes.html', context)
