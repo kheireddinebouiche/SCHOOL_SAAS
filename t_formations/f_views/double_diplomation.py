@@ -102,6 +102,7 @@ def ApiSaveDouble(request):
             'message': 'Méthode non autorisée.'
         }, status=405)
 
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 @login_required(login_url="institut_app:login")
 def ApiLoadDoubleDiplomation(request):
@@ -123,14 +124,14 @@ def ApiLoadDoubleDiplomation(request):
                     'specialite1_label': combinaison.specialite1.label if combinaison.specialite1 else 'N/A',
                     'specialite1_formation': combinaison.specialite1.formation.nom if combinaison.specialite1 and combinaison.specialite1.formation else 'N/A',
                     'specialite1_formation_id': combinaison.specialite1.formation.id if combinaison.specialite1 and combinaison.specialite1.formation else None,
-                    'prix_spec1' : combinaison.prix_spec1 if combinaison.prix_spec1 else None,
-                    'prix_spec2' : combinaison.prix_spec2 if combinaison.prix_spec2 else None,
+                    'prix_spec1' : intcomma(combinaison.prix_spec1) if combinaison.prix_spec1 else None,
+                    'prix_spec2' : intcomma(combinaison.prix_spec2) if combinaison.prix_spec2 else None,
                     'specialite2_id': combinaison.specialite2.id if combinaison.specialite2 else None,
                     'specialite2_label': combinaison.specialite2.label if combinaison.specialite2 else 'N/A',
                     'specialite2_formation': combinaison.specialite2.formation.nom if combinaison.specialite2 and combinaison.specialite2.formation else 'N/A',
                     'specialite2_formation_id': combinaison.specialite2.formation.id if combinaison.specialite2 and combinaison.specialite2.formation else None,
-                    'montant' : combinaison.prix if combinaison.prix else None,
-                    'frais_inscription' : combinaison.frais_inscription if combinaison.frais_inscription else None,
+                    'montant' : intcomma(combinaison.prix) if combinaison.prix else None,
+                    'frais_inscription' : intcomma(combinaison.frais_inscription) if combinaison.frais_inscription else None,
                     'created_at': combinaison.created_at.strftime('%d %b %Y') if combinaison.created_at else 'N/A',
                     'description': getattr(combinaison, 'description', ''),  # In case description field exists in future
                 }

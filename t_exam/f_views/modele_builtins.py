@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from ..models import ModelBuilltins, BuiltinTypeNote, BuiltinSousNote
+from ..models import ModelBuilltins, BuiltinTypeNote, BuiltinSousNote, BuiltinTypeNoteDependency, NoteBloc
 from t_formations.models import Formation
 from django.db import transaction
 import json
@@ -75,9 +75,9 @@ def ApiGetModelBuilltinDetails(request):
     """API pour obtenir les détails d'un modèle de bulletin avec ses types de notes et sous-notes"""
     model_id = request.GET.get('id')
     model = ModelBuilltins.objects.get(id=model_id)
-    
+
     types_notes = BuiltinTypeNote.objects.filter(builtin=model).order_by('ordre')
-    
+
     data = {
         'id': model.id,
         'label': model.label,
@@ -86,9 +86,21 @@ def ApiGetModelBuilltinDetails(request):
         'is_default': model.is_default,
         'types_notes': []
     }
-    
+
     for type_note in types_notes:
         sous_notes = BuiltinSousNote.objects.filter(type_note=type_note).order_by('ordre')
+
+        # Get dependencies for this type note
+        dependencies = BuiltinTypeNoteDependency.objects.filter(parent=type_note)
+        dependencies_data = [
+            {
+                'id': dep.id,
+                'child_id': dep.child.id,
+                'child_code': dep.child.code,
+                'child_libelle': dep.child.libelle
+            } for dep in dependencies
+        ]
+
         data['types_notes'].append({
             'id': type_note.id,
             'code': type_note.code,
@@ -99,6 +111,11 @@ def ApiGetModelBuilltinDetails(request):
             'is_rachat': type_note.is_rachat,
             'nb_sous_notes': type_note.nb_sous_notes,
             'ordre': type_note.ordre,
+            'is_calculee': type_note.is_calculee,
+            'type_calcul': type_note.type_calcul,
+            'bloc_id': type_note.bloc.id if type_note.bloc else None,
+            'bloc_label': type_note.bloc.label if type_note.bloc else None,
+            'dependencies': dependencies_data,
             'sous_notes': [
                 {
                     'id': sn.id,
@@ -108,7 +125,7 @@ def ApiGetModelBuilltinDetails(request):
                 } for sn in sous_notes
             ]
         })
-    
+
     return JsonResponse(data)
 
 @login_required(login_url="institut_app:login")
@@ -176,11 +193,19 @@ def ApiAddTypeNote(request):
         is_rachat = request.POST.get('is_rachat') == 'on'
         nb_sous_notes = request.POST.get('nb_sous_notes', 0)
         ordre = request.POST.get('ordre', 0)
+        is_calculee = request.POST.get('is_calculee') == 'on'
+        type_calcul = request.POST.get('type_calcul', 'NONE')
+        bloc_id = request.POST.get('bloc_id')
 
         builtin = ModelBuilltins.objects.get(id=model_id)
 
+        bloc = None
+        if bloc_id and bloc_id != 'null' and bloc_id != '':
+            bloc = NoteBloc.objects.get(id=bloc_id)
+
         type_note = BuiltinTypeNote.objects.create(
             builtin=builtin,
+            bloc=bloc,
             code=code,
             libelle=libelle,
             max_note=float(max_note),
@@ -188,7 +213,9 @@ def ApiAddTypeNote(request):
             is_rattrapage=is_rattrapage,
             is_rachat=is_rachat,
             nb_sous_notes=int(nb_sous_notes),
-            ordre=int(ordre)
+            ordre=int(ordre),
+            is_calculee=is_calculee,
+            type_calcul=type_calcul
         )
 
         return JsonResponse({
@@ -213,8 +240,19 @@ def ApiUpdateTypeNote(request):
         is_rachat = request.POST.get('is_rachat') == 'on'
         nb_sous_notes = request.POST.get('nb_sous_notes', 0)
         ordre = request.POST.get('ordre', 0)
+        is_calculee = request.POST.get('is_calculee') == 'on'
+        type_calcul = request.POST.get('type_calcul', 'NONE')
+        bloc_id = request.POST.get('bloc_id')
 
         type_note = BuiltinTypeNote.objects.get(id=type_note_id)
+
+        # Update bloc
+        if bloc_id and bloc_id != 'null' and bloc_id != '':
+            bloc = NoteBloc.objects.get(id=bloc_id)
+            type_note.bloc = bloc
+        else:
+            type_note.bloc = None
+
         type_note.code = code
         type_note.libelle = libelle
         type_note.max_note = float(max_note)
@@ -223,6 +261,8 @@ def ApiUpdateTypeNote(request):
         type_note.is_rachat = is_rachat
         type_note.nb_sous_notes = int(nb_sous_notes)
         type_note.ordre = int(ordre)
+        type_note.is_calculee = is_calculee
+        type_note.type_calcul = type_calcul
         type_note.save()
 
         return JsonResponse({
@@ -271,7 +311,6 @@ def ApiAddSousNote(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-
 @transaction.atomic
 def ApiUpdateSousNote(request):
     """API pour mettre à jour une sous-note"""
@@ -294,7 +333,6 @@ def ApiUpdateSousNote(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-
 @transaction.atomic
 def ApiDeleteSousNote(request):
     """API pour supprimer une sous-note"""
@@ -305,7 +343,6 @@ def ApiDeleteSousNote(request):
         'status': 'success',
         'message': 'Sous-note supprimée avec succès'
     })
-
 
 @transaction.atomic
 def ApiBulkUpdateSousNotes(request):
@@ -348,6 +385,127 @@ def ApiBulkUpdateSousNotes(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAddTypeNoteDependency(request):
+    """API pour ajouter une dépendance entre types de notes"""
+    if request.method == 'POST':
+        parent_id = request.POST.get('parent_id')
+        child_id = request.POST.get('child_id')
+
+        parent = BuiltinTypeNote.objects.get(id=parent_id)
+        child = BuiltinTypeNote.objects.get(id=child_id)
+
+        # Vérifier qu'on ne crée pas une boucle de dépendance
+        if creates_cycle(parent, child):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Cette dépendance créerait une boucle de dépendance'
+            })
+
+        dependency, created = BuiltinTypeNoteDependency.objects.get_or_create(
+            parent=parent,
+            child=child
+        )
+
+        if created:
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Dépendance ajoutée avec succès',
+                'id': dependency.id
+            })
+        else:
+            return JsonResponse({
+                'status': 'success',
+                'message': 'La dépendance existe déjà',
+                'id': dependency.id
+            })
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteTypeNoteDependency(request):
+    """API pour supprimer une dépendance entre types de notes"""
+    dependency_id = request.GET.get('id')
+    dependency = BuiltinTypeNoteDependency.objects.get(id=dependency_id)
+    dependency.delete()
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Dépendance supprimée avec succès'
+    })
+
+@login_required(login_url="institut_app:login")
+def ApiGetTypeNoteDependencies(request):
+    """API pour obtenir toutes les dépendances d'un type de note"""
+    parent_id = request.GET.get('parent_id')
+    parent = BuiltinTypeNote.objects.get(id=parent_id)
+
+    dependencies = BuiltinTypeNoteDependency.objects.filter(parent=parent)
+
+    data = []
+    for dep in dependencies:
+        data.append({
+            'id': dep.id,
+            'parent_id': dep.parent.id,
+            'parent_code': dep.parent.code,
+            'parent_libelle': dep.parent.libelle,
+            'child_id': dep.child.id,
+            'child_code': dep.child.code,
+            'child_libelle': dep.child.libelle
+        })
+
+    return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiGetTypeNoteAvailableDependencies(request):
+    """API pour obtenir tous les types de notes disponibles pour les dépendances"""
+    model_id = request.GET.get('model_id')
+    parent_id = request.GET.get('parent_id')
+
+    # Récupérer tous les types de notes du modèle sauf le parent lui-même
+    available_types = BuiltinTypeNote.objects.filter(builtin_id=model_id).exclude(id=parent_id)
+
+    # Exclure les types de notes qui sont déjà dépendants du parent (pour éviter les boucles)
+    parent = BuiltinTypeNote.objects.get(id=parent_id)
+    dependencies = BuiltinTypeNoteDependency.objects.filter(parent=parent)
+    excluded_ids = [dep.child.id for dep in dependencies]
+    available_types = available_types.exclude(id__in=excluded_ids)
+
+    data = []
+    for type_note in available_types:
+        data.append({
+            'id': type_note.id,
+            'code': type_note.code,
+            'libelle': type_note.libelle
+        })
+
+    return JsonResponse(data, safe=False)
+
+def creates_cycle(parent, child):
+    """
+    Fonction pour vérifier si l'ajout d'une dépendance créerait une boucle
+    """
+    # Vérifier si le child dépend déjà du parent (directement ou indirectement)
+    visited = set()
+    stack = [child]
+
+    while stack:
+        current = stack.pop()
+        if current.id == parent.id:
+            return True  # Une boucle serait créée
+        if current.id in visited:
+            continue
+        visited.add(current.id)
+
+        # Ajouter tous les parents de current à la pile
+        parents = BuiltinTypeNoteDependency.objects.filter(child=current).values_list('parent', flat=True)
+        for parent_id in parents:
+            parent_obj = BuiltinTypeNote.objects.get(id=parent_id)
+            if parent_obj.id not in visited:
+                stack.append(parent_obj)
+
+    return False
 
 def ApiGetSousNotesForType(request):
     """API pour obtenir toutes les sous-notes d'un type de note"""
@@ -366,3 +524,52 @@ def ApiGetSousNotesForType(request):
         })
 
     return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiGetAllBlocs(request):
+    """API pour obtenir tous les blocs de notes"""
+    blocs = NoteBloc.objects.all().order_by('ordre')
+
+    data = []
+    for bloc in blocs:
+        data.append({
+            'id': bloc.id,
+            'label': bloc.label,
+            'code': bloc.code,
+            'ordre': bloc.ordre
+        })
+
+    return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAddBloc(request):
+    """API pour ajouter un nouveau bloc de notes"""
+    if request.method == 'POST':
+        label = request.POST.get('label')
+        code = request.POST.get('code')
+        ordre = request.POST.get('ordre', 0)
+
+        # Check if code already exists
+        if NoteBloc.objects.filter(code=code).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Un bloc avec ce code existe déjà'
+            })
+
+        bloc = NoteBloc.objects.create(
+            label=label,
+            code=code,
+            ordre=int(ordre)
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Bloc ajouté avec succès',
+            'id': bloc.id,
+            'label': bloc.label,
+            'code': bloc.code,
+            'ordre': bloc.ordre
+        })
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})

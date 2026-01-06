@@ -1,487 +1,256 @@
 {% load exam_custom_filters %}
-<!-- Include Bootstrap Icons CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-<!-- Modal for preview exam PV -->
-<div id="previewExamPvModal" class="modal fade" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable" role="document">
-        <div class="modal-content rounded-0 shadow-lg border-0 h-100">
-            <div class="modal-header bg-primary text-white p-4">
-                <div class="d-flex align-items-center">
-                    <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                        <i class="bi bi-file-text text-white"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title mb-0 text-white">Prévisualisation PV d'examen</h5>
-                        <p class="mb-0 opacity-75 small text-white">Gestion des résultats d'examen</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal for filling exam notes -->
+<div class="modal fade" id="fillNotesModal" tabindex="-1" aria-labelledby="fillNotesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title text-dark" id="fillNotesModalLabel">
+                    Remplissage des notes - {{ module }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="header-info mb-4">
-                    <div class="row">
-                        <div class="col-md-2">
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-people text-white"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Groupe</small>
-                                    <span class="fw-semibold">{{ groupe.groupe.nom }}</span>
-                                </div>
-                            </div>
+
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-dark">Groupe: <strong>{{ groupe.groupe.nom }}</strong></h6>
                         </div>
-                        <div class="col-md-2">
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-calendar text-info"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Session</small>
-                                    <span class="fw-semibold">{{ session }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-book text-success"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Module</small>
-                                    <span class="fw-semibold">{{ module }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-check-circle text-secondary"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Validé</small>
-                                    <span class="fw-semibold">{{ pv_examen.est_valide|yesno:"Oui,Non" }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-danger bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-exclamation-triangle text-danger"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Note éliminatoire</small>
-                                    <span class="fw-semibold text-danger">{{ note_eliminatoire|default:"N/A" }}</span>
-                                </div>
-                            </div>
+                        <div class="col-md-6">
+                            <h6 class="text-dark">Session: <strong>{{ session }}</strong></h6>
                         </div>
                     </div>
-                </div>
 
-                {% if exam_planification.type_examen == 'normal' %}
-                <div class="alert alert-info mb-4">
-                    <h6 class="alert-heading mb-2"><i class="bi bi-info-circle me-2"></i> Légende des couleurs</h6>
-                    <ul class="mb-0">
-                        <li><span class="badge bg-success" style="background-color: #d4edda !important; color: #000 !important; border: 1px solid #c3e6cb;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #155724;">Moyenne ≥ Note éliminatoire</strong> - Étudiant admis</li>
-                        <li><span class="badge bg-danger" style="background-color: #f8d7da !important; color: #000 !important; border: 1px solid #f1b0b7;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #721c24;">Moyenne &lt; Note éliminatoire</strong> - Étudiant non admis</li>
-                        <li><span class="badge" style="background-color: #fff !important; color: #000 !important; border: 1px solid #ccc;">&nbsp;&nbsp;&nbsp;</span> <strong style="color: #000;">Ligne blanche</strong> - Étudiant avec statut 'rachat' ou 'ajourné', champs désactivés</li>
-                    </ul>
-                </div>
-                {% endif %}
-
-                <div id="status-message" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-                    <div id="status-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="toast-header bg-primary text-white">
-                            <i class="bi bi-info-circle me-2"></i>
-                            <strong class="me-auto">Système</strong>
-                            <small>Aujourd'hui</small>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-dark">Module: <strong>{{ module }}</strong></h6>
                         </div>
-                        <div class="toast-body">
-                            <span id="status-message-text"></span>
+                        <div class="col-md-6">
+                            <h6 class="text-dark">Note éliminatoire: <strong>{{ note_eliminatoire }}</strong></h6>
                         </div>
                     </div>
-                </div>
 
-                <form id="exam-results-form-modal">
-                    {% csrf_token %}
-                    <div class="table-responsive rounded-3 overflow-hidden shadow-sm">
-                        <table class="table table-hover mb-0 border table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">N°</th>
-                                    <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">Nom de l'étudiant</th>
-                                    <th rowspan="2" class="align-middle border" style="border: 2px solid #495057 !important; vertical-align: middle;">Prénom</th>
-                                    {% for type_note in filtered_types_notes %}
-                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                            <th colspan="{{ type_note.nb_sous_notes|add:1 }}" class="text-center py-3 border" style="border: 2px solid #495057 !important;">{{ type_note.libelle }} <span class="badge bg-primary bg-opacity-25 text-white">Max: {{ type_note.max_note }}</span></th>
-                                        {% else %}
-                                            <th class="text-center py-3 border" style="border: 2px solid #495057 !important;">{{ type_note.libelle }} <span class="badge bg-secondary bg-opacity-25 text-white">Max: {{ type_note.max_note }}</span></th>
-                                        {% endif %}
-                                    {% endfor %}
-                                    <th rowspan="2" class="align-middle border text-center" style="border: 2px solid #495057 !important; vertical-align: middle;">Moyenne</th>
-                                    <th rowspan="2" class="align-middle border text-center" style="border: 2px solid #495057 !important; vertical-align: middle;">Observation</th>
-                                </tr>
-                                <tr>
-                                    {% for type_note in filtered_types_notes %}
-                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                            {% for sous_note in type_note.sous_notes.all %}
-                                                <th class="text-center py-2 small border" style="border: 2px solid #495057 !important;">
-                                                    <div class="d-flex flex-column">
-                                                        <span class="fw-medium">{{ sous_note.label }}</span>
-                                                        <small class="opacity-75">Max: {{ sous_note.max_note|default:"N/A" }}</small>
-                                                    </div>
-                                                </th>
+                    <div id="status-message" class="status-message alert" style="display: none;"></div>
+
+                    <form id="exam-results-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="exam_plan_id" value="{{ pk }}">
+
+                        <!-- Single table with note types visually grouped into blocks -->
+                        <div class="note-block-container border rounded p-3">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th rowspan="2" class="align-middle text-dark">N°</th>
+                                            <th rowspan="2" class="align-middle text-dark">Nom</th>
+                                            <th rowspan="2" class="align-middle text-dark">Prénom</th>
+                                            {% for bloc_data in ordered_blocs_with_types %}
+                                                {% if bloc_data.bloc %}
+                                                    <th colspan="{{ bloc_data.types|length }}" class="text-center text-dark bg-primary bg-opacity-25 bloc-header">{{ bloc_data.bloc.label }}</th>
+                                                {% else %}
+                                                    {% for type_note in bloc_data.types %}
+                                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                            <th colspan="{{ type_note.nb_sous_notes|add:1 }}" class="text-center text-dark note-type-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                                        {% else %}
+                                                            <th class="text-center text-dark note-type-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
                                             {% endfor %}
-                                            <th class="text-center py-2 small border" style="border: 2px solid #495057 !important;">
-                                                <div class="d-flex flex-column">
-                                                    <span class="fw-bold text-success">Somme</span>
-                                                    <small class="opacity-75">des sous-notes</small>
-                                                </div>
-                                            </th>
-                                        {% endif %}
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for student_line in students %}
-                                    {% with commission_result=commission_results|exam_get_item:student_line.student.id %}
-                                    {% with exam_type=exam_planification.type_examen %}
-                                    <tr {% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}class="no-elimination-check"{% endif %}>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td class="student-name">{{ student_line.student.nom }}</td>
-                                        <td>{{ student_line.student.prenom }}</td>
-                                        {% for type_note in filtered_types_notes %}
-                                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                                {% for sous_note in type_note.sous_notes.all %}
-                                                    <td class="note-cell">
-                                                        <input type="number"
-                                                               step="0.01"
-                                                               min="0"
-                                                               max="{{ sous_note.max_note|default:type_note.max_note }}"
-                                                               class="note-input form-control form-control-sm"
-                                                               name="sous_note_{{ student_line.student.id }}_{{ type_note.id }}_{{ forloop.counter0 }}"
-                                                               value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and forloop.counter0 < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:forloop.counter0 %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endif %}"
-                                                               {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
-                                                    </td>
+                                        </tr>
+                                        <tr>
+                                            {% for bloc_data in ordered_blocs_with_types %}
+                                                {% for type_note in bloc_data.types %}
+                                                    {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                        {% for sous_note in type_note.sous_notes.all %}
+                                                            <th class="text-center small text-dark">{{ sous_note.label }} (Max: {{ sous_note.max_note|default:"N/A" }})</th>
+                                                        {% endfor %}
+                                                        <th class="text-center small text-dark">Note finale</th>
+                                                    {% else %}
+                                                        <th class="text-center small text-dark">Note</th>
+                                                    {% endif %}
                                                 {% endfor %}
-                                                <td class="note-cell">
-                                                    <input type="text"
-                                                           class="form-control form-control-sm text-success"
-                                                           id="sum_{{ student_line.student.id }}_{{ type_note.id }}"
-                                                           value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}0{% endif %}"
-                                                           readonly
-                                                           data-max-note="{{ type_note.max_note }}">
-                                                </td>
-                                            {% else %}
-                                                <td class="note-cell">
-                                                    <input type="number"
-                                                           step="0.01"
-                                                           min="0"
-                                                           max="{{ type_note.max_note }}"
-                                                           class="note-input form-control form-control-sm"
-                                                           name="note_{{ student_line.student.id }}_{{ type_note.id }}"
-                                                           value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0{% else %}{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endif %}"
-                                                           {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
-                                                </td>
-                                            {% endif %}
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student_line in students %}
+                                            <tr>
+                                                <td class="text-dark">{{ forloop.counter }}</td>
+                                                <td class="student-name text-dark">{{ student_line.student.nom }}</td>
+                                                <td class="text-dark">{{ student_line.student.prenom }}</td>
+                                                {% for bloc_data in ordered_blocs_with_types %}
+                                                    {% for type_note in bloc_data.types %}
+                                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                            {% for sous_note in type_note.sous_notes.all %}
+                                                                {% with sous_note_loop_index=forloop.counter0 %}
+                                                                <td class="text-center">
+                                                                    <input type="number"
+                                                                           step="0.01"
+                                                                           min="0"
+                                                                           max="{{ sous_note.max_note|default:type_note.max_note }}"
+                                                                           class="form-control form-control-sm"
+                                                                           name="sous_note_{{ student_line.student.id }}_{{ type_note.id }}_{{ sous_note_loop_index }}"
+                                                                           value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and sous_note_loop_index < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:sous_note_loop_index %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                                                           {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                                </td>
+                                                                {% endwith %}
+                                                            {% endfor %}
+                                                            <!-- Input for the calculated final note -->
+                                                            <td class="text-center">
+                                                                <input type="number"
+                                                                       step="0.01"
+                                                                       min="0"
+                                                                       max="{{ type_note.max_note }}"
+                                                                       class="form-control form-control-sm"
+                                                                       name="note_{{ student_line.student.id }}_{{ type_note.id }}"
+                                                                       value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                                                       {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                            </td>
+                                                        {% else %}
+                                                            <!-- Input for notes without sub-notes -->
+                                                            <td class="text-center">
+                                                                <input type="number"
+                                                                       step="0.01"
+                                                                       min="0"
+                                                                       max="{{ type_note.max_note }}"
+                                                                       class="form-control form-control-sm"
+                                                                       name="note_{{ student_line.student.id }}_{{ type_note.id }}"
+                                                                       value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                                                       {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                            </td>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endfor %}
+                                            </tr>
                                         {% endfor %}
-                                        <td class="moyenne-cell">
-                                            <input type="text"
-                                                   class="form-control form-control-sm text-center fw-bold"
-                                                   id="moyenne_{{ student_line.student.id }}"
-                                                   value="{% if exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}0.00{% else %}0.00{% endif %}"
-                                                   readonly
-                                                   style="background-color: #e6f3ff;">
-                                        </td>
-                                        <td class="decision-cell">
-                                            {% with student_decision=decisions_existantes|exam_get_item:student_line.student.id %}
-                                            <select class="form-select form-select-sm" name="decision_{{ student_line.student.id }}" id="decision_{{ student_line.student.id }}" {% if pv_examen and pv_examen.est_valide or exam_type == 'normal' and commission_result == 'rach' or exam_type == 'normal' and commission_result == 'ajou' %}disabled{% endif %}>
-                                                <option value="">Sélectionner...</option>
-                                                <option value="valide" {% if student_decision and student_decision.statut == 'valide' %}selected{% endif %}>Admis</option>
-                                                <option value="rattrapage" {% if student_decision and student_decision.statut == 'rattrapage' %}selected{% endif %}>Rattrapage</option>
-                                                <option value="rach" {% if student_decision and student_decision.statut == 'rach' %}selected{% elif commission_result == 'rach' %}selected{% endif %}>Rachat de crédit</option>
-                                                <option value="ajou" {% if student_decision and student_decision.statut == 'ajou' %}selected{% elif commission_result == 'ajou' %}selected{% endif %}>Ajourné</option>
-                                            </select>
-                                            {% endwith %}
-                                        </td>
-                                    </tr>
-                                    {% endwith %}
-                                    {% endwith %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer bg-light p-4">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
-                        <i class="bi bi-x me-2"></i>Fermer
-                    </button>
-                    <button type="button" class="btn btn-success px-4 py-2" id="save-results-btn-modal" {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
-                        <i class="bi bi-save me-2"></i>Sauvegarder
-                    </button>
-                    {% if not pv_examen or not pv_examen.est_valide %}
-                        <button type="button" class="btn btn-danger px-4 py-2" id="validate-btn-modal">
-                            <i class="bi bi-check me-2"></i>Valider le PV
-                        </button>
-                    {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </form>
                 </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                {% if not pv_examen or not pv_examen.est_valide %}
+                    <button type="button" class="btn btn-warning" id="save-notes-btn">Sauvegarder</button>
+                    <button type="button" class="btn btn-success" id="validate-exam-btn">Valider l'examen</button>
+                {% else %}
+                    <span class="text-success fw-bold">PV Validé</span>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+<!-- Bootstrap and jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Bootstrap Toast JavaScript -->
 <script>
+    // Define URLs using Django template tags - using var instead of const to avoid redeclaration issues
+    if (typeof SAVE_EXAM_RESULTS_URL === 'undefined') {
+        var SAVE_EXAM_RESULTS_URL = "{% url 't_exam:save_exam_results' pk %}";
+    }
+    if (typeof VALIDATE_EXAM_URL === 'undefined') {
+        var VALIDATE_EXAM_URL = "{% url 't_exam:validate_exam' %}";
+    }
 
-      // Add event listeners when the modal is shown
-$(document).ready(function() {
-       
-        function showStatus(message, isSuccess) {
-            const toastElement = document.getElementById('status-toast');
-            const toastBody = document.getElementById('status-message-text');
-            const toastHeader = toastElement.querySelector('.toast-header');
+    function showStatus(message, isSuccess) {
+        const statusDiv = document.getElementById('status-message');
+        statusDiv.textContent = message;
+        statusDiv.className = 'status-message alert ' + (isSuccess ? 'alert-success' : 'alert-danger');
+        statusDiv.style.display = 'block';
 
-            // Set the message
-            toastBody.textContent = message;
+        setTimeout(function() {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
 
-            // Update header and body classes based on success/error
-            if (isSuccess) {
-                toastHeader.className = 'toast-header bg-success text-white';
-            } else {
-                toastHeader.className = 'toast-header bg-danger text-white';
-            }
+    function validateNoteInput(inputElement) {
+        const value = parseFloat(inputElement.value);
+        const maxNote = parseFloat(inputElement.max);
 
-            // Create bootstrap toast instance and show it
-            const toast = new bootstrap.Toast(toastElement, {
-                delay: 5000,
-                autohide: true
-            });
-
-            toast.show();
+        // Vérifier si la valeur est supérieure à la max_note
+        if (!isNaN(value) && !isNaN(maxNote) && value > maxNote) {
+            // Changer la couleur de fond pour indiquer une erreur
+            inputElement.style.backgroundColor = '#ffe6e6'; // rouge clair
+            return false;
+        } else if (!isNaN(value) && !isNaN(maxNote) && value <= maxNote) {
+            // Changer la couleur de fond pour indiquer une saisie valide
+            inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
+            return true;
+        } else {
+            // Réinitialiser la couleur de fond si la valeur est vide ou invalide
+            inputElement.style.backgroundColor = '';
+            return true;
         }
+    }
 
-        function calculateSum(studentId, typeNoteId) {
-            let sum = 0;
-            let hasValidValues = false;
+    function validateAllNotes() {
+        let allValid = true;
+        const noteInputs = document.querySelectorAll('input[type="number"]');
 
-            // Find all sub-note inputs for this student and type note
-            const subNoteInputs = document.querySelectorAll(`input[name^="sous_note_${studentId}_${typeNoteId}_"]`);
-
-            subNoteInputs.forEach(function(input) {
-                const value = parseFloat(input.value);
-                if (!isNaN(value)) {
-                    sum += value;
-                    hasValidValues = true;
-                }
-            });
-
-            // Update the sum field
-            const sumField = document.getElementById(`sum_${studentId}_${typeNoteId}`);
-            if (sumField) {
-                sumField.value = hasValidValues ? sum.toFixed(2) : '0.00';
+        noteInputs.forEach(function(input) {
+            if (!validateNoteInput(input)) {
+                allValid = false;
             }
-        }
+        });
 
-        function calculateAverage(studentId) {
-            let totalNotes = 0;      // Somme des notes obtenues
-            let totalMaxNotes = 0;   // Somme des notes maximales
+        return allValid;
+    }
 
-            // Find all main note inputs for this student (for types without sub-notes)
-            const noteInputs = document.querySelectorAll(`input[name^="note_${studentId}_"]`);
+    function saveExamResults() {
+        const form = document.getElementById('exam-results-form');
+        const formData = new FormData(form);
 
-            // Process each note input
-            noteInputs.forEach(function(input) {
-                const value = parseFloat(input.value);
-                if (!isNaN(value) && input.value.trim() !== '') {
-                    // Extract type note ID from input name: note_studentId_typeNoteId
-                    const nameParts = input.name.split('_');
-                    if (nameParts.length >= 3) {
-                        const typeNoteId = nameParts[2];
-
-                        // Get the max_note for this type from the input's max attribute
-                        const maxNote = parseFloat(input.max);
-                        if (!isNaN(maxNote) && maxNote > 0) {
-                            totalNotes += value;
-                            totalMaxNotes += maxNote;
-                        }
-                    }
-                }
-            });
-
-            // Also include sum fields for types with sub-notes
-            const sumInputs = document.querySelectorAll(`input[id^="sum_${studentId}_"]`);
-            sumInputs.forEach(function(input) {
-                const value = parseFloat(input.value);
-                if (!isNaN(value) && input.value.trim() !== '') {
-                    // For sum fields, get the max_note from the data attribute
-                    const maxNote = parseFloat(input.dataset.maxNote || input.getAttribute('data-max-note'));
-                    if (!isNaN(maxNote) && maxNote > 0) {
-                        totalNotes += value;
-                        totalMaxNotes += maxNote;
-                    }
-                }
-            });
-
-            // Calculate weighted average: (sum of obtained notes) / (sum of max notes) * 20
-            let weightedAverage = 0;
-            if (totalMaxNotes > 0) {
-                weightedAverage = (totalNotes / totalMaxNotes) * 20;
-            }
-
-            // Update the average field
-            const averageField = document.getElementById(`moyenne_${studentId}`);
-            if (averageField) {
-                averageField.value = weightedAverage.toFixed(2);
-            }
-
-            // Color the row based on the average compared to the elimination note
-            colorRowBasedOnAverage(studentId, weightedAverage);
-        }
-
-        function colorRowBasedOnAverage(studentId, average) {
-            // Get the note éliminatoire from the page
-            const noteEliminatoireElement = document.querySelector('span.fw-semibold.text-danger');
-            let noteEliminatoire = 0;
-
-            if (noteEliminatoireElement) {
-                const noteText = noteEliminatoireElement.textContent.trim();
-                noteEliminatoire = parseFloat(noteText);
-            }
-
-            // If we couldn't parse the note éliminatoire, use a default value
-            if (isNaN(noteEliminatoire)) {
-                noteEliminatoire = parseFloat('{{ module.note_eliminatoire|default:0 }}');
-            }
-
-            // Find the row for this student
-            // We'll look for the row that contains the average input for this student
-            const averageInput = document.getElementById(`moyenne_${studentId}`);
-            if (!averageInput) return; // If average input not found, exit
-
-            // Find the parent row
-            const row = averageInput.closest('tr');
-            if (!row) return; // If row not found, exit
-
-            // Check if this is a student with 'rach' or 'ajou' status in a normal exam
-            // If so, don't apply elimination note checking
-            if (row.classList.contains('no-elimination-check')) {
-                // For students with 'rach' or 'ajou' status, reset to default styling
-                row.classList.remove('table-danger', 'table-success');
-                const inputs = row.querySelectorAll('input');
-                inputs.forEach(input => {
-                    input.style.backgroundColor = '';
-                    input.style.color = '#000';
-                });
-                if (averageInput) {
-                    averageInput.style.backgroundColor = '';
-                    averageInput.style.color = '#000';
-                }
-                return; // Don't apply elimination note checking for these students
-            }
-
-            // Remove existing color classes
-            row.classList.remove('table-danger', 'table-success');
-
-            // Color the row based on comparison with elimination note
-            if (average < noteEliminatoire) {
-                // Average is below elimination note - color red (danger)
-                row.classList.add('table-danger');
-
-                // Also color the input fields in the row to red with black text
-                const inputs = row.querySelectorAll('input');
-                inputs.forEach(input => {
-                    input.style.backgroundColor = '#f8d7da'; // light red background
-                    input.style.color = '#000'; // black text for better readability
-                });
-
-                // Color the average field specifically
-                const avgInput = document.getElementById(`moyenne_${studentId}`);
-                if (avgInput) {
-                    avgInput.style.backgroundColor = '#f1b0b7'; // slightly darker red for average
-                    avgInput.style.color = '#000'; // black text
-                }
-            } else {
-                // Average is above or equal to elimination note - color green with black text
-                row.classList.add('table-success');
-
-                // Also color the input fields in the row to green with black text
-                const inputs = row.querySelectorAll('input');
-                inputs.forEach(input => {
-                    input.style.backgroundColor = '#d4edda'; // light green background
-                    input.style.color = '#000'; // black text for better readability
-                });
-
-                // Color the average field specifically
-                const avgInput = document.getElementById(`moyenne_${studentId}`);
-                if (avgInput) {
-                    avgInput.style.backgroundColor = '#c3e6cb'; // slightly darker green for average
-                    avgInput.style.color = '#000'; // black text
-                }
-            }
-        }
-
-        function validateNoteInput(inputElement) {
-            const value = parseFloat(inputElement.value);
-            const maxNote = parseFloat(inputElement.max);
-
-            // Vérifier si la valeur est supérieure à la max_note
-            if (!isNaN(value) && !isNaN(maxNote) && value > maxNote) {
-                // Changer la couleur de fond pour indiquer une erreur
-                inputElement.style.backgroundColor = '#ffe6e6'; // rouge clair
-                inputElement.style.color = '#000'; // noir
-                return false;
-            } else if (!isNaN(value) && !isNaN(maxNote) && value <= maxNote) {
-                // Changer la couleur de fond pour indiquer une saisie valide
-                inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
-                inputElement.style.color = '#000'; // noir
-                return true;
-            } else {
-                // Si la valeur est vide mais le champ a une valeur, on met en vert clair
-                if (inputElement.value.trim() !== '') {
-                    inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
-                    inputElement.style.color = '#000'; // noir
+        $.ajax({
+            url: typeof SAVE_EXAM_RESULTS_URL !== 'undefined' ? SAVE_EXAM_RESULTS_URL : "{% url 't_exam:save_exam_results' pk %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            success: function(data) {
+                if (data.status === 'success') {
+                    showStatus(data.message, true);
                 } else {
-                    // Réinitialiser la couleur de fond si la valeur est vide
-                    inputElement.style.backgroundColor = '';
-                    inputElement.style.color = '';
+                    showStatus(data.message, false);
                 }
-                return true;
+            },
+            error: function(xhr, status, error) {
+                showStatus('Erreur de connexion: ' + error, false);
             }
-        }
+        });
+    }
 
-        function validateAllNotes() {
-            let allValid = true;
-            const noteInputs = document.querySelectorAll('.note-input');
+    function validateExam() {
+        const examPlanId = document.querySelector('input[name="exam_plan_id"]').value;
 
-            noteInputs.forEach(function(input) {
-                if (!validateNoteInput(input)) {
-                    allValid = false;
-                }
-            });
-
-            return allValid;
-        }
-
-        function saveExamResults(pk) {
-            const form = document.getElementById('exam-results-form-modal');
-            const formData = new FormData(form);
-
+        if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
             $.ajax({
-                url: "{% url 't_exam:save_exam_results' pk %}",
+                url: typeof VALIDATE_EXAM_URL !== 'undefined' ? VALIDATE_EXAM_URL : "{% url 't_exam:validate_exam' %}",
                 type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                data: {
+                    'planId': examPlanId,
+                    'examStatus': 'termine',  // Assuming we're validating as completed
+                    'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 success: function(data) {
                     if (data.status === 'success') {
                         showStatus(data.message, true);
+                        // Disable all input fields after validation
+                        $('input').prop('disabled', true);
+                        // Disable save button
+                        $('#save-notes-btn').prop('disabled', true);
+                        // Hide validate button and show validation status
+                        $('#validate-exam-btn').hide();
+                        $('.modal-footer').append('<span class="text-success fw-bold ms-2">PV Validé</span>');
                     } else {
                         showStatus(data.message, false);
                     }
@@ -491,333 +260,44 @@ $(document).ready(function() {
                 }
             });
         }
+    }
 
-        function collectStudentDecisions() {
-            const decisions = {};
-            const decisionInputs = document.querySelectorAll('select[name^="decision_"]');
-
-            decisionInputs.forEach(function(select) {
-                // Extract student ID from the select name: decision_studentId
-                const nameParts = select.name.split('_');
-                if (nameParts.length >= 2) {
-                    const studentId = nameParts[1];
-                    const decision = select.value;
-
-                    if (studentId && decision) {
-                        // Get the average for this student
-                        const averageInput = document.getElementById(`moyenne_${studentId}`);
-                        let moyenne = null;
-
-                        if (averageInput && averageInput.value) {
-                            moyenne = parseFloat(averageInput.value);
-                        }
-
-                        decisions[studentId] = {
-                            statut: decision,
-                            moyenne: moyenne
-                        };
-                    }
-                }
-            });
-
-            return decisions;
-        }
-
-        function validateExam(pk) {
-            if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
-                $.ajax({
-                    url: "{% url 't_exam:validate_exam' %}",
-                    type: 'POST',
-                    data: {
-                        'exam_plan_id': pk,
-                        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    success: function(data) {
-                        if (data.status === 'success') {
-                            showStatus(data.message, true);
-                            // Disable all input fields after validation
-                            $('input').prop('disabled', true);
-                            // Disable save button
-                            $('#save-results-btn-modal').prop('disabled', true);
-                            // Hide validate button
-                            $('#validate-btn-modal').hide();
-                        } else {
-                            showStatus(data.message, false);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showStatus('Erreur de connexion: ' + error, false);
-                    }
-                });
-            }
-        }
-
-        function validatePvExam(pk) {
-            if (confirm('Êtes-vous sûr de vouloir valider ce PV d\'examen ? Cette action est irréversible.')) {
-                // Collect student decisions
-                const decisions = collectStudentDecisions();
-
-                // Define the PV validation URL if not already defined
-                if (typeof VALIDATE_PV_EXAM_URL === 'undefined') {
-                    window.VALIDATE_PV_EXAM_URL = "{% url 't_exam:validate_pv_exam' %}";
-                }
-
-                $.ajax({
-                    url: "{% url 't_exam:validate_pv_exam' %}",
-                    type: 'POST',
-                    data: {
-                        'exam_plan_id': pk,
-                        'decisions': JSON.stringify(decisions),  // Include decisions in the request
-                        'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    success: function(data) {
-                        if (data.status === 'success') {
-                            showStatus(data.message, true);
-                            // Disable all input fields after validation
-                            $('input').prop('disabled', true);
-                            // Disable save button
-                            $('#save-results-btn-modal').prop('disabled', true);
-                            // Hide validate button
-                            $('#validate-btn-modal').hide();
-                        } else {
-                            showStatus(data.message, false);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showStatus('Erreur de connexion: ' + error, false);
-                    }
-                });
-            }
-        }
-
-        function displayCalculatedResults(resultsData) {
-            let html = '';
-
-            resultsData.forEach(function(student, index) {
-                html += '<tr>';
-                html += '<td>' + (index + 1) + '</td>';
-                html += '<td class="student-name">' + student.nom + '</td>';
-                html += '<td>' + student.prenom + '</td>';
-
-                // Calculer la moyenne générale pour cet étudiant (seulement pour les types de notes avec sous-notes)
-                let totalNotes = 0;
-                let countNotes = 0;
-
-                // Afficher d'abord les notes pour les types de notes avec sous-notes
-                student.notes.forEach(function(note) {
-                    if (note.has_sous_notes && note.nb_sous_notes > 0) {
-                        // Afficher chaque sous-note
-                        note.sous_notes.forEach(function(sousNote) {
-                            html += '<td class="note-cell">' + (sousNote.valeur !== null ? sousNote.valeur : '') + '</td>';
-                        });
-
-                        // Calculer et afficher la moyenne des sous-notes
-                        let total = 0;
-                        let count = 0;
-                        note.sous_notes.forEach(function(sousNote) {
-                            if (sousNote.valeur !== null) {
-                                total += parseFloat(sousNote.valeur);
-                                count++;
-                            }
-                        });
-
-                        let moyenne = count > 0 ? (total / count).toFixed(2) : '';
-                        html += '<td class="note-cell" style="font-weight: bold;">' + moyenne + '</td>';
-
-                        // Afficher la note finale (valeur calculée du type de note)
-                        html += '<td class="note-cell" style="font-weight: bold; background-color: #e6f3ff;">' + (note.valeur !== null ? note.valeur : '') + '</td>';
-
-                        // Ajouter cette note à la moyenne générale (seulement pour les types de notes avec sous-notes)
-                        if (note.valeur !== null) {
-                            totalNotes += parseFloat(note.valeur);
-                            countNotes++;
-                        }
-                    }
-                });
-
-                // Calculer et afficher la moyenne générale (seulement pour les types de notes avec sous-notes)
-                let moyenneGenerale = countNotes > 0 ? (totalNotes / countNotes).toFixed(2) : '';
-                html += '<td class="note-cell" style="font-weight: bold; background-color: #fff3cd;">' + moyenneGenerale + '</td>';
-
-                // Afficher ensuite les notes pour les types de notes sans sous-notes
-                student.notes.forEach(function(note) {
-                    if (!note.has_sous_notes || note.nb_sous_notes == 0) {
-                        // Afficher la note principale
-                        html += '<td class="note-cell">' + (note.valeur !== null ? note.valeur : '') + '</td>';
-                    }
-                });
-
-                html += '</tr>';
-            });
-
-            $('#calculated-results-body').html(html);
-        }
-
-        // Save results button
-        const saveResultsBtn = document.getElementById('save-results-btn-modal');
-        if (saveResultsBtn) {
-            saveResultsBtn.addEventListener('click', function() {
+    // Add event listeners when the modal is shown
+    document.addEventListener('DOMContentLoaded', function() {
+        // Save notes button
+        const saveNotesBtn = document.getElementById('save-notes-btn');
+        if (saveNotesBtn) {
+            saveNotesBtn.addEventListener('click', function() {
                 // Valider toutes les notes avant de sauvegarder
                 if (!validateAllNotes()) {
                     if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
                         return;
                     }
                 }
-                saveExamResults("{{ pk }}");
-                console.log("{{pk}}");
+                saveExamResults();
             });
         }
 
-        // Validate button
-        const validateBtn = document.getElementById('validate-btn-modal');
-        if (validateBtn) {
-            validateBtn.addEventListener('click', function() {
+        // Validate exam button
+        const validateExamBtn = document.getElementById('validate-exam-btn');
+        if (validateExamBtn) {
+            validateExamBtn.addEventListener('click', function() {
                 // Valider toutes les notes avant de valider
                 if (!validateAllNotes()) {
                     if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même valider ?')) {
                         return;
                     }
                 }
-                validatePvExam("{{ pk }}");
+                validateExam();
             });
         }
 
         // Ajouter un événement blur à tous les champs de note existants
-        const noteInputs = document.querySelectorAll('.note-input');
+        const noteInputs = document.querySelectorAll('input[type="number"]');
         noteInputs.forEach(function(input) {
             input.addEventListener('blur', function() {
                 validateNoteInput(this);
-
-                // Check if this is a sub-note input and update the sum
-                const name = input.name;
-                if (name.startsWith('sous_note_')) {
-                    // Extract studentId and typeNoteId from the input name
-                    // Format: sous_note_studentId_typeNoteId_index
-                    const parts = name.split('_');
-                    if (parts.length >= 4) {
-                        const studentId = parts[2];
-                        const typeNoteId = parts[3];
-                        calculateSum(studentId, typeNoteId);
-                        // After updating sum, recalculate average for this student
-                        calculateAverage(studentId);
-                    }
-                } else if (name.startsWith('note_')) {
-                    // For regular note inputs, recalculate average
-                    // Extract studentId from the input name
-                    // Format: note_studentId_typeNoteId
-                    const parts = name.split('_');
-                    if (parts.length >= 3) {
-                        const studentId = parts[1];  // studentId is at index 1, not 2
-                        calculateAverage(studentId);
-                    }
-                }
-            });
-
-            // Also add input event listener for real-time updates
-            input.addEventListener('input', function() {
-                // Check if this is a sub-note input and update the sum
-                const name = input.name;
-                if (name.startsWith('sous_note_')) {
-                    // Extract studentId and typeNoteId from the input name
-                    // Format: sous_note_studentId_typeNoteId_index
-                    const parts = name.split('_');
-                    if (parts.length >= 4) {
-                        const studentId = parts[2];
-                        const typeNoteId = parts[3];
-                        calculateSum(studentId, typeNoteId);
-                        // After updating sum, recalculate average for this student
-                        calculateAverage(studentId);
-                    }
-                } else if (name.startsWith('note_')) {
-                    // For regular note inputs, recalculate average
-                    // Extract studentId from the input name
-                    // Format: note_studentId_typeNoteId
-                    const parts = name.split('_');
-                    if (parts.length >= 3) {
-                        const studentId = parts[1];  // studentId is at index 1, not 2
-                        calculateAverage(studentId);
-                    }
-                }
-            });
-
-            // Initialize the color for inputs that already have values
-            if (input.value.trim() !== '') {
-                input.style.backgroundColor = '#e6ffe6'; // vert clair
-                input.style.color = '#000'; // noir
-            }
-        });
-
-        // Initialize sums for all students and type notes that have sub-notes, and calculate averages
-        const rows = document.querySelectorAll('tbody tr');
-        rows.forEach(function(row) {
-            const cells = row.querySelectorAll('td');
-            // Skip the first 3 cells (N°, Nom, Prénom)
-            let studentId = null;
-
-            // First, find the student ID by looking at any note input in the row
-            for (let i = 3; i < cells.length - 2; i++) { // -2 to exclude moyenne and decision cells
-                const cell = cells[i];
-                const input = cell.querySelector('input');
-                if (input) {
-                    if (input.name.startsWith('sous_note_')) {
-                        // Extract studentId from sub-note input: sous_note_studentId_typeNoteId_index
-                        const parts = input.name.split('_');
-                        if (parts.length >= 4) {
-                            studentId = parts[2];
-                            break;
-                        }
-                    } else if (input.name.startsWith('note_')) {
-                        // Extract studentId from regular note input: note_studentId_typeNoteId
-                        const parts = input.name.split('_');
-                        if (parts.length >= 3) {
-                            studentId = parts[1];  // studentId is at index 1, not 2
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Calculate sums for sub-notes if studentId was found
-            if (studentId) {
-                // Calculate all sums for this student
-                const subNoteInputs = document.querySelectorAll(`input[name^="sous_note_${studentId}_"]`);
-                const processedTypeIds = new Set();
-
-                subNoteInputs.forEach(function(input) {
-                    const parts = input.name.split('_');
-                    if (parts.length >= 4) {
-                        const typeNoteId = parts[3];
-                        if (!processedTypeIds.has(typeNoteId)) {
-                            calculateSum(studentId, typeNoteId);
-                            processedTypeIds.add(typeNoteId);
-                        }
-                    }
-                });
-
-                // Calculate average for this student after initializing sums
-                calculateAverage(studentId);
-
-                // Also color the row based on the average
-                const averageField = document.getElementById(`moyenne_${studentId}`);
-                if (averageField) {
-                    const average = parseFloat(averageField.value);
-                    if (!isNaN(average)) {
-                        colorRowBasedOnAverage(studentId, average);
-                    }
-                }
-            }
-        });
-
-        // Prevent recalculation of averages for students with 'rach' status in normal exams
-        // These students should always have an average of 0
-        document.querySelectorAll('tr.table-warning input.note-input').forEach(function(input) {
-            input.addEventListener('input', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
             });
         });
-
-
     });
 </script>

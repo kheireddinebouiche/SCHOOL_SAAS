@@ -64,6 +64,7 @@ TENANT_APPS = [
     't_timetable',
     'pdf_editor',
     'taggit',
+    'django.contrib.humanize',
     'phonenumber_field',
     'django_countries',
     'django.contrib.auth',
@@ -125,7 +126,7 @@ WSGI_APPLICATION = 'school.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': 'official',
+        'NAME': 'insim',
         'USER': 'postgres',
         'PASSWORD': '1230042690',
         'HOST': 'localhost',

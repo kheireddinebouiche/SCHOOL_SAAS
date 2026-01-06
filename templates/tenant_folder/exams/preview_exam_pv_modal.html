@@ -239,268 +239,271 @@
 
 <!-- Bootstrap Toast JavaScript -->
 <script>
-    // Define URLs using Django template tags only if they haven't been defined yet
-    if (typeof SAVE_EXAM_RESULTS_URL === 'undefined') {
-        window.SAVE_EXAM_RESULTS_URL = "{% url 't_exam:save_exam_results' pk %}";
-    }
-    if (typeof VALIDATE_EXAM_URL === 'undefined') {
-        window.VALIDATE_EXAM_URL = "{% url 't_exam:validate_exam' %}";
-    }
-    if (typeof CALCULATED_RESULTS_URL === 'undefined') {
-        window.CALCULATED_RESULTS_URL = "{% url 't_exam:get_calculated_results' pk %}";
-    }
 
-    function showStatus(message, isSuccess) {
-        const toastElement = document.getElementById('status-toast');
-        const toastBody = document.getElementById('status-message-text');
-        const toastHeader = toastElement.querySelector('.toast-header');
-
-        // Set the message
-        toastBody.textContent = message;
-
-        // Update header and body classes based on success/error
-        if (isSuccess) {
-            toastHeader.className = 'toast-header bg-success text-white';
-        } else {
-            toastHeader.className = 'toast-header bg-danger text-white';
+    // Add event listeners when the modal is shown
+    $(document).ready(function() {
+        // Define URLs using Django template tags only if they haven't been defined yet
+        if (typeof SAVE_EXAM_RESULTS_URL === 'undefined') {
+            window.SAVE_EXAM_RESULTS_URL = "{% url 't_exam:save_exam_results' pk %}";
+        }
+        if (typeof VALIDATE_EXAM_URL === 'undefined') {
+            window.VALIDATE_EXAM_URL = "{% url 't_exam:validate_exam' %}";
+        }
+        if (typeof CALCULATED_RESULTS_URL === 'undefined') {
+            window.CALCULATED_RESULTS_URL = "{% url 't_exam:get_calculated_results' pk %}";
         }
 
-        // Create bootstrap toast instance and show it
-        const toast = new bootstrap.Toast(toastElement, {
-            delay: 5000,
-            autohide: true
-        });
+        function showStatus(message, isSuccess) {
+            const toastElement = document.getElementById('status-toast');
+            const toastBody = document.getElementById('status-message-text');
+            const toastHeader = toastElement.querySelector('.toast-header');
 
-        toast.show();
-    }
+            // Set the message
+            toastBody.textContent = message;
 
-    function calculateSum(studentId, typeNoteId) {
-        let sum = 0;
-        let hasValidValues = false;
-
-        // Find all sub-note inputs for this student and type note
-        const subNoteInputs = document.querySelectorAll(`input[name^="sous_note_${studentId}_${typeNoteId}_"]`);
-
-        subNoteInputs.forEach(function(input) {
-            const value = parseFloat(input.value);
-            if (!isNaN(value)) {
-                sum += value;
-                hasValidValues = true;
+            // Update header and body classes based on success/error
+            if (isSuccess) {
+                toastHeader.className = 'toast-header bg-success text-white';
+            } else {
+                toastHeader.className = 'toast-header bg-danger text-white';
             }
-        });
 
-        // Update the sum field
-        const sumField = document.getElementById(`sum_${studentId}_${typeNoteId}`);
-        if (sumField) {
-            sumField.value = hasValidValues ? sum.toFixed(2) : '0.00';
+            // Create bootstrap toast instance and show it
+            const toast = new bootstrap.Toast(toastElement, {
+                delay: 5000,
+                autohide: true
+            });
+
+            toast.show();
         }
-    }
 
-    function calculateAverage(studentId) {
-        let totalNotes = 0;      // Somme des notes obtenues
-        let totalMaxNotes = 0;   // Somme des notes maximales
+        function calculateSum(studentId, typeNoteId) {
+            let sum = 0;
+            let hasValidValues = false;
 
-        // Find all main note inputs for this student (for types without sub-notes)
-        const noteInputs = document.querySelectorAll(`input[name^="note_${studentId}_"]`);
+            // Find all sub-note inputs for this student and type note
+            const subNoteInputs = document.querySelectorAll(`input[name^="sous_note_${studentId}_${typeNoteId}_"]`);
 
-        // Process each note input
-        noteInputs.forEach(function(input) {
-            const value = parseFloat(input.value);
-            if (!isNaN(value) && input.value.trim() !== '') {
-                // Extract type note ID from input name: note_studentId_typeNoteId
-                const nameParts = input.name.split('_');
-                if (nameParts.length >= 3) {
-                    const typeNoteId = nameParts[2];
+            subNoteInputs.forEach(function(input) {
+                const value = parseFloat(input.value);
+                if (!isNaN(value)) {
+                    sum += value;
+                    hasValidValues = true;
+                }
+            });
 
-                    // Get the max_note for this type from the input's max attribute
-                    const maxNote = parseFloat(input.max);
+            // Update the sum field
+            const sumField = document.getElementById(`sum_${studentId}_${typeNoteId}`);
+            if (sumField) {
+                sumField.value = hasValidValues ? sum.toFixed(2) : '0.00';
+            }
+        }
+
+        function calculateAverage(studentId) {
+            let totalNotes = 0;      // Somme des notes obtenues
+            let totalMaxNotes = 0;   // Somme des notes maximales
+
+            // Find all main note inputs for this student (for types without sub-notes)
+            const noteInputs = document.querySelectorAll(`input[name^="note_${studentId}_"]`);
+
+            // Process each note input
+            noteInputs.forEach(function(input) {
+                const value = parseFloat(input.value);
+                if (!isNaN(value) && input.value.trim() !== '') {
+                    // Extract type note ID from input name: note_studentId_typeNoteId
+                    const nameParts = input.name.split('_');
+                    if (nameParts.length >= 3) {
+                        const typeNoteId = nameParts[2];
+
+                        // Get the max_note for this type from the input's max attribute
+                        const maxNote = parseFloat(input.max);
+                        if (!isNaN(maxNote) && maxNote > 0) {
+                            totalNotes += value;
+                            totalMaxNotes += maxNote;
+                        }
+                    }
+                }
+            });
+
+            // Also include sum fields for types with sub-notes
+            const sumInputs = document.querySelectorAll(`input[id^="sum_${studentId}_"]`);
+            sumInputs.forEach(function(input) {
+                const value = parseFloat(input.value);
+                if (!isNaN(value) && input.value.trim() !== '') {
+                    // For sum fields, get the max_note from the data attribute
+                    const maxNote = parseFloat(input.dataset.maxNote || input.getAttribute('data-max-note'));
                     if (!isNaN(maxNote) && maxNote > 0) {
                         totalNotes += value;
                         totalMaxNotes += maxNote;
                     }
                 }
-            }
-        });
+            });
 
-        // Also include sum fields for types with sub-notes
-        const sumInputs = document.querySelectorAll(`input[id^="sum_${studentId}_"]`);
-        sumInputs.forEach(function(input) {
-            const value = parseFloat(input.value);
-            if (!isNaN(value) && input.value.trim() !== '') {
-                // For sum fields, get the max_note from the data attribute
-                const maxNote = parseFloat(input.dataset.maxNote || input.getAttribute('data-max-note'));
-                if (!isNaN(maxNote) && maxNote > 0) {
-                    totalNotes += value;
-                    totalMaxNotes += maxNote;
+            // Calculate weighted average: (sum of obtained notes) / (sum of max notes) * 20
+            let weightedAverage = 0;
+            if (totalMaxNotes > 0) {
+                weightedAverage = (totalNotes / totalMaxNotes) * 20;
+            }
+
+            // Update the average field
+            const averageField = document.getElementById(`moyenne_${studentId}`);
+            if (averageField) {
+                averageField.value = weightedAverage.toFixed(2);
+            }
+
+            // Color the row based on the average compared to the elimination note
+            colorRowBasedOnAverage(studentId, weightedAverage);
+        }
+
+        function colorRowBasedOnAverage(studentId, average) {
+            // Get the note éliminatoire from the page
+            const noteEliminatoireElement = document.querySelector('span.fw-semibold.text-danger');
+            let noteEliminatoire = 0;
+
+            if (noteEliminatoireElement) {
+                const noteText = noteEliminatoireElement.textContent.trim();
+                noteEliminatoire = parseFloat(noteText);
+            }
+
+            // If we couldn't parse the note éliminatoire, use a default value
+            if (isNaN(noteEliminatoire)) {
+                noteEliminatoire = parseFloat('{{ module.note_eliminatoire|default:0 }}');
+            }
+
+            // Find the row for this student
+            // We'll look for the row that contains the average input for this student
+            const averageInput = document.getElementById(`moyenne_${studentId}`);
+            if (!averageInput) return; // If average input not found, exit
+
+            // Find the parent row
+            const row = averageInput.closest('tr');
+            if (!row) return; // If row not found, exit
+
+            // Check if this is a student with 'rach' or 'ajou' status in a normal exam
+            // If so, don't apply elimination note checking
+            if (row.classList.contains('no-elimination-check')) {
+                // For students with 'rach' or 'ajou' status, reset to default styling
+                row.classList.remove('table-danger', 'table-success');
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.style.backgroundColor = '';
+                    input.style.color = '#000';
+                });
+                if (averageInput) {
+                    averageInput.style.backgroundColor = '';
+                    averageInput.style.color = '#000';
+                }
+                return; // Don't apply elimination note checking for these students
+            }
+
+            // Remove existing color classes
+            row.classList.remove('table-danger', 'table-success');
+
+            // Color the row based on comparison with elimination note
+            if (average < noteEliminatoire) {
+                // Average is below elimination note - color red (danger)
+                row.classList.add('table-danger');
+
+                // Also color the input fields in the row to red with black text
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.style.backgroundColor = '#f8d7da'; // light red background
+                    input.style.color = '#000'; // black text for better readability
+                });
+
+                // Color the average field specifically
+                const avgInput = document.getElementById(`moyenne_${studentId}`);
+                if (avgInput) {
+                    avgInput.style.backgroundColor = '#f1b0b7'; // slightly darker red for average
+                    avgInput.style.color = '#000'; // black text
+                }
+            } else {
+                // Average is above or equal to elimination note - color green with black text
+                row.classList.add('table-success');
+
+                // Also color the input fields in the row to green with black text
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.style.backgroundColor = '#d4edda'; // light green background
+                    input.style.color = '#000'; // black text for better readability
+                });
+
+                // Color the average field specifically
+                const avgInput = document.getElementById(`moyenne_${studentId}`);
+                if (avgInput) {
+                    avgInput.style.backgroundColor = '#c3e6cb'; // slightly darker green for average
+                    avgInput.style.color = '#000'; // black text
                 }
             }
-        });
-
-        // Calculate weighted average: (sum of obtained notes) / (sum of max notes) * 20
-        let weightedAverage = 0;
-        if (totalMaxNotes > 0) {
-            weightedAverage = (totalNotes / totalMaxNotes) * 20;
         }
 
-        // Update the average field
-        const averageField = document.getElementById(`moyenne_${studentId}`);
-        if (averageField) {
-            averageField.value = weightedAverage.toFixed(2);
-        }
+        function validateNoteInput(inputElement) {
+            const value = parseFloat(inputElement.value);
+            const maxNote = parseFloat(inputElement.max);
 
-        // Color the row based on the average compared to the elimination note
-        colorRowBasedOnAverage(studentId, weightedAverage);
-    }
-
-    function colorRowBasedOnAverage(studentId, average) {
-        // Get the note éliminatoire from the page
-        const noteEliminatoireElement = document.querySelector('span.fw-semibold.text-danger');
-        let noteEliminatoire = 0;
-
-        if (noteEliminatoireElement) {
-            const noteText = noteEliminatoireElement.textContent.trim();
-            noteEliminatoire = parseFloat(noteText);
-        }
-
-        // If we couldn't parse the note éliminatoire, use a default value
-        if (isNaN(noteEliminatoire)) {
-            noteEliminatoire = parseFloat('{{ module.note_eliminatoire|default:0 }}');
-        }
-
-        // Find the row for this student
-        // We'll look for the row that contains the average input for this student
-        const averageInput = document.getElementById(`moyenne_${studentId}`);
-        if (!averageInput) return; // If average input not found, exit
-
-        // Find the parent row
-        const row = averageInput.closest('tr');
-        if (!row) return; // If row not found, exit
-
-        // Check if this is a student with 'rach' or 'ajou' status in a normal exam
-        // If so, don't apply elimination note checking
-        if (row.classList.contains('no-elimination-check')) {
-            // For students with 'rach' or 'ajou' status, reset to default styling
-            row.classList.remove('table-danger', 'table-success');
-            const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.style.backgroundColor = '';
-                input.style.color = '#000';
-            });
-            if (averageInput) {
-                averageInput.style.backgroundColor = '';
-                averageInput.style.color = '#000';
-            }
-            return; // Don't apply elimination note checking for these students
-        }
-
-        // Remove existing color classes
-        row.classList.remove('table-danger', 'table-success');
-
-        // Color the row based on comparison with elimination note
-        if (average < noteEliminatoire) {
-            // Average is below elimination note - color red (danger)
-            row.classList.add('table-danger');
-
-            // Also color the input fields in the row to red with black text
-            const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.style.backgroundColor = '#f8d7da'; // light red background
-                input.style.color = '#000'; // black text for better readability
-            });
-
-            // Color the average field specifically
-            const avgInput = document.getElementById(`moyenne_${studentId}`);
-            if (avgInput) {
-                avgInput.style.backgroundColor = '#f1b0b7'; // slightly darker red for average
-                avgInput.style.color = '#000'; // black text
-            }
-        } else {
-            // Average is above or equal to elimination note - color green with black text
-            row.classList.add('table-success');
-
-            // Also color the input fields in the row to green with black text
-            const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.style.backgroundColor = '#d4edda'; // light green background
-                input.style.color = '#000'; // black text for better readability
-            });
-
-            // Color the average field specifically
-            const avgInput = document.getElementById(`moyenne_${studentId}`);
-            if (avgInput) {
-                avgInput.style.backgroundColor = '#c3e6cb'; // slightly darker green for average
-                avgInput.style.color = '#000'; // black text
-            }
-        }
-    }
-
-    function validateNoteInput(inputElement) {
-        const value = parseFloat(inputElement.value);
-        const maxNote = parseFloat(inputElement.max);
-
-        // Vérifier si la valeur est supérieure à la max_note
-        if (!isNaN(value) && !isNaN(maxNote) && value > maxNote) {
-            // Changer la couleur de fond pour indiquer une erreur
-            inputElement.style.backgroundColor = '#ffe6e6'; // rouge clair
-            inputElement.style.color = '#000'; // noir
-            return false;
-        } else if (!isNaN(value) && !isNaN(maxNote) && value <= maxNote) {
-            // Changer la couleur de fond pour indiquer une saisie valide
-            inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
-            inputElement.style.color = '#000'; // noir
-            return true;
-        } else {
-            // Si la valeur est vide mais le champ a une valeur, on met en vert clair
-            if (inputElement.value.trim() !== '') {
+            // Vérifier si la valeur est supérieure à la max_note
+            if (!isNaN(value) && !isNaN(maxNote) && value > maxNote) {
+                // Changer la couleur de fond pour indiquer une erreur
+                inputElement.style.backgroundColor = '#ffe6e6'; // rouge clair
+                inputElement.style.color = '#000'; // noir
+                return false;
+            } else if (!isNaN(value) && !isNaN(maxNote) && value <= maxNote) {
+                // Changer la couleur de fond pour indiquer une saisie valide
                 inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
                 inputElement.style.color = '#000'; // noir
+                return true;
             } else {
-                // Réinitialiser la couleur de fond si la valeur est vide
-                inputElement.style.backgroundColor = '';
-                inputElement.style.color = '';
-            }
-            return true;
-        }
-    }
-
-    function validateAllNotes() {
-        let allValid = true;
-        const noteInputs = document.querySelectorAll('.note-input');
-
-        noteInputs.forEach(function(input) {
-            if (!validateNoteInput(input)) {
-                allValid = false;
-            }
-        });
-
-        return allValid;
-    }
-
-    function saveExamResults(pk) {
-        const form = document.getElementById('exam-results-form-modal');
-        const formData = new FormData(form);
-
-        $.ajax({
-            url: window.SAVE_EXAM_RESULTS_URL,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            success: function(data) {
-                if (data.status === 'success') {
-                    showStatus(data.message, true);
+                // Si la valeur est vide mais le champ a une valeur, on met en vert clair
+                if (inputElement.value.trim() !== '') {
+                    inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
+                    inputElement.style.color = '#000'; // noir
                 } else {
-                    showStatus(data.message, false);
+                    // Réinitialiser la couleur de fond si la valeur est vide
+                    inputElement.style.backgroundColor = '';
+                    inputElement.style.color = '';
                 }
-            },
-            error: function(xhr, status, error) {
-                showStatus('Erreur de connexion: ' + error, false);
+                return true;
             }
-        });
-    }
+        }
+
+        function validateAllNotes() {
+            let allValid = true;
+            const noteInputs = document.querySelectorAll('.note-input');
+
+            noteInputs.forEach(function(input) {
+                if (!validateNoteInput(input)) {
+                    allValid = false;
+                }
+            });
+
+            return allValid;
+        }
+
+        function saveExamResults(pk) {
+            const form = document.getElementById('exam-results-form-modal');
+            const formData = new FormData(form);
+
+            $.ajax({
+                url: window.SAVE_EXAM_RESULTS_URL,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        showStatus(data.message, true);
+                    } else {
+                        showStatus(data.message, false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showStatus('Erreur de connexion: ' + error, false);
+                }
+            });
+        }
 
     function collectStudentDecisions() {
         const decisions = {};
@@ -600,7 +603,6 @@
         }
     }
 
-    
     function displayCalculatedResults(resultsData) {
         let html = '';
 
@@ -664,21 +666,20 @@
         $('#calculated-results-body').html(html);
     }
 
-    // Add event listeners when the modal is shown
-    $(document).ready(function() {
-        // Save results button
-        const saveResultsBtn = document.getElementById('save-results-btn-modal');
-        if (saveResultsBtn) {
-            saveResultsBtn.addEventListener('click', function() {
-                // Valider toutes les notes avant de sauvegarder
-                if (!validateAllNotes()) {
-                    if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
-                        return;
-                    }
+    
+    // Save results button
+    const saveResultsBtn = document.getElementById('save-results-btn-modal');
+    if (saveResultsBtn) {
+        saveResultsBtn.addEventListener('click', function() {
+            // Valider toutes les notes avant de sauvegarder
+            if (!validateAllNotes()) {
+                if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
+                    return;
                 }
-                saveExamResults("{{ pk }}");
-            });
-        }
+            }
+            saveExamResults("{{ pk }}");
+        });
+    }
 
         // Show calculated results button
         const showCalculatedResultsBtn = document.getElementById('show-calculated-results-btn-modal');
@@ -838,4 +839,8 @@
             });
         });
     });
+
+
+
+
 </script>

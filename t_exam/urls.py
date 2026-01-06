@@ -6,6 +6,7 @@ from .f_views.modele_builtins import *
 from .f_views.action_views import examen_action, rachat_action, ajourne_action
 from .f_views.exam_plan import *
 from .f_views.deliberation import *
+from .f_views.generate_pv import *
 
 app_name="t_exam"
 
@@ -26,10 +27,11 @@ urlpatterns = [
 
    path("get-exam-plans/", get_exam_planifications, name="get_exam_plans"),
    path("save_exam_plan", save_exam_plan, name="save_exam_plan"),
+   path('delete_pv',delete_pv, name="delete_pv"),
    path("update_exam/",update_exam_plan, name="update_exam_plan"),
    path('ApiLoadSalle',ApiLoadSalle, name="ApiLoadSalle"),
    path('delete_exam_plan',delete_exam_plan, name="delete_exam_plan"),
-
+   path('delete_pv',delete_pv,name="delete_pv"),
    path('close_session_line',close_session_line, name="close_session_line"), 
    path('models-pv/', ModelBuilltinPage, name="ModelBuilltinPage"),
    path('ApiListModeleBuilltins', ApiListModeleBuilltins, name="ApiListModeleBuilltins"),
@@ -49,7 +51,10 @@ urlpatterns = [
    path('ApiDeleteSousNote', ApiDeleteSousNote, name="ApiDeleteSousNote"),
    path('ApiBulkUpdateSousNotes', ApiBulkUpdateSousNotes, name="ApiBulkUpdateSousNotes"),
    path('ApiGetSousNotesForType', ApiGetSousNotesForType, name="ApiGetSousNotesForType"),
-
+   path('ApiGetTypeNoteDependencies',ApiGetTypeNoteDependencies, name="ApiGetTypeNoteDependencies"),
+   path('ApiGetTypeNoteAvailableDependencies',ApiGetTypeNoteAvailableDependencies, name="ApiGetTypeNoteAvailableDependencies"),
+   path('ApiAddTypeNoteDependency',ApiAddTypeNoteDependency, name="ApiAddTypeNoteDependency"),
+   path('ApiDeleteTypeNoteDependency',ApiDeleteTypeNoteDependency, name="ApiDeleteTypeNoteDependency"),
 
    path('ApiDeleteGroupeSessionLine', ApiDeleteGroupeSessionLine, name="ApiDeleteGroupeSessionLine"),
    path('ApiGetSessionLineDetails',ApiGetSessionLineDetails, name="ApiGetSessionLineDetails"), 
@@ -115,5 +120,8 @@ urlpatterns = [
     path('details-session/exams/plannification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
 
     path('ApiLoadFormateur',ApiLoadFormateur ,name="ApiLoadFormateur"),
+
+    path('ApiGetAllBlocs',ApiGetAllBlocs, name="ApiGetAllBlocs"),
+    path('ApiAddBloc',ApiAddBloc, name="ApiAddBloc"),
 
 ]

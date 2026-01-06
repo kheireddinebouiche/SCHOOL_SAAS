@@ -725,6 +725,11 @@
                                                     <button ${resultButtonDisabled} ${dateExiste} class="btn btn-sm btn-outline-warning result-btn ${textClass}" data-plan-id="${plan.id}" title="Résultat">
                                                         <i class="ri-bar-chart-line"></i>
                                                     </button>
+                                                    <!-- Delete PV Button - Only show if PV exists but not validated -->
+                                                    ${plan.pv_existe && !plan.est_valide ?
+                                                      `<button class="btn btn-sm btn-outline-danger delete-pv-btn" data-plan-id="${plan.id}" data-module="${plan.module_nom}" title="Supprimer le PV">
+                                                          <i class="ri-delete-bin-2-line"></i>
+                                                      </button>` : ''}
                                                 </div>
                                             </td>
                                         </tr>
@@ -1108,7 +1113,7 @@
             var examPlanId = $(this).data('plan-id');
 
             // Supprimer l'ancien modal
-            $('#previewExamPvModal').remove();
+            $('#fillNotesModal').remove();
 
             $.get(
                 "{% url 't_exam:GeneratePvModal' pk=0 %}".replace('0', examPlanId),
@@ -1116,7 +1121,7 @@
 
                     $('body').append(data);
 
-                    var $modal = $('#previewExamPvModal');
+                    var $modal = $('#fillNotesModal');
 
                     // Recharger APRÈS fermeture du modal
                     $modal.on('hidden.bs.modal', function () {
@@ -1195,8 +1200,126 @@
             $('#examStatus').val('termine');
         });
 
+        // Delete PV Confirmation Modal
+        $(document).on('click', '.delete-pv-btn', function() {
+            const planId = $(this).data('plan-id');
+            const module = $(this).data('module');
+
+            // Set the plan ID in the confirmation button
+            $('#confirmDeletePvBtn').data('plan-id', planId);
+
+            // Update modal title and message
+            $('#deletePvConfirmationModalLabel').text('Confirmer la suppression du PV');
+            $('#deletePvConfirmationModal .modal-body .text-muted').text(
+                `Êtes-vous sûr de vouloir supprimer le PV de l'examen "${module}" ?`
+            );
+
+            // Show the modal
+            $('#deletePvConfirmationModal').modal('show');
+        });
+
+        // Confirm PV deletion
+        $(document).on('click', '#confirmDeletePvBtn', function() {
+            const planId = $(this).data('plan-id');
+
+            // Disable the button to prevent multiple clicks
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Suppression...');
+
+            // Send the delete request
+            $.ajax({
+                url: "{% url 't_exam:delete_pv' %}",
+                type: 'POST',
+                data: {
+                    "exam_plan_id": planId
+                },
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        // Close the modal
+                        $('#deletePvConfirmationModal').modal('hide');
+
+                        // Reset the button
+                        $('#confirmDeletePvBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                        // Reload the data
+                        loadExamPlanification();
+
+                        // Show success message
+                        showNotification(response.message, 'success');
+                    } else {
+                        // Reset the button
+                        $('#confirmDeletePvBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                        // Show error message
+                        showNotification(response.message, 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Reset the button
+                    $('#confirmDeletePvBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+
+                    // Show error message
+                    showNotification('Erreur de connexion: ' + error, 'error');
+                }
+            });
+        });
+
+        // Reset PV deletion modal when closed
+        $('#deletePvConfirmationModal').on('hidden.bs.modal', function () {
+            // Reset the button
+            $('#confirmDeletePvBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
+        });
+
     });
 </script>
+
+<!-- Modal de confirmation de suppression du PV -->
+<div class="modal fade" id="deletePvConfirmationModal" tabindex="-1" aria-labelledby="deletePvConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-danger text-white rounded-top-3 p-4">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+            <i class="ri-delete-bin-line fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="deletePvConfirmationModalLabel">Confirmer la suppression du PV</h5>
+            <small class="opacity-75">Êtes-vous sûr de vouloir supprimer ce PV ?</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-2">
+              <i class="ri-alert-line"></i>
+            </div>
+          </div>
+          <p class="text-muted mb-4">
+            Cette action est irréversible. Le PV sera définitivement supprimé avec toutes ses données associées.
+          </p>
+          <div class="alert alert-warning bg-warning bg-opacity-10 border-0" role="alert">
+            <i class="ri-information-line me-2"></i>
+            <strong>Attention:</strong> Toutes les notes et décisions associées à ce PV seront perdues.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-3 p-4">
+        <div class="d-flex w-100">
+          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-danger flex-fill" id="confirmDeletePvBtn">
+            <i class="ri-delete-bin-line me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 

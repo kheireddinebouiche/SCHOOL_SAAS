@@ -484,7 +484,7 @@ def detailSpecialite(request, pk):
 
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
-    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider')
+    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider').order_by('created_at')
 
     specialite = Specialites.objects.get(code = id)
 
