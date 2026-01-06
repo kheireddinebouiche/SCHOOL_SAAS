@@ -10,6 +10,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
+            <style>
+                .calculated-field {
+                    background-color: #e9ecef !important; /* Grey background for calculated fields */
+                    color: #6c757d !important; /* Grey text for calculated fields */
+                }
+            </style>
+
             <div class="modal-body">
                 <div class="container-fluid">
                     <div class="row mb-3">
@@ -36,98 +43,108 @@
                         {% csrf_token %}
                         <input type="hidden" name="exam_plan_id" value="{{ pk }}">
 
-                        <!-- Single table with note types visually grouped into blocks -->
-                        <div class="note-block-container border rounded p-3">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th rowspan="2" class="align-middle text-dark">N°</th>
-                                            <th rowspan="2" class="align-middle text-dark">Nom</th>
-                                            <th rowspan="2" class="align-middle text-dark">Prénom</th>
-                                            {% for bloc_data in ordered_blocs_with_types %}
-                                                {% if bloc_data.bloc %}
-                                                    <th colspan="{{ bloc_data.types|length }}" class="text-center text-dark bg-primary bg-opacity-25 bloc-header">{{ bloc_data.bloc.label }}</th>
-                                                {% else %}
-                                                    {% for type_note in bloc_data.types %}
-                                                        {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                                            <th colspan="{{ type_note.nb_sous_notes|add:1 }}" class="text-center text-dark note-type-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
-                                                        {% else %}
-                                                            <th class="text-center text-dark note-type-header">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% endif %}
-                                            {% endfor %}
-                                        </tr>
-                                        <tr>
-                                            {% for bloc_data in ordered_blocs_with_types %}
-                                                {% for type_note in bloc_data.types %}
-                                                    {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                                        {% for sous_note in type_note.sous_notes.all %}
-                                                            <th class="text-center small text-dark">{{ sous_note.label }} (Max: {{ sous_note.max_note|default:"N/A" }})</th>
+                        <!-- Table showing students and note types -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="align-middle text-dark">N°</th>
+                                        <th class="align-middle text-dark">Nom</th>
+                                        <th class="align-middle text-dark">Prénom</th>
+                                        {% for type_note in filtered_types_notes %}
+                                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                <th colspan="{{ type_note.nb_sous_notes|add:1 }}" class="text-center text-dark">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                            {% else %}
+                                                <th class="text-center text-dark">{{ type_note.libelle }} (Max: {{ type_note.max_note }})</th>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        <th class="align-middle text-dark"></th>
+                                        <th class="align-middle text-dark"></th>
+                                        <th class="align-middle text-dark"></th>
+                                        {% for type_note in filtered_types_notes %}
+                                            {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
+                                                {% for builtin_type in modele.types_notes.all %}
+                                                    {% if builtin_type.code == type_note.code %}
+                                                        {% for sous_note in builtin_type.sous_notes.all %}
+                                                            <th class="text-center small text-dark">{{ sous_note.label }} (Max: {{ sous_note.max_note }})</th>
                                                         {% endfor %}
-                                                        <th class="text-center small text-dark">Note finale</th>
-                                                    {% else %}
-                                                        <th class="text-center small text-dark">Note</th>
                                                     {% endif %}
                                                 {% endfor %}
-                                            {% endfor %}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for student_line in students %}
-                                            <tr>
-                                                <td class="text-dark">{{ forloop.counter }}</td>
-                                                <td class="student-name text-dark">{{ student_line.student.nom }}</td>
-                                                <td class="text-dark">{{ student_line.student.prenom }}</td>
-                                                {% for bloc_data in ordered_blocs_with_types %}
-                                                    {% for type_note in bloc_data.types %}
+                                                <th class="text-center small text-dark">
+                                                    {% if type_note.is_calculee %}
+                                                        {{ type_note.libelle }} ({{ type_note.type_calcul }})
+                                                    {% else %}
+                                                        Total
+                                                    {% endif %}
+                                                </th>
+                                            {% else %}
+                                                <th class="text-center small text-dark">
+                                                    {% if type_note.is_calculee %}
+                                                        {{ type_note.libelle }} ({{ type_note.type_calcul }})
+                                                    {% else %}
+                                                        {{ type_note.libelle }}
+                                                    {% endif %}
+                                                </th>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student_line in students %}
+                                        <tr>
+                                            <td class="text-dark">{{ forloop.counter }}</td>
+                                            <td class="student-name text-dark">{{ student_line.student.nom }}</td>
+                                            <td class="text-dark">{{ student_line.student.prenom }}</td>
+                                            {% for type_note in filtered_types_notes %}
+                                                {% for builtin_type in modele.types_notes.all %}
+                                                    {% if builtin_type.code == type_note.code %}
                                                         {% if type_note.has_sous_notes and type_note.nb_sous_notes > 0 %}
-                                                            {% for sous_note in type_note.sous_notes.all %}
-                                                                {% with sous_note_loop_index=forloop.counter0 %}
+                                                            {% for sous_note in builtin_type.sous_notes.all %}
+                                                                {% with sous_note_index=forloop.counter0 %}
                                                                 <td class="text-center">
                                                                     <input type="number"
                                                                            step="0.01"
                                                                            min="0"
-                                                                           max="{{ sous_note.max_note|default:type_note.max_note }}"
-                                                                           class="form-control form-control-sm"
-                                                                           name="sous_note_{{ student_line.student.id }}_{{ type_note.id }}_{{ sous_note_loop_index }}"
-                                                                           value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and sous_note_loop_index < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:sous_note_loop_index %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
-                                                                           {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                                           max="{{ sous_note.max_note }}"
+                                                                           class="form-control form-control-sm sous-note-input"
+                                                                           name="sous_note_{{ student_line.student.id }}_{{ builtin_type.id }}_{{ sous_note_index }}"
+                                                                           value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data and note_data.sous_notes and sous_note_index < note_data.sous_notes|length %}{% with sous_note_item=note_data.sous_notes|exam_get_list_item:sous_note_index %}{% if sous_note_item %}{{ sous_note_item.valeur|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
+                                                                           {% if pv_examen and pv_examen.est_valide or type_note.is_calculee %}disabled{% endif %}>
                                                                 </td>
                                                                 {% endwith %}
                                                             {% endfor %}
-                                                            <!-- Input for the calculated final note -->
+                                                            <!-- Total field for sub-notes -->
                                                             <td class="text-center">
                                                                 <input type="number"
                                                                        step="0.01"
                                                                        min="0"
                                                                        max="{{ type_note.max_note }}"
-                                                                       class="form-control form-control-sm"
-                                                                       name="note_{{ student_line.student.id }}_{{ type_note.id }}"
+                                                                       class="form-control form-control-sm final-note-input {% if type_note.is_calculee %}calculated-field{% endif %}"
+                                                                       name="note_{{ student_line.student.id }}_{{ builtin_type.id }}"
                                                                        value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
-                                                                       {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                                       {% if pv_examen and pv_examen.est_valide or type_note.is_calculee %}readonly{% endif %}>
                                                             </td>
                                                         {% else %}
-                                                            <!-- Input for notes without sub-notes -->
                                                             <td class="text-center">
                                                                 <input type="number"
                                                                        step="0.01"
                                                                        min="0"
                                                                        max="{{ type_note.max_note }}"
-                                                                       class="form-control form-control-sm"
-                                                                       name="note_{{ student_line.student.id }}_{{ type_note.id }}"
+                                                                       class="form-control form-control-sm {% if type_note.is_calculee %}calculated-field{% endif %}"
+                                                                       name="note_{{ student_line.student.id }}_{{ builtin_type.id }}"
                                                                        value="{% if student_notes_data %}{% with student_data=student_notes_data|exam_get_item:student_line.student.id %}{% if student_data %}{% with note_data=student_data|exam_get_item:type_note.id %}{% if note_data %}{{ note_data.value|format_number_for_input }}{% endif %}{% endwith %}{% endif %}{% endwith %}{% endif %}"
-                                                                       {% if pv_examen and pv_examen.est_valide %}disabled{% endif %}>
+                                                                       {% if pv_examen and pv_examen.est_valide or type_note.is_calculee %}readonly{% endif %}>
                                                             </td>
                                                         {% endif %}
-                                                    {% endfor %}
+                                                    {% endif %}
                                                 {% endfor %}
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </form>
                 </div>
@@ -145,19 +162,31 @@
         </div>
     </div>
 </div>
-
+</div>
 <!-- Bootstrap and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Define URLs using Django template tags - using var instead of const to avoid redeclaration issues
+    // Define URLs using Django template tags
     if (typeof SAVE_EXAM_RESULTS_URL === 'undefined') {
         var SAVE_EXAM_RESULTS_URL = "{% url 't_exam:save_exam_results' pk %}";
     }
     if (typeof VALIDATE_EXAM_URL === 'undefined') {
         var VALIDATE_EXAM_URL = "{% url 't_exam:validate_exam' %}";
     }
+
+    // Define dependencies data from Django template context
+    var dependenciesData = {};
+    {% if dependencies_data and dependencies_data != 'null' and dependencies_data != '{}' %}
+    try {
+        dependenciesData = JSON.parse('{{ dependencies_data|escapejs }}');
+    } catch (e) {
+        console.error('Error parsing dependencies data:', e);
+        console.log('Raw dependencies data:', '{{ dependencies_data|escapejs }}');
+        dependenciesData = {};
+    }
+    {% endif %}
 
     function showStatus(message, isSuccess) {
         const statusDiv = document.getElementById('status-message');
@@ -174,17 +203,13 @@
         const value = parseFloat(inputElement.value);
         const maxNote = parseFloat(inputElement.max);
 
-        // Vérifier si la valeur est supérieure à la max_note
         if (!isNaN(value) && !isNaN(maxNote) && value > maxNote) {
-            // Changer la couleur de fond pour indiquer une erreur
-            inputElement.style.backgroundColor = '#ffe6e6'; // rouge clair
+            inputElement.style.backgroundColor = '#ffe6e6';
             return false;
         } else if (!isNaN(value) && !isNaN(maxNote) && value <= maxNote) {
-            // Changer la couleur de fond pour indiquer une saisie valide
-            inputElement.style.backgroundColor = '#e6ffe6'; // vert clair
+            inputElement.style.backgroundColor = '#e6ffe6';
             return true;
         } else {
-            // Réinitialiser la couleur de fond si la valeur est vide ou invalide
             inputElement.style.backgroundColor = '';
             return true;
         }
@@ -207,6 +232,12 @@
         const form = document.getElementById('exam-results-form');
         const formData = new FormData(form);
 
+        // Debug: log form data
+        console.log('Form data being sent:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+
         $.ajax({
             url: typeof SAVE_EXAM_RESULTS_URL !== 'undefined' ? SAVE_EXAM_RESULTS_URL : "{% url 't_exam:save_exam_results' pk %}",
             type: 'POST',
@@ -224,7 +255,10 @@
                 }
             },
             error: function(xhr, status, error) {
-                showStatus('Erreur de connexion: ' + error, false);
+                console.error('Save error:', error);
+                console.error('XHR status:', xhr.status);
+                console.error('XHR responseText:', xhr.responseText);
+                showStatus('Erreur de sauvegarde: ' + error, false);
             }
         });
     }
@@ -238,17 +272,14 @@
                 type: 'POST',
                 data: {
                     'planId': examPlanId,
-                    'examStatus': 'termine',  // Assuming we're validating as completed
+                    'examStatus': 'termine',
                     'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 success: function(data) {
                     if (data.status === 'success') {
                         showStatus(data.message, true);
-                        // Disable all input fields after validation
                         $('input').prop('disabled', true);
-                        // Disable save button
                         $('#save-notes-btn').prop('disabled', true);
-                        // Hide validate button and show validation status
                         $('#validate-exam-btn').hide();
                         $('.modal-footer').append('<span class="text-success fw-bold ms-2">PV Validé</span>');
                     } else {
@@ -262,27 +293,136 @@
         }
     }
 
+    // Calculate total from sub-notes
+    function calculateTotalFromSubNotes(studentId, typeId, nbSubNotes) {
+        let total = 0;
+        let isValid = true;
+
+        for (let i = 0; i < nbSubNotes; i++) {
+            const subNoteInput = document.querySelector(`input[name="sous_note_${studentId}_${typeId}_${i}"]`);
+            if (subNoteInput && subNoteInput.value !== '') {
+                const value = parseFloat(subNoteInput.value);
+                if (!isNaN(value)) {
+                    total += value;
+                } else {
+                    isValid = false;
+                }
+            }
+        }
+
+        if (isValid) {
+            const totalInput = document.querySelector(`input[name="note_${studentId}_${typeId}"]`);
+            if (totalInput) {
+                // Only update if this note is not calculated from dependencies
+                const noteData = dependenciesData[typeId];
+                if (!noteData || !noteData.is_calculee || noteData.type_calcul === 'NONE') {
+                    totalInput.value = total.toFixed(2);
+                    validateNoteInput(totalInput);
+                }
+            }
+        }
+    }
+
+    // Calculate value based on dependencies (SUM or AVG)
+    function calculateFromDependencies(studentId, builtinId) {
+        const noteData = dependenciesData[builtinId];
+        if (!noteData || !noteData.is_calculee || noteData.type_calcul === 'NONE') {
+            return;
+        }
+
+        // Check if this note has dependencies (calculated from other notes) or is just a total of sub-notes
+        const dependencies = noteData.dependencies;
+        if (!dependencies || dependencies.length === 0) {
+            // This might be a total of sub-notes that is also marked as calculated
+            // In this case, we don't calculate it from dependencies, it should be calculated from sub-notes
+            return;
+        }
+
+        let total = 0;
+        let count = 0;
+        let allValid = true;
+
+        // Calculate based on dependencies
+        for (const dep of dependencies) {
+            const depInput = document.querySelector(`input[name="note_${studentId}_${dep.builtin_id}"]`);
+            if (depInput && depInput.value !== '') {
+                const value = parseFloat(depInput.value);
+                if (!isNaN(value)) {
+                    total += value;
+                    count++;
+                } else {
+                    allValid = false;
+                }
+            } else {
+                allValid = false;
+            }
+        }
+
+        if (allValid && count > 0) {
+            let result;
+            if (noteData.type_calcul === 'SUM') {
+                result = total;
+            } else if (noteData.type_calcul === 'AVG') {
+                result = total / count;
+            }
+
+            // Ensure result doesn't exceed max note
+            const maxNote = noteData.max_note;
+            if (result > maxNote) {
+                result = maxNote;
+            }
+
+            const targetInput = document.querySelector(`input[name="note_${studentId}_${builtinId}"]`);
+            if (targetInput) {
+                targetInput.value = result.toFixed(2);
+                validateNoteInput(targetInput);
+            }
+        }
+    }
+
+    // Trigger calculations for all calculated notes that depend on this note
+    function triggerDependentCalculations(studentId, changedBuiltinId) {
+        // Loop through all dependencies to find notes that depend on the changed note
+        for (const builtinId in dependenciesData) {
+            const noteData = dependenciesData[builtinId];
+            if (noteData.is_calculee && noteData.type_calcul !== 'NONE') {
+                // Check if this note depends on the changed note
+                const dependsOnChanged = noteData.dependencies.some(dep => dep.builtin_id == changedBuiltinId);
+
+                if (dependsOnChanged) {
+                    // This note depends on the changed note, so recalculate it
+                    calculateFromDependencies(studentId, builtinId);
+
+                    // Recursively trigger calculations for notes that depend on this one
+                    triggerDependentCalculations(studentId, builtinId);
+                }
+            }
+        }
+    }
+
     // Add event listeners when the modal is shown
-    document.addEventListener('DOMContentLoaded', function() {
+    $(document).ready(function() {
         // Save notes button
         const saveNotesBtn = document.getElementById('save-notes-btn');
         if (saveNotesBtn) {
             saveNotesBtn.addEventListener('click', function() {
-                // Valider toutes les notes avant de sauvegarder
+                console.log('Save button clicked');
                 if (!validateAllNotes()) {
                     if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
                         return;
                     }
                 }
+                console.log('Calling saveExamResults');
                 saveExamResults();
             });
+        } else {
+            console.error('Save button not found');
         }
 
         // Validate exam button
         const validateExamBtn = document.getElementById('validate-exam-btn');
         if (validateExamBtn) {
             validateExamBtn.addEventListener('click', function() {
-                // Valider toutes les notes avant de valider
                 if (!validateAllNotes()) {
                     if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même valider ?')) {
                         return;
@@ -292,11 +432,66 @@
             });
         }
 
-        // Ajouter un événement blur à tous les champs de note existants
+        // Add validation to all note inputs
         const noteInputs = document.querySelectorAll('input[type="number"]');
         noteInputs.forEach(function(input) {
             input.addEventListener('blur', function() {
                 validateNoteInput(this);
+            });
+        });
+
+        // Add event listeners for sub-notes
+        document.querySelectorAll('.sous-note-input').forEach(function(input) {
+            input.addEventListener('input', function() {
+                const name = input.name;
+                const match = name.match(/sous_note_(\d+)_(\d+)_(\d+)/);
+                if (match) {
+                    const studentId = match[1];
+                    const typeId = match[2];
+                    const subNoteIndex = match[3];
+
+                    // Count total sub-notes for this type by checking how many sub-note inputs exist for this student and type
+                    const nbSubNotes = document.querySelectorAll(`input[name^="sous_note_${studentId}_${typeId}_"]`).length;
+
+                    calculateTotalFromSubNotes(studentId, typeId, nbSubNotes);
+                    validateNoteInput(input);
+
+                    // Trigger dependent calculations since this total note has changed
+                    triggerDependentCalculations(studentId, typeId);
+                }
+            });
+        });
+
+        // Add event listeners for regular note inputs (not calculated and not based on sub-notes)
+        document.querySelectorAll('input[name^="note_"]:not(.calculated-field):not(.final-note-input)').forEach(function(input) {
+            input.addEventListener('input', function() {
+                const name = input.name;
+                const match = name.match(/note_(\d+)_(\d+)/);
+                if (match) {
+                    const studentId = match[1];
+                    const builtinId = match[2];
+
+                    validateNoteInput(input);
+
+                    // Trigger dependent calculations since this note has changed
+                    triggerDependentCalculations(studentId, builtinId);
+                }
+            });
+        });
+
+        // Add event listeners for calculated fields (based on dependencies) to prevent user input
+        document.querySelectorAll('input.calculated-field').forEach(function(input) {
+            input.addEventListener('input', function() {
+                // For calculated fields, recalculate based on dependencies
+                const name = input.name;
+                const match = name.match(/note_(\d+)_(\d+)/);
+                if (match) {
+                    const studentId = match[1];
+                    const builtinId = match[2];
+
+                    // Recalculate the value based on dependencies
+                    calculateFromDependencies(studentId, builtinId);
+                }
             });
         });
     });

@@ -49,3 +49,50 @@ def lookup(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key)
     return None
+
+@register.filter
+def range(value):
+    """
+    Return a range of numbers from 0 to value-1
+    Usage: {% for i in value|range %}
+    """
+    try:
+        return range(int(value))
+    except (ValueError, TypeError):
+        return range(0)
+
+@register.filter
+def div(value, arg):
+    """
+    Divide value by arg
+    Usage: {{ value|div:arg }}
+    """
+    try:
+        return float(value) / float(arg)
+    except (ValueError, TypeError, ZeroDivisionError):
+        return 0
+
+@register.filter
+def get_sous_note_by_index(builtin_type, index):
+    """
+    Get a sous-note by index from a builtin type
+    Usage: {{ builtin_type|get_sous_note_by_index:index }}
+    """
+    try:
+        sous_notes = list(builtin_type.sous_notes.all())
+        if 0 <= index < len(sous_notes):
+            return sous_notes[index]
+        return None
+    except Exception:
+        return None
+
+@register.filter
+def getattr(obj, attr_name):
+    """
+    Get an attribute from an object by name
+    Usage: {{ obj|getattr:"attribute_name" }}
+    """
+    try:
+        return getattr(obj, attr_name, None)
+    except:
+        return None
