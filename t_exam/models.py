@@ -29,7 +29,7 @@ class SessionExam(models.Model):
         return self.label
     
 class SessionExamLine(models.Model):
-    session = models.ForeignKey(SessionExam, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_lines")
+    session = models.ForeignKey(SessionExam, on_delete=models.CASCADE, null=True, blank=True, related_name="session_exam_lines")
     groupe = models.ForeignKey(Groupe, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_groupe")
     semestre = models.CharField(max_length=100, null=True, choices=[('1',"1"),('2',"2"),('3',"3"),('4',"4")])
 
