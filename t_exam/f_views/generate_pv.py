@@ -260,34 +260,42 @@ def GeneratePvModal(request, pk):
                             'sous_notes': []
                         }
 
-    # Récupérer les décisions existantes pour ce PV
+    # Get existing decisions for this PV
     decisions_existantes = {}
 
-    # Récupérer les décisions pour ce PV spécifique
+    # Get decisions for this specific PV
     for decision in ExamDecisionEtudiant.objects.filter(pv=pv_examen):
         decisions_existantes[decision.etudiant.id] = {
             'statut': decision.statut,
             'moyenne': decision.moyenne
         }
 
-    # Pour les examens de rattrapage, on devrait chercher les décisions des examens originaux pour ce module et groupe
+    # For makeup exams, we should look for the original exam's decisions for this module and group
     if exam_type == 'rattrage':
-        # Trouver les examens normaux originaux pour ce module et ce groupe
+        # Find the original normal exams for this module and group
         original_planifications = ExamPlanification.objects.filter(
             exam_line=groupe,
             module=obj.module,
-            type_examen='normal'  # Examen normal original
+            type_examen='normal'  # Original normal exam
         )
 
         for original_plan in original_planifications:
             original_pv = PvExamen.objects.filter(exam_planification=original_plan).first()
             if original_pv:
                 for decision in ExamDecisionEtudiant.objects.filter(pv=original_pv, statut='rattrapage'):
-                    # Ajouter les décisions de rattrapage de l'examen original
+                    # Add the makeup decisions from the original exam
                     decisions_existantes[decision.etudiant.id] = {
                         'statut': decision.statut,
                         'moyenne': decision.moyenne
                     }
+
+    # Pass the existing decisions to the template context
+    existing_decisions = {}
+    for decision in ExamDecisionEtudiant.objects.filter(pv=pv_examen):
+        existing_decisions[decision.etudiant.id] = {
+            'moyenne': decision.moyenne,
+            'statut': decision.statut
+        }
 
     # Get dependencies for calculated notes to pass to frontend
     # Create dependency mapping for frontend calculations
@@ -337,6 +345,7 @@ def GeneratePvModal(request, pk):
         "module" : module,
         'note_eliminatoire' : note_eliminatoire,
         'decisions_existantes': decisions_existantes,
+        'existing_decisions': existing_decisions,  # Pass existing decisions to template
         'commission_results': commission_results,  # Pass commission results to template
         'exam_planification': obj,  # Pass the exam planification object to template
         'dependencies_data': dependencies_data_json,  # Pass dependency data as JSON string for frontend calculations
