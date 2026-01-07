@@ -113,7 +113,7 @@ urlpatterns = [
     path('ApiLoadSessionExamLines', ApiLoadSessionExamLines, name="ApiLoadSessionExamLines"),
 
     # URLs for group deliberation results
-    path('groupe-deliberation-results/<int:groupe_id>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
+    path('groupe-deliberation-results/<int:session_line_id>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
     path('api/groupe-deliberation-results/', get_groupe_deliberation_results_ajax, name="get_groupe_deliberation_results_ajax"),
 
 

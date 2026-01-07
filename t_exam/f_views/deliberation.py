@@ -9,14 +9,14 @@ from t_formations.models import Modules
 
 
 @login_required
-def groupe_deliberation_results_view(request, groupe_id):
+def groupe_deliberation_results_view(request, session_line_id):
     """
     View to display group deliberation results in a modal
     Note: groupe_id is actually the SessionExamLine ID
     """
     try:
         # Get the SessionExamLine using the groupe_id parameter
-        session_exam_line = SessionExamLine.objects.get(id=groupe_id)
+        session_exam_line = SessionExamLine.objects.get(id=session_line_id)
         groupe = session_exam_line.groupe  # Get the associated group
 
         # Get all exam planifications for this session exam line

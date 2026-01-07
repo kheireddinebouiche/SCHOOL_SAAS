@@ -184,7 +184,64 @@
         </div>
     </div>
 </div>
+
+<!-- Confirmation Modal for Exam Validation -->
+<div class="modal fade" id="confirmValidateModal" tabindex="-1" aria-labelledby="confirmValidateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark" id="confirmValidateModalLabel">Confirmation de validation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="confirm-validate-btn">Valider</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Confirmation Modal for Saving with Invalid Notes -->
+<div class="modal fade" id="confirmSaveInvalidModal" tabindex="-1" aria-labelledby="confirmSaveInvalidModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark" id="confirmSaveInvalidModalLabel">Notes invalides détectées</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" id="confirm-save-invalid-btn">Sauvegarder quand même</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal for Validating with Invalid Notes -->
+<div class="modal fade" id="confirmValidateInvalidModal" tabindex="-1" aria-labelledby="confirmValidateInvalidModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark" id="confirmValidateInvalidModalLabel">Notes invalides détectées</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Certaines notes dépassent la note maximale. Voulez-vous quand même valider ?
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="confirm-validate-invalid-btn">Valider quand même</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap and jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -320,33 +377,77 @@
     }
 
     function validateExam() {
-        const examPlanId = document.querySelector('input[name="exam_plan_id"]').value;
-
-        if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
-            $.ajax({
-                url: typeof VALIDATE_EXAM_URL !== 'undefined' ? VALIDATE_EXAM_URL : "{% url 't_exam:validate_pv_exam' %}",
-                type: 'POST',
-                data: {
-                    'planId': examPlanId,
-                    'examStatus': 'termine',
-                    'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                success: function(data) {
-                    if (data.status === 'success') {
-                        showStatus(data.message, true);
-                        $('input').prop('disabled', true);
-                        $('#save-notes-btn').prop('disabled', true);
-                        $('#validate-exam-btn').hide();
-                        $('.modal-footer').append('<span class="text-success fw-bold ms-2">PV Validé</span>');
-                    } else {
-                        showStatus(data.message, false);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    showStatus('Erreur de connexion: ' + error, false);
+        // Show the confirmation modal
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+            var modalElement = document.getElementById('confirmValidateModal');
+            // Check if modal is already open to avoid recursion
+            if (!modalElement.classList.contains('show')) {
+                var modal = bootstrap.Modal.getInstance(modalElement);
+                if (!modal) {
+                    modal = new bootstrap.Modal(modalElement);
                 }
-            });
+                modal.show();
+            }
+        } else {
+            // Fallback to confirm if bootstrap is not loaded
+            if (confirm('Êtes-vous sûr de vouloir valider cet examen ? Cette action est irréversible.')) {
+                performValidateExam();
+            }
         }
+    }
+
+    // Handle the confirmation for exam validation
+    function performValidateExam() {
+        const examPlanId = "{{pk}}";
+
+        // Using fetch API instead of jQuery.ajax for vanilla JS
+        fetch(typeof VALIDATE_EXAM_URL !== 'undefined' ? VALIDATE_EXAM_URL : "{% url 't_exam:validate_pv_exam' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: 'planId=' + encodeURIComponent(examPlanId) +
+                  '&examStatus=termine' +
+                  '&csrfmiddlewaretoken=' + encodeURIComponent(document.querySelector('[name=csrfmiddlewaretoken]').value)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showStatus(data.message, true);
+                // Disable all input elements
+                document.querySelectorAll('input').forEach(input => {
+                    input.disabled = true;
+                });
+                // Disable all select elements (including observation columns)
+                document.querySelectorAll('select').forEach(select => {
+                    select.disabled = true;
+                    // Gray out the select elements to make them visually appear disabled
+                    select.style.backgroundColor = '#e9ecef';
+                    select.style.color = '#6c757d';
+                    select.style.cursor = 'not-allowed';
+                });
+                // Disable save button
+                const saveBtn = document.getElementById('save-notes-btn');
+                if (saveBtn) saveBtn.disabled = true;
+                // Hide validate button
+                const validateBtn = document.getElementById('validate-exam-btn');
+                if (validateBtn) validateBtn.style.display = 'none';
+                // Add validation text
+                const modalFooter = document.querySelector('.modal-footer');
+                if (modalFooter) {
+                    const validatedSpan = document.createElement('span');
+                    validatedSpan.className = 'text-success fw-bold ms-2';
+                    validatedSpan.textContent = 'PV Validé';
+                    modalFooter.appendChild(validatedSpan);
+                }
+            } else {
+                showStatus(data.message, false);
+            }
+        })
+        .catch(error => {
+            showStatus('Erreur de connexion: ' + error, false);
+        });
     }
 
     // Calculate total from sub-notes
@@ -513,35 +614,135 @@
 
     // Add event listeners when the modal is shown
     $(document).ready(function() {
-        // Save notes button
+        // If PV is already validated when page loads, disable all inputs and selects
+        {% if pv_examen and pv_examen.est_valide %}
+            // Disable all input elements
+            document.querySelectorAll('input').forEach(input => {
+                input.disabled = true;
+            });
+            // Disable all select elements (including observation columns)
+            document.querySelectorAll('select').forEach(select => {
+                select.disabled = true;
+                // Gray out the select elements to make them visually appear disabled
+                select.style.backgroundColor = '#e9ecef';
+                select.style.color = '#6c757d';
+                select.style.cursor = 'not-allowed';
+            });
+            // Disable save button if it exists
+            const saveBtn = document.getElementById('save-notes-btn');
+            if (saveBtn) saveBtn.disabled = true;
+            // Hide validate button if it exists
+            const validateBtn = document.getElementById('validate-exam-btn');
+            if (validateBtn) validateBtn.style.display = 'none';
+        {% endif %}
+
+        // Save notes button - only add event listener if button exists
         const saveNotesBtn = document.getElementById('save-notes-btn');
         if (saveNotesBtn) {
             saveNotesBtn.addEventListener('click', function() {
                 console.log('Save button clicked');
                 if (!validateAllNotes()) {
-                    if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
-                        return;
+                    // Show the confirmation modal for invalid notes
+                    if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                        var modalElement = document.getElementById('confirmSaveInvalidModal');
+                        // Check if modal is already open to avoid recursion
+                        if (!modalElement.classList.contains('show')) {
+                            var modal = bootstrap.Modal.getInstance(modalElement);
+                            if (!modal) {
+                                modal = new bootstrap.Modal(modalElement);
+                            }
+                            modal.show();
+                        }
+                    } else {
+                        // Fallback to confirm if bootstrap is not loaded
+                        if (confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même sauvegarder ?')) {
+                            saveExamResults();
+                        }
                     }
+                } else {
+                    console.log('Calling saveExamResults');
+                    saveExamResults();
                 }
-                console.log('Calling saveExamResults');
-                saveExamResults();
             });
-        } else {
-            console.error('Save button not found');
         }
 
-        // Validate exam button
+        // Handle the confirmation for saving with invalid notes
+        document.getElementById('confirm-save-invalid-btn').addEventListener('click', function() {
+            // Hide the modal using vanilla JS
+            var modalEl = document.getElementById('confirmSaveInvalidModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            console.log('Calling saveExamResults');
+            saveExamResults();
+        });
+
+        // Also handle closing the modal via backdrop or close button
+        document.getElementById('confirmSaveInvalidModal').addEventListener('hidden.bs.modal', function () {
+            // Ensure the modal is properly closed
+        });
+
+        // Validate exam button - only add event listener if button exists
         const validateExamBtn = document.getElementById('validate-exam-btn');
         if (validateExamBtn) {
             validateExamBtn.addEventListener('click', function() {
                 if (!validateAllNotes()) {
-                    if (!confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même valider ?')) {
-                        return;
+                    // Show the confirmation modal for invalid notes during validation
+                    if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                        var modalElement = document.getElementById('confirmValidateInvalidModal');
+                        // Check if modal is already open to avoid recursion
+                        if (!modalElement.classList.contains('show')) {
+                            var modal = bootstrap.Modal.getInstance(modalElement);
+                            if (!modal) {
+                                modal = new bootstrap.Modal(modalElement);
+                            }
+                            modal.show();
+                        }
+                    } else {
+                        // Fallback to confirm if bootstrap is not loaded
+                        if (confirm('Certaines notes dépassent la note maximale. Voulez-vous quand même valider ?')) {
+                            validateExam();
+                        }
                     }
+                } else {
+                    // Directly call validateExam which will show the validation modal
+                    validateExam();
                 }
-                validateExam();
             });
         }
+
+        // Handle the confirmation for validating with invalid notes
+        document.getElementById('confirm-validate-invalid-btn').addEventListener('click', function() {
+            // Hide the modal using vanilla JS
+            var modalEl = document.getElementById('confirmValidateInvalidModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            validateExam();
+        });
+
+        // Handle the confirmation for exam validation
+        document.getElementById('confirm-validate-btn').addEventListener('click', function() {
+            // Hide the modal using vanilla JS
+            var modalEl = document.getElementById('confirmValidateModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            performValidateExam();
+        });
+
+        // Also handle closing the modal via backdrop or close button
+        document.getElementById('confirmValidateInvalidModal').addEventListener('hidden.bs.modal', function () {
+            // Ensure the modal is properly closed
+        });
+
+        // Also handle closing the first modal via backdrop or close button
+        document.getElementById('confirmValidateModal').addEventListener('hidden.bs.modal', function () {
+            // Ensure the modal is properly closed
+        });
 
         // Add validation to all note inputs
         const noteInputs = document.querySelectorAll('input[type="number"]');

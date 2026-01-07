@@ -526,7 +526,7 @@ def validate_pv_exam(request):
     """
     if request.method == "POST":
         try:
-            exam_plan_id = request.POST.get('exam_plan_id')
+            exam_plan_id = request.POST.get('planId')
 
             if not exam_plan_id:
                 return JsonResponse({"status": "error", "message": "ID de l'examen manquant"})
@@ -542,7 +542,7 @@ def validate_pv_exam(request):
             pv_examen.date_validation = timezone.now()
             pv_examen.save()
 
-            return JsonResponse({"status": "success","message": "PV d'examen validé et décisions enregistrées avec succès"})
+            return JsonResponse({"status": "success","message": "PV d'examen validé avec succès"})
 
         except ExamPlanification.DoesNotExist:
             return JsonResponse({"status": "error", "message": "Examen planifié non trouvé"})
