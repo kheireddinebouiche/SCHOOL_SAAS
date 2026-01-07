@@ -89,6 +89,8 @@
                                                 </th>
                                             {% endif %}
                                         {% endfor %}
+                                        <th class="text-center text-dark">Moyenne UV</th>
+                                        <th class="text-center text-dark">Observation</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -141,6 +143,26 @@
                                                     {% endif %}
                                                 {% endfor %}
                                             {% endfor %}
+                                            <!-- Moyenne column -->
+                                            <td class="text-center">
+                                                <input type="text"
+                                                       class="form-control form-control-sm"
+                                                       id="moyenne_{{ student_line.student.id }}"
+                                                       readonly
+                                                       style="background-color: #e9ecef !important; color: #6c757d !important;"
+                                                       value="">
+                                            </td>
+                                            <!-- Observation column -->
+                                            <td class="text-center">
+                                                <select class="form-select form-select-sm"
+                                                        name="observation_{{ student_line.student.id }}">
+                                                    <option value="">Sélectionnez...</option>
+                                                    <option value="valide">Admis</option>
+                                                    <option value="rattrapage">Rattrapage</option>
+                                                    <option value="rach">Rachat de crédit</option>
+                                                    <option value="ajou">Ajourné</option>
+                                                </select>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -237,6 +259,40 @@
         for (let [key, value] of formData.entries()) {
             console.log(key, value);
         }
+
+        // Add average and observation values to form data
+        const studentRows = document.querySelectorAll('tbody tr');
+        studentRows.forEach(function(row) {
+            const studentCell = row.querySelector('td:nth-child(1)'); // First cell has student number
+            if (studentCell) {
+                // Get student ID from the row (we'll use the data from the first cell's sibling)
+                const studentNameCell = row.querySelector('td:nth-child(2)');
+                const studentFirstNameCell = row.querySelector('td:nth-child(3)');
+
+                // Find the student ID by looking at the inputs in the row
+                const noteInputs = row.querySelectorAll('input[name^="note_"]');
+                if (noteInputs.length > 0) {
+                    // Extract student ID from first input name (format: note_studentId_typeId)
+                    const firstInputName = noteInputs[0].name;
+                    const match = firstInputName.match(/note_(\d+)_(\d+)/);
+                    if (match) {
+                        const studentId = match[1];
+
+                        // Add average value
+                        const avgInput = document.getElementById(`moyenne_${studentId}`);
+                        if (avgInput && avgInput.value !== '') {
+                            formData.append(`average_${studentId}`, avgInput.value);
+                        }
+
+                        // Add observation value
+                        const obsSelect = row.querySelector(`select[name="observation_${studentId}"]`);
+                        if (obsSelect && obsSelect.value !== '') {
+                            formData.append(`observation_${studentId}`, obsSelect.value);
+                        }
+                    }
+                }
+            }
+        });
 
         $.ajax({
             url: typeof SAVE_EXAM_RESULTS_URL !== 'undefined' ? SAVE_EXAM_RESULTS_URL : "{% url 't_exam:save_exam_results' pk %}",
@@ -398,6 +454,61 @@
                 }
             }
         }
+
+        // After all calculations, recalculate the average
+        calculateAverage(studentId);
+    }
+
+    // Calculate average for a student based on notes that intervene in the average with weighting
+    function calculateAverage(studentId) {
+        // Get all note inputs for this student
+        const noteInputs = document.querySelectorAll(`input[name^="note_${studentId}_"]`);
+        let weightedSum = 0;
+        let totalCoefficients = 0;
+
+        // Iterate through each note input
+        noteInputs.forEach(function(input) {
+            // Extract the type note ID from the input name (format: note_studentId_typeNoteId)
+            const nameParts = input.name.split('_');
+            if (nameParts.length >= 3) {
+                const extractedStudentId = nameParts[1];
+                const extractedTypeId = nameParts[2];
+
+                // Only process if this belongs to the current student
+                if (extractedStudentId == studentId) {
+                    // Check if this type note intervenes in the average
+                    const noteValue = parseFloat(input.value);
+                    if (!isNaN(noteValue) && input.value.trim() !== '') {
+                        // We need to determine if this note type should be included in average
+                        // This requires checking the backend data
+                        const noteData = dependenciesData[extractedTypeId];
+                        if (noteData && noteData.in_moyenne) {
+                            // Calculate coefficient based on max_note (weight)
+                            const maxNote = noteData.max_note || 20; // Default to 20 if no max_note
+
+                            // Calculate the weighted value: (note_value / max_note) * 20 * coefficient
+                            // For a weighted average, we use: (value/max) * coefficient
+                            const normalizedValue = (noteValue / maxNote) * 20; // Normalize to 20 scale
+                            const coefficient = maxNote / 20; // Use max_note as coefficient (adjust as needed)
+
+                            weightedSum += normalizedValue * coefficient;
+                            totalCoefficients += coefficient;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Calculate and display the weighted average on 20 scale
+        const avgElement = document.getElementById(`moyenne_${studentId}`);
+        if (avgElement) {
+            if (totalCoefficients > 0) {
+                const weightedAverage = weightedSum / totalCoefficients;
+                avgElement.value = weightedAverage.toFixed(2);
+            } else {
+                avgElement.value = '';
+            }
+        }
     }
 
     // Add event listeners when the modal is shown
@@ -458,6 +569,9 @@
 
                     // Trigger dependent calculations since this total note has changed
                     triggerDependentCalculations(studentId, typeId);
+
+                    // Recalculate average for this student
+                    calculateAverage(studentId);
                 }
             });
         });
@@ -475,6 +589,9 @@
 
                     // Trigger dependent calculations since this note has changed
                     triggerDependentCalculations(studentId, builtinId);
+
+                    // Recalculate average for this student
+                    calculateAverage(studentId);
                 }
             });
         });
@@ -491,6 +608,9 @@
 
                     // Recalculate the value based on dependencies
                     calculateFromDependencies(studentId, builtinId);
+
+                    // Recalculate average for this student
+                    calculateAverage(studentId);
                 }
             });
         });

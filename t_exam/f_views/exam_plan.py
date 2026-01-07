@@ -1103,6 +1103,51 @@ def SaveExamResults(request, pk):
 
                     student_details['notes'].append(type_note_details)
 
+                # Process averages and observations after processing all notes
+                for student_line in students:
+                    student = student_line.student
+
+                    # Get average value from form
+                    avg_value = request.POST.get(f'average_{student.id}')
+                    # Get observation value from form
+                    observation_value = request.POST.get(f'observation_{student.id}')
+
+                    if avg_value or observation_value:
+                        # Get or create the exam decision for this student
+                        exam_decision, created = ExamDecisionEtudiant.objects.get_or_create(
+                            pv=pv_examen,
+                            etudiant=student,
+                            defaults={'moyenne': None, 'statut': 'ajou'}  # Default to 'ajou' (ajourné)
+                        )
+
+                        # Update average if provided
+                        if avg_value and avg_value.strip() != '':
+                            try:
+                                exam_decision.moyenne = float(avg_value)
+                            except ValueError:
+                                processed_data['errors'].append({
+                                    'student_id': student.id,
+                                    'field': 'average',
+                                    'value': avg_value,
+                                    'error': 'Invalid average value'
+                                })
+
+                        # Update observation/status if provided
+                        if observation_value and observation_value.strip() != '':
+                            # Validate that the status is one of the allowed choices
+                            valid_statuses = ['valide', 'rattrapage', 'rach', 'ajou']
+                            if observation_value in valid_statuses:
+                                exam_decision.statut = observation_value
+                            else:
+                                processed_data['errors'].append({
+                                    'student_id': student.id,
+                                    'field': 'observation',
+                                    'value': observation_value,
+                                    'error': 'Invalid status value'
+                                })
+
+                        exam_decision.save()
+
                 processed_data['details'].append(student_details)
                 processed_data['students_processed'] += 1
 

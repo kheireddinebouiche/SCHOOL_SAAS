@@ -97,6 +97,7 @@ def GeneratePvModal(request, pk):
                 has_sous_notes=builtin_type_note.has_sous_notes,
                 nb_sous_notes=builtin_type_note.nb_sous_notes,
                 is_calculee=builtin_type_note.is_calculee,
+                in_moyenne=builtin_type_note.in_moyenne,
                 type_calcul=builtin_type_note.type_calcul,
                 ordre=builtin_type_note.ordre
             )
@@ -309,6 +310,7 @@ def GeneratePvModal(request, pk):
             dependencies_data[builtin_type.id] = {
                 'type_calcul': exam_type_note.type_calcul,
                 'is_calculee': exam_type_note.is_calculee,
+                'in_moyenne': exam_type_note.in_moyenne,
                 'dependencies': dependencies,
                 'max_note': exam_type_note.max_note,
                 'has_sous_notes': exam_type_note.has_sous_notes,

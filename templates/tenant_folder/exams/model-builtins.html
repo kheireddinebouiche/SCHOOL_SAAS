@@ -770,6 +770,19 @@
             </div>
           </div>
 
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <div class="mb-3">
+                <div class="form-check form-switch form-switch-success">
+                  <input class="form-check-input" type="checkbox" id="in_moyenne" name="in_moyenne">
+                  <label class="form-check-label" for="in_moyenne">
+                    Intervient dans la moyenne
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div id="calculee_options" class="mt-3 p-3 bg-light rounded-2" style="display: none;">
             <div class="mb-3">
               <label for="type_calcul" class="form-label">Type de calcul</label>
@@ -1545,15 +1558,12 @@
             $('#is_rattrapage').prop('checked', typeNote.is_rattrapage);
             $('#is_rachat').prop('checked', typeNote.is_rachat);
             $('#is_calculee').prop('checked', typeNote.is_calculee);
+            $('#in_moyenne').prop('checked', typeNote.in_moyenne);
             $('#type_calcul').val(typeNote.type_calcul);
             $('#nb_sous_notes').val(typeNote.nb_sous_notes);
 
-            // Set the bloc selection
-            if(typeNote.bloc_id) {
-              $('#bloc_id').val(typeNote.bloc_id);
-            } else {
-              $('#bloc_id').val('');
-            }
+            // Load blocs first and then set the selection
+            loadBlocsForSelection(typeNote.bloc_id);
 
             if(typeNote.has_sous_notes) {
               $('#nb_sous_notes_container').show();
@@ -1899,6 +1909,39 @@
         });
       }
     });
+
+    // Load blocs for selection
+    function loadBlocsForSelection(selectedBlocId) {
+      $.ajax({
+        url: "{% url 't_exam:ApiGetAllBlocs' %}",
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+          let options = '<option value="">Aucun bloc</option>';
+          if(response.length > 0) {
+            $.each(response, function(index, bloc) {
+              options += '<option value="' + bloc.id + '">' + bloc.label + '</option>';
+            });
+          }
+          $('#bloc_id').html(options);
+
+          // Set the selected value after options are loaded
+          if(selectedBlocId) {
+            $('#bloc_id').val(selectedBlocId);
+          } else {
+            $('#bloc_id').val('');
+          }
+        },
+        error: function() {
+          // Even if there's an error, still try to set the value
+          if(selectedBlocId) {
+            $('#bloc_id').val(selectedBlocId);
+          } else {
+            $('#bloc_id').val('');
+          }
+        }
+      });
+    }
   });
 </script>
 {% endblock content %}

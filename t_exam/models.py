@@ -117,6 +117,11 @@ class BuiltinTypeNote(models.Model):
 
     ordre = models.PositiveIntegerField(default=0)
 
+    in_moyenne = models.BooleanField(
+        default=False,
+        help_text="Intervient dans le calcul de la moyenne générale"
+    )
+
     class Meta:
         unique_together = ('builtin', 'code')
         ordering = ['ordre']
@@ -220,6 +225,11 @@ class ExamTypeNote(models.Model):
     type_calcul = models.CharField(max_length=10, default='NONE')
 
     ordre = models.PositiveIntegerField(default=0)
+
+    in_moyenne = models.BooleanField(
+        default=False,
+        help_text="Intervient dans le calcul de la moyenne générale"
+    )
 
     class Meta:
         unique_together = ('pv', 'code')

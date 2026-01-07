@@ -123,7 +123,8 @@ def ApiGetModelBuilltinDetails(request):
                     'max_note' : sn.max_note,
                     'ordre': sn.ordre
                 } for sn in sous_notes
-            ]
+            ],
+            'in_moyenne': type_note.in_moyenne
         })
 
     return JsonResponse(data)
@@ -174,7 +175,8 @@ def ApiGetTypeNotes(request):
             'is_rattrapage': type_note.is_rattrapage,
             'is_rachat': type_note.is_rachat,
             'nb_sous_notes': type_note.nb_sous_notes,
-            'ordre': type_note.ordre
+            'ordre': type_note.ordre,
+            'in_moyenne': type_note.in_moyenne
         })
 
     return JsonResponse(data, safe=False)
@@ -194,6 +196,7 @@ def ApiAddTypeNote(request):
         nb_sous_notes = request.POST.get('nb_sous_notes', 0)
         ordre = request.POST.get('ordre', 0)
         is_calculee = request.POST.get('is_calculee') == 'on'
+        in_moyenne = request.POST.get('in_moyenne') == 'on'
         type_calcul = request.POST.get('type_calcul', 'NONE')
         bloc_id = request.POST.get('bloc_id')
 
@@ -215,6 +218,7 @@ def ApiAddTypeNote(request):
             nb_sous_notes=int(nb_sous_notes),
             ordre=int(ordre),
             is_calculee=is_calculee,
+            in_moyenne=in_moyenne,
             type_calcul=type_calcul
         )
 
@@ -262,6 +266,7 @@ def ApiUpdateTypeNote(request):
         type_note.nb_sous_notes = int(nb_sous_notes)
         type_note.ordre = int(ordre)
         type_note.is_calculee = is_calculee
+        type_note.in_moyenne = request.POST.get('in_moyenne') == 'on'
         type_note.type_calcul = type_calcul
         type_note.save()
 
