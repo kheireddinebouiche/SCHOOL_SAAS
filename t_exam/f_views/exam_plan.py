@@ -527,13 +527,9 @@ def validate_pv_exam(request):
     if request.method == "POST":
         try:
             exam_plan_id = request.POST.get('exam_plan_id')
-            decisions_json = request.POST.get('decisions')
 
             if not exam_plan_id:
                 return JsonResponse({"status": "error", "message": "ID de l'examen manquant"})
-
-            if not decisions_json:
-                return JsonResponse({"status": "error", "message": "Aucune décision fournie"})
 
             # Récupérer l'objet d'examen planifié
             exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
@@ -541,55 +537,19 @@ def validate_pv_exam(request):
             # Récupérer ou créer le PV d'examen
             pv_examen, created = PvExamen.objects.get_or_create(exam_planification=exam_plan)
 
-            # Parser les décisions
-            try:
-                decisions = json.loads(decisions_json)
-            except json.JSONDecodeError:
-                return JsonResponse({"status": "error", "message": "Format JSON invalide pour les décisions"})
-
-            # Enregistrer les décisions pour chaque étudiant
-            for student_id, decision_data in decisions.items():
-                try:
-                    student_id = int(student_id)
-                    statut = decision_data.get('statut')
-                    moyenne = decision_data.get('moyenne')
-
-                    if statut:  # Vérifier que le statut existe
-                        # Récupérer l'étudiant
-                        etudiant = Prospets.objects.get(id=student_id)
-
-                        # Créer ou mettre à jour la décision
-                        decision_etudiant, created = ExamDecisionEtudiant.objects.update_or_create(
-                            pv=pv_examen,
-                            etudiant=etudiant,
-                            defaults={
-                                'statut': statut,
-                                'moyenne': moyenne
-                            }
-                        )
-                except (ValueError, Prospets.DoesNotExist):
-                    # Si l'étudiant n'existe pas, continuer avec les autres
-                    continue
-
             # Valider le PV d'examen
             pv_examen.est_valide = True
             pv_examen.date_validation = timezone.now()
             pv_examen.save()
 
-            return JsonResponse({
-                "status": "success",
-                "message": "PV d'examen validé et décisions enregistrées avec succès"
-            })
+            return JsonResponse({"status": "success","message": "PV d'examen validé et décisions enregistrées avec succès"})
 
         except ExamPlanification.DoesNotExist:
             return JsonResponse({"status": "error", "message": "Examen planifié non trouvé"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Erreur lors de la validation: {str(e)}"})
 
-    return JsonResponse({
-        "status": "error",
-        "message": "Méthode non autorisée"
-    })
+    return JsonResponse({"status": "error","message": "Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app:login")
