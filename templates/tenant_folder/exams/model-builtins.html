@@ -872,6 +872,17 @@
               </div>
             </div>
           </div>
+
+          <div class="row g-3 mt-2">
+            <div class="col-lg-12">
+              <div class="form-check form-switch form-switch-primary">
+                <input class="form-check-input" type="checkbox" id="blocInPvDeliberation" name="in_pv_deliberation">
+                <label class="form-check-label" for="blocInPvDeliberation">
+                  Afficher dans les PV de délibération
+                </label>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -1151,7 +1162,7 @@
     }
 
     // Add new bloc
-    function addNewBloc(label, code, ordre) {
+    function addNewBloc(label, code, ordre, inPvDeliberation) {
       $.ajax({
         url: "{% url 't_exam:ApiAddBloc' %}",
         type: 'POST',
@@ -1159,6 +1170,7 @@
           'label': label,
           'code': code,
           'ordre': ordre,
+          'in_pv_deliberation': inPvDeliberation ? 'on' : 'off',
           'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
         },
         dataType: 'json',
@@ -1177,6 +1189,37 @@
         },
         error: function() {
           alertify.error("Erreur lors de l'ajout du bloc.");
+        }
+      });
+    }
+
+    // Update bloc
+    function updateBloc(blocId, label, code, ordre, inPvDeliberation) {
+      $.ajax({
+        url: "{% url 't_exam:ApiUpdateBloc' %}",
+        type: 'POST',
+        data: {
+          'bloc_id': blocId,
+          'label': label,
+          'code': code,
+          'ordre': ordre,
+          'in_pv_deliberation': inPvDeliberation ? 'on' : 'off',
+          'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        dataType: 'json',
+        success: function(response) {
+          if(response.status === 'success') {
+            alertify.success(response.message);
+            // Reload blocs to reflect the changes
+            loadBlocs();
+            // Close the modal
+            $('#blocModal').modal('hide');
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors de la mise à jour du bloc.");
         }
       });
     }
@@ -1353,18 +1396,50 @@
           $('#detailIsDefault').text(response.is_default ? 'Oui' : 'Non');
           $('#modelDetailsTitle').text('Modèle: ' + response.label);
           
-          // Render types of notes
-          let typesNotesHtml = '';
+          // Group types of notes by bloc
+          let blocsMap = {};
+          let unassignedTypes = [];
+
           if(response.types_notes && response.types_notes.length > 0) {
             $.each(response.types_notes, function(index, typeNote) {
+              if(typeNote.bloc_label) {
+                if(!blocsMap[typeNote.bloc_label]) {
+                  blocsMap[typeNote.bloc_label] = {
+                    id: typeNote.bloc_id,
+                    label: typeNote.bloc_label,
+                    types: []
+                  };
+                }
+                blocsMap[typeNote.bloc_label].types.push(typeNote);
+              } else {
+                unassignedTypes.push(typeNote);
+              }
+            });
+          }
+
+          let typesNotesHtml = '';
+
+          // Render blocs with their types of notes
+          for(let blocLabel in blocsMap) {
+            let bloc = blocsMap[blocLabel];
+            typesNotesHtml += '<div class="card mb-3">';
+            typesNotesHtml += '<div class="card-header bg-primary bg-opacity-10 py-2">';
+            typesNotesHtml += '<div class="d-flex justify-content-between align-items-center">';
+            typesNotesHtml += '<h6 class="mb-0 text-primary"><i class="ri-stack-line me-2"></i>' + bloc.label + '</h6>';
+            typesNotesHtml += '<div class="btn-group" role="group">';
+            typesNotesHtml += '<button type="button" class="btn btn-outline-primary btn-sm edit-bloc" data-bloc-id="' + bloc.id + '" data-bloc-label="' + bloc.label + '" data-bs-toggle="tooltip" title="Modifier le bloc"><i class="ri-edit-line"></i></button>';
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '<div class="card-body p-3">';
+
+            // Render types of notes in this bloc
+            $.each(bloc.types, function(index, typeNote) {
               typesNotesHtml += '<div class="type-note-item mb-3">';
               typesNotesHtml += '<div class="d-flex justify-content-between align-items-center">';
               typesNotesHtml += '<div>';
               typesNotesHtml += '<h6 class="mb-1"><strong>' + typeNote.code + '</strong> - ' + typeNote.libelle + '</h6>';
               typesNotesHtml += '<small class="text-muted">Note max: ' + typeNote.max_note + ', Ordre: ' + typeNote.ordre + '</small>';
-              if(typeNote.bloc_label) {
-                typesNotesHtml += '<br><small class="text-primary">Bloc: ' + typeNote.bloc_label + '</small>';
-              }
               if(typeNote.has_sous_notes) {
                 typesNotesHtml += '<br><small class="text-success">Avec ' + typeNote.nb_sous_notes + ' sous-note(s)</small>';
               }
@@ -1395,7 +1470,7 @@
                 });
                 typesNotesHtml += '</div>';
               }
-              
+
               // Render sous-notes if they exist
               if(typeNote.sous_notes && typeNote.sous_notes.length > 0) {
                 typesNotesHtml += '<div class="nested-list mt-2">';
@@ -1413,10 +1488,86 @@
                 });
                 typesNotesHtml += '</div>';
               }
-              
+
               typesNotesHtml += '</div>';
             });
-          } else {
+
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '</div>';
+          }
+
+          // Render unassigned types of notes
+          if(unassignedTypes.length > 0) {
+            typesNotesHtml += '<div class="card mb-3">';
+            typesNotesHtml += '<div class="card-header bg-light py-2">';
+            typesNotesHtml += '<h6 class="mb-0 text-muted"><i class="ri-stack-line me-2"></i>Sans bloc</h6>';
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '<div class="card-body p-3">';
+
+            $.each(unassignedTypes, function(index, typeNote) {
+              typesNotesHtml += '<div class="type-note-item mb-3">';
+              typesNotesHtml += '<div class="d-flex justify-content-between align-items-center">';
+              typesNotesHtml += '<div>';
+              typesNotesHtml += '<h6 class="mb-1"><strong>' + typeNote.code + '</strong> - ' + typeNote.libelle + '</h6>';
+              typesNotesHtml += '<small class="text-muted">Note max: ' + typeNote.max_note + ', Ordre: ' + typeNote.ordre + '</small>';
+              if(typeNote.has_sous_notes) {
+                typesNotesHtml += '<br><small class="text-success">Avec ' + typeNote.nb_sous_notes + ' sous-note(s)</small>';
+              }
+              if(typeNote.is_rattrapage) {
+                typesNotesHtml += '<br><small class="text-warning">Rattrapage</small>';
+              }
+              if(typeNote.is_rachat) {
+                typesNotesHtml += '<br><small class="text-info">Rachat de crédit</small>';
+              }
+              if(typeNote.is_calculee) {
+                typesNotesHtml += '<br><small class="text-info">Calculée (' + typeNote.type_calcul + ')</small>';
+              }
+              typesNotesHtml += '</div>';
+              typesNotesHtml += '<div class="btn-group" role="group">';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-primary btn-sm edit-type-note" data-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-success btn-sm add-sous-note" data-id="' + typeNote.id + '"><i class="ri-add-line"></i></button>';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-info btn-sm manage-dependencies" data-id="' + typeNote.id + '"><i class="ri-link-line"></i></button>';
+              typesNotesHtml += '<button type="button" class="btn btn-outline-danger btn-sm delete-type-note" data-id="' + typeNote.id + '"><i class="ri-delete-bin-line"></i></button>';
+              typesNotesHtml += '</div>';
+              typesNotesHtml += '</div>';
+
+              // Display dependencies if they exist
+              if(typeNote.dependencies && typeNote.dependencies.length > 0) {
+                typesNotesHtml += '<div class="mt-2">';
+                typesNotesHtml += '<small class="text-muted">Dépendances: </small>';
+                $.each(typeNote.dependencies, function(idx, dependency) {
+                  typesNotesHtml += '<span class="badge bg-light text-dark me-1">' + dependency.child_code + ' - ' + dependency.child_libelle + '</span>';
+                });
+                typesNotesHtml += '</div>';
+              }
+
+              // Render sous-notes if they exist
+              if(typeNote.sous_notes && typeNote.sous_notes.length > 0) {
+                typesNotesHtml += '<div class="nested-list mt-2">';
+                $.each(typeNote.sous_notes, function(idx, sousNote) {
+                  typesNotesHtml += '<div class="sous-note-item d-flex justify-content-between align-items-center">';
+                  typesNotesHtml += '<div>';
+                  let maxNoteDisplay = sousNote.max_note !== null ? ' - Max: ' + sousNote.max_note : '';
+                  typesNotesHtml += '<span>' + sousNote.label + ' (Ordre: ' + sousNote.ordre + maxNoteDisplay + ')</span>';
+                  typesNotesHtml += '</div>';
+                  typesNotesHtml += '<div class="btn-group" role="group">';
+                  typesNotesHtml += '<button type="button" class="btn btn-outline-warning btn-sm edit-sous-note" data-id="' + sousNote.id + '" data-type-note-id="' + typeNote.id + '"><i class="ri-edit-line"></i></button>';
+                  typesNotesHtml += '<button type="button" class="btn btn-outline-danger btn-sm delete-sous-note" data-id="' + sousNote.id + '"><i class="ri-delete-bin-line"></i></button>';
+                  typesNotesHtml += '</div>';
+                  typesNotesHtml += '</div>';
+                });
+                typesNotesHtml += '</div>';
+              }
+
+              typesNotesHtml += '</div>';
+            });
+
+            typesNotesHtml += '</div>';
+            typesNotesHtml += '</div>';
+          }
+
+          // If no types of notes at all
+          if(response.types_notes && response.types_notes.length === 0) {
             typesNotesHtml = `
               <div class="text-center py-5">
                 <div class="mb-4">
@@ -1872,14 +2023,50 @@
       $('#blocModal').modal('show');
     });
 
+    // Edit bloc functionality - triggered when clicking the edit button on a bloc
+    $(document).on('click', '.edit-bloc', function() {
+      const blocId = $(this).data('bloc-id');
+      const blocLabel = $(this).data('bloc-label');
+
+      // Load the bloc details to populate the form
+      $.ajax({
+        url: "{% url 't_exam:ApiGetAllBlocs' %}",
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+          const bloc = response.find(b => b.id == blocId);
+          if(bloc) {
+            $('#blocId').val(bloc.id);
+            $('#blocLabel').val(bloc.label);
+            $('#blocCode').val(bloc.code);
+            $('#blocOrdre').val(bloc.ordre);
+            $('#blocInPvDeliberation').prop('checked', bloc.in_pv_deliberation);
+            $('#blocModalTitle').text('Modifier le bloc de notes');
+            $('#blocModal').modal('show');
+          }
+        },
+        error: function() {
+          alertify.error("Erreur lors du chargement des détails du bloc.");
+        }
+      });
+    });
+
     // Handle bloc form submission
     $(document).on('submit', '#blocForm', function(e) {
       e.preventDefault();
+      const blocId = $('#blocId').val();
       const label = $('#blocLabel').val();
       const code = $('#blocCode').val();
       const ordre = $('#blocOrdre').val();
+      const inPvDeliberation = $('#blocInPvDeliberation').is(':checked');
 
-      addNewBloc(label, code, ordre);
+      if(blocId) {
+        // Update existing bloc
+        updateBloc(blocId, label, code, ordre, inPvDeliberation);
+      } else {
+        // Add new bloc
+        addNewBloc(label, code, ordre, inPvDeliberation);
+      }
     });
 
     // Delete dependency
@@ -1939,6 +2126,44 @@
           } else {
             $('#bloc_id').val('');
           }
+        }
+      });
+    }
+
+    // Load all blocs (for general use)
+    function loadBlocs() {
+      $.ajax({
+        url: "{% url 't_exam:ApiGetAllBlocs' %}",
+        type: 'GET',
+        dataType: 'JSON',
+        success: function(data) {
+          let options = '<option value="">Aucun bloc</option>';
+          if(data.length > 0) {
+            $.each(data, function(index, bloc) {
+              options += '<option value="' + bloc.id + '">' + bloc.label + '</option>';
+            });
+          }
+          $('#bloc_id').html(options);
+        },
+        error: function() {
+          console.error("Erreur lors du chargement des blocs");
+        }
+      });
+    }
+
+    // Load blocs with details for editing
+    function loadBlocsForEditing() {
+      $.ajax({
+        url: "{% url 't_exam:ApiGetAllBlocs' %}",
+        type: 'GET',
+        dataType: 'JSON',
+        success: function(data) {
+          // This function can be used to populate a list of blocs for editing
+          // For now, we'll just log the data
+          console.log(data);
+        },
+        error: function() {
+          console.error("Erreur lors du chargement des blocs");
         }
       });
     }

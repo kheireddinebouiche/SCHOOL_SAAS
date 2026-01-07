@@ -554,6 +554,7 @@ def ApiAddBloc(request):
         label = request.POST.get('label')
         code = request.POST.get('code')
         ordre = request.POST.get('ordre', 0)
+        in_pv_deliberation = request.POST.get('in_pv_deliberation') == 'on'
 
         # Check if code already exists
         if NoteBloc.objects.filter(code=code).exists():
@@ -565,7 +566,8 @@ def ApiAddBloc(request):
         bloc = NoteBloc.objects.create(
             label=label,
             code=code,
-            ordre=int(ordre)
+            ordre=int(ordre),
+            in_pv_deliberation=in_pv_deliberation
         )
 
         return JsonResponse({
@@ -574,7 +576,71 @@ def ApiAddBloc(request):
             'id': bloc.id,
             'label': bloc.label,
             'code': bloc.code,
-            'ordre': bloc.ordre
+            'ordre': bloc.ordre,
+            'in_pv_deliberation': bloc.in_pv_deliberation
         })
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateBloc(request):
+    """API pour mettre à jour un bloc de notes"""
+    if request.method == 'POST':
+        bloc_id = request.POST.get('bloc_id')
+        label = request.POST.get('label')
+        code = request.POST.get('code')
+        ordre = request.POST.get('ordre', 0)
+        in_pv_deliberation = request.POST.get('in_pv_deliberation') == 'on'
+
+        try:
+            bloc = NoteBloc.objects.get(id=bloc_id)
+
+            # Check if code already exists for another bloc
+            if NoteBloc.objects.filter(code=code).exclude(id=bloc_id).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Un autre bloc avec ce code existe déjà'
+                })
+
+            bloc.label = label
+            bloc.code = code
+            bloc.ordre = int(ordre)
+            bloc.in_pv_deliberation = in_pv_deliberation
+            bloc.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Bloc mis à jour avec succès',
+                'id': bloc.id,
+                'label': bloc.label,
+                'code': bloc.code,
+                'ordre': bloc.ordre,
+                'in_pv_deliberation': bloc.in_pv_deliberation
+            })
+        except NoteBloc.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Bloc non trouvé'
+            })
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetAllBlocs(request):
+    """API pour obtenir tous les blocs de notes"""
+    blocs = NoteBloc.objects.all().order_by('ordre')
+
+    data = []
+    for bloc in blocs:
+        data.append({
+            'id': bloc.id,
+            'label': bloc.label,
+            'code': bloc.code,
+            'ordre': bloc.ordre,
+            'in_pv_deliberation': bloc.in_pv_deliberation
+        })
+
+    return JsonResponse(data, safe=False)

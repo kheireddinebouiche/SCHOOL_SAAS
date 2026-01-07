@@ -27,10 +27,10 @@ def ApiLoadDataToPlan(request):
         if not id_groupe:
             return JsonResponse({"status":"error","message":"Informations manquante"})
 
-
         modules = []
         specialite = Groupe.objects.get(id = id_groupe)
         donnee = Modules.objects.filter(specialite = specialite.specialite)
+        surveillant = Formateurs.objects.all().values('id','nom','prenom')
 
         for i in donnee:
             modules.append({
@@ -44,6 +44,7 @@ def ApiLoadDataToPlan(request):
         data = {
             'modules' : list(modules),
             'salles' : list(salles),
+            'surveillant' : list(surveillant),
         }
 
         return JsonResponse(data, safe=False)
@@ -60,8 +61,10 @@ def PageDetailsSessionExamPlan(request, pk):
 @login_required(login_url="institut_app:login")
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
+    groupe = SessionExamLine.objects.get(id = session_line_id)
 
     plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('created_at').select_related('pv','module','salle')
+
 
     data = []
     for plan in plans:
@@ -69,6 +72,7 @@ def get_exam_planifications(request):
             'id' : plan.id,
             "module_id": plan.module.id,
             "module_nom": plan.module.label,
+            "groupe" : plan.exam_line.groupe.nom,
             "type_examen" : plan.get_type_examen_display(),
             "date": plan.date.strftime("%Y-%m-%d") if plan.date else "",
             "heure_debut": plan.heure_debut.strftime("%H:%M") if plan.heure_debut else "",
@@ -82,8 +86,13 @@ def get_exam_planifications(request):
             "pv_existe": hasattr(plan, 'pv'),
             "pv_id": plan.pv.id if hasattr(plan, 'pv') else None,
         })
+    context = {
+        'data' : data,
+        'groupe_name' : groupe.groupe.nom,
+        'groupe_id' : groupe.groupe.id,
+    }
 
-    return JsonResponse({"status": "success", "planifications": data})
+    return JsonResponse({"status": "success", "planifications": context})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

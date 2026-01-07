@@ -134,8 +134,8 @@
                   <span class="badge bg-success bg-opacity-10 text-success">Active</span>
                 </div>
                 <div class="d-flex align-items-center mb-2">
-                  <span class="text-muted me-2">Examens:</span>
-                  <span>8 programmés</span>
+                  <span class="text-muted me-2">Groupe:</span>
+                  <span id="groupName"></span>
                 </div>
               </div>
             </div>
@@ -155,6 +155,9 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
+                  <button type="button" class="btn btn-primary" id="openPlanExamModal">
+                    <i class="ri-add-line me-1"></i>Nouvel examen
+                  </button>
                   <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#helpModal">
                     <i class="ri-question-line me-1"></i>Aide
                   </button>
@@ -196,6 +199,8 @@
   </div>
   <!-- End Page-content -->
 </div>
+
+<input type="hidden" disabled id="groupeId" />
 
 <!-- Modal de modification des plannifications d'examen -->
 <div class="modal fade" id="editExamPlanModal" tabindex="-1" aria-labelledby="editExamPlanModalLabel" aria-hidden="true">
@@ -560,10 +565,218 @@
   </div>
 </div>
 
+<!-- Modal de planification d'examen -->
+<div class="modal fade" id="planExamModal" tabindex="-1" aria-labelledby="planExamModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-primary text-white rounded-top-3 p-4">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+            <i class="ri-calendar-2-line fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="planExamModalLabel">Planifier un examen</h5>
+            <small class="opacity-75">Planifiez un nouvel examen pour cette session</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="planExamForm">
+          {% csrf_token %}
+          <input type="hidden" id="sessionLineId" name="session_line_id" value="{{pk}}">
+
+          <!-- Section Matière et Type -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-3">Matière et type d'examen</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="moduleSelect" class="form-label fw-medium">Matière</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-book-line text-primary"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="moduleSelect" name="moduleSelect" required>
+                    <option value="">Sélectionner une matière</option>
+                    <!-- Options will be loaded dynamically -->
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="typeExamenSelect" class="form-label fw-medium">Type d'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-file-text-line text-primary"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="typeExamenSelect" name="typeExamenSelect" required>
+                    <option value="">Sélectionner un type</option>
+                    <option value="normal">Examen ordinaire</option>
+                    <option value="rachat">Rachat de crédit</option>
+                    <option value="rattrage">Rattrapage</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Mode d'examen -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-3">Mode d'examination</h6>
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label for="modeExamenSelect" class="form-label fw-medium">Mode d'examination</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-settings-2-line text-primary"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="modeExamenSelect" name="modeExamenSelect" required>
+                    <option value="">Sélectionner un mode</option>
+                    <option value="exam">Examen</option>
+                    <option value="tr">Travail à remettre</option>
+                    <option value="ligne">Examen en ligne</option>
+                    <option value="orale">Présentation orale</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Date et Heure -->
+          <div class="mb-4" id="dateHeureSection">
+            <h6 class="text-muted mb-3">Date et heure</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="dateExamen" class="form-label fw-medium">Date de l'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-calendar-2-line text-primary"></i>
+                  </span>
+                  <input type="date" class="form-control form-control-lg" id="dateExamen" name="dateExamen" required>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label for="heureDebut" class="form-label fw-medium">Heure de début</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-time-line text-primary"></i>
+                  </span>
+                  <input type="time" class="form-control form-control-lg" id="heureDebut" name="heureDebut" required>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label for="heureFin" class="form-label fw-medium">Heure de fin</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-time-line text-primary"></i>
+                  </span>
+                  <input type="time" class="form-control form-control-lg" id="heureFin" name="heureFin" required>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Salle -->
+          <div class="mb-4" id="salleSection">
+            <h6 class="text-muted mb-3">Salle d'examen</h6>
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label for="salleSelect" class="form-label fw-medium">Salle d'examen</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-building-2-line text-primary"></i>
+                  </span>
+                  <select class="form-select form-select-lg" id="salleSelect" name="salleSelect">
+                    <option value="">Sélectionner une salle (optionnel)</option>
+                    <!-- Options will be loaded dynamically -->
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Informations complémentaires -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-3">Informations complémentaires</h6>
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label for="observations" class="form-label fw-medium">Observations</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="ri-sticky-note-line text-primary"></i>
+                  </span>
+                  <textarea class="form-control form-control-lg" id="observations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-3 p-4">
+        <div class="d-flex w-100">
+          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-primary flex-fill" id="submitPlanExamBtn">
+            <i class="ri-check-line me-1"></i>Planifier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation de suppression du PV -->
+<div class="modal fade" id="deletePvConfirmationModal" tabindex="-1" aria-labelledby="deletePvConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-danger text-white rounded-top-3 p-4">
+        <div class="d-flex align-items-center">
+          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+            <i class="ri-delete-bin-line fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0" id="deletePvConfirmationModalLabel">Confirmer la suppression du PV</h5>
+            <small class="opacity-75">Êtes-vous sûr de vouloir supprimer ce PV ?</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center">
+          <div class="avatar-lg mx-auto mb-4">
+            <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-2">
+              <i class="ri-alert-line"></i>
+            </div>
+          </div>
+          <p class="text-muted mb-4">
+            Cette action est irréversible. Le PV sera définitivement supprimé avec toutes ses données associées.
+          </p>
+          <div class="alert alert-warning bg-warning bg-opacity-10 border-0" role="alert">
+            <i class="ri-information-line me-2"></i>
+            <strong>Attention:</strong> Toutes les notes et décisions associées à ce PV seront perdues.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-3 p-4">
+        <div class="d-flex w-100">
+          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+            <i class="ri-close-line me-1"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-danger flex-fill" id="confirmDeletePvBtn">
+            <i class="ri-delete-bin-line me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
     $(document).ready(function(){
         const idExamLine = "{{pk}}";
+        let groupeName = "";
+        let groupeId = "";
 
         function loadExamPlanification(){
             // Reset modal fields to ensure clean state on each load
@@ -578,7 +791,14 @@
                 },
                 success: function(data){
                     if(data.status === "success"){
-                        const plans = data.planifications;
+                        const plans = data.planifications.data;
+                        groupeName = data.planifications.groupe_name;
+                        groupeId = data.planifications.groupe_id;
+
+                        $('#groupName').html(groupeName);
+                        $('#groupeId').val(groupeId);
+
+
                         const container = $('#exam-plans-container');
                         container.empty();
 
@@ -760,6 +980,8 @@
         }
 
         loadExamPlanification();
+
+        console.log(groupeId);
 
         // Function to reset modal fields to their initial state
         function resetModalFields() {
@@ -1272,54 +1494,187 @@
             $('#confirmDeletePvBtn').prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Supprimer');
         });
 
+
+        function loadDataToPlan(){
+          var groupe = $("#groupeId").val();
+
+          $.ajax({
+            url : "{% url 't_exam:ApiLoadDataToPlan' %}",
+            dataType: "JSON",
+            type : "GET",
+            data : {
+              'id_groupe' : groupe,
+            },
+            success : function(data){
+              var salles = "<option value=''>Veuillez sélectionner une salle</option>";
+              $.each(data.salles, function(index, p){
+                salles +="<option value="+p.code+">"+p.nom+"</option>";
+              });
+              $('#salleSelect').html(salles);
+
+              var modules = "<option value=''>Veuillez sélectionner un module</option>";
+              $.each(data.modules, function(index, p){
+                modules +="<option value="+p.id+">"+p.label+"</option>";
+              });
+              $('#moduleSelect').html(modules);
+
+            },
+          })
+        }
+
+        // Add button to open the exam planning modal
+        $(document).on('click', '#openPlanExamModal', function() {
+            // Load modules and salles for the selected group
+            
+            loadDataToPlan();
+            $('#planExamModal').modal('show');
+        });
+
+
+        // Handle mode examen change to show/hide fields
+        $('#modeExamenSelect').change(function() {
+            var selectedMode = $(this).val();
+
+            switch(selectedMode) {
+                case 'exam': // Examen
+                case 'orale': // Présentation orale
+                    // Enable all fields
+                    $('#dateExamen').prop('disabled', false);
+                    $('#heureDebut').prop('disabled', false);
+                    $('#heureFin').prop('disabled', false);
+                    $('#salleSelect').prop('disabled', false);
+                    $('#heureDebut').prop('required', true);
+                    $('#heureFin').prop('required', true);
+                    // Show all sections
+                    $('#dateHeureSection').show();
+                    $('#salleSection').show();
+                    break;
+                case 'tr': // Travail à remettre
+                    // Only date field should be accessible, others should be disabled
+                    $('#dateExamen').prop('disabled', false);
+                    $('#heureDebut').prop('disabled', true);
+                    $('#heureFin').prop('disabled', true);
+                    $('#salleSelect').prop('disabled', true);
+                    $('#heureDebut').prop('required', false);
+                    $('#heureFin').prop('required', false);
+                    // Show date section, hide time and salle sections
+                    $('#dateHeureSection').show();
+                    $('#salleSection').hide();
+                    break;
+                case 'ligne': // Examen en ligne
+                    // Date and time fields should be accessible, but salle should be disabled
+                    $('#dateExamen').prop('disabled', false);
+                    $('#heureDebut').prop('disabled', false);
+                    $('#heureFin').prop('disabled', false);
+                    $('#salleSelect').prop('disabled', true);
+                    $('#heureDebut').prop('required', true);
+                    $('#heureFin').prop('required', true);
+                    // Show date and time sections, but disable salle
+                    $('#dateHeureSection').show();
+                    $('#salleSection').show(); // Still show the section but disable the input
+                    break;
+            }
+        });
+
+        // Handle form submission
+        $('#submitPlanExamBtn').click(function() {
+            // Validate required fields
+            let isValid = true;
+            const requiredFields = ['#moduleSelect', '#typeExamenSelect', '#modeExamenSelect', '#dateExamen'];
+
+            // Check required fields
+            requiredFields.forEach(function(field) {
+                if ($(field).val() === '') {
+                    $(field).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(field).removeClass('is-invalid');
+                }
+            });
+
+            // For exam and orale modes, check time fields
+            const mode = $('#modeExamenSelect').val();
+            if (mode === 'exam' || mode === 'orale') {
+                if ($('#heureDebut').val() === '' || $('#heureFin').val() === '') {
+                    $('#heureDebut').addClass('is-invalid');
+                    $('#heureFin').addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $('#heureDebut').removeClass('is-invalid');
+                    $('#heureFin').removeClass('is-invalid');
+                }
+
+                // Check if start time is before end time
+                if ($('#heureDebut').val() && $('#heureFin').val()) {
+                    if ($('#heureDebut').val() >= $('#heureFin').val()) {
+                        $('#heureDebut').addClass('is-invalid');
+                        $('#heureFin').addClass('is-invalid');
+                        isValid = false;
+                        showNotification('L\'heure de début doit être antérieure à l\'heure de fin.', 'error');
+                    }
+                }
+            }
+
+            if (!isValid) {
+                showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
+                return;
+            }
+
+            // Disable button and show loading
+            const originalText = $(this).html();
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Planification...');
+
+            // Submit the form
+            $.ajax({
+                url: "{% url 't_exam:ApiPlanExam' %}",
+                type: 'POST',
+                data: $('#planExamForm').serialize(),
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        $('#planExamModal').modal('hide');
+                        $(this).prop('disabled', false).html(originalText);
+                        loadExamPlanification(); // Reload the exam plans
+                        showNotification(response.message, 'success');
+                    } else {
+                        $(this).prop('disabled', false).html(originalText);
+                        showNotification(response.message || 'Erreur lors de la planification', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $(this).prop('disabled', false).html(originalText);
+                    showNotification('Erreur de connexion: ' + error, 'error');
+                }
+            });
+        });
+
+        // Reset modal when closed
+        $('#planExamModal').on('hidden.bs.modal', function () {
+          $('#planExamForm')[0].reset();
+          $('.is-invalid').removeClass('is-invalid');
+          $('#submitPlanExamBtn').prop('disabled', false).html('<i class="ri-check-line me-1"></i>Planifier');
+          // Show all sections by default
+          $('#dateHeureSection').show();
+          $('#salleSection').show();
+          // Reset field states to enabled
+          $('#dateExamen').prop('disabled', false);
+          $('#heureDebut').prop('disabled', false);
+          $('#heureFin').prop('disabled', false);
+          $('#salleSelect').prop('disabled', false);
+          // Set default required attributes
+          $('#heureDebut').prop('required', true);
+          $('#heureFin').prop('required', true);
+      });
+
+
     });
+
+   
 </script>
 
-<!-- Modal de confirmation de suppression du PV -->
-<div class="modal fade" id="deletePvConfirmationModal" tabindex="-1" aria-labelledby="deletePvConfirmationModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient bg-danger text-white rounded-top-3 p-4">
-        <div class="d-flex align-items-center">
-          <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
-            <i class="ri-delete-bin-line fs-5"></i>
-          </div>
-          <div>
-            <h5 class="modal-title fw-bold mb-0" id="deletePvConfirmationModalLabel">Confirmer la suppression du PV</h5>
-            <small class="opacity-75">Êtes-vous sûr de vouloir supprimer ce PV ?</small>
-          </div>
-        </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4">
-        <div class="text-center">
-          <div class="avatar-lg mx-auto mb-4">
-            <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-2">
-              <i class="ri-alert-line"></i>
-            </div>
-          </div>
-          <p class="text-muted mb-4">
-            Cette action est irréversible. Le PV sera définitivement supprimé avec toutes ses données associées.
-          </p>
-          <div class="alert alert-warning bg-warning bg-opacity-10 border-0" role="alert">
-            <i class="ri-information-line me-2"></i>
-            <strong>Attention:</strong> Toutes les notes et décisions associées à ce PV seront perdues.
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer bg-light rounded-bottom-3 p-4">
-        <div class="d-flex w-100">
-          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
-            <i class="ri-close-line me-1"></i>Annuler
-          </button>
-          <button type="button" class="btn btn-danger flex-fill" id="confirmDeletePvBtn">
-            <i class="ri-delete-bin-line me-1"></i>Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 
 

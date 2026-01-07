@@ -81,6 +81,7 @@ class NoteBloc(models.Model):
     label = models.CharField(max_length=100)
     code = models.CharField(max_length=30, unique=True)
     ordre = models.PositiveIntegerField(default=0)
+    in_pv_deliberation = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['ordre']

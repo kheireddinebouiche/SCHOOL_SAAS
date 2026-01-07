@@ -409,12 +409,12 @@
         renderPagination();
       }
     });
-    // Add event listener for "Voir détails" buttons
-    
+
+    // Event listener for "Voir détails" buttons
     $(document).on('click', '.view-details', function() {
       const groupeId = $(this).data('groupe-id');
 
-      // Show loading state in modal
+      // Show loading spinner in modal
       $('#groupeDetailsModal .modal-body').html(`
         <div class="d-flex justify-content-center align-items-center p-5">
           <div class="spinner-border text-primary" role="status">
@@ -426,45 +426,28 @@
       // Show the modal
       $('#groupeDetailsModal').modal('show');
 
-      // Load the group details via AJAX
+      // Load the group results data via AJAX
       $.ajax({
-        url: '{% url "t_exam:groupe_deliberation_results_view" groupe_id=0 %}'.replace('0', groupeId),
+        url: "{% url 't_exam:groupe_deliberation_results_view' pk=0 %}".replace('0', sessionId),
         type: 'GET',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
+        success: function(data) {
+          // Replace modal body content with the loaded data
+          $('#groupeDetailsModal .modal-body').html(data);
         },
-        success: function(response) {
-          if (response.status === 'success' && response.html) {
-            // Update modal content with the loaded HTML
-            $('#groupeDetailsModal .modal-content').html(response.html);
-          } else {
-            $('#groupeDetailsModal .modal-body').html(`
-              <div class="text-center p-5">
-                <div class="text-danger">
-                  <i class="ri-error-warning-line ri-2x"></i>
-                  <p>` + (response.error || 'Erreur de chargement des détails') + `</p>
-                </div>
-              </div>
-            `);
-          }
-        },
-        error: function() {
+        error: function(xhr, status, error) {
+          console.error("Error loading group results:", error);
           $('#groupeDetailsModal .modal-body').html(`
-            <div class="text-center p-5">
-              <div class="text-danger">
-                <i class="ri-error-warning-line ri-2x"></i>
-                <p>Erreur de chargement des données</p>
-              </div>
+            <div class="alert alert-danger text-center p-4">
+              <i class="ri-error-warning-line ri-2x mb-3"></i>
+              <h6>Erreur de chargement</h6>
+              <p>Impossible de charger les résultats du groupe</p>
             </div>
           `);
         }
       });
     });
+
   });
-
-  // Add modal HTML structure
 </script>
-
-
 
 {% endblock content %}
