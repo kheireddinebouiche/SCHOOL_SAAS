@@ -233,6 +233,16 @@ class DocumentExportView(LoginRequiredMixin, View):
                         background-color: white;
                     }}
 
+                    /* ✅ CRITICAL : CSS pour les pagebreak (WeasyPrint) */
+                    .pagebreak {{
+                        page-break-before: always;
+                        break-before: page;
+                        margin: 0;
+                        padding: 0;
+                        height: 0;
+                        display: block;
+                    }}
+
                     .card-body {{
                         flex: 1 1 auto;
                         min-height: 1px;
@@ -284,71 +294,6 @@ class DocumentExportView(LoginRequiredMixin, View):
         except ImportError:
             # Si weasyprint n'est pas installé, retourner HTML à imprimer
             return redirect('pdf_editor:document-preview', pk=document.pk)
-
-
-# from playwright.sync_api import sync_playwright
-# from django.conf import settings
-
-# from playwright.sync_api import sync_playwright
-
-# class DocumentExportView(LoginRequiredMixin, View):
-
-#     def get(self, request, pk):
-#         document = get_object_or_404(DocumentGeneration, pk=pk)
-
-#         try:
-#             html_content = f"""
-#             <!DOCTYPE html>
-#             <html>
-#             <head>
-#                 <meta charset="utf-8">
-#                 <style>
-#                     body {{
-#                         font-family: Arial, system-ui, sans-serif;
-#                         margin: 0;
-#                         padding: 0;
-#                         background: white;
-#                     }}
-#                     .btn, .no-print {{ display: none !important; }}
-#                     img {{ max-width: 100%; height: auto; }}
-#                     {document.template.custom_css}
-#                 </style>
-#             </head>
-#             <body>
-#                 {document.rendered_content}
-#             </body>
-#             </html>
-#             """
-
-#             with sync_playwright() as p:
-#                 browser = p.chromium.launch(
-#                     headless=True,
-#                     args=["--no-sandbox", "--disable-dev-shm-usage"]
-#                 )
-
-#                 page = browser.new_page()
-#                 page.set_default_timeout(10000)
-
-#                 page.set_content(
-#                     html_content,
-#                     base_url=request.build_absolute_uri('/'),
-#                     wait_until="load"   # 🔥 correction clé
-#                 )
-
-#                 pdf_bytes = page.pdf(
-#                     format="A4",
-#                     print_background=True,
-#                     margin={"top": "0mm", "bottom": "0mm"}
-#                 )
-
-#                 browser.close()
-
-#             return HttpResponse(pdf_bytes, content_type="application/pdf")
-
-#         except Exception as e:
-#             print("PDF ERROR:", e)
-#             return redirect("pdf_editor:document-preview", pk=document.pk)
-
 
 
 class DocumentPrintView(LoginRequiredMixin, View):

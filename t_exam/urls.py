@@ -111,7 +111,9 @@ urlpatterns = [
 
     path('deliberation/results/liste/<int:pk>/',PageDeliberationResult, name="PageDeliberationResult"),
     path('ApiLoadSessionExamLines', ApiLoadSessionExamLines, name="ApiLoadSessionExamLines"),
-    path('deliberation/groupe-results/<int:pk>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
+
+    # URLs for group deliberation results
+    path('groupe-deliberation-results/<int:pk>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
 
 
     path('details-session/exams/plannification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
@@ -120,6 +122,5 @@ urlpatterns = [
 
     path('ApiGetAllBlocs',ApiGetAllBlocs, name="ApiGetAllBlocs"),
     path('ApiAddBloc',ApiAddBloc, name="ApiAddBloc"),
-    path('ApiUpdateBloc',ApiUpdateBloc, name="ApiUpdateBloc"),
 
 ]

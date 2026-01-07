@@ -1,201 +1,113 @@
-<div class="modal-header border-0 pb-2">
-  <div class="d-flex align-items-center">
-    <div class="me-3 p-2 bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-      <i class="ri-bar-chart-line text-white fs-5"></i>
-    </div>
-    <div>
-      <h5 class="modal-title fw-semibold text-dark mb-0" style="font-size: 1.2rem;">Résultats de délibération - {{ session_exam.label }}</h5>
-      <small class="text-muted">Session: {{ session_exam.code }} | Groupes: 
-        {% for groupe in groupes %}
-          {{ groupe.nom }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-      </small>
-    </div>
-  </div>
-  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-</div>
-<div class="modal-body p-4">
-  <!-- Table for Normal Exam Session -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-primary bg-opacity-10 border-0 py-3">
-      <h6 class="mb-0 fw-semibold text-primary d-flex align-items-center">
-        <i class="ri-file-text-line me-2"></i>Session d'examen normale
-      </h6>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover table-sm m-0" style="font-size: 0.8rem;">
-          <thead class="table-light">
-            <tr>
-              <th rowspan="2" class="align-middle" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">Étudiant</th>
-              {% for module_data in grouped_modules %}
-                {% if module_data.normal_exam and module_data.normal_exam.pv %}
-                <th colspan="{{ module_data.normal_note_count|add:2 }}" class="text-center" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">{{ module_data.module.label }}</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-            <tr>
-              {% for module_data in grouped_modules %}
-                {% if module_data.normal_exam and module_data.normal_exam.pv %}
-                  {% for type_note in module_data.normal_exam.pv.exam_types_notes.all %}
-                    {% if type_note.bloc and type_note.bloc.in_pv_deliberation %}
-              <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">{{ type_note.libelle }}</th>
-                    {% endif %}
-                  {% endfor %}
-                  <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">Moyenne</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for student_data in results_data %}
-            <tr class="align-middle" style="height: 35px;">
-              <td style="font-size: 0.75rem;">{{ student_data.student.nom }} {{ student_data.student.prenom }}</td>
-              {% for result in student_data.results %}
-                {% if result.normal_result and result.normal_result.exam_plan and result.normal_result.exam_plan.pv %}
-                  {% for structured_note in result.normal_result.structured_notes %}
-                    {% if structured_note.type_note.bloc and structured_note.type_note.bloc.in_pv_deliberation %}
-              <td class="text-center fw-bold" style="font-size: 0.75rem;">{% if structured_note.valeur != None %}{{ structured_note.valeur|floatformat:2 }}{% else %}-{% endif %}</td>
-                    {% endif %}
-                  {% endfor %}
-                  <!-- Average note -->
-                  <td class="text-center fw-bold" style="font-size: 0.75rem; background-color: #e9ecef;">{% if result.normal_result.avg_note > 0 %}{{ result.normal_result.avg_note|floatformat:2 }}{% else %}-{% endif %}</td>
-                {% else %}
-                  <!-- If no normal result or no pv, add empty cells -->
-                  {% for i in module_data.normal_note_count|add:1|make_list %}
-                  <td class="text-center" style="font-size: 0.75rem;">-</td>
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="header-title mb-0">PV de Délibération - {{ groupe.label }}</h4>
+            </div>
+            <p class="text-muted font-14 mb-4">
+                Résultats des examens pour le groupe {{ groupe.label }} - Session: {{ session_line.session.label }}
+            </p>
 
-  <!-- Table for Rachat de Crédit -->
-  {% if has_rachat %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-success bg-opacity-10 border-0 py-3">
-      <h6 class="mb-0 fw-semibold text-success d-flex align-items-center">
-        <i class="ri-exchange-dollar-line me-2"></i>Rachat de crédit
-      </h6>
+            <div class="table-responsive">
+                {% for pv_item in pv_data %}
+                    <h5 class="mt-4">Module: {{ pv_item.pv.exam_planification.module.libelle }}</h5>
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Étudiant</th>
+                                {% for type_note in pv_item.exam_types_notes %}
+                                    {% if type_note.has_sous_notes %}
+                                        <th colspan="{{ type_note.nb_sous_notes|add:1 }}" class="text-center">{{ type_note.libelle }}</th>
+                                    {% else %}
+                                        <th>{{ type_note.libelle }}</th>
+                                    {% endif %}
+                                {% endfor %}
+                                <th rowspan="2">Décision</th>
+                            </tr>
+                            <tr>
+                                {% for type_note in pv_item.exam_types_notes %}
+                                    {% if type_note.has_sous_notes %}
+                                        {% for i in "x"|rjust:type_note.nb_sous_notes %}
+                                            <th>S{{ forloop.counter }}</th>
+                                        {% endfor %}
+                                        <th>{{ type_note.libelle }}</th>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for etudiant in etudiants %}
+                                <tr>
+                                    <td>{{ etudiant.nom }} {{ etudiant.prenom }}</td>
+                                    {% for type_note in pv_item.exam_types_notes %}
+                                        {% if type_note.has_sous_notes %}
+                                            {% for i in "x"|rjust:type_note.nb_sous_notes %}
+                                                {% with current_loop_index=forloop.counter0 %}
+                                                    {% for note in pv_item.notes %}
+                                                        {% if note.etudiant.id == etudiant.id and note.type_note.id == type_note.id %}
+                                                            {% for sous_note in note.sous_notes.all %}
+                                                                {% if forloop.counter0 == current_loop_index %}
+                                                                    <td>{{ sous_note.valeur|default:'-' }}</td>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                            {% if note.sous_notes.all|length <= current_loop_index %}
+                                                                <td>-</td>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endwith %}
+                                            {% endfor %}
+                                        {% endif %}
+                                        {% for note in pv_item.notes %}
+                                            {% if note.etudiant.id == etudiant.id and note.type_note.id == type_note.id %}
+                                                <td class="font-weight-bold">{{ note.valeur|default:'-' }}</td>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% comment %} If no note found for this student and type, show a placeholder {% endcomment %}
+                                        {% with note_found=False %}
+                                            {% for note in pv_item.notes %}
+                                                {% if note.etudiant.id == etudiant.id and note.type_note.id == type_note.id %}
+                                                    {% with note_found=True %}{% endwith %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not note_found %}
+                                                <td class="font-weight-bold">-</td>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                    {% comment %} Decision for this student {% endcomment %}
+                                    {% with decision_displayed=False %}
+                                        {% for decision in pv_item.decisions %}
+                                            {% if decision.etudiant.id == etudiant.id %}
+                                                <td>
+                                                    {% if decision.statut == 'valide' %}
+                                                        <span class="badge badge-success">Admis</span>
+                                                    {% elif decision.statut == 'rattrapage' %}
+                                                        <span class="badge badge-warning">Rattrapage</span>
+                                                    {% elif decision.statut == 'rach' %}
+                                                        <span class="badge badge-info">Rachat</span>
+                                                    {% elif decision.statut == 'ajou' %}
+                                                        <span class="badge badge-danger">Ajourné</span>
+                                                    {% endif %}
+                                                </td>
+                                                {% with decision_displayed=True %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if not decision_displayed %}
+                                            <td>-</td>
+                                        {% endif %}
+                                    {% endwith %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% empty %}
+                    <div class="alert alert-info">
+                        <h5>Aucun PV de délibération disponible pour ce groupe.</h5>
+                        <p>Il n'y a pas encore de procès-verbal d'examen pour ce groupe.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover table-sm m-0" style="font-size: 0.8rem;">
-          <thead class="table-light">
-            <tr>
-              <th rowspan="2" class="align-middle" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">Étudiant</th>
-              {% for module_data in grouped_modules %}
-                {% if module_data.rachat_exam and module_data.rachat_exam.pv %}
-                <th colspan="{{ module_data.rachat_note_count|add:2 }}" class="text-center" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">{{ module_data.module.label }}</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-            <tr>
-              {% for module_data in grouped_modules %}
-                {% if module_data.rachat_exam %}
-                  {% for type_note in module_data.rachat_exam.pv.exam_types_notes.all %}
-                    {% if type_note.bloc and type_note.bloc.in_pv_deliberation %}
-              <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">{{ type_note.libelle }}</th>
-                    {% endif %}
-                  {% endfor %}
-                  <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">Moyenne</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for student_data in results_data %}
-            <tr class="align-middle" style="height: 35px;">
-              <td style="font-size: 0.75rem;">{{ student_data.student.nom }} {{ student_data.student.prenom }}</td>
-              {% for result in student_data.results %}
-                {% if result.rachat_result %}
-                  {% for structured_note in result.rachat_result.structured_notes %}
-                    {% if structured_note.type_note.bloc and structured_note.type_note.bloc.in_pv_deliberation %}
-              <td class="text-center fw-bold" style="font-size: 0.75rem;">{% if structured_note.valeur != None %}{{ structured_note.valeur|floatformat:2 }}{% else %}-{% endif %}</td>
-                    {% endif %}
-                  {% endfor %}
-                  <!-- Average note -->
-                  <td class="text-center fw-bold" style="font-size: 0.75rem; background-color: #e9ecef;">{% if result.rachat_result.avg_note > 0 %}{{ result.rachat_result.avg_note|floatformat:2 }}{% else %}-{% endif %}</td>
-                {% else %}
-                  <!-- If no rachat result, add empty cells -->
-                  {% for i in module_data.rachat_note_count|add:1|make_list %}
-                  <td class="text-center" style="font-size: 0.75rem;">-</td>
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Table for Rattrapage -->
-  {% if has_rattrapage %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-warning bg-opacity-10 border-0 py-3">
-      <h6 class="mb-0 fw-semibold text-warning-emphasis d-flex align-items-center">
-        <i class="ri-refresh-line me-2"></i>Rattrapage
-      </h6>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover table-sm m-0" style="font-size: 0.8rem;">
-          <thead class="table-light">
-            <tr>
-              <th rowspan="2" class="align-middle" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">Étudiant</th>
-              {% for module_data in grouped_modules %}
-                {% if module_data.rattrapage_exam %}
-                <th colspan="{{ module_data.rattrapage_note_count|add:2 }}" class="text-center" style="vertical-align: middle; height: 40px; font-size: 0.75rem; background-color: #f8f9fa;">{{ module_data.module.label }}</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-            <tr>
-              {% for module_data in grouped_modules %}
-                {% if module_data.rattrapage_exam %}
-                  {% for type_note in module_data.rattrapage_exam.pv.exam_types_notes.all %}
-                    {% if type_note.bloc and type_note.bloc.in_pv_deliberation %}
-              <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">{{ type_note.libelle }}</th>
-                    {% endif %}
-                  {% endfor %}
-                  <th class="text-center" style="vertical-align: middle; height: 30px; font-size: 0.7rem; background-color: #f8f9fa;">Moyenne</th>
-                {% endif %}
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for student_data in results_data %}
-            <tr class="align-middle" style="height: 35px;">
-              <td style="font-size: 0.75rem;">{{ student_data.student.nom }} {{ student_data.student.prenom }}</td>
-              {% for result in student_data.results %}
-                {% if result.rattrapage_result %}
-                  {% for structured_note in result.rattrapage_result.structured_notes %}
-                    {% if structured_note.type_note.bloc and structured_note.type_note.bloc.in_pv_deliberation %}
-              <td class="text-center fw-bold" style="font-size: 0.75rem;">{% if structured_note.valeur != None %}{{ structured_note.valeur|floatformat:2 }}{% else %}-{% endif %}</td>
-                    {% endif %}
-                  {% endfor %}
-                  <!-- Average note -->
-                  <td class="text-center fw-bold" style="font-size: 0.75rem; background-color: #e9ecef;">{% if result.rattrapage_result.avg_note > 0 %}{{ result.rattrapage_result.avg_note|floatformat:2 }}{% else %}-{% endif %}</td>
-                {% else %}
-                  <!-- If no rattrapage result, add empty cells -->
-                  {% for i in module_data.rattrapage_note_count|add:1|make_list %}
-                  <td class="text-center" style="font-size: 0.75rem;">-</td>
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  {% endif %}
 </div>

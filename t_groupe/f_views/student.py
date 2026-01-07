@@ -35,7 +35,7 @@ def StudentDetails(request, pk):
         montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
         montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
         specialite_simple = FicheDeVoeux.objects.get(prospect = student, is_confirmed=True)
-        modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
+        #modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
         entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
         echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
         echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
@@ -73,7 +73,7 @@ def StudentDetails(request, pk):
             'remises' : remises,
             'specialite_simple' : specialite_simple.specialite.label if not student.is_double else None,
             'formation' : specialite_simple.specialite.formation.nom,
-            'modele_contrat' : modele_contrat,
+            #'modele_contrat' : modele_contrat,
             'qualification' : specialite_simple.specialite.formation.qualification,
             'entreprise_details' : entreprise_details,
             'echeancier_standart' : echancier_standard,
@@ -170,7 +170,6 @@ class generate_student_pdf(LoginRequiredMixin, View):
         formation = fiche.specialite.label
         annee_academique = fiche.promo.annee_academique
 
-        # Récupération de l'échéancier et conversion des Decimals en float
         echeancier_qs = DuePaiements.objects.filter(client=student).order_by('date_echeance')
     
         echeancier = []
@@ -191,9 +190,7 @@ class generate_student_pdf(LoginRequiredMixin, View):
         documents_qs = DossierInscription.objects.filter(formation  = formation.id)
         documents = []
         for i in documents_qs:
-            documents.append({
-                'label' : i.label
-            })
+            documents.append({'label' : i.label})
 
         # Sélection du template
         if template_slug:
@@ -207,7 +204,6 @@ class generate_student_pdf(LoginRequiredMixin, View):
 
         # Préparer les données de contexte
         context_data = {
-            
             'current_date': timezone.now().date().isoformat(),
             'pk': student.pk,
             'nom': student.nom,
@@ -222,11 +218,25 @@ class generate_student_pdf(LoginRequiredMixin, View):
             'annee_academique': annee_academique,
             'echeancier': echeancier,
             'documents' : documents,
+            'formation' : formation.specialite.formation.nom,
         }
 
         # Rendu du template
         try:
-            django_template = Template(template_obj.content)
+            # ✅ MODIFICATION 1 : Convertir les commentaires <!-- pagebreak --> en divs
+            raw_content = template_obj.content
+            import re
+
+            # Remplace <!-- pagebreak --> par <div class="pagebreak"></div>
+            # Accepte les variantes : espaces, casse différente
+            raw_content = re.sub(
+                r'<!--\s*pagebreak\s*-->',
+                '<div class="pagebreak"></div>',
+                raw_content,
+                flags=re.IGNORECASE
+            )
+
+            django_template = Template(raw_content)
             rendered_content = django_template.render(Context(context_data))
 
             # Enregistrer la génération

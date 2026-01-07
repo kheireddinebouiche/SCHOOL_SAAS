@@ -330,6 +330,45 @@ def GeneratePvModal(request, pk):
     # Convert dependencies_data to JSON string for template
     dependencies_data_json = json.dumps(dependencies_data)
 
+    # Determine which students should have their lines grayed out for normal exam type
+    rach_ajou_students = set()
+    rachat_only_students = set()  # Students specifically in rachat situation
+    rachat_students_details = []  # Detailed information about rachat students
+    commission_stats = {'total': 0, 'rach': 0, 'ajou': 0}
+
+    if exam_type == 'normal':
+        # For normal exam, identify students who have 'rach' or 'ajou' status in commission results
+        for student_id, result in commission_results.items():
+            if result in ['rach', 'ajou']:
+                rach_ajou_students.add(student_id)
+
+            # Specifically identify students in rachat situation for yellow highlighting
+            if result == 'rach':
+                rachat_only_students.add(student_id)
+
+                # Get student details for rachat students
+                from t_etudiants.models import Prospets
+                try:
+                    student = Prospets.objects.get(id=student_id)
+                    rachat_students_details.append({
+                        'id': student.id,
+                        'nom': student.nom,
+                        'prenom': student.prenom,
+                        'matricule': student.matricule,
+                    })
+                except Prospets.DoesNotExist:
+                    # Handle case where student doesn't exist
+                    pass
+
+            # Count statistics
+            if result == 'rach':
+                commission_stats['rach'] += 1
+            elif result == 'ajou':
+                commission_stats['ajou'] += 1
+
+        # Total students with commission results
+        commission_stats['total'] = len(commission_results)
+
     # Pass commission results to template for special handling
     context = {
         'pk': pk,
@@ -351,5 +390,9 @@ def GeneratePvModal(request, pk):
         'dependencies_data': dependencies_data_json,  # Pass dependency data as JSON string for frontend calculations
         'builtin_types_to_include': builtin_types_to_include,  # Pass builtin types for template
         'exam_to_builtin_mapping': exam_to_builtin_mapping,  # Pass mapping for template access
+        'rach_ajou_students': rach_ajou_students,  # Pass students with rachat/ajourné status
+        'rachat_only_students': rachat_only_students,  # Pass students specifically in rachat situation
+        'rachat_students_details': rachat_students_details,  # Pass detailed information about rachat students
+        'commission_stats': commission_stats,  # Pass commission statistics
     }
     return render(request, 'tenant_folder/exams/remplissage_notes.html', context)

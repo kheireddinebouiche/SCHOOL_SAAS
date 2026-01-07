@@ -1,0 +1,117 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="pvDeliberationTable" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Module</th>
+                                    <th>Groupe</th>
+                                    <th>Date Examen</th>
+                                    <th>Heure Début</th>
+                                    <th>Heure Fin</th>
+                                    <th>Type Examen</th>
+                                    <th>Mode Examen</th>
+                                    <th>Statut Validation</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for deliberation results -->
+<div class="modal fade" id="deliberationResultsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Résultats de Délibération</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="deliberationResultsContent">
+                <!-- Content will be loaded via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load PVs for deliberation
+    loadDeliberationPvs();
+});
+
+function loadDeliberationPvs() {
+    $.ajax({
+        url: "{% url 't_exam:ApiLoadDeliberationPv' %}",
+        method: 'GET',
+        success: function(response) {
+            var tableBody = $('#pvDeliberationTable tbody');
+            tableBody.empty();
+            
+            response.data.forEach(function(pv) {
+                var row = `
+                    <tr>
+                        <td>${pv.module_label}</td>
+                        <td>${pv.groupe_label}</td>
+                        <td>${pv.date_examen || '-'}</td>
+                        <td>${pv.heure_debut || '-'}</td>
+                        <td>${pv.heure_fin || '-'}</td>
+                        <td>${pv.type_examen || '-'}</td>
+                        <td>${pv.mode_examination || '-'}</td>
+                        <td>
+                            <span class="badge ${pv.est_valide ? 'badge-success' : 'badge-warning'}">
+                                ${pv.est_valide ? 'Validé' : 'En cours'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="showDeliberationResults(${pv.id})">
+                                Voir Résultats
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tableBody.append(row);
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading PVs for deliberation:', error);
+        }
+    });
+}
+
+function showDeliberationResults(pvId) {
+    // Load the deliberation results in the modal
+    $.get("{% url 't_exam:groupe_deliberation_results' pv_id=0 %}".replace('0', pvId), function(data) {
+        $('#deliberationResultsContent').html(data);
+        $('#deliberationResultsModal').modal('show');
+    });
+}
+</script>
+{% endblock %}

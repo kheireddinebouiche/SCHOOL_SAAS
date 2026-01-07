@@ -20,7 +20,7 @@ class Groupe(models.Model):
     semestre = models.CharField(max_length=100, null=True, blank=True, choices=[('1','Semestre 1'),('2','Semestre 2'),('3','Semestre 3'),('4','Semestre 4'),('s','Stage')], default='1')
 
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='groupe_specialite', null=True, blank=True)
-
+    date_lancement = models.DateField(null=True, blank=True)
     etat = models.CharField(max_length=200, choices=[('valider','Groupe valider'),('brouillon','Brouillon'),('inscription',"En cours d'inscription"),('enc', 'En cours'), ('cloture', 'Cloturé')], default='brouillon')
 
     date_creation = models.DateTimeField(auto_now_add=True)
