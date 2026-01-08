@@ -4,6 +4,13 @@
 
 {% block content %}
 <style>
+  /* Alertify CSS */
+  @import url("//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/alertify.min.css");
+  @import url("//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/themes/default.min.css");
+</style>
+<script src="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/alertify.min.js"></script>
+
+<style>
   .promo-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid #e9ecef;
@@ -65,15 +72,7 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* Notification */
-  .notification {
-    position: fixed;
-    top: 1.5rem;
-    right: 1.5rem;
-    z-index: 1090;
-    min-width: 250px;
-    display: none;
-  }
+
 
   /* Table Modernization */
   .table {
@@ -106,7 +105,7 @@
 
 <div class="main-content">
   <div class="page-content">
-    <div id="notification-area"></div>
+    <!-- notification area removed -->
     <div class="container-fluid">
       <!-- start page title -->
       <div class="row mb-4">
@@ -263,6 +262,7 @@
                         <th scope="col">Session</th>
                         <th scope="col">Pénalité retard</th>
                         <th scope="col">Prix rachat crédit</th>
+                        <th scope="col">Entité</th>
                         <th scope="col">Actions</th>
                       </tr>
                     </thead>
@@ -319,6 +319,18 @@
               <input type="number" class="form-control with-icon" id="prixRachatCredit" name="prix_rachat_credit" step="0.01" required>
             </div>
           </div>
+          <div class="mb-4">
+             <label for="entiteSelect" class="form-label">Entité</label>
+             <div class="position-relative">
+               <i class="ri-building-line form-control-icon"></i>
+               <select class="form-select with-icon" id="entiteSelect" name="entite_id">
+                 <option value="">Sélectionner une entité</option>
+                 {% for entite in entreprises %}
+                   <option value="{{ entite.id }}">{{ entite.designation }}</option>
+                 {% endfor %}
+               </select>
+             </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer border-top-0">
@@ -338,29 +350,7 @@
     // Charger les données depuis l'API
     loadPromosData();
     
-    function showNotification(message, type = 'success') {
-        const notificationArea = $('#notification-area');
-        const alertClass = `alert-${type}`;
-        const icon = type === 'success' ? 'ri-check-line' : 'ri-error-warning-line';
-        
-        const notificationHtml = `
-            <div class="notification alert ${alertClass} alert-dismissible fade show" role="alert">
-                <i class="${icon} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        `;
-        
-        notificationArea.html(notificationHtml);
-        const notificationElement = notificationArea.find('.notification');
-        notificationElement.fadeIn();
-
-        setTimeout(() => {
-            notificationElement.fadeOut(function() {
-                $(this).remove();
-            });
-        }, 5000);
-    }
+    // Fonction showNotification supprimée au profit de Alertify
 
 
     // Fonction pour charger les données depuis l'API
@@ -380,7 +370,7 @@
           console.error('Erreur lors du chargement des données:', error);
           $('#loadingSpinner').hide();
           $('#noDataMessage').show();
-           showNotification('Erreur lors du chargement des promotions.', 'danger');
+           alertify.error('Erreur lors du chargement des promotions.');
         }
       });
     }
@@ -450,6 +440,11 @@
                 </span>
               </td>
               <td>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                  <i class="ri-building-line me-1"></i>${promo.entite_label || 'Non définie'}
+                </span>
+              </td>
+              <td>
                 <button class="btn btn-soft-primary btn-sm configure-promo" data-promo='${JSON.stringify(promo)}'>
                   <i class="ri-settings-line me-1"></i> Configurer
                 </button>
@@ -499,6 +494,7 @@
       $('#promoId').val(promoData.id);
       $('#penaliteRetard').val(promoData.penalite_retard);
       $('#prixRachatCredit').val(promoData.prix_rachat_credit);
+      $('#entiteSelect').val(promoData.entite_id);
       $('#editPromoModal').modal('show');
     });
 
@@ -519,12 +515,12 @@
         data: formData,
         success: function(response) {
           $('#editPromoModal').modal('hide');
-          showNotification(response.message, 'success');
+          alertify.success(response.message);
           loadPromosData(); // Recharger les données
         },
         error: function(xhr) {
           const errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : "Une erreur est survenue.";
-          showNotification(`Erreur: ${errorMessage}`, 'danger');
+          alertify.error(`Erreur: ${errorMessage}`);
         },
         complete: function() {
             saveButton.prop('disabled', false);

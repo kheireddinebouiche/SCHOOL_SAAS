@@ -16,7 +16,8 @@ from django.db.models.functions import Concat
 
 @login_required(login_url="institut_app:login")
 def PageConfPenalite(request):
-    return render(request,'tenant_folder/comptabilite/conf/liste_promo.html')
+    entreprises = Entreprise.objects.all()
+    return render(request,'tenant_folder/comptabilite/conf/liste_promo.html', locals())
 
 
 @login_required(login_url="institut_app:login")
@@ -32,6 +33,8 @@ def ApiLoadPromo(request):
                 'session' : i.get_session_display(),
                 'prix_rachat_credit' : i.prix_rachat_credit,
                 'penalite_retard' : i.penalite_retard,
+                'entite_id': i.entite.id if i.entite else None,
+                'entite_label': i.entite.designation if i.entite else None,
             })
         return JsonResponse(data, safe=False)
 
@@ -45,10 +48,17 @@ def ApiUpdatePromoConfig(request):
             promo_id = request.POST.get('promo_id')
             prix_rachat_credit = request.POST.get('prix_rachat_credit')
             penalite_retard = request.POST.get('penalite_retard')
+            entite_id = request.POST.get('entite_id')
 
             promo = Promos.objects.get(id=promo_id)
             promo.prix_rachat_credit = Decimal(prix_rachat_credit)
             promo.penalite_retard = Decimal(penalite_retard)
+            
+            if entite_id:
+                promo.entite = Entreprise.objects.get(id=entite_id)
+            else:
+                promo.entite = None
+                
             promo.save()
 
             return JsonResponse({'status': 'success', 'message': 'Promotion mise à jour avec succès.'})
@@ -57,3 +67,65 @@ def ApiUpdatePromoConfig(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+def ListePenalite(request):
+    return render(request,'tenant_folder/comptabilite/penalite_rachat/demande_paiements.html')
+
+
+@login_required(login_url="institut_app:login")
+def ApiListeDuePenalite(request):
+    if request.method == 'GET':
+        due_paiements = DuePaiements.objects.filter(type__in=['rach', 'dette', 'autre']).select_related('client')
+        data = []
+        for due in due_paiements:
+            data.append({
+                'id': due.id,
+                'client': f"{due.client.nom} {due.client.prenom}" if due.client else "Client Inconnu",
+                'label': due.label,
+                'montant_due': due.montant_due,
+                'is_done': due.is_done,
+                'type': due.get_type_display(), # Use get_type_display() for readable choice label
+            })
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+def ApiDeleteDuePenalite(request):
+    if request.method == 'POST':
+        try:
+            id_paiement = request.POST.get('id')
+            if not id_paiement:
+                return JsonResponse({'status': 'error', 'message': 'ID manquant.'}, status=400)
+
+            due_paiement = DuePaiements.objects.get(id=id_paiement)
+            due_paiement.delete()
+
+            return JsonResponse({'status': 'success', 'message': 'Paiement dû supprimé avec succès.'})
+        except DuePaiements.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Paiement dû introuvable.'}, status=404)
+@login_required(login_url="institut_app:login")
+def ApiPayDuePenalite(request):
+    if request.method == 'POST':
+        try:
+            id_paiement = request.POST.get('id')
+            if not id_paiement:
+                return JsonResponse({'status': 'error', 'message': 'ID manquant.'}, status=400)
+
+            due_paiement = DuePaiements.objects.get(id=id_paiement)
+            if due_paiement.is_done:
+                 return JsonResponse({'status': 'info', 'message': 'Ce paiement a déjà été effectué.'})
+            
+            due_paiement.is_done = True
+            due_paiement.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Paiement effectué avec succès.'})
+        except DuePaiements.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Paiement dû introuvable.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)

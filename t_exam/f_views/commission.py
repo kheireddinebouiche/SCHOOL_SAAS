@@ -222,6 +222,7 @@ def ApiGetCommissionResults(request):
                 ),
                 "result": r.get_result_display(),
                 "commentaire": r.commentaire,
+                "is_generated": r.is_generated,
             })
         
         return JsonResponse(data, safe=False)

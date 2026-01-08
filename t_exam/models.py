@@ -82,6 +82,7 @@ class NoteBloc(models.Model):
     code = models.CharField(max_length=30, unique=True)
     ordre = models.PositiveIntegerField(default=0)
     in_pv_deliberation = models.BooleanField(default=False)
+    in_builltin_note = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['ordre']
@@ -189,6 +190,7 @@ class CommisionResult(models.Model):
     etudiants = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     result = models.CharField(max_length=100, null=True, blank=True, choices=[('exam','Examen'),('rach','Rachat'),('ajou','Ajourné(e)')])
     modules = models.ManyToManyField(Modules)
+    is_generated = models.BooleanField(default=False)
     commentaire = models.TextField(null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)

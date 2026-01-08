@@ -221,6 +221,11 @@ urlpatterns = [
     path('penalite/liste/',PageConfPenalite,name="PageConfPenalite"),
     path('api/update-promo-config/', ApiUpdatePromoConfig, name='ApiUpdatePromoConfig'),
 
+    path('penalite/demandes-paiements/',ListePenalite,name="ListePenalite"),
+    path('api/liste-due-paiements/', ApiListeDuePenalite, name='ApiListeDuePenalite'),
+    path('api/delete-due-paiement/', ApiDeleteDuePenalite, name='ApiDeleteDuePenalite'),
+    path('api/pay-due-paiement/', ApiPayDuePenalite, name='ApiPayDuePenalite'),
+
 
 
 ]
