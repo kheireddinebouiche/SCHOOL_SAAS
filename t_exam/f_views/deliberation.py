@@ -22,7 +22,7 @@ def groupe_deliberation_results_view(request, pk):
     # Get all PVs for these exam planifications
     pvs = PvExamen.objects.filter(
         exam_planification__in=exam_planifications
-    ).prefetch_related(
+    ).select_related('exam_planification__module').prefetch_related(
         'exam_types_notes__bloc',  # Get the bloc with in_pv_deliberation field
         'notes__etudiant',
         'notes__type_note',
@@ -34,41 +34,92 @@ def groupe_deliberation_results_view(request, pk):
     groupe_lines = GroupeLine.objects.filter(groupe=groupe).select_related('student')
     etudiants = [gl.student for gl in groupe_lines]
 
-    # Prepare data structure for the template
-    pv_data = []
+    # Group PVs by module
+    modules_data = {}
     for pv in pvs:
-        # Get exam types notes that should appear in PV deliberation (where bloc.in_pv_deliberation is True)
-        exam_types_notes = pv.exam_types_notes.filter(
-            bloc__in=NoteBloc.objects.filter(in_pv_deliberation=True)
-        ).order_by('ordre')
+        module = pv.exam_planification.module
+        if module.id not in modules_data:
+            modules_data[module.id] = {
+                'module': module,
+                'pvs': [],
+                'all_exam_types_notes': [],
+                'all_notes': [],
+                'all_decisions': []
+            }
+        modules_data[module.id]['pvs'].append(pv)
 
-        # Get all notes for these exam types
-        notes = pv.notes.filter(
-            type_note__in=exam_types_notes
-        ).select_related('etudiant', 'type_note').prefetch_related('sous_notes')
+    # Process each module to combine data from all its PVs
+    pv_data = []
+    for module_id, module_info in modules_data.items():
+        module = module_info['module']
+        pvs_list = module_info['pvs']
 
-        # Get decisions for this PV
-        decisions = pv.decisions.all().select_related('etudiant')
+        # Collect all exam types notes from all PVs for this module
+        exam_types_notes_dict = {}  # Use dict to avoid duplicates by code
+        all_notes = []
+        all_decisions = []
+
+        for pv in pvs_list:
+            # Get exam types notes that should appear in PV deliberation
+            exam_types_notes = pv.exam_types_notes.filter(
+                bloc__in=NoteBloc.objects.filter(in_pv_deliberation=True)
+            ).order_by('ordre')
+
+            for etn in exam_types_notes:
+                if etn.code not in exam_types_notes_dict:
+                    exam_types_notes_dict[etn.code] = etn
+
+            # Get all notes for these exam types
+            notes = pv.notes.filter(
+                type_note__in=exam_types_notes
+            ).select_related('etudiant', 'type_note').prefetch_related('sous_notes')
+            all_notes.extend(notes)
+
+            # Get decisions for this PV
+            decisions = pv.decisions.all().select_related('etudiant')
+            all_decisions.extend(decisions)
+
+        # Convert exam_types_notes_dict to ordered list
+        exam_types_notes_list = sorted(exam_types_notes_dict.values(), key=lambda x: x.ordre)
 
         # Organize notes by student and type for easier access in template
         notes_by_student = {}
-        for note in notes:
+        for note in all_notes:
             student_id = note.etudiant.id
+            type_note_code = note.type_note.code
             if student_id not in notes_by_student:
                 notes_by_student[student_id] = {}
-            notes_by_student[student_id][note.type_note.id] = note
+            
+            # If there are multiple notes for same student and type (from different PVs),
+            # we keep the latest or combine them based on your business logic
+            if type_note_code not in notes_by_student[student_id]:
+                notes_by_student[student_id][type_note_code] = []
+            notes_by_student[student_id][type_note_code].append(note)
 
         # Organize decisions by student for easier access in template
         decisions_by_student = {}
-        for decision in decisions:
-            decisions_by_student[decision.etudiant.id] = decision
+        for decision in all_decisions:
+            student_id = decision.etudiant.id
+            # If student already has a decision, keep the one with non-zero moyenne
+            # or the one with the highest moyenne (for rachat/rattrapage)
+            if student_id in decisions_by_student:
+                existing_decision = decisions_by_student[student_id]
+                # Prioritize non-zero moyenne, or take the higher one
+                if decision.moyenne and decision.moyenne > 0:
+                    if not existing_decision.moyenne or existing_decision.moyenne == 0:
+                        decisions_by_student[student_id] = decision
+                    elif decision.moyenne > existing_decision.moyenne:
+                        decisions_by_student[student_id] = decision
+            else:
+                decisions_by_student[decision.etudiant.id] = decision
 
         pv_data.append({
-            'pv': pv,
-            'exam_types_notes': exam_types_notes,
-            'notes': notes,
+            'module': module,
+            'pvs': pvs_list,
+            'exam_types_notes': exam_types_notes_list,
+            'notes': all_notes,
             'notes_by_student': notes_by_student,
-            'decisions': decisions,
+            'decisions': all_decisions,
             'decisions_by_student': decisions_by_student
         })
 

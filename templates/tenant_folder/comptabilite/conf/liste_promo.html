@@ -1,0 +1,558 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Configuration - Liste des promotions{% endblock title %}
+
+{% block content %}
+<style>
+  .promo-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+  .promo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  .dropdown-menu {
+    z-index: 1060 !important;
+  }
+  .form-control-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 1rem;
+    color: #6c757d;
+  }
+  .form-control.with-icon {
+    padding-left: 3rem;
+  }
+
+  /* Loader */
+  .loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Notification */
+  .notification {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 1090;
+    min-width: 250px;
+    display: none;
+  }
+
+  /* Table Modernization */
+  .table {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+  .table th, .table td {
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .table th {
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+  }
+  .table tr {
+    transition: all 0.2s ease-in-out;
+  }
+  .table-hover tbody tr:hover {
+    transform: scale(1.01);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    background-color: #fff;
+    cursor: pointer;
+  }
+/* CSS for dropdown fix */
+  .table-responsive.dropdown-open {
+    overflow: visible;
+    z-index: 1050;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div id="notification-area"></div>
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-gradient-to-r from-primary to-info rounded-3 shadow p-4 text-white">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                <i class="ri-calendar-2-line ri-2x"></i>
+              </div>
+              <div>
+                <h4 class="mb-1">Liste des promotions</h4>
+                <p class="mb-0 opacity-75">Gestion des configurations de promotion</p>
+              </div>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 text-white">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-home-4-line me-1"></i>Configuration
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active">Promotions</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-primary-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Total promotions</p>
+                  <h4 class="mb-0"><span id="totalPromos">0</span></h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-primary rounded-circle text-white fs-4">
+                    <i class="ri-calendar-2-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-success-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Pénalité retard moyenne</p>
+                  <h4 class="mb-0"><span id="avgPenalty">0%</span></h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-success rounded-circle text-white fs-4">
+                    <i class="ri-percent-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-warning-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Prix rachat moyen</p>
+                  <h4 class="mb-0"><span id="avgRachat">0</span> DH</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-warning rounded-circle text-white fs-4">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-info-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Sessions configurées</p>
+                  <h4 class="mb-0"><span id="totalSessions">0</span></h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-info rounded-circle text-white fs-4">
+                    <i class="ri-settings-2-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white p-4 border-bottom">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="ri-filter-line text-info"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 text-info">Filtres avancés</h5>
+                    <p class="text-muted mb-0 small">Affinez votre recherche</p>
+                  </div>
+                </div>
+
+                <div class="ms-auto">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div class="d-flex gap-2">
+                      <select id="sessionFilter" class="form-select rounded-pill" style="min-width: 180px;">
+                        <option value="">Toutes les sessions</option>
+                        <option value="s1">Semestre 1</option>
+                        <option value="s2">Semestre 2</option>
+                        <option value="s3">Semestre 3</option>
+                        <option value="s4">Semestre 4</option>
+                      </select>
+
+                      <div class="position-relative">
+                        <input type="text" id="promoSearch" class="form-select rounded-pill ps-5" placeholder="Rechercher..." style="min-width: 200px;">
+                        <i class="ri-search-line position-absolute start-0 top-50 translate-middle-y text-muted fs-6 ps-3"></i>
+                      </div>
+                    </div>
+                    
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-0">
+              <div id="loadingSpinner" class="loader"></div>
+
+              <div id="promosContainer" style="display: none;">
+                <div class="table-responsive">
+                  <table class="table table-hover table-nowrap align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col">Année académique</th>
+                        <th scope="col">Session</th>
+                        <th scope="col">Pénalité retard</th>
+                        <th scope="col">Prix rachat crédit</th>
+                        <th scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="promosTableBody">
+                      <!-- Data will be loaded dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+                
+
+              </div>
+
+              <div id="noDataMessage" class="text-center py-5" style="display: none;">
+                <div class="avatar-lg mx-auto mb-4 bg-light-subtle rounded-circle d-flex align-items-center justify-content-center">
+                  <i class="ri-calendar-2-line text-muted fs-1"></i>
+                </div>
+                <h5 class="mb-2">Aucune promotion trouvée</h5>
+                <p class="text-muted mb-4">Il n'y a aucune promotion enregistrée pour le moment</p>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<!-- Edit Promo Modal -->
+<div class="modal fade" id="editPromoModal" tabindex="-1" aria-labelledby="editPromoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="editPromoModalLabel">Modifier la promotion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="editPromoForm">
+          {% csrf_token %}
+          <input type="hidden" id="promoId" name="promo_id">
+          <div class="mb-4">
+            <label for="penaliteRetard" class="form-label">Pénalité de retard (%)</label>
+            <div class="position-relative">
+              <i class="ri-percent-line form-control-icon"></i>
+              <input type="number" class="form-control with-icon" id="penaliteRetard" name="penalite_retard" step="0.01" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="prixRachatCredit" class="form-label">Prix de rachat de crédit (DH)</label>
+            <div class="position-relative">
+              <i class="ri-money-dollar-circle-line form-control-icon"></i>
+              <input type="number" class="form-control with-icon" id="prixRachatCredit" name="prix_rachat_credit" step="0.01" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="savePromoChanges">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  $(document).ready(function(){
+    // Charger les données depuis l'API
+    loadPromosData();
+    
+    function showNotification(message, type = 'success') {
+        const notificationArea = $('#notification-area');
+        const alertClass = `alert-${type}`;
+        const icon = type === 'success' ? 'ri-check-line' : 'ri-error-warning-line';
+        
+        const notificationHtml = `
+            <div class="notification alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        
+        notificationArea.html(notificationHtml);
+        const notificationElement = notificationArea.find('.notification');
+        notificationElement.fadeIn();
+
+        setTimeout(() => {
+            notificationElement.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
+
+
+    // Fonction pour charger les données depuis l'API
+    function loadPromosData() {
+      $('#loadingSpinner').show();
+      $('#promosContainer').hide();
+      $('#noDataMessage').hide();
+
+      $.ajax({
+        url: '{% url "t_tresorerie:ApiLoadPromo" %}',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+          displayPromosData(data);
+        },
+        error: function(xhr, status, error) {
+          console.error('Erreur lors du chargement des données:', error);
+          $('#loadingSpinner').hide();
+          $('#noDataMessage').show();
+           showNotification('Erreur lors du chargement des promotions.', 'danger');
+        }
+      });
+    }
+
+    // Fonction pour afficher les données des promotions
+    function displayPromosData(data) {
+      if (!Array.isArray(data)) {
+        console.error('Les données reçues ne sont pas un tableau:', data);
+        $('#loadingSpinner').hide();
+        $('#noDataMessage').show();
+        return;
+      }
+
+      const promos = data;
+      $('#totalPromos').text(promos.length);
+
+      let totalPenalty = 0;
+      let totalRachat = 0;
+      let sessionCount = new Set(promos.map(p => p.session)).size;
+
+      promos.forEach(promo => {
+        totalPenalty += parseFloat(promo.penalite_retard || 0);
+        totalRachat += parseFloat(promo.prix_rachat_credit || 0);
+      });
+
+      const avgPenalty = promos.length > 0 ? (totalPenalty / promos.length).toFixed(2) : 0;
+      const avgRachat = promos.length > 0 ? (totalRachat / promos.length).toFixed(2) : 0;
+
+      $('#avgPenalty').text(avgPenalty + '%');
+      $('#avgRachat').text(avgRachat);
+      $('#totalSessions').text(sessionCount);
+
+      const promosTableBody = $('#promosTableBody');
+      promosTableBody.empty();
+
+      if (promos.length > 0) {
+        promos.forEach(promo => {
+          const academicYear = promo.begin_year + ' - ' + promo.end_year;
+          const rowHtml = `
+            <tr id="promo-row-${promo.id}">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="avatar-xs me-2">
+                    <div class="avatar-title bg-soft-primary rounded-circle">
+                      <i class="ri-calendar-2-line text-primary"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <h6 class="mb-0">${academicYear}</h6>
+                    <p class="text-muted mb-0 small">${promo.begin_year}/${promo.end_year}</p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                  <i class="ri-settings-2-line me-1"></i>${promo.session}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                  <i class="ri-percent-line me-1"></i>${promo.penalite_retard || 'N/A'}%
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="ri-money-dollar-circle-line me-1"></i>${promo.prix_rachat_credit || 'N/A'} DH
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-soft-primary btn-sm configure-promo" data-promo='${JSON.stringify(promo)}'>
+                  <i class="ri-settings-line me-1"></i> Configurer
+                </button>
+              </td>
+            </tr>
+          `;
+          promosTableBody.append(rowHtml);
+        });
+
+        $('#loadingSpinner').hide();
+        $('#promosContainer').show();
+      } else {
+        $('#loadingSpinner').hide();
+        $('#noDataMessage').show();
+      }
+    }
+
+    // Gestion du filtre et de la recherche
+    $('#sessionFilter, #promoSearch').on('input change', function() {
+        const filterValue = $('#sessionFilter').val().toLowerCase();
+        const searchTerm = $('#promoSearch').val().toLowerCase();
+        
+        $('#promosTableBody tr').each(function() {
+            const sessionText = $(this).find('td:eq(1)').text().toLowerCase();
+            const rowText = $(this).text().toLowerCase();
+            
+            const sessionMatch = filterValue === '' || sessionText.includes(filterValue);
+            const searchMatch = rowText.includes(searchTerm);
+
+            if (sessionMatch && searchMatch) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
+
+
+
+    // Ouvrir le modal de modification
+    $(document).on('click', '.configure-promo', function(e) {
+      e.preventDefault();
+      const promoData = $(this).data('promo');
+      const academicYear = promoData.begin_year + ' - ' + promoData.end_year;
+      $('#editPromoModalLabel').text('Modifier la promotion: ' + academicYear);
+      $('#promoId').val(promoData.id);
+      $('#penaliteRetard').val(promoData.penalite_retard);
+      $('#prixRachatCredit').val(promoData.prix_rachat_credit);
+      $('#editPromoModal').modal('show');
+    });
+
+    // Sauvegarder les changements
+    $('#savePromoChanges').on('click', function() {
+      const saveButton = $(this);
+      const spinner = saveButton.find('.spinner-border');
+      
+      saveButton.prop('disabled', true);
+      spinner.show();
+
+      const form = $('#editPromoForm');
+      const formData = form.serialize();
+
+      $.ajax({
+        url: '{% url "t_tresorerie:ApiUpdatePromoConfig" %}',
+        type: 'POST',
+        data: formData,
+        success: function(response) {
+          $('#editPromoModal').modal('hide');
+          showNotification(response.message, 'success');
+          loadPromosData(); // Recharger les données
+        },
+        error: function(xhr) {
+          const errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : "Une erreur est survenue.";
+          showNotification(`Erreur: ${errorMessage}`, 'danger');
+        },
+        complete: function() {
+            saveButton.prop('disabled', false);
+            spinner.hide();
+        }
+      });
+    });
+
+    // Gestion des boutons de visualisation
+    $(document).on('click', '.view-promo', function() {
+      const promoData = $(this).data('promo');
+      alert('Détails de la promotion: ' + JSON.stringify(promoData));
+    });
+
+    // Gestion des boutons de suppression
+    $(document).on('click', '.delete-promo', function() {
+      const promoId = $(this).data('promo-id');
+      if (confirm('Êtes-vous sûr de vouloir supprimer cette promotion ?')) {
+        alert('Suppression de la promotion avec ID: ' + promoId + ' (non implémenté)');
+      }
+    });
+
+    // Fix for dropdowns inside responsive table
+    $('.table-responsive').on('show.bs.dropdown', function () {
+        $(this).addClass('dropdown-open');
+    }).on('hide.bs.dropdown', function () {
+        $(this).removeClass('dropdown-open');
+    });
+  });
+</script>
+{% endblock content %}

@@ -1,0 +1,307 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Examens - Liste des étudiants{% endblock title %}
+
+{% block content %}
+<style>
+  .student-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+  .student-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+  }
+  .dropdown-item i {
+    width: 1.2rem;
+  }
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+  .modal-header .btn-close:focus {
+    box-shadow: none;
+  }
+  .dropdown-menu {
+    z-index: 1060 !important;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-gradient-to-r from-primary to-info rounded-3 shadow p-4 text-white">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                <i class="ri-team-line ri-2x"></i>
+              </div>
+              <div>
+                <h4 class="mb-1">Liste des étudiants</h4>
+                <p class="mb-0 opacity-75">Groupe: {{ groupe.nom }} | Session: {{ session_exam_line.session.label }}</p>
+              </div>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 text-white">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-home-4-line me-1"></i>Examens
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-white text-opacity-75">
+                      <i class="ri-team-line me-1"></i>{{ groupe.nom }}
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active">Étudiants</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-primary-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Total étudiants</p>
+                  <h4 class="mb-0">{{ student_data|length }}</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-primary rounded-circle text-white fs-4">
+                    <i class="ri-user-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-success-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Groupe</p>
+                  <h4 class="mb-0">{{ groupe.nom }}</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-success rounded-circle text-white fs-4">
+                    <i class="ri-team-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-warning-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Session</p>
+                  <h4 class="mb-0">{{ session_exam_line.semestre }}ème Semestre</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-warning rounded-circle text-white fs-4">
+                    <i class="ri-calendar-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card stats-card bg-info-subtle border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <p class="text-muted mb-1">Date session</p>
+                  <h4 class="mb-0">{{ session_exam_line.date_debut|date:"d M Y" }} - {{ session_exam_line.date_fin|date:"d M Y" }}</h4>
+                </div>
+                <div class="avatar-sm align-self-center">
+                  <div class="avatar-title bg-info rounded-circle text-white fs-4">
+                    <i class="ri-time-line"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white p-4 border-bottom">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="ri-list-check-2 text-info"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 text-info">Liste des étudiants</h5>
+                    <p class="text-muted mb-0 small">Étudiants inscrits dans le groupe "{{ groupe.nom }}"</p>
+                  </div>
+                </div>
+
+                <div class="ms-auto">
+                  <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div class="d-flex gap-2">
+                      <div class="position-relative">
+                        <input type="text" id="studentSearch" class="form-control ps-5 rounded-pill" placeholder="Rechercher un étudiant...">
+                        <i class="ri-search-line position-absolute start-0 top-50 translate-middle-y text-muted fs-6 ps-3"></i>
+                      </div>
+                      
+                      <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                          <i class="ri-download-2-line me-1"></i>Exporter
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                          <li><a class="dropdown-item" href="#"><i class="ri-file-pdf-line me-2"></i>PDF</a></li>
+                          <li><a class="dropdown-item" href="#"><i class="ri-file-excel-line me-2"></i>Excel</a></li>
+                          <li><a class="dropdown-item" href="#"><i class="ri-file-text-line me-2"></i>CSV</a></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-0">
+              {% if student_data %}
+              <div class="table-responsive">
+                <table class="table table-hover table-nowrap align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">Nom</th>
+                      <th scope="col">Prénom</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Téléphone</th>
+                      <th scope="col">Date inscription</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentTableBody">
+                    {% for item in student_data %}
+                    {% with student=item.student %}
+                    <tr>
+                      <td>{{ forloop.counter }}</td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-xs me-2">
+                            <div class="avatar-title bg-soft-primary rounded-circle">
+                              {{ student.nom.0|upper }}
+                            </div>
+                          </div>
+                          {{ student.nom }}
+                        </div>
+                      </td>
+                      <td>{{ student.prenom }}</td>
+                      <td>{{ student.email }}</td>
+                      <td>{{ student.telephone }}</td>
+                      <td>{{ item.date_inscription|date:"d M Y" }}</td>
+                      <td>
+                        <div class="hstack gap-2">
+                          <a href="{% url 't_exam:student_bulletin' session_exam_line.id student.id %}" class="btn btn-soft-info btn-sm" title="Voir le bulletin">
+                            <i class="ri-file-text-line"></i>
+                          </a>
+                          <a href="#" class="btn btn-soft-success btn-sm" title="Modifier">
+                            <i class="ri-edit-line"></i>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-4 bg-light-subtle rounded-circle d-flex align-items-center justify-content-center">
+                  <i class="ri-team-line text-muted fs-1"></i>
+                </div>
+                <h5 class="mb-2">Aucun étudiant trouvé</h5>
+                <p class="text-muted mb-4">Il n'y a aucun étudiant inscrit dans ce groupe pour le moment</p>
+              </div>
+              {% endif %}
+            </div>
+            
+            {% if student_data %}
+            <div class="card-footer bg-light">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted">
+                  Affichage de <span id="startItem">1</span> à <span id="endItem">{{ student_data|length }}</span> sur <span id="totalItems">{{ student_data|length }}</span> entrées
+                </div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-separated mb-0">
+                    <li class="page-item disabled">
+                      <a class="page-link" href="#" aria-label="Previous">
+                        <i class="ri-arrow-left-s-line"></i>
+                      </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                      <a class="page-link" href="#" aria-label="Next">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- container-fluid -->
+  </div>
+  <!-- End Page-content -->
+</div>
+
+<script>
+  // Search functionality
+  document.getElementById('studentSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#studentTableBody tr');
+    
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+</script>
+{% endblock content %}

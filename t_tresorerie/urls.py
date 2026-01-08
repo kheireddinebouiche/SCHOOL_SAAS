@@ -14,6 +14,7 @@ from .f_views.facturation import *
 from .f_views.produits import *
 from .f_views.imputation_comptable_specialite import *
 from .f_views.autre_paiement import *
+from .f_views.configure_penalite import *
 
 app_name="t_tresorerie"
 
@@ -215,6 +216,10 @@ urlpatterns = [
     path('ApiUpdateAutrePaiement', ApiUpdateAutrePaiement, name="ApiUpdateAutrePaiement"),
     path('ApiDeleteAutrePaiement', ApiDeleteAutrePaiement, name="ApiDeleteAutrePaiement"),
     path('api_liste_clients', api_liste_clients, name="api_liste_clients"),
+
+
+    path('penalite/liste/',PageConfPenalite,name="PageConfPenalite"),
+    path('api/update-promo-config/', ApiUpdatePromoConfig, name='ApiUpdatePromoConfig'),
 
 
 

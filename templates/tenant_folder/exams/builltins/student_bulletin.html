@@ -1,0 +1,272 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Bulletin de notes - {{ student.nom }} {{ student.prenom }}{% endblock title %}
+
+{% block content %}
+<style>
+  .bulletin-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .module-card {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  
+  .module-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+  }
+  
+  .notes-table {
+    margin-bottom: 0;
+  }
+  
+  .notes-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    padding: 0.75rem;
+  }
+  
+  .notes-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+  }
+  
+  .note-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #495057;
+  }
+  
+  .moyenne-badge {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  
+  .decision-badge {
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  
+  .student-info-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .info-label {
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+  }
+  
+  .info-value {
+    font-size: 1.1rem;
+    color: #212529;
+  }
+  
+  @media print {
+    .no-print {
+      display: none;
+    }
+    
+    .module-card {
+      page-break-inside: avoid;
+    }
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      
+      {% if student %}
+      <!-- Bulletin Header -->
+      <div class="bulletin-header">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h2 class="mb-2">
+              <i class="ri-file-text-line me-2"></i>Bulletin de Notes
+            </h2>
+            <h4 class="mb-1">{{ student.nom }} {{ student.prenom }}</h4>
+            <p class="mb-0 opacity-75">
+              Groupe: {{ groupe.nom }} | Session: {{ session_line.session.label }} | 
+              Semestre {{ session_line.semestre }}
+            </p>
+          </div>
+          <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <button onclick="window.print()" class="btn btn-light btn-lg no-print">
+              <i class="ri-printer-line me-2"></i>Imprimer
+            </button>
+            <a href="{% url 't_exam:liste_etudiants' session_line.id %}" class="btn btn-outline-light btn-lg no-print">
+              <i class="ri-arrow-left-line me-2"></i>Retour
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Information -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="student-info-card">
+            <div class="info-label">Nom complet</div>
+            <div class="info-value">{{ student.nom }} {{ student.prenom }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="student-info-card">
+            <div class="info-label">Email</div>
+            <div class="info-value">{{ student.email|default:"-" }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="student-info-card">
+            <div class="info-label">Téléphone</div>
+            <div class="info-value">{{ student.telephone|default:"-" }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="student-info-card">
+            <div class="info-label">Groupe</div>
+            <div class="info-value">{{ groupe.nom }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modules and Notes -->
+      {% if modules_data %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-bordered mb-0">
+                <thead>
+                  <tr class="bg-light">
+                    <th style="width: 8%;">Code UV</th>
+                    <th style="width: 25%;">Intitulé Unité de Valeur</th>
+                    {% for note_type in note_types_list %}
+                    <th style="width: 8%;">{{ note_type.libelle }}</th>
+                    {% endfor %}
+                    <th style="width: 8%;" class="bg-warning">Moy. UV/20</th>
+                    <th style="width: 5%;">Coef</th>
+                    <th style="width: 10%;" class="bg-warning">Moy.X Coef</th>
+                    <th style="width: 10%;">Obs.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for module_item in modules_data %}
+                  <tr>
+                    <td><strong>{{ module_item.module.code|default:"-" }}</strong></td>
+                    <td>{{ module_item.module.label }}</td>
+                    
+                    {% comment %} Display notes for each type dynamically {% endcomment %}
+                    {% for note_type in note_types_list %}
+                      <td class="text-center">
+                        {% with note=module_item.notes_by_type|get_item:note_type.code %}
+                          {% if note and note.valeur is not None %}
+                            {{ note.valeur|floatformat:2 }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        {% endwith %}
+                      </td>
+                    {% endfor %}
+                    
+                    {% comment %} Moyenne UV/20 {% endcomment %}
+                    <td class="text-center bg-danger text-white font-weight-bold">
+                      {% if module_item.decision and module_item.decision.moyenne %}
+                        {{ module_item.decision.moyenne|floatformat:2 }}
+                      {% else %}
+                        0,00
+                      {% endif %}
+                    </td>
+                    
+                    {% comment %} Coefficient {% endcomment %}
+                    <td class="text-center">
+                      {{ module_item.module.coef|default:"1" }}
+                    </td>
+                    
+                    {% comment %} Moy × Coef {% endcomment %}
+                    <td class="text-center bg-danger text-white font-weight-bold">
+                      {{ module_item.moy_coef|floatformat:2 }}
+                    </td>
+                    
+                    {% comment %} Observations {% endcomment %}
+                    <td class="text-center">
+                      {% if module_item.decision %}
+                        {% if module_item.decision.statut == 'valide' %}
+                          <span class="badge badge-success">Admis</span>
+                        {% elif module_item.decision.statut == 'rattrapage' %}
+                          <span class="badge badge-warning">Ratt.</span>
+                        {% elif module_item.decision.statut == 'rach' %}
+                          <span class="badge badge-info">Rachat</span>
+                        {% elif module_item.decision.statut == 'ajou' %}
+                          <span class="badge badge-danger">Ajourné</span>
+                        {% endif %}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                  
+                  {% comment %} Ligne de total - Moyenne du Semestre {% endcomment %}
+                  <tr class="bg-light font-weight-bold">
+                    <td colspan="{{ note_types_list|length|add:2 }}" class="text-end">Moyenne du Semestre {{ session_line.semestre }}</td>
+                    <td class="text-center bg-danger text-white">
+                      {{ moyenne_semestre|floatformat:2 }}
+                    </td>
+                    <td class="text-center">N. Coef. <br><strong>{{ total_coef }}</strong></td>
+                    <td colspan="2" class="text-center">N.Pts <br><strong>{{ total_points|floatformat:2 }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      {% else %}
+      <div class="alert alert-info">
+        <h5 class="alert-heading">
+          <i class="ri-information-line me-2"></i>Aucune note disponible
+        </h5>
+        <p class="mb-0">Il n'y a pas encore de notes enregistrées pour cet étudiant dans cette session.</p>
+      </div>
+      {% endif %}
+      
+      {% else %}
+      <div class="alert alert-danger">
+        <h5 class="alert-heading">
+          <i class="ri-error-warning-line me-2"></i>Erreur
+        </h5>
+        <p class="mb-0">Impossible de charger le bulletin de notes. Étudiant ou session introuvable.</p>
+      </div>
+      {% endif %}
+      
+    </div>
+  </div>
+</div>
+{% endblock content %}

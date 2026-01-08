@@ -11,6 +11,8 @@ from django.db.models import F, Value,CharField, Q
 from django.db.models.functions import Coalesce
 from itertools import chain
 from django.db.models.functions import Concat
+from django.contrib.humanize.templatetags.humanize import intcomma
+
 
 @login_required(login_url="institut_app:login")
 def PageBrouillardCaisse(request):
@@ -78,6 +80,8 @@ def brouillard_caisse_json(request):
             "solde": solde,
             "order_to" : mv['order_to']
         })
+
+       
 
     # ---- 5. Retour JSON propre ----
     return JsonResponse({

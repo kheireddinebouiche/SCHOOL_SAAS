@@ -260,6 +260,9 @@ class Promos(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    prix_rachat_credit =models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    penalite_retard = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     is_archived = models.BooleanField(default=False)
 
     class Meta:

@@ -7,6 +7,8 @@ from .f_views.action_views import examen_action, rachat_action, ajourne_action
 from .f_views.exam_plan import *
 from .f_views.deliberation import *
 from .f_views.generate_pv import *
+from .f_views.builltins import *
+from .f_views.generate_paiements import *
 
 app_name="t_exam"
 
@@ -122,5 +124,18 @@ urlpatterns = [
 
     path('ApiGetAllBlocs',ApiGetAllBlocs, name="ApiGetAllBlocs"),
     path('ApiAddBloc',ApiAddBloc, name="ApiAddBloc"),
+    path('ApiUpdateBloc',ApiUpdateBloc,name="ApiUpdateBloc"),
+
+
+    ########### SECTION DES BUILLTINS DE NOTES #####################
+    path('deliberation/builltins/session/',PageListeSessionExam, name="PageListeSessionExam"),
+    path('ApiListeDesGroupes',ApiListeDesGroupes, name="ApiListeDesGroupes"),
+    path('ApiListeGroupeSession',ApiListeGroupeSession ,name="ApiListeGroupeSession"),
+    path('builltins/resultats/etudiants/<int:pk>/',ListeDesEtudiants, name="liste_etudiants"),
+    path('builltins/bulletin/<int:session_line_id>/<int:student_id>/', StudentBulletin, name="student_bulletin"),
+
+
+
+    path('ApiGenerateDuePaiements',ApiGenerateDuePaiements, name="ApiGenerateDuePaiements"),
 
 ]
