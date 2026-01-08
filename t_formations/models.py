@@ -262,6 +262,7 @@ class Promos(models.Model):
 
     prix_rachat_credit =models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     penalite_retard = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    entite = models.ForeignKey(Entreprise, null=True, blank=True, on_delete=models.DO_NOTHING)
 
     is_archived = models.BooleanField(default=False)
 
