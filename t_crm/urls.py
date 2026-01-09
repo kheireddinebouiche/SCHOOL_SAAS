@@ -178,5 +178,6 @@ urlpatterns = [
     path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     
     path('user-logs/', user_action_log_list, name='user_action_log_list'),
+    path('user-logs/clear/', clear_logs, name='clear_logs'),
 
 ]

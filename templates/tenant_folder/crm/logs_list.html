@@ -6,151 +6,304 @@
 <div class="main-content">
   <div class="page-content bg-light">
     <div class="container-fluid">
-      <!-- Page Title -->
-      <div class="row mb-3">
-        <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
-            <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="fas fa-history text-info"></i>
-              </div>
-              <h4 class="mb-0 text-info">Journal des actions utilisateurs</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Filters -->
+      
+      <!-- Header Section -->
       <div class="row mb-4">
         <div class="col-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <h5 class="card-title mb-0 text-info">Filtres</h5>
-            </div>
-            <div class="card-body p-3">
-               <form method="get" class="row g-3" id="logs-filter-form">
-                    <div class="col-md-3">
-                        <label class="form-label">Utilisateur</label>
-                        <select name="user" class="form-select filter-input">
-                            <option value="">Tous</option>
-                            {% for u in users %}
-                            <option value="{{ u.id }}" {% if selected_user == u.id %}selected{% endif %}>{{ u.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Type d'action</label>
-                        <select name="action_type" class="form-select filter-input">
-                            <option value="">Tous</option>
-                            {% for code, label in action_choices %}
-                            <option value="{{ code }}" {% if selected_action == code %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Modèle Cible</label>
-                        <input type="text" name="target_model" class="form-control filter-input" value="{{ selected_target|default:'' }}">
-                    </div>
-                     <div class="col-md-2">
-                        <label class="form-label">Date Début</label>
-                        <input type="date" name="date_from" class="form-control filter-input" value="{{ date_from|default:'' }}">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">Filtrer</button>
-                    </div>
-               </form>
-            </div>
+          <div class="d-flex align-items-center justify-content-between">
+              <h4 class="mb-0 text-uppercase font-size-18 text-dark fw-bold">Journal d'Audit</h4>
+              <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">CRM</a></li>
+                    <li class="breadcrumb-item active">Actions</li>
+                </ol>
+              </div>
           </div>
         </div>
       </div>
 
-      <!-- Table -->
+      <!-- Stats / Actions Bar -->
+      <div class="row mb-4">
+          <div class="col-xl-3 col-md-6">
+              <div class="card card-animate overflow-hidden border-0 shadow-sm" style="border-radius: 15px;">
+                  <div class="card-body bg-soft-info">
+                      <div class="d-flex align-items-center">
+                          <div class="flex-grow-1">
+                              <h5 class="text-muted fw-semibold mb-2">Total Actions</h5>
+                              <h4 class="fw-bold mb-0 text-dark">{{ page_obj.paginator.count }}</h4>
+                          </div>
+                          <div class="avatar-sm flex-shrink-0">
+                              <span class="avatar-title bg-info rounded-circle fs-2">
+                                  <i class="bx bx-list-ul text-white"></i>
+                              </span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          
+           {% if user.is_staff %}
+            <div class="col-xl-9 col-md-6 d-flex align-items-center justify-content-end">
+                 <button type="button" class="btn btn-danger btn-label waves-effect waves-light shadow-sm" data-bs-toggle="modal" data-bs-target="#clearLogsModal" style="border-radius: 10px;">
+                    <i class="bx bx-trash label-icon align-middle fs-16 me-2"></i> Nettoyer l'historique
+                </button>
+            </div>
+            
+             <!-- Modal de nettoyage -->
+            <div class="modal fade" id="clearLogsModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+                  <div class="modal-header bg-soft-danger p-3 border-bottom-0">
+                    <h5 class="modal-title text-danger" id="modalLabel">Nettoyage des Logs</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <form action="{% url 't_crm:clear_logs' %}" method="post">
+                      {% csrf_token %}
+                      <div class="modal-body p-4">
+                        <div class="mb-4 text-center">
+                             <div class="avatar-md mx-auto mb-3">
+                                <div class="avatar-title bg-soft-danger rounded-circle text-danger display-4">
+                                    <i class="bx bx-trash"></i>
+                                </div>
+                            </div>
+                            <p class="text-muted">Sélectionnez la méthode de nettoyage des journaux d'actions.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Option de suppression</label>
+                            <select name="delete_mode" class="form-select form-select-lg bg-light border-0" id="deleteModeSelector">
+                                <option value="all">Tout vider (Irréversible)</option>
+                                <option value="older_than">Plus ancien que...</option>
+                                <option value="period">Période spécifique</option>
+                            </select>
+                        </div>
+                        
+                        <div id="olderThanInput" class="mb-3 d-none">
+                            <label class="form-label">Supprimer les logs avant le :</label>
+                            <input type="date" name="date_threshold" class="form-control bg-light border-0">
+                        </div>
+                        
+                        <div id="periodInput" class="mb-3 d-none">
+                            <label class="form-label">Période :</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0">Du</span>
+                                <input type="date" name="date_from_delete" class="form-control bg-light border-0">
+                                <span class="input-group-text bg-light border-0">Au</span>
+                                <input type="date" name="date_to_delete" class="form-control bg-light border-0">
+                            </div>
+                        </div>
+                        <div class="alert alert-warning border-0 bg-soft-warning text-warning d-flex align-items-center mt-3">
+                            <i class="bx bx-error me-2 fs-4"></i>
+                            <div>Attention, cette action est définitive et ne peut être annulée.</div>
+                        </div>
+                      </div>
+                      <div class="modal-footer border-top-0 pt-0 pb-4 px-4">
+                        <button type="button" class="btn btn-light w-md" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger w-md">Confirmer</button>
+                      </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+           {% endif %}
+      </div>
+
+      <!-- Filters & Table -->
       <div class="row">
         <div class="col-12">
-          <div class="card shadow border-0 rounded-3" id="logs-table-container">
-            <div class="card-body p-0">
+          <div class="card shadow-sm border-0" style="border-radius: 15px;">
+            <div class="card-header bg-transparent border-bottom p-4">
+                 <div class="d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0 text-dark fw-bold">Historique des Activités</h5>
+                 </div>
+                 
+                 <!-- Filters Inline -->
+                 <div class="mt-4">
+                    <form method="get" class="row g-3" id="logs-filter-form">
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bx bx-user"></i></span>
+                                <select name="user" class="form-select border-0 bg-light filter-input">
+                                    <option value="">Tous les utilisateurs</option>
+                                    {% for u in users %}
+                                    <option value="{{ u.id }}" {% if selected_user == u.id %}selected{% endif %}>{{ u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                             <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bx bx-purchase-tag"></i></span>
+                                <select name="action_type" class="form-select border-0 bg-light filter-input">
+                                    <option value="">Toutes actions</option>
+                                    {% for code, label in action_choices %}
+                                    <option value="{{ code }}" {% if selected_action == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                             <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bx bx-target-lock"></i></span>
+                                <input type="text" name="target_model" class="form-control border-0 bg-light filter-input" placeholder="Modèle Cible (ex: Prospect)" value="{{ selected_target|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bx bx-calendar"></i></span>
+                                <input type="date" name="date_from" class="form-control border-0 bg-light filter-input" value="{{ date_from|default:'' }}">
+                            </div>
+                        </div>
+                         <!-- Hidden Submit for Enter Key compatibility -->
+                        <button type="submit" class="d-none">Filtrer</button>
+                    </form>
+                 </div>
+            </div>
+
+            <div class="card-body p-0" id="logs-table-container">
                <div class="table-responsive">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                  <table class="table table-hover table-nowrap align-middle mb-0">
+                    <thead class="bg-light text-muted text-uppercase">
                       <tr>
-                        <th class="border-0 rounded-start ps-4">Date</th>
-                        <th class="border-0">Utilisateur</th>
-                        <th class="border-0">Action</th>
-                        <th class="border-0">Cible</th>
-                        <th class="border-0">ID Cible</th>
-                        <th class="border-0">Détails</th>
-                         <th class="border-0 rounded-end">IP</th>
+                        <th class="ps-4 py-3" style="width: 50px;">#</th>
+                        <th class="py-3">Utilisateur</th>
+                        <th class="py-3">Action</th>
+                        <th class="py-3">Cible</th>
+                        <th class="py-3">Détails</th>
+                        <th class="py-3">Date</th>
+                        <th class="py-3 pe-4 text-end">IP</th>
                       </tr>
                     </thead>
                     <tbody>
                       {% for log in page_obj %}
                       <tr>
-                        <td class="ps-4">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="ps-4 fw-bold text-muted">
+                           #{{ forloop.counter0|add:page_obj.start_index }}
+                        </td>
                         <td>
-                            {% if log.user %}
-                                <span class="badge bg-soft-primary text-primary">{{ log.user.username }}</span>
+                            <div class="d-flex align-items-center">
+                                {% if log.user %}
+                                    <div class="avatar-xs me-2">
+                                        <span class="avatar-title rounded-circle bg-primary text-white font-size-12">
+                                            {{ log.user.username|slice:":1"|upper }}
+                                        </span>
+                                    </div>
+                                    <h6 class="mb-0 text-dark">{{ log.user.username }}</h6>
+                                {% else %}
+                                     <div class="avatar-xs me-2">
+                                        <span class="avatar-title rounded-circle bg-light text-muted font-size-12">
+                                            <i class="bx bx-desktop"></i>
+                                        </span>
+                                    </div>
+                                    <h6 class="mb-0 text-muted">Système</h6>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if log.action_type == 'CREATE' %}
+                                <span class="badge bg-success font-size-12 p-2"><i class="bx bx-plus me-1"></i> {{ log.get_action_type_display }}</span>
+                            {% elif log.action_type == 'UPDATE' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning font-size-12 p-2"><i class="bx bx-edit me-1"></i> {{ log.get_action_type_display }}</span>
+                            {% elif log.action_type == 'DELETE' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger font-size-12 p-2"><i class="bx bx-trash me-1"></i> {{ log.get_action_type_display }}</span>
                             {% else %}
-                                <span class="text-muted">Système/Inconnu</span>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary font-size-12 p-2">{{ log.get_action_type_display }}</span>
                             {% endif %}
                         </td>
                         <td>
-                            <span class="badge 
-                                {% if log.action_type == 'CREATE' %}bg-success
-                                {% elif log.action_type == 'UPDATE' %}bg-warning
-                                {% elif log.action_type == 'DELETE' %}bg-danger
-                                {% else %}bg-secondary{% endif %}">
-                                {{ log.get_action_type_display }}
+                            <h6 class="mb-0 font-size-13 text-dark">{{ log.target_model|default:"-" }}</h6>
+                            <small class="text-muted">ID: {{ log.target_id|default:"-" }}</small>
+                        </td>
+                        <td style="max-width: 350px;">
+                            <span class="d-inline-block text-truncate text-muted" style="max-width: 100%;" title="{{ log.details }}">
+                                {{ log.details|default:"-" }}
                             </span>
                         </td>
-                        <td>{{ log.target_model|default:"-" }}</td>
-                        <td>{{ log.target_id|default:"-" }}</td>
-                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.details }}">
-                            {{ log.details|truncatechars:50 }}
+                        <td>
+                            <div class="d-flex align-items-center text-muted">
+                                <i class="bx bx-calendar me-1"></i>
+                                <span>{{ log.created_at|date:"d M Y" }}</span>
+                                <span class="mx-1"> - </span>
+                                <span class="small">{{ log.created_at|date:"H:i" }}</span>
+                            </div>
                         </td>
-                         <td>{{ log.ip_address|default:"-" }}</td>
+                        <td class="pe-4 text-end">
+                            <span class="badge bg-light text-muted font-family-monospace small">{{ log.ip_address|default:"-" }}</span>
+                        </td>
                       </tr>
                       {% empty %}
                       <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">Aucun journal trouvé.</td>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="avatar-lg mx-auto mb-3">
+                                <div class="avatar-title bg-soft-info rounded-circle text-info display-4">
+                                     <i class="bx bx-search-alt"></i>
+                                </div>
+                            </div>
+                            <h5 class="text-muted">Aucune activité trouvée</h5>
+                            <p class="text-muted mb-0">Essayez d'ajuster vos filtres de recherche.</p>
+                        </td>
                       </tr>
                       {% endfor %}
                     </tbody>
                   </table>
                </div>
-            </div>
-            
-            <!-- Pagination -->
-            {% if page_obj.has_other_pages %}
-            <div class="card-footer bg-white py-3 border-0">
-                <nav aria-label="Page navigation">
-                  <ul class="pagination justify-content-center mb-0">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                      </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                             <li class="page-item"><a class="page-link" href="?page={{ num }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}">{{ num }}</a></li>
-                        {% endif %}
-                    {% endfor %}
+               
+               <!-- Pagination Styled -->
+                <div class="row align-items-center p-4 border-top">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center">
+                            <span class="text-muted me-2">Afficher</span>
+                            <select class="form-select form-select-sm w-auto me-2 filter-input" name="per_page" form="logs-filter-form">
+                                <option value="25" {% if per_page == '25' %}selected{% endif %}>25</option>
+                                <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+                                <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+                            </select>
+                            <span class="text-muted">sur <span class="fw-semibold">{{ page_obj.paginator.count }}</span> entrées</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                         <div class="float-sm-end">
+                            <ul class="pagination mb-0 pagination-rounded justify-content-center justify-content-sm-end">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" aria-label="Previous">
+                                        <i class="mdi mdi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% else %}
+                                 <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Previous">
+                                        <i class="mdi mdi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ num }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
 
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ page_obj.next_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                      </a>
-                    </li>
-                    {% endif %}
-                  </ul>
-                </nav>
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" aria-label="Next">
+                                        <i class="mdi mdi-chevron-right"></i>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Next">
+                                        <i class="mdi mdi-chevron-right"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
-            {% endif %}
           </div>
         </div>
       </div>
@@ -158,6 +311,7 @@
     </div>
   </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const filterInputs = document.querySelectorAll('.filter-input');
@@ -196,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
             dobounceTimer = setTimeout(fetchResults, 500);
         });
         
-        // For date and select, trigger immediately on change
         input.addEventListener('change', function() {
             clearTimeout(dobounceTimer);
             fetchResults();
@@ -208,6 +361,24 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         fetchResults();
     });
+
+    // Delete Modal Logic
+    const deleteModeSelector = document.getElementById('deleteModeSelector');
+    if (deleteModeSelector) {
+        const olderThanInput = document.getElementById('olderThanInput');
+        const periodInput = document.getElementById('periodInput');
+        
+        deleteModeSelector.addEventListener('change', function() {
+            olderThanInput.classList.add('d-none');
+            periodInput.classList.add('d-none');
+            
+            if (this.value === 'older_than') {
+                olderThanInput.classList.remove('d-none');
+            } else if (this.value === 'period') {
+                periodInput.classList.remove('d-none');
+            }
+        });
+    }
 });
 </script>
 {% endblock content %}
