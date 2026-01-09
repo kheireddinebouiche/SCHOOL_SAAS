@@ -16,6 +16,7 @@ class GenerateBulkStudentPdf(LoginRequiredMixin, View):
     def post(self, request):
         student_ids_str = request.POST.get('student_ids')
         template_slug = request.POST.get('template_slug')
+        group_id = request.POST.get('group_id')
 
         if not student_ids_str or not template_slug:
             messages.error(request, "Veuillez sélectionner des étudiants et un modèle.")
@@ -52,7 +53,7 @@ class GenerateBulkStudentPdf(LoginRequiredMixin, View):
         for index, student_id in enumerate(student_ids):
             try:
                 # Génération du contexte pour cet étudiant
-                context_data = get_student_context(student_id)
+                context_data = get_student_context(student_id, group_id)
                 
                 # Rendu du template pour cet étudiant
                 rendered_part = django_template.render(Context(context_data))
