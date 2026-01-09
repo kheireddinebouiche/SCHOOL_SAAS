@@ -115,7 +115,7 @@ def detailsGroupe(request, pk):
     echeancier = EcheancierPaiement.objects.get(formation = groupe.specialite.formation)
     dossier_inscription = DossierInscription.objects.filter(formation = groupe.specialite.formation).values('label')
     montant_formation = groupe.specialite.formation.prix_formation
-
+    documents = groupe.specialite.formation.documents.all()
 
     context = {
         'groupe' : groupe,
@@ -129,7 +129,8 @@ def detailsGroupe(request, pk):
         "branche" : groupe.specialite.branche,
         'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
         "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id),
-        "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite.formation.partenaire.logo else ""
+        "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite.formation.partenaire.logo else "",
+        "documents" : documents,
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 
