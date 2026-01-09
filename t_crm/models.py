@@ -527,6 +527,41 @@ class RemiseAppliquerLine(models.Model):
 
     def __str__(self):
         return f'{self.prospect.nom} - {self.prenom}'
+
+class UserActionLog(models.Model):
+    ACTION_CHOICES = [
+        ('CREATE', 'Création'),
+        ('UPDATE', 'Modification'),
+        ('DELETE', 'Suppression'),
+        ('LOGIN', 'Connexion'),
+        ('LOGOUT', 'Déconnexion'),
+        ('EXPORT', 'Exportation'),
+        ('PRINT', 'Impression'),
+        ('OTHER', 'Autre'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='action_logs')
+    action_type = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    
+    # Cible de l'action (ex: "Prospect", "Facture")
+    target_model = models.CharField(max_length=100, null=True, blank=True)
+    target_id = models.CharField(max_length=100, null=True, blank=True)
+    
+    # Détails (ex: "Changement du statut de 'En attente' à 'Validé'")
+    details = models.TextField(null=True, blank=True)
+    
+    # Contexte
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Journal d'action"
+        verbose_name_plural = "Journaux d'actions"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} - {self.action_type} - {self.created_at}"
     
 
 

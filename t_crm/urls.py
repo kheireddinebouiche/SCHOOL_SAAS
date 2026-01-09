@@ -9,6 +9,7 @@ from .f_views.entreprise_prospect import *
 from .f_views.secondwishe import *
 from .f_views.remise import *
 from.f_views.counter import *
+from .f_views.logs import *
 
 app_name="t_crm"
 
@@ -176,4 +177,6 @@ urlpatterns = [
 
     path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     
+    path('user-logs/', user_action_log_list, name='user_action_log_list'),
+
 ]
