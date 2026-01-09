@@ -6,27 +6,15 @@ from django.utils import timezone
 from t_groupe.models import GroupeLine
 
 def get_student_context(student_id):
-    """
-    Génère le contexte pour l'impression de la fiche d'un étudiant.
-    Retourne un dictionnaire avec toutes les données nécessaires.
-    """
     student = get_object_or_404(Prospets, pk=student_id)
-    # On essaie de récupérer la fiche de voeux
-    # Note: Dans le code d'origine il y avait get_object_or_404(FicheDeVoeux, prospect=student)
-    # On garde la même logique
+
     fiche = get_object_or_404(FicheDeVoeux, prospect=student)
-    
     logo = fiche.specialite.formation.entite_legal.entete_logo.url if fiche.specialite.formation.entite_legal.entete_logo else ''
 
     specialite = fiche.specialite.label
-    formation_label = fiche.specialite.label # Variable 'formation' dans le contexte d'origine (ligne 171)
-    # Mais plus bas (ligne 222) 'formation' devient fiche.specialite.formation.nom
-    # On va garder les deux pour être sûr
-    
+    formation_label = fiche.specialite.label
     annee_academique = fiche.promo.annee_academique
-
     echeancier_qs = DuePaiements.objects.filter(client=student, type="frais_f").order_by('date_echeance')
-    
     echeancier = []
 
     for e in echeancier_qs:
@@ -41,8 +29,6 @@ def get_student_context(student_id):
             'date_echeance': e.date_echeance.isoformat() if e.date_echeance else ''
         })
 
-    # Note: Dans le code d'origine, formation est redéfini comme:
-    # formation = FicheDeVoeux.objects.get(prospect = student) -> C'est 'fiche'
     documents_qs = DossierInscription.objects.filter(formation = fiche.specialite.formation.id)
     documents = []
     for i in documents_qs:
@@ -53,7 +39,6 @@ def get_student_context(student_id):
     else:
         current_groupe = None
 
-    # Préparer les données de contexte
     context_data = {
         'current_date': timezone.now().date().isoformat(),
         'pk': student.pk,

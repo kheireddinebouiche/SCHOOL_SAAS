@@ -112,23 +112,16 @@ def detailsGroupe(request, pk):
     groupe = Groupe.objects.get(pk=pk)
     students = GroupeLine.objects.filter(groupe = groupe)
 
-    echeancier_line = EcheancierPaiementLine.objects.filter(echeancier__formation = groupe.specialite.formation).values('value','date_echeancier', 'montant_tranche')
-    echeancier = EcheancierPaiement.objects.get(formation = groupe.specialite.formation)
-    dossier_inscription = DossierInscription.objects.filter(formation = groupe.specialite.formation).values('label')
-    montant_formation = groupe.specialite.formation.prix_formation
     documents = groupe.specialite.formation.documents.all()
 
     context = {
         'groupe' : groupe,
         'students' : students,
         "specialite" : groupe.specialite,
-        'echeancier_line' : json.dumps(list(echeancier_line),cls=DjangoJSONEncoder),
-        'frais_inscription' : echeancier.frais_inscription,
         "qualification" : groupe.specialite.formation.qualification,
         "date_debut" : groupe.start_date,
         "date_fin" : groupe.end_date,
         "branche" : groupe.specialite.branche,
-        'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
         "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id),
         "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite.formation.partenaire.logo else "",
         "documents" : documents,
