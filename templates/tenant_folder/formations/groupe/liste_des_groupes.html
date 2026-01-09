@@ -55,6 +55,33 @@
     z-index: 1050;
     position: absolute;
   }
+  
+  /* Grid View Styles */
+  .group-card {
+    transition: all 0.3s ease;
+    background: #fff;
+    border: 1px solid #f3f3f3;
+    border-top: 3px solid transparent; /* Default top border */
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  }
+  .group-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  }
+
+  /* Status Border Colors */
+  .group-card.border-top-success { border-top-color: #0ab39c !important; }
+  .group-card.border-top-warning { border-top-color: #f7b84b !important; }
+  .group-card.border-top-danger { border-top-color: #f06548 !important; }
+  .group-card.border-top-secondary { border-top-color: #405189 !important; }
+  .group-card.border-top-dark { border-top-color: #212529 !important; }
+
+  .view-toggler .btn.active {
+    background-color: #eef0f7;
+    color: #405189;
+    border-color: #eef0f7;
+  }
 </style>
 
 <div class="main-content">
@@ -183,7 +210,19 @@
                     <option value="">Filtrer par date de création</option>
                     <option value="-created_at">Date (récent)</option>
                     <option value="created_at">Date (ancien)</option>
+                    <option value="created_at">Date (ancien)</option>
                   </select>
+
+                  <div class="vr h-100 py-2"></div>
+
+                  <div class="btn-group view-toggler" role="group">
+                    <button type="button" class="btn btn-soft-secondary py-1 px-2 active" id="btn-grid-view" title="Vue Grille">
+                      <i class="ri-grid-fill fs-5"></i>
+                    </button>
+                    <button type="button" class="btn btn-soft-secondary py-1 px-2" id="btn-list-view" title="Vue Liste">
+                      <i class="ri-list-check fs-5"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -253,6 +292,11 @@
                     {% endif %}
                   </tbody>
                 </table>
+              </div>
+              
+              <!-- Grid View Container -->
+              <div id="gridView" class="row g-4 mt-3">
+                <!-- Cards will be injected here via JS -->
               </div>
             </div>
           </div>
@@ -425,6 +469,7 @@
       originalData = templateData;
       updateStatistics(originalData);
       populateSpecialtyFilter(originalData);
+      renderData(originalData); // Trigger initial render for Grid View
     }
 
     
@@ -476,43 +521,117 @@
       }
     });
 
-    // Function to render data to the table
+    // Function to render data to the table and grid
     function renderData(data) {
-      var row = "";
+      // 1. Render Table Rows
+      var tableRows = "";
+      // 2. Render Grid Cards
+      var gridCards = "";
+
       if (data.length === 0) {
-        row += "<tr><td colspan='7' class='text-center text-muted'>Aucun groupe trouvé</td></tr>";
+        tableRows += "<tr><td colspan='7' class='text-center text-muted'>Aucun groupe trouvé</td></tr>";
+        gridCards = '<div class="col-12"><div class="text-center py-5"><div class="avatar-lg mx-auto mb-4"><div class="avatar-title bg-light text-muted rounded-circle fs-1"><i class="ri-group-2-line"></i></div></div><h5 class="mb-2">Aucun groupe trouvé</h5><p class="text-muted mb-0">Essayez de modifier vos filtres</p></div></div>';
       } else {
         $.each(data, function(index, item) {
-          row += "<tr class='align-middle'>";
-          row += "<td><div class='fw-medium'>" + item.nom + "</div></td>";
-          row += "<td><div class='text-body'>" + item.start_date + "</div></td>";
-          row += "<td><div class='text-body'>" + item.end_date + "</div></td>";
-          row += "<td><div class='text-body'>" + item.specialite + "</div></td>";
-          row += "<td><div class='text-body'>" + item.annee_scolaire + "</div></td>";
+          // --- Table Row Rendering ---
+          tableRows += "<tr class='align-middle'>";
+          tableRows += "<td><div class='fw-medium'>" + item.nom + "</div></td>";
+          tableRows += "<td><div class='text-body'>" + item.start_date + "</div></td>";
+          tableRows += "<td><div class='text-body'>" + item.end_date + "</div></td>";
+          tableRows += "<td><div class='text-body'>" + item.specialite + "</div></td>";
+          tableRows += "<td><div class='text-body'>" + item.annee_scolaire + "</div></td>";
 
-          // Gestion du statut avec badges
-          if (item.etat.includes('Brouillon')) {
-            row += "<td><span class='badge bg-secondary bg-opacity-10 text-secondary px-2 py-1'>" + item.etat + "</span></td>";
-          } else if (item.etat.includes('En cours')) {
-            row += "<td><span class='badge bg-warning bg-opacity-10 text-warning px-2 py-1'>" + item.etat + "</span></td>";
-          } else if (item.etat.includes('Validé')) {
-            row += "<td><span class='badge bg-success bg-opacity-10 text-success px-2 py-1'>" + item.etat + "</span></td>";
-          } else if (item.etat.includes('Archivé')) {
-            row += "<td><span class='badge bg-dark bg-opacity-10 text-dark px-2 py-1'>" + item.etat + "</span></td>";
-          } else {
-            row += "<td><span class='badge bg-secondary bg-opacity-10 text-secondary px-2 py-1'>" + item.etat + "</span></td>";
+          // Gestion du statut avec badges (Helper var for both views)
+          let statusBadge = "";
+          let statusClass = "secondary";
+          // Check based on display text (Model choices conventions)
+          let etatText = item.etat.toLowerCase();
+          
+          if (etatText.includes('brouillon')) {
+             statusClass = "secondary";
+          } else if (etatText.includes('en cours') || etatText.includes('inscription')) {
+             statusClass = "warning";
+          } else if (etatText.includes('valider') || etatText.includes('validé')) {
+             statusClass = "success";
+          } else if (etatText.includes('cloture') || etatText.includes('clôturé') || etatText.includes('archivé')) {
+             statusClass = "danger"; // Changed to danger for closed/archived
           }
+          statusBadge = "<span class='badge bg-" + statusClass + " bg-opacity-10 text-" + statusClass + " px-2 py-1'>" + item.etat + "</span>";
+
+          tableRows += "<td>" + statusBadge + "</td>";
 
           // Action dropdown
-          var actions = '<div class="dropdown"><button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-fill align-middle"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/formations/groupe/details/' + item.id + '/"><i class="ri-eye-line me-2 align-middle"></i> Consulter</a><li><a class="dropdown-item remove-item-btn" href="javascript:void(0);"><i class="ri-delete-bin-line me-2 align-middle"></i> Supprimer</a></ul></div>';
-          row += "<td class='text-end'>" + actions + "</td>";
-          row += "</tr>";
+          var actions = '<div class="dropdown"><button class="btn btn-soft-secondary btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-fill align-middle"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/scolarite/groupes/details-groupe/' + item.id + '/"><i class="ri-eye-line me-2 align-middle"></i> Consulter</a><li><a class="dropdown-item remove-item-btn" href="javascript:void(0);" data-id="' + item.id + '" id="deleteConfirmation"><i class="ri-delete-bin-line me-2 align-middle"></i> Supprimer</a></ul></div>';
+          tableRows += "<td class='text-end'>" + actions + "</td>";
+          tableRows += "</tr>";
+
+          // --- Card Rendering ---
+          // --- Card Rendering (Status-Accent Style) ---
+          gridCards += '<div class="col-xxl-3 col-md-4 col-sm-6">';
+          gridCards += '  <div class="card group-card h-100 mb-0 border-top-' + statusClass + '">';
+          gridCards += '    <div class="card-body p-4 d-flex flex-column">';
+          
+          // Header: Name + Session Badge
+          gridCards += '      <div class="d-flex justify-content-between align-items-start mb-3">';
+          gridCards += '        <h5 class="fs-16 fw-bold mb-0 text-dark text-truncate pe-2" title="' + item.nom + '">' + item.nom + '</h5>';
+          gridCards += '        <span class="badge bg-light text-muted border">' + item.annee_scolaire + '</span>';
+          gridCards += '      </div>';
+          
+          // Body: Specialty
+          gridCards += '      <div class="mb-4 flex-grow-1">';
+          gridCards += '        <div class="d-flex align-items-center">';
+          gridCards += '           <i class="ri-book-mark-fill text-' + statusClass + ' fs-5 me-2 opacity-75"></i>';
+          gridCards += '           <span class="text-muted fw-medium text-truncate" title="' + item.specialite + '">' + item.specialite + '</span>';
+          gridCards += '        </div>';
+          gridCards += '      </div>';
+          
+          // Footer: Dates + Actions
+          gridCards += '      <div class="pt-3 border-top border-light mt-auto">';
+          gridCards += '        <div class="d-flex align-items-center justify-content-between text-muted small mb-3">';
+          gridCards += '           <span><i class="ri-calendar-line me-1"></i> ' + item.start_date + '</span>';
+          gridCards += '           <i class="ri-arrow-right-line opacity-50"></i>';
+          gridCards += '           <span><i class="ri-calendar-check-line me-1"></i> ' + item.end_date + '</span>';
+          gridCards += '        </div>';
+          
+          gridCards += '        <div class="d-flex gap-2">';
+          gridCards += '            <a href="/scolarite/groupes/details-groupe/' + item.id + '/" class="btn btn-soft-primary w-100 btn-sm fw-medium"><i class="ri-eye-line me-1"></i> Détails</a>';
+          gridCards += '            <button type="button" class="btn btn-soft-danger btn-sm px-3" id="deleteConfirmation" data-id="' + item.id + '"><i class="ri-delete-bin-line"></i></button>';
+          gridCards += '        </div>';
+          gridCards += '      </div>';
+          
+          gridCards += '    </div>'; // end card-body
+          gridCards += '  </div>'; // end card
+          gridCards += '</div>'; // end col
         });
       }
 
-      $("#listeItem").html(row);
+      $("#listeItem").html(tableRows);
+      $("#gridView").html(gridCards); // Update grid container
       updateStatistics(data);
     }
+
+    // Toggle View Logic
+    function setView(viewType) {
+        if (viewType === 'grid') {
+            $('#gridView').removeClass('d-none');
+            $('.table-responsive').addClass('d-none');
+            $('#btn-grid-view').addClass('active');
+            $('#btn-list-view').removeClass('active');
+        } else {
+            $('#gridView').addClass('d-none');
+            $('.table-responsive').removeClass('d-none');
+            $('#btn-grid-view').removeClass('active');
+            $('#btn-list-view').addClass('active');
+        }
+    }
+
+    // Initialize Default View (Grid)
+    setView('grid');
+
+    // Event Listeners for Toggles
+    $('#btn-grid-view').on('click', function() { setView('grid'); });
+    $('#btn-list-view').on('click', function() { setView('list'); });
+
     
     // Client-side search functionality
     $(document).on('input', '#table-filter', function() {
