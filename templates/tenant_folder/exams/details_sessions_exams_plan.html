@@ -1371,8 +1371,9 @@
         $(document).on('click','.result-btn', function(){
             var examPlanId = $(this).data('plan-id');
 
-            // Supprimer l'ancien modal
-            $('#fillNotesModal').remove();
+            // Supprimer tous les anciens modals liés pour éviter les doublons et les problèmes de z-index
+            $('#fillNotesModal, #confirmValidateModal, #confirmSaveInvalidModal, #confirmValidateInvalidModal').remove();
+            $('.modal-backdrop').remove(); // Nettoyage de sécurité
 
             $.get(
                 "{% url 't_exam:GeneratePvModal' pk=0 %}".replace('0', examPlanId),
@@ -1382,10 +1383,13 @@
 
                     var $modal = $('#fillNotesModal');
 
-                    // Recharger APRÈS fermeture du modal
+                    // Recharger APRÈS fermeture du modal et nettoyer TOUS les modals
                     $modal.on('hidden.bs.modal', function () {
                         loadExamPlanification();
-                        $(this).remove(); // nettoyage propre
+                        // Supprimer le modal principal ET tous les modals de confirmation enfants/frères
+                        $(this).remove(); 
+                        $('#confirmValidateModal, #confirmSaveInvalidModal, #confirmValidateInvalidModal').remove();
+                        $('.modal-backdrop').remove(); // Supprimer le fond gris s'il reste bloqué
                     });
 
                     // Afficher le modal
