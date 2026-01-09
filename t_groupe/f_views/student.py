@@ -163,36 +163,6 @@ class generate_student_pdf(LoginRequiredMixin, View):
 
     def get(self, request, pk, template_slug=None):
         # Récupération de l'étudiant et de sa fiche
-        student = get_object_or_404(Prospets, pk=pk)
-        fiche = get_object_or_404(FicheDeVoeux, prospect=student)
-        logo = fiche.specialite.formation.entite_legal.entete_logo.url if fiche.specialite.formation.entite_legal.entete_logo else ''
-
-        specialite = fiche.specialite.label
-        formation = fiche.specialite.label
-        annee_academique = fiche.promo.annee_academique
-
-        echeancier_qs = DuePaiements.objects.filter(client=student).order_by('date_echeance')
-    
-        echeancier = []
-
-        for e in echeancier_qs:
-            label = e.label
-
-            if label == "Frais d'inscription":
-                label = f"{label} (Non Remboursable)"
-
-            echeancier.append({
-                'label': label,
-                'montant_due': float(e.montant_due) if e.montant_due is not None else 0.0,
-                'date_echeance': e.date_echeance.isoformat() if e.date_echeance else ''
-            })
-
-        formation = FicheDeVoeux.objects.get(prospect = student)
-        documents_qs = DossierInscription.objects.filter(formation  = formation.id)
-        documents = []
-        for i in documents_qs:
-            documents.append({'label' : i.label})
-
         # Sélection du template
         if template_slug:
             template_obj = get_object_or_404(DocumentTemplate, slug=template_slug, is_active=True)
@@ -204,23 +174,8 @@ class generate_student_pdf(LoginRequiredMixin, View):
                 return redirect('school:student-detail', pk=pk)
 
         # Préparer les données de contexte
-        context_data = {
-            'current_date': timezone.now().date().isoformat(),
-            'pk': student.pk,
-            'nom': student.nom,
-            'prenom': student.prenom,
-            'date_naissance': student.date_naissance.isoformat() if student.date_naissance else None,
-            'lieu_naissance': student.lieu_naissance,
-            'email': student.email or '',
-            'telephone': student.telephone or '',
-            'adresse': student.adresse or '',
-            'logo': logo,
-            'specialite': specialite,
-            'annee_academique': annee_academique,
-            'echeancier': echeancier,
-            'documents' : documents,
-            'formation' : formation.specialite.formation.nom,
-        }
+        from ..utils import get_student_context
+        context_data = get_student_context(pk)
 
         # Rendu du template
         try:

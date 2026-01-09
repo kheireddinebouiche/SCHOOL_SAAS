@@ -106,6 +106,7 @@ def ApiGetGroupeList(request):
 def detailsGroupe(request, pk):
     from t_tresorerie.models import EcheancierPaiementLine,EcheancierPaiement
     from django.core.serializers.json import DjangoJSONEncoder
+    from pdf_editor.models import DocumentTemplate
     import json
 
     groupe = Groupe.objects.get(pk=pk)
@@ -131,6 +132,7 @@ def detailsGroupe(request, pk):
         "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id),
         "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite.formation.partenaire.logo else "",
         "documents" : documents,
+        "active_templates": DocumentTemplate.objects.filter(is_active=True), # Filtrer par type si nécessaire, ex: template_type='student_info'
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 

@@ -3,6 +3,7 @@ from django.urls import path
 from .views import *
 from .f_views.affectations import *
 from .f_views.student import *
+from .f_views.groupe_print import GenerateBulkStudentPdf
 
 app_name="t_groupe"
 
@@ -42,4 +43,5 @@ urlpatterns = [
 
     
     path('students/<int:pk>/print/<slug:template_slug>/', generate_student_pdf.as_view(), name='generate_student_pdf'),
+    path('bulk-print/', GenerateBulkStudentPdf.as_view(), name='generate_group_students_pdf'),
 ]

@@ -132,9 +132,8 @@
                                             <i class="ri-printer-line me-1"></i> Impression
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            {% for i in documents %}
-                                                <li><a class="dropdown-item" href="#" ><i class="ri-file-text-line me-2"></i> {{i.title}}</a></li>
-                                            {% endfor %}
+            
+                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#bulkPrintModal"><i class="ri-pages-line me-2"></i> Impression par lot (PDF Editor)</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -1176,7 +1175,178 @@
     </div>
 </div>
 
-<!-- Script for certificat selection functionality -->
+<!-- Modal for Bulk Print (PDF Editor) -->
+<div class="modal fade" id="bulkPrintModal" tabindex="-1" aria-labelledby="bulkPrintModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-printer-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="bulkPrintModalLabel">
+                            Impression groupée (PDF Editor)
+                        </h5>
+                        <p class="text-muted small mb-0">Sélectionnez les étudiants et le modèle à imprimer</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="bulkPrintForm" method="POST" action="{% url 't_groupe:generate_group_students_pdf' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="student_ids" id="bulkPrintStudentIds">
+                    
+                    <div class="mb-4">
+                        <label for="templateSelect" class="form-label fw-semibold">Modèle de document</label>
+                        <select class="form-select" id="templateSelect" name="template_slug" required>
+                            <option value="" selected disabled>Choisir un modèle...</option>
+                            {% for t in active_templates %}
+                                <option value="{{ t.slug }}">{{ t.title }} ({{ t.get_template_type_display }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-3" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-information-line text-info fs-5 me-3"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Sélection des étudiants</h6>
+                                <p class="mb-0">Cochez les étudiants pour lesquels générer le document.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search bar -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="ri-search-line"></i></span>
+                            <input type="text" class="form-control" id="bulkPrintStudentSearch" placeholder="Rechercher un étudiant...">
+                        </div>
+                    </div>
+                    
+                    <!-- Select all checkbox -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllBulkPrintStudents">
+                            <label class="form-check-label" for="selectAllBulkPrintStudents">Tout sélectionner</label>
+                        </div>
+                        <span class="text-muted"><span id="bulkPrintSelectedCount">0</span> sur {{students.count}} étudiants sélectionnés</span>
+                    </div>
+                    
+                    <!-- Students list -->
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="sticky-top bg-white top-0 shadow-sm">
+                                <tr>
+                                    <th>Nom & Prénom</th>
+                                    <th>Email</th>
+                                    <th>Sélectionner</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkPrintStudentsTableBody">
+                                {% for student_line in students %}
+                                <tr>
+                                    <td>{{student_line.student.nom}} {{student_line.student.prenom}}</td>
+                                    <td>{{student_line.student.email}}</td>
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" value="{{student_line.student.id}}" name="selectedBulkPrintStudents" id="bulk_print_student_{{student_line.student.id}}">
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">Aucun étudiant inscrit</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary px-4" id="generateBulkPrintBtn">Générer PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Bulk Print Logic within this scope
+        const selectAllCheckbox = document.getElementById('selectAllBulkPrintStudents');
+        const studentCheckboxes = document.getElementsByName('selectedBulkPrintStudents');
+        const selectedCountSpan = document.getElementById('bulkPrintSelectedCount');
+        const searchInput = document.getElementById('bulkPrintStudentSearch');
+        const generateBtn = document.getElementById('generateBulkPrintBtn');
+        const form = document.getElementById('bulkPrintForm');
+        const hiddenInputIds = document.getElementById('bulkPrintStudentIds');
+        const templateSelect = document.getElementById('templateSelect');
+
+        function updateCount() {
+            const count = Array.from(studentCheckboxes).filter(cb => cb.checked).length;
+            selectedCountSpan.textContent = count;
+        }
+
+        if(selectAllCheckbox){
+            selectAllCheckbox.addEventListener('change', function() {
+                Array.from(studentCheckboxes).forEach(cb => {
+                    // Only check visible rows if filtering is active (optional refinement, here we check all)
+                    cb.checked = this.checked;
+                });
+                updateCount();
+            });
+        }
+
+        if(searchInput){
+            searchInput.addEventListener('keyup', function() {
+                const value = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#bulkPrintStudentsTableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(value) ? '' : 'none';
+                });
+            });
+        }
+
+        if(studentCheckboxes){
+            studentCheckboxes.forEach(cb => {
+                 cb.addEventListener('change', function() {
+                     updateCount();
+                     if (!this.checked && selectAllCheckbox.checked) {
+                         selectAllCheckbox.checked = false;
+                     }
+                 });
+            });
+        }
+
+        if(generateBtn){
+            generateBtn.addEventListener('click', function() {
+                const selectedIds = Array.from(studentCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => parseInt(cb.value));
+
+                if (selectedIds.length === 0) {
+                    alert("Veuillez sélectionner au moins un étudiant.");
+                    return;
+                }
+                
+                if (!templateSelect.value) {
+                    alert("Veuillez sélectionner un modèle de document.");
+                    return;
+                }
+
+                hiddenInputIds.value = JSON.stringify(selectedIds);
+                form.submit();
+            });
+        }
+    });
+</script>
 <script>
     $(document).ready(function(){
         
