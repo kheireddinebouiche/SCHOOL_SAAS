@@ -207,12 +207,12 @@ def ApiStoreClientPaiement(request):
         update_due_paiement.montant_restant = montant_restant
         update_due_paiement.save()
 
-
-        OperationsBancaire.objects.create(
-            operation_type = "entree",
-            paiement = paiement,
-            montant = montant,
-            reference_bancaire = reference,
+        if modePaiement == "che" or modePaiement == "vir":
+            OperationsBancaire.objects.create(
+                operation_type = "entree",
+                paiement = paiement,
+                montant = montant,
+                reference_bancaire = reference,
         )
 
         return JsonResponse({"status" : "success"})

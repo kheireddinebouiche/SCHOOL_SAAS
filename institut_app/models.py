@@ -297,3 +297,11 @@ class UserModuleRole(models.Model):
             module_permission__module = self.module,
             module_permission__permission_type = permission_type
         ).exists()
+
+    def get_effective_permissions(self):
+        """
+        Returns the queryset of RolePermission specific to this assignment's module.
+        """
+        return self.role.permissions.filter(
+            module_permission__module=self.module
+        ).select_related('module_permission')

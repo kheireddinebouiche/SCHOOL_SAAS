@@ -90,8 +90,8 @@ def ApiDeleteTimeTable(request):
         
         obj = Timetable.objects.get(id = id)
 
-        if obj.is_validated:
-            return JsonResponse({"status":"error","message" : "L'emploie du temps ne peux pas être supprimer."})
+        # if obj.is_validated:
+        #     return JsonResponse({"status":"error","message" : "L'emploie du temps ne peux pas être supprimer."})
         
         obj.delete()
         messages.success(request, "L'emploie du temps à été supprimer avec succès")
@@ -341,16 +341,17 @@ from django.db.models import Q
 
 
 @transaction.atomic
-def CreateRegistre(groupe,semestre):
-    groupe_obj = Groupe.objects.get(id=groupe)
+def CreateRegistre(groupe_id,semestre):
+    groupe = Groupe.objects.get(id=groupe_id)
+
     registre, created = RegistrePresence.objects.update_or_create(
-        label= groupe_obj,
-        context="Génération automatique",
+        groupe=groupe,
+        semestre=semestre,
+        annee_academique=groupe.promotion.annee_academique,
         defaults={
-            'groupe_id': groupe,
-            'semestre': semestre,
-            'status' : "enc",
-            'annee_academique' : groupe_obj.promotion.annee_academique,
+            'label': str(groupe),
+            'context': "Génération automatique",
+            'status': "enc",
         }
     )
     return registre  # <-- retourne seulement l’objet, pas le tuple
@@ -361,13 +362,13 @@ def CreateRegisterLine(module, teacher, salle, registre, heure_debut, heure_fin,
     ligne, created = LigneRegistrePresence.objects.update_or_create(
         module_id=module,
         teacher_id=teacher,
+        registre_id= registre,
         room = salle,
         heure_debut = heure_debut,
         heure_fin = heure_fin,
         jour = jour,
         defaults={
             'type': "",
-            'registre_id': registre
         }
     )
     return ligne

@@ -10,9 +10,57 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.text import slugify
 from django.db import models
+from django.contrib import messages
 import json
 from .models import DocumentTemplate, DocumentGeneration
 from .forms import DocumentTemplateForm, DocumentTemplateBasicForm, DocumentGenerationForm
+from .utils import serialize_templates, process_template_import
+
+class TemplateExportView(LoginRequiredMixin, View):
+    """Exporte un ou plusieurs templates en JSON"""
+
+    def get(self, request, *args, **kwargs):
+        slug = kwargs.get('slug')
+        if slug:
+            queryset = DocumentTemplate.objects.filter(slug=slug)
+            filename = f"template_{slug}.json"
+        else:
+            # Export all active templates or filtered
+            queryset = DocumentTemplate.objects.all()
+            filename = "document_templates_export.json"
+
+        data = serialize_templates(queryset)
+        
+        response = HttpResponse(
+            json.dumps(data, indent=4, ensure_ascii=False),
+            content_type='application/json'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+class TemplateImportView(LoginRequiredMixin, View):
+    """Importe des templates depuis un fichier JSON"""
+
+    def get(self, request):
+        return render(request, 'documents/template_import.html')
+
+    def post(self, request):
+        if 'json_file' not in request.FILES:
+            messages.error(request, "Veuillez sélectionner un fichier.")
+            return redirect('pdf_editor:template-import')
+
+        json_file = request.FILES['json_file']
+        try:
+            data = json.load(json_file)
+            count_created, count_updated = process_template_import(data, request.user)
+            messages.success(request, f"Import réussi : {count_created} créés, {count_updated} mis à jour.")
+            return redirect('pdf_editor:template-list')
+        except json.JSONDecodeError:
+            messages.error(request, "Fichier JSON invalide.")
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'import : {str(e)}")
+            
+        return redirect('pdf_editor:template-import')
 
 
 class TemplateListView(LoginRequiredMixin, ListView):

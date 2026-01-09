@@ -6,6 +6,8 @@ app_name = 'pdf_editor'
 urlpatterns = [
     # Main list view
     path('', views.TemplateListView.as_view(), name='template-list'),
+    path('export/', views.TemplateExportView.as_view(), name='template-export-all'),
+    path('import/', views.TemplateImportView.as_view(), name='template-import'),
 
     # Template creation - two-step process
     path('create/', views.TemplateCreateBasicView.as_view(), name='template-create'),
@@ -20,5 +22,6 @@ urlpatterns = [
     # Template operations - These should come after document generation to avoid conflicts
     path('<slug:slug>/edit/', views.TemplateUpdateView.as_view(), name='template-update'),
     path('<slug:slug>/delete/', views.TemplateDeleteView.as_view(), name='template-delete'),
+    path('<slug:slug>/export-json/', views.TemplateExportView.as_view(), name='template-export-json'),
     path('<slug:slug>/', views.TemplateDetailView.as_view(), name='template-detail'),
 ]

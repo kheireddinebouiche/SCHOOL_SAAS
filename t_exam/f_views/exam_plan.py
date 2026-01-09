@@ -12,6 +12,28 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 
+from django.db.models import Q
+
+def check_exam_overlap(salle_id, date, heure_debut, heure_fin, exclude_id=None):
+    """
+    Vérifie si un examen existe déjà dans la même salle au même moment.
+    Retourne True s'il y a un chevauchement, False sinon.
+    """
+    if not salle_id or not date or not heure_debut or not heure_fin:
+        return False
+        
+    query = Q(
+        salle_id=salle_id,
+        date=date,
+    ) & (
+        Q(heure_debut__lt=heure_fin, heure_fin__gt=heure_debut)
+    )
+    
+    if exclude_id:
+        query &= ~Q(id=exclude_id)
+        
+    return ExamPlanification.objects.filter(query).exists()
+
 @login_required(login_url="institut_app:login")
 def ApiSavePlannedExam(request):
     if request.method == "POST":
@@ -90,6 +112,11 @@ def get_exam_planifications(request):
         'data' : data,
         'groupe_name' : groupe.groupe.nom,
         'groupe_id' : groupe.groupe.id,
+        'session_nom': groupe.session.label,
+        'date_debut': groupe.date_debut if groupe.date_debut else "-",
+        'date_fin': groupe.date_fin if groupe.date_fin else "-",
+        'type_session': groupe.session.get_type_session_display(),
+        'status_session': groupe.session.get_status_display(),
     }
 
     return JsonResponse({"status": "success", "planifications": context})
@@ -123,6 +150,12 @@ def ApiPlanExam(request):
                     return JsonResponse({"status":"error","message":"Veuillez sélectionner une salle pour le mode examen"})
         except Salle.DoesNotExist:
             return JsonResponse({"status":"error","message":"Salle non trouvée"})
+
+        # Check for overlaps
+        if salle:
+            if check_exam_overlap(salle.id, dateExamen, heureDebut, heureFin):
+                 return JsonResponse({"status":"error", "message": f"La salle {salle.nom} est déjà occupée pour ce créneau horaire."})
+
 
         try:
             exam_planification = ExamPlanification.objects.create(
@@ -1444,6 +1477,15 @@ def update_exam_plan(request):
             obj.salle_id = salle if salle else None
             obj.surveillant_id = surveillant if surveillant else None
             obj.comment = observations
+            
+            # Check for overlaps
+            if salle:
+                 # Ensure we exclude the current exam plan from the check
+                if check_exam_overlap(salle, date, heure_debut, heure_fin, exclude_id=obj.id):
+                    # Fetch salle name for better error message
+                    salle_obj = Salle.objects.get(id=salle)
+                    return JsonResponse({"status":"error", "message": f"La salle {salle_obj.nom} est déjà occupée pour ce créneau horaire."})
+
             obj.save()
 
             return JsonResponse({"status" : "success", "message": "success"})

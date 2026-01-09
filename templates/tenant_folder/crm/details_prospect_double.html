@@ -1204,12 +1204,6 @@
                                             <p>Veuillez sélectionner une formation pour afficher les spécialités liées</p>
                                         </div>
                                     </div>
-                                    <!-- Champ de sélection traditionnel pour la spécialité -->
-                                    <label class="form-label fw-medium mt-3" for="create_specialite_voeux">Sélectionner une spécialité</label>
-                                    <select id="create_specialite_voeux" class="form-select border-0 bg-light py-2" aria-label="Sélectionnez une spécialité">
-                                        <option value="0">Rechercher et sélectionner une spécialité</option>
-                                        <!-- Options à charger dynamiquement -->
-                                    </select>
                                 </div>
                                 
                                 <!-- Commentaires avec compteur de caractères -->
@@ -2097,11 +2091,11 @@
                 dataType: "JSON",
                 type : "GET",
                 success : function(data){
-                    var row = "<option value='0'>Sélectionnez une formation</option>";
+                    // var row = "<option value='0'>Sélectionnez une formation</option>";
                     var row1 = "<option value='0'>Sélectionnez une promotion/session </option>";
-                    $.each(data.formation, function(index, item){
-                        row += "<option value="+item.id+">"+item.nom+"</option>";
-                    });
+                    // $.each(data.formation, function(index, item){
+                    //     row += "<option value="+item.id+">"+item.nom+"</option>";
+                    // });
 
                     $.each(data.promo, function(index, item){
                         row1 += "<option value="+item.code+">"+item.code+'#'+item.session+' - '+item.begin_year+'/'+item.end_year+"</option>";
@@ -2109,18 +2103,17 @@
 
                     $('#promo_voeux').html(row1);
                     
-                    $('#create_formation_voeux').html(row);
-                    $('#formation_cursus').html(row);
+                    // $('#create_formation_voeux').html(row);
+                    // $('#formation_cursus').html(row);
 
                     $('#promo_voeux_create').html(row1);
-                    // Ajout pour la modale de configuration des formations supplémentaires
-                    $('#config_promo_supp').html(row1);
-                    $('#config_formation_supp').html(row);
-                    $('#promo_cursus').html(row1);
+                    // // Ajout pour la modale de configuration des formations supplémentaires
+                    // $('#config_promo_supp').html(row1);
+                    // $('#config_formation_supp').html(row);
+                    // $('#promo_cursus').html(row1);
                 }
             })
         }
-
 
         function loadDoubleDiplomation(){
             $.ajax({
@@ -2133,6 +2126,7 @@
                         option += "<option value="+p.id+">"+p.label+"</option>";
                     });
                     $('#formation_voeux').html(option);
+                    $('#create_formation_voeux').html(option);
                 }
             });
         }
@@ -2464,6 +2458,7 @@
         });
 
         $(document).on('click', '#createVoeuxBtn', function(){
+             loadDoubleDiplomation();
              loadFormations();
              $('#createVoeuxModal').modal('show');
         })
@@ -2489,7 +2484,7 @@
             var id_formation = $(this).val();
             if(id_formation != '0'){
                 $.ajax({
-                    url : "{% url 't_crm:ApiLoadSpecialite' %}",
+                    url : "{% url 't_crm:ApiLoadDoubleSpecialite' %}",
                     dataType: "JSON",
                     type : "GET",
                     data : {"id_formation" : id_formation},
@@ -2497,34 +2492,27 @@
                         var container = $('#create_specialite_voeux_container');
                         container.empty();
 
-                        if(data.length > 0){
-                            $.each(data, function(index, item){
-                                var card = `
-                                    <div class="specialite-card position-relative">
-                                        <div class="specialite-icon">
-                                            <i class="ri-stack-line"></i>
-                                        </div>
-                                        <h6 class="text-center">`+item.label+`</h6>
-                                    </div>
-                                `;
-                                container.append(card);
-                            });
-
-                            // Charger aussi les options dans le select
-                            var select = $('#create_specialite_voeux');
-                            select.empty();
-                            select.append('<option value="0">Rechercher et sélectionner une spécialité</option>');
-                            $.each(data, function(index, item){
-                                select.append('<option value="'+item.id+'">'+item.label+'</option>');
-                            });
-                        } else {
-                            container.append(`
-                                <div class="text-center text-muted py-4">
-                                    <i class="ri-stack-line fs-2 mb-2"></i>
-                                    <p>Aucune spécialité disponible pour cette formation</p>
+                        var card1 = `
+                            <div class="specialite-card position-relative">
+                                <div class="specialite-icon">
+                                    <i class="ri-stack-line"></i>
                                 </div>
-                            `);
-                        }
+                                <p class="text-muted text-center" style="font-size: 10px;">`+data.specialite1_formation+`</p>
+                                <h6 class="text-center">`+data.specialite1+`</h6>
+                            </div>
+                        `;
+
+                        var card2 = `
+                            <div class="specialite-card position-relative">
+                                <div class="specialite-icon">
+                                    <i class="ri-stack-line"></i>
+                                </div>
+                                <p class="text-muted text-center" style="font-size: 10px;">`+data.specialite2_formation+`</p>
+                                <h6 class="text-center">`+data.specialite2+`</h6>
+                            </div>
+                        `;
+                        container.append(card1+card2);
+  
                     }
                 });
             } else {
@@ -2650,12 +2638,12 @@
                 Enregistrement...
             `);
 
-            var specialite = $('#create_specialite_voeux').val();
+            var specialite = $('#create_formation_voeux').val();
             var commentaires = $('#create_commentaires_voeux').val();
             var promo = $('#promo_voeux_create').val();
 
             $.ajax({
-                url : "{% url 't_crm:ApiCreateVoeux' %}",
+                url : "{% url 't_crm:ApiCreateVoeuxDouble' %}",
                 dataType: "JSON",
                 type : "POST",
                 data : {

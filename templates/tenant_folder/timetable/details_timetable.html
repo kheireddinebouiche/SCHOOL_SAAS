@@ -7,7 +7,7 @@
 <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
 <!-- Load jsPDF library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 
 <div class="main-content">
   <div class="page-content bg-light">
@@ -357,191 +357,326 @@
   </div>
 </div>
 
-<!-- Modal de succès après la génération des registres de présences -->
-<div class="modal fade" id="successAttendanceModal" tabindex="-1" aria-labelledby="successAttendanceLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-4 shadow-lg border-0">
-      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
-        <div class="d-flex align-items-center">
-          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-            <i class="ri-checkbox-circle-line text-success fs-4"></i>
-          </div>
-          <div>
-            <h5 class="modal-title fw-semibold text-success mb-1" id="successAttendanceLabel">
-              Registres de présences créés avec succès
-            </h5>
-            <p class="text-muted small mb-0">Confirmation de la création des documents</p>
-          </div>
-        </div>
+<!-- Modal de prévisualisation avant impression -->
+<div class="modal fade" id="printPreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title"><i class="ri-printer-line me-2"></i>Aperçu avant impression</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4">
-        <div class="text-center mb-4">
-          <div class="avatar-lg mx-auto mb-3">
-            <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
-              <i class="ri-checkbox-circle-line"></i>
+      <div class="modal-body bg-light">
+        <div class="d-flex justify-content-center">
+             <!-- Container for the preview, mimicking A4 proportions -->
+            <div id="printPreviewContainer" class="shadow-sm bg-white" style="width: 297mm; min-height: 210mm; padding: 10mm; transform: scale(0.65); transform-origin: top center;">
+                <!-- Content will be injected here -->
             </div>
-          </div>
-          <h5 class="mb-3">Opération réussie !</h5>
-          <p class="text-muted mb-4">
-            Les registres de présences ont été créés avec succès pour l'ensemble des séances prévues dans cet emploi du temps.
-          </p>
-          <div class="alert alert-success">
-            <i class="ri-check-double-line fs-4 me-2"></i>
-            <strong>Succès :</strong> {{ sessions|length }} registres de présence ont été générés pour autant de séances.
-          </div>
         </div>
       </div>
-      <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-center">
-        <button type="button" class="btn btn-success px-4 py-2" data-bs-dismiss="modal">
-          <i class="ri-check-line me-2"></i>Fermer
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-info" id="confirmPrintBtn">
+            <i class="ri-printer-line me-2"></i>Imprimer
         </button>
       </div>
     </div>
   </div>
 </div>
 
-
 <script>
-  // Fonction pour imprimer l'emploi du temps en utilisant jsPDF avec html2canvas
-  function printTimetableWithJsPdf() {
-    // Charger html2canvas
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    script.onload = function() {
-      const { jsPDF } = window.jspdf;
+  // Variable globale pour stocker le titre (pour le nom de fichier)
+  let currentTimetableTitle = "Emploi_du_Temps";
 
-      // Créer une version simplifiée de l'emploi du temps pour l'impression
+  // Fonction pour générer le contenu HTML de l'emploi du temps
+  function generateTimetableHtml() {
       const timetableSection = document.querySelector('.table-responsive');
       if (!timetableSection) {
         console.error('Tableau de l\'emploi du temps non trouvé');
-        return;
+        return null;
       }
 
-      // Créer un conteneur temporaire pour le contenu à imprimer
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '290mm'; // A4 width - small margin
-      tempContainer.style.padding = '5mm';
-      tempContainer.style.background = 'white';
-      tempContainer.style.color = 'black';
-      tempContainer.style.fontFamily = 'Arial, sans-serif';
-      tempContainer.style.fontSize = '8px';
+      // On récupère les données de base
+      const title = "{{ timetable.label|default:'Emploi du Temps'|escapejs }}";
+      currentTimetableTitle = title.replace(/\s+/g, '_');
+      
+      const group = "{{ timetable.groupe.nom|default:'N/A'|escapejs }}";
+      const semester = "{{ timetable.get_semestre_display|default:'N/A'|escapejs }}";
+      const type = "{% if timetable.extraordinary_timetable %}Extraordinaire{% else %}Ordinaire{% endif %}";
+      const date = "{{ timetable.date_modification|date:'d/m/Y' }}";
 
-      // Créer le contenu du PDF avec moins de décoration
-      const content = document.createElement('div');
-      content.innerHTML = `
-        <h1 style="text-align: center; font-size: 16px; margin: 0 0 8px 0; font-weight: bold;">{{ timetable.label|default:'Emploi du Temps' }}</h1>
-        <div style="font-size: 10px; margin-bottom: 8px; line-height: 1.4;">
-          <div><strong>Groupe:</strong> {{ timetable.groupe.nom|default:'N/A' }}</div>
-          <div><strong>Semestre:</strong> {{ timetable.get_semestre_display|default:'N/A' }}</div>
-          <div><strong>Type:</strong> {% if timetable.extraordinary_timetable %}Extraordinaire{% else %}Ordinaire{% endif %}</div>
-          <div><strong>Date de modification:</strong> {{ timetable.date_modification|date:'d/m/Y' }}</div>
+      return `
+        <style>
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .pdf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #0ea5e9; /* Sky-500 equivalent */
+            padding-bottom: 15px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+          .pdf-brand h1 {
+            color: #0f172a; /* Slate-900 */
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .pdf-brand p {
+            color: #64748b; /* Slate-500 */
+            font-size: 10px;
+            margin: 2px 0 0;
+            font-weight: 500;
+          }
+          .pdf-meta {
+            text-align: right;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+          .pdf-meta-item {
+            display: inline-block;
+            margin-left: 15px;
+            font-size: 10px;
+            color: #475569;
+          }
+          .pdf-meta-item strong {
+            display: block;
+            color: #0ea5e9;
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px;
+          }
+          
+          /* Table Styles */
+          .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            background: #fff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+          .pdf-table th {
+            background-color: #f1f5f9; /* Slate-100 */
+            color: #475569; /* Slate-600 */
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 8px 4px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 8px;
+            letter-spacing: 0.5px;
+          }
+          .pdf-table td {
+            border: 1px solid #e2e8f0; /* Slate-200 */
+            padding: 4px;
+            vertical-align: top;
+            height: 60px; /* Fixed styling height */
+          }
+          
+          /* Day Column */
+          .pdf-day-cell {
+            background-color: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle !important;
+            width: 80px;
+            font-size: 10px;
+            text-transform: capitalize;
+          }
+
+          /* Course Cards in PDF */
+          .pdf-course {
+            background-color: #f0f9ff; /* Sky-50 */
+            border-left: 3px solid #0ea5e9;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin-bottom: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+          .pdf-course-title {
+            color: #0369a1; /* Sky-700 */
+            font-weight: 700;
+            font-size: 9px;
+            display: block;
+            margin-bottom: 2px;
+            line-height: 1.2;
+          }
+          .pdf-course-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            color: #525252;
+            font-size: 8px;
+            margin-top: 2px;
+          }
+          .pdf-course-icon {
+            display: inline-flex;
+            align-items: center;
+            opacity: 0.8;
+          }
+          .icon-user::before { content: "👤"; margin-right: 2px; font-size: 7px; }
+          .icon-map::before { content: "📍"; margin-right: 2px; font-size: 7px; }
+
+          .pdf-footer {
+            margin-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            color: #94a3b8;
+            font-size: 8px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+        </style>
+
+        <!-- Header -->
+        <div class="pdf-header">
+          <div class="pdf-brand">
+            <h1>${title}</h1>
+            <p>PLANNING ACADÉMIQUE</p>
+          </div>
+          <div class="pdf-meta">
+            <div class="pdf-meta-item">
+              <strong>Groupe</strong> ${group}
+            </div>
+            <div class="pdf-meta-item">
+              <strong>Semestre</strong> ${semester}
+            </div>
+            <div class="pdf-meta-item">
+              <strong>Type</strong> ${type}
+            </div>
+            <div class="pdf-meta-item">
+              <strong>Édité le</strong> ${date}
+            </div>
+          </div>
         </div>
-        <div style="border: 1px solid #333; border-collapse: collapse; width: 100%;">
-          ${timetableSection.innerHTML}
+
+        <!-- Timetable Content -->
+        <table class="pdf-table">
+            <thead>
+                <tr>
+                    <th>Jours</th>
+                    {% for time_slot in time_slots %}
+                    <th>{{ time_slot }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in unique_days %}
+                <tr>
+                    <td class="pdf-day-cell">{{ day|title }}</td>
+                    {% for time_slot in time_slots %}
+                    <td>
+                         {% for session in sessions %}
+                            {% if session.jour|lower == day %}
+                                {% with session_start=session.heure_debut|time:"H:i" %}
+                                    {% if session_start == time_slot|slice:":5" %}
+                                        <div class="pdf-course">
+                                            <span class="pdf-course-title">{{ session.cours.label|escapejs }}</span>
+                                            <div class="pdf-course-info">
+                                                <span class="pdf-course-icon icon-user">
+                                                    {% if session.formateur %}{{ session.formateur.nom|slice:":1" }}.{{ session.formateur.prenom }}{% else %}N/A{% endif %}
+                                                </span>
+                                                <span class="pdf-course-icon icon-map">{{ session.salle.nom|default:'?' }}</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Footer -->
+        <div class="pdf-footer">
+          <span>Généré automatiquement par School SaaS</span>
+          <span>Page 1/1</span>
         </div>
       `;
-
-      // Simplifier le style du tableau pour une meilleure impression
-      const table = content.querySelector('table');
-      if (table) {
-        table.style.borderCollapse = 'collapse';
-        table.style.width = '100%';
-        table.style.fontSize = '7px';
-
-        // Améliorer les styles pour l'impression
-        const allCells = table.querySelectorAll('th, td');
-        allCells.forEach(cell => {
-          cell.style.border = '1px solid #333';
-          cell.style.padding = '2px';
-          cell.style.textAlign = 'center';
-          cell.style.verticalAlign = 'middle';
-        });
-
-        // Styles spécifiques pour les en-têtes
-        const headers = table.querySelectorAll('th');
-        headers.forEach(header => {
-          header.style.backgroundColor = '#f0f0f0';
-          header.style.fontWeight = 'bold';
-        });
-
-        // Ajuster la hauteur des cellules pour l'impression
-        const dataCells = table.querySelectorAll('td');
-        dataCells.forEach(cell => {
-          const courseItems = cell.querySelectorAll('.course-item');
-          if (courseItems.length > 0) {
-            // Simplifier l'affichage des cours pour l'impression
-            let simplifiedContent = '';
-            courseItems.forEach(item => {
-              const courseName = item.querySelector('strong');
-              const teacherDiv = item.querySelector('.small.mt-1:first-child');
-              const roomDiv = item.querySelector('.small.mt-1:last-child');
-
-              const courseText = courseName ? courseName.textContent.trim() : '';
-              const teacherText = teacherDiv ? teacherDiv.textContent.replace(/[\s\n\r]+/g, ' ').trim() : '';
-              const roomText = roomDiv ? roomDiv.textContent.replace(/[\s\n\r]+/g, ' ').trim() : '';
-
-              if (courseText || teacherText || roomText) {
-                simplifiedContent += (simplifiedContent ? '\\n' : '') +
-                  (courseText ? courseText + '\\n' : '') +
-                  (teacherText ? teacherText + '\\n' : '') +
-                  (roomText ? roomText : '');
-              }
-            });
-
-            cell.innerHTML = simplifiedContent.replace(/\n/g, '<br>');
-            cell.style.fontSize = '6px';
-            cell.style.lineHeight = '1.1';
-          }
-        });
-      }
-
-      tempContainer.appendChild(content);
-      document.body.appendChild(tempContainer);
-
-      // Capturer le contenu avec html2canvas
-      html2canvas(tempContainer, {
-        scale: 1.5, // Réduire l'échelle pour une taille plus gérable
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        scrollX: 0,
-        scrollY: 0,
-        logging: false
-      }).then(function(canvas) {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const imgWidth = 285; // A4 landscape width - margins
-        const pageHeight = 190; // Hauteur utile avec marges
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-
-        // Gérer la pagination si le tableau est trop long
-        let heightLeft = imgHeight;
-        let position = 10;
-
-        pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        // Supprimer le conteneur temporaire
-        document.body.removeChild(tempContainer);
-
-        // Sauvegarder le PDF
-        pdf.save('emploi_du_temps_{{ timetable.id }}.pdf');
-      });
-    };
-    document.head.appendChild(script);
   }
 
-  // Ajouter une fonctionnalité pour imprimer l'emploi du temps
+  // Fonction appelée par le bouton "Imprimer" principal
+  function openPrintPreview() {
+    const content = generateTimetableHtml();
+    if (!content) return;
+
+    const previewContainer = document.getElementById('printPreviewContainer');
+    previewContainer.innerHTML = content;
+
+    // Ouvrir la modal
+    const modal = new bootstrap.Modal(document.getElementById('printPreviewModal'));
+    modal.show();
+  }
+
+  // Fonction appelée pour imprimer via le navigateur (native print)
+  function printPdfFromPreview() {
+    const container = document.getElementById('printPreviewContainer');
+    const content = container.innerHTML;
+
+    // Créer une iframe invisible
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    // Écrire le contenu dans l'iframe
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Emploi_Du_Temps_${currentTimetableTitle}</title>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Lancer l'impression une fois chargé
+    iframe.contentWindow.focus();
+    setTimeout(() => {
+        iframe.contentWindow.print();
+        // Nettoyage après impression (délai pour laisser le temps au dialogue)
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
+    }, 500);
+  }
+
+  // Event Listeners
   document.addEventListener('DOMContentLoaded', function() {
-    // Gestion du bouton d'impression
+    // Bouton principal pour ouvrir la preview
     document.getElementById('printTimetableBtn').addEventListener('click', function() {
-      printTimetableWithJsPdf();
+      openPrintPreview();
     });
 
-    // Gestion du bouton d'export
+    // Bouton de confirmation dans la modal
+    document.getElementById('confirmPrintBtn').addEventListener('click', function() {
+      printPdfFromPreview();
+    });
+
+    // Gestion du bouton d'export existant (inchangé)
     const exportBtn = document.querySelectorAll('.btn.btn-success.btn-label[type="button"]')[0];
     if(exportBtn) {
       exportBtn.addEventListener('click', function() {
@@ -549,7 +684,7 @@
       });
     }
 
-    // Gestion du bouton de génération des registres de présences
+    // Gestion du bouton de génération des registres de présences (inchangé)
     $(document).on('click','#generateAttendanceBtn', function() {
 
       var btn = $(this); 

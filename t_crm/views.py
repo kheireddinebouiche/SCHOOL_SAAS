@@ -640,3 +640,23 @@ def ApiCheckIfVoeuxDoubleExiste(request):
         return JsonResponse({'status' : 'error'})
 
 
+@login_required(login_url="institut_app:login")
+def ApiCreateVoeuxDouble(request):
+    if request.method == 'POST':
+        specialite = request.POST.get('specialite')
+        id_prospect = request.POST.get('id_prospect')
+        promo = request.POST.get('promo')
+        comment = request.POST.get('comment')
+
+        if specialite and id_prospect and promo :
+            fiche_voeux = FicheVoeuxDouble.objects.create(
+                prospect = Prospets.objects.get(id=id_prospect),
+                specialite = DoubleDiplomation.objects.get(id=specialite),
+                promo = Promos.objects.get(code=promo),
+                commentaire = comment,
+            )
+            return JsonResponse({'status' : 'success','message':'Le voeu a été créé avec succès.'})
+        else:
+            return JsonResponse({'status' : 'error','message':'Veuillez remplir tous les champs.'})
+    else:
+        return JsonResponse({'status' : 'error'})

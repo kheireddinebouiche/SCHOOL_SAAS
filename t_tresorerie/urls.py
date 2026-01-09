@@ -216,6 +216,8 @@ urlpatterns = [
     path('ApiUpdateAutrePaiement', ApiUpdateAutrePaiement, name="ApiUpdateAutrePaiement"),
     path('ApiDeleteAutrePaiement', ApiDeleteAutrePaiement, name="ApiDeleteAutrePaiement"),
     path('api_liste_clients', api_liste_clients, name="api_liste_clients"),
+    path('CreateClientFromTresorerie', CreateClientFromTresorerie, name="CreateClientFromTresorerie"),
+
 
 
     path('penalite/liste/',PageConfPenalite,name="PageConfPenalite"),
@@ -225,6 +227,8 @@ urlpatterns = [
     path('api/liste-due-paiements/', ApiListeDuePenalite, name='ApiListeDuePenalite'),
     path('api/delete-due-paiement/', ApiDeleteDuePenalite, name='ApiDeleteDuePenalite'),
     path('api/pay-due-paiement/', ApiPayDuePenalite, name='ApiPayDuePenalite'),
+    path('penalite/print-receipt/<int:paiement_id>/', PrintReceipt, name='PrintReceipt'),
+
 
 
 

@@ -73,6 +73,38 @@
   .expand-icon {
     cursor: pointer;
     margin-right: 0.5rem;
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    color: #6c757d;
+    transition: transform 0.2s;
+  }
+  .expand-icon:hover {
+    color: #0d6efd;
+  }
+  
+  .tree-branch-line {
+    position: absolute;
+    left: 0;
+    top: -50%;
+    height: 100%;
+    width: 1px;
+    background-color: #e9ecef;
+    z-index: 0;
+  }
+  .tree-branch-connector {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 15px;
+    height: 1px;
+    background-color: #e9ecef;
+    z-index: 0;
+  }
+  
+  /* Highlight row on hover to track hierarchy */
+  tr:hover td {
+    background-color: #f8f9fa;
   }
 </style>
 
@@ -268,21 +300,48 @@ $(document).ready(function() {
         }
 
         // Flatten the hierarchy for table display
-        function flattenCategories(items, level = 0) {
+        // Flatten the hierarchy for table display with visual tree lines
+        function flattenCategories(items, level = 0, parentIsLast = []) {
             let rows = [];
-            items.forEach(item => {
+            items.forEach((item, index) => {
+                const isLast = index === items.length - 1;
+                const hasChildren = item.children && item.children.length > 0;
                 const date = item.created_at ? new Date(item.created_at).toLocaleDateString('fr-FR') : '-';
-                const indentClass = level > 0 ? 'hierarchy-indent' : '';
                 
+                // Build indentation and lines
+                let indentContent = '';
+                
+                // Vertical lines for ancestor levels to connect their siblings
+                for(let i = 0; i < level; i++) {
+                     if (!parentIsLast[i]) { 
+                         // Draw vertical line for ongoing parent's level
+                         indentContent += `<span style="position:absolute; left:${i*24 + 12}px; top:0; bottom:0; width:1px; background-color:#dee2e6;"></span>`;
+                     }
+                }
+                
+                // Connector for current level (connection to parent)
+                if (level > 0) {
+                     // Horizontal line to the node
+                     const hLine = `<span style="position:absolute; left:${(level-1)*24 + 12}px; top:50%; width:12px; height:1px; background-color:#dee2e6;"></span>`;
+                     // Vertical line connection (Full height if not last, Half height if last)
+                     const vLineHeight = isLast ? '50%' : '100%';
+                     const vLine = `<span style="position:absolute; left:${(level-1)*24 + 12}px; top:0; height:${vLineHeight}; width:1px; background-color:#dee2e6;"></span>`;
+                     indentContent += hLine + vLine;
+                }
+
+                // Padding Calculation (Indent + Space for icon)
+                const paddingLeft = level * 24 + 10;
+
                 rows.push(`
                     <tr data-category-id="${item.id}" data-level="${level}">
-                        <td class="${indentClass}">
-                            ${item.children && item.children.length > 0 ? 
-                                `<span class="expand-icon"><i class="fas fa-chevron-right"></i></span>` : 
-                                `<span style="width: 20px; display: inline-block;"></span>`}
-                            ${item.name}
+                        <td style="padding-left: ${paddingLeft + 25}px; position: relative;">
+                            ${indentContent}
+                            ${hasChildren ? 
+                                `<span class="expand-icon"><i class="fas fa-chevron-down"></i></span>` : 
+                                `<span style="display:inline-block; width: 20px; text-align:center; color:#adb5bd; margin-right: 0.5rem;">&bull;</span>`}
+                            <span class="fw-medium">${item.name}</span>
                         </td>
-                        <td>${item.parent_id ? 'Sous-catégorie' : 'Catégorie racine'}</td>
+                        <td>${item.parent_name || '-'}</td>
                         <td><span class="badge bg-primary">${item.children_count}</span></td>
                         <td><span class="badge bg-success">Active</span></td>
                         <td>${date}</td>
@@ -312,8 +371,8 @@ $(document).ready(function() {
                     </tr>
                 `);
 
-                if (item.children && item.children.length > 0) {
-                    rows = rows.concat(flattenCategories(item.children, level + 1));
+                if (hasChildren) {
+                    rows = rows.concat(flattenCategories(item.children, level + 1, [...parentIsLast, isLast]));
                 }
             });
             return rows;
@@ -321,7 +380,54 @@ $(document).ready(function() {
 
         const rows = flattenCategories(categories);
         tbody.html(rows.join(''));
+        
+        // Unbind previous click events
+        $(document).off('click', '.expand-icon');
+
+        // Bind Click Event for Toggle
+        $(document).on('click', '.expand-icon', function(e) {
+             e.stopPropagation();
+             const tr = $(this).closest('tr');
+             const currentLevel = parseInt(tr.data('level'));
+             const icon = $(this).find('i');
+             
+             // Toggle Icon state
+             const isExpanded = icon.hasClass('fa-chevron-down');
+             
+             if(isExpanded) {
+                 icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+             } else {
+                 icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+             }
+             
+             // Toggle Descendants
+             let nextTr = tr.next('tr');
+             while(nextTr.length > 0) {
+                 const nextLevel = parseInt(nextTr.data('level'));
+                 if(nextLevel <= currentLevel) break; 
+                 
+                 // Logic: If expanding, only show if parent is expanded? 
+                 // Simple approach: Toggle all descendants based on Root Toggle.
+                 // Ideally, we should check hierarchy, but for "Quick View" simply toggling visibility of the block is accepted behavior here.
+                 // To make it behave like a tree, we'd need to check "hidden-by-parent" state.
+                 // We will simply toggle ALL descendants. 
+                 if(isExpanded) {
+                     nextTr.hide();
+                 } else {
+                     nextTr.show();
+                     // Reset icons to expanded if we show them? No, keep state.
+                     // But if a child was collapsed, and we show it, its children appear too (because we show ALL descendants).
+                     // This "Reset All" strategy is simple and robust against "stranded hidden rows".
+                     if(nextTr.find('.expand-icon i').hasClass('fa-chevron-right')) {
+                          nextTr.find('.expand-icon i').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                     }
+                 }
+                 nextTr = nextTr.next('tr');
+             }
+        });
     }
+
+
 
     // Load all categories for dropdown
     function loadParentCategories() {

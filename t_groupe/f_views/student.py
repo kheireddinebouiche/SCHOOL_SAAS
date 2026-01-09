@@ -39,7 +39,7 @@ def StudentDetails(request, pk):
         entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
         echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
         echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
-
+        rachat_due_paiement = DuePaiements.objects.filter(client = student, type='rach')
         documents_available = current_groupe.groupe.specialite.formation.documents.all()
 
         try:
@@ -89,6 +89,7 @@ def StudentDetails(request, pk):
             'type_formation' : current_groupe.groupe.specialite.formation.type_formation,
             'logo_partenaire' : logo_partenanire.logo.url if logo_partenanire.logo else "",
             'documents_available':documents_available,
+            'rachat_due_paiement' : rachat_due_paiement,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 

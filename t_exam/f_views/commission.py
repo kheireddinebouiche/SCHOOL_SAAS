@@ -1,3 +1,4 @@
+from t_timetable.models import Timetable
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from ..models import *
@@ -164,10 +165,12 @@ def ApiGetGroupeDetails(request):
 
         if not groupe_id:
             return JsonResponse({"status": "error", "message": "groupe_id manquant"})
-
+        semester  = Timetable.objects.filter(groupe_id=groupe_id, status="enc").last()
+        if not semester:
+            return JsonResponse({"status": "error", "message": "Le semestre n'est pas encours"})
         historiques = (
             HistoriqueAbsence.objects
-            .filter(ligne_presence__registre__groupe_id=groupe_id, etat=False)
+            .filter(ligne_presence__registre__groupe_id=groupe_id, ligne_presence__registre__semestre=semester.semestre, etat=False)
             .select_related(
                 'etudiant',
                 'ligne_presence__module',
@@ -211,6 +214,11 @@ def ApiGetCommissionResults(request):
                    .select_related('etudiants')
                    .prefetch_related('modules'))
         
+        try:
+             commission = Commissions.objects.get(id=id_commission)
+        except Commissions.DoesNotExist:
+             return JsonResponse({"status": "error", "message": "Commission introuvable"})
+        
         data = []
         for r in results:
             data.append({
@@ -223,6 +231,7 @@ def ApiGetCommissionResults(request):
                 "result": r.get_result_display(),
                 "commentaire": r.commentaire,
                 "is_generated": r.is_generated,
+                "group_name": GroupeLine.objects.filter(student=r.etudiants, groupe__in=commission.groupes.all()).first().groupe.nom if GroupeLine.objects.filter(student=r.etudiants, groupe__in=commission.groupes.all()).exists() else "N/A"
             })
         
         return JsonResponse(data, safe=False)

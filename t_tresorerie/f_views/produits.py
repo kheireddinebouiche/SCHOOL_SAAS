@@ -5,6 +5,7 @@ from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from t_crm.models import Prospets
 import json
 
 
@@ -29,6 +30,7 @@ def ApiListeCategoriesProduits(request):
             'id': cat.id,
             'name': cat.name,
             'parent_id': cat.parent.id if cat.parent else None,
+            'parent_name': cat.parent.name if cat.parent else None,
             'children_count': cat.children.count(),
             'is_active': True,
             'is_parent': cat.parent is None,
@@ -320,8 +322,16 @@ def ApiDeleteAutrePaiement(request):
 @login_required(login_url="institut_app:login")
 def api_liste_clients(request):
     if request.method == "GET":
-        pass
+        type_prospect = request.GET.get('type', None)
+        
+        query = Prospets.objects.all().values('id', 'nom', 'prenom', 'type_prospect')
+        
+        if type_prospect:
+            query = query.filter(type_prospect=type_prospect)
+            
+        return JsonResponse(list(query), safe=False)
     else:
+
         return JsonResponse({"status" : "error"})
     
 
@@ -330,16 +340,31 @@ def CreateClientFromTresorerie(request):
     if request.method == "POST":
         nom  = request.POST.get('nom')
         prenom = request.POST.get('prenom')
-        nin = request.POST.get('nin')
+        nin = request.POST.get('nin') # Optional or required? User didn't specify. Assuming optional or basic.
         telephone = request.POST.get('telephone')
+        type_prospect = request.POST.get('type_prospect')
+        email = request.POST.get('email')
 
-
-        if not nom or not prenom or not nin or not telephone:
-            return JsonResponse({"status" : "error"})
+        if not nom or not type_prospect:
+             return JsonResponse({"status" : "error", "message": "Nom et Type sont obligatoires"}, status=400)
         
-        Prospets.objects.create(
-            
-        )
+        try:
+            prospect = Prospets.objects.create(
+                nom=nom,
+                prenom=prenom if prenom else None,
+                telephone=telephone if telephone else None,
+                type_prospect=type_prospect,
+                email=email if email else None,
+                is_client=True 
+            )
+            return JsonResponse({
+                "status": "success", 
+                "id": prospect.id, 
+                "nom": f"{prospect.nom} {prospect.prenom}".strip()
+            })
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
 
     else:
         return JsonResponse({"status" : "error"})

@@ -173,5 +173,7 @@ urlpatterns = [
     path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
 
     path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
+
+    path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     
 ]

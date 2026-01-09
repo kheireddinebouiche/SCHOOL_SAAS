@@ -11,6 +11,7 @@ from django.db.models import F, Value,CharField, Q
 from django.db.models.functions import Coalesce
 from itertools import chain
 from django.db.models.functions import Concat
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 
 
@@ -80,13 +81,18 @@ def ApiListeDuePenalite(request):
         due_paiements = DuePaiements.objects.filter(type__in=['rach', 'dette', 'autre']).select_related('client')
         data = []
         for due in due_paiements:
+            # Check if a payment exists for this due
+            paiement = Paiements.objects.filter(due_paiements=due).first()
             data.append({
                 'id': due.id,
                 'client': f"{due.client.nom} {due.client.prenom}" if due.client else "Client Inconnu",
                 'label': due.label,
                 'montant_due': due.montant_due,
                 'is_done': due.is_done,
-                'type': due.get_type_display(), # Use get_type_display() for readable choice label
+                'type': due.get_type_display(),
+                'paiement_id': paiement.id if paiement else None,
+                'date_echeance': due.date_echeance,
+                'date_paiement': paiement.date_paiement if paiement else None,
             })
         return JsonResponse(data, safe=False)
     else:
@@ -107,6 +113,9 @@ def ApiDeleteDuePenalite(request):
             return JsonResponse({'status': 'success', 'message': 'Paiement dû supprimé avec succès.'})
         except DuePaiements.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Paiement dû introuvable.'}, status=404)
+
+
+            
 @login_required(login_url="institut_app:login")
 def ApiPayDuePenalite(request):
     if request.method == 'POST':
@@ -119,13 +128,41 @@ def ApiPayDuePenalite(request):
             if due_paiement.is_done:
                  return JsonResponse({'status': 'info', 'message': 'Ce paiement a déjà été effectué.'})
             
+            # Create the actual Payment record
+            paiement = Paiements.objects.create(
+                due_paiements=due_paiement,
+                prospect=due_paiement.client,
+                montant_paye=due_paiement.montant_due,
+                date_paiement=datetime.now().date(),
+                mode_paiement='esp', # Defaulting to Cash as requested
+                paiement_label=f"Paiement: {due_paiement.label}",
+                context='rach' if due_paiement.type == 'rach' else 'autre', # Mapping logic
+                is_done=True,
+                # created_by removed as it doesn't exist in model
+            )
+            
             due_paiement.is_done = True
             due_paiement.save()
 
-            return JsonResponse({'status': 'success', 'message': 'Paiement effectué avec succès.'})
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Paiement effectué avec succès.',
+                'paiement_id': paiement.id
+            })
         except DuePaiements.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Paiement dû introuvable.'}, status=404)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     else:
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+
+@xframe_options_exempt
+@login_required(login_url="institut_app:login")
+def PrintReceipt(request, paiement_id):
+    try:
+        paiement = Paiements.objects.get(id=paiement_id)
+        return render(request, 'tenant_folder/comptabilite/penalite_rachat/print_receipt.html', {'paiement': paiement})
+    except Paiements.DoesNotExist:
+        messages.error(request, "Paiement introuvable.")
+        return render(request, 'tenant_folder/404.html') # Or redirect back

@@ -304,6 +304,22 @@
     var currentSearchTerm = '';
     var currentTypeFilter = '0';
 
+    // Helper function to format money with thousands separator
+    function formatMoney(amount) {
+      if (typeof amount === 'string') {
+        amount = parseFloat(amount);
+      }
+      if (isNaN(amount)) return '0.00';
+      
+      // Use toLocaleString for hundreds separation
+      // 'fr-FR' or 'de-DE' usually use space or dot, we want space for DZD typically or just standard comma
+      // Let's use a standard format: 1 234,56
+      return amount.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2
+      }).replace(/\./g, ' '); // explicit space separator if preferred, or just let locale handle it
+    }
+
     function loadItems(){
       $.ajax({
         url : "{% url 't_tresorerie:brouillard_caisse_json' %}",
@@ -475,9 +491,9 @@
         var soldeTotal = filteredData.length > 0 ? filteredData[filteredData.length - 1].solde : 0;
 
         // Update statistics cards
-        $('#soldeTotal').text(soldeTotal.toFixed(2) + ' DZD');
-        $('#totalEntrees').text(totalEntrees.toFixed(2) + ' DZD');
-        $('#totalSorties').text(totalSorties.toFixed(2) + ' DZD');
+        $('#soldeTotal').text(formatMoney(soldeTotal) + ' DZD');
+        $('#totalEntrees').text(formatMoney(totalEntrees) + ' DZD');
+        $('#totalSorties').text(formatMoney(totalSorties) + ' DZD');
         $('#totalOperations').text(totalOperations);
 
         // Create HTML for each date group
@@ -534,23 +550,23 @@
                   <div class="d-flex gap-3">
                     <div class="text-center">
                       <div class="text-info small">Solde initial</div>
-                      <div class="fw-bold text-info">${initialBalance.toFixed(2)} DZD</div>
+                      <div class="fw-bold text-info">${formatMoney(initialBalance)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-success small">Entrées</div>
-                      <div class="fw-bold">${entreesTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold">${formatMoney(entreesTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-danger small">Sorties</div>
-                      <div class="fw-bold">${sortiesTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold">${formatMoney(sortiesTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-primary small">Net</div>
-                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${netTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(netTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-warning small">Solde final</div>
-                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${finalBalance.toFixed(2)} DZD</div>
+                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(finalBalance)} DZD</div>
                     </div>
                   </div>
                 </div>
@@ -578,8 +594,8 @@
               '<span class="badge bg-primary">Encaissement</span>' :
               '<span class="badge bg-danger">Décaissement</span>';
             var montantText = transaction.type === 'entree' ?
-              '<span class="text-success fw-bold">+' + transaction.montant + ' DZD</span>' :
-              '<span class="text-danger fw-bold">-' + transaction.montant + ' DZD</span>';
+              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + ' DZD</span>' :
+              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + ' DZD</span>';
 
             var transactionRow = `
               <tr>
@@ -605,7 +621,7 @@
                 </td>
                 <td>
                   <div class="text-body">
-                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${transaction.solde.toFixed(2)} DZD</span>
+                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(transaction.solde)} DZD</span>
                   </div>
                 </td>
                 <td class="text-end">
@@ -793,8 +809,8 @@
       $.each(exportData, function(i, transaction) {
         var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
         var montantText = transaction.type === 'entree' ?
-          '+' + transaction.montant :
-          '-' + transaction.montant;
+          '+' + formatMoney(transaction.montant) :
+          '-' + formatMoney(transaction.montant);
 
         ws_data.push([
           transaction.date,
@@ -802,7 +818,7 @@
           transaction.order_to,
           typeLabel,
           montantText,
-          transaction.solde.toFixed(2) + ' DZD'
+          formatMoney(transaction.solde) + ' DZD'
         ]);
       });
 
@@ -933,8 +949,8 @@
         $.each(exportData, function(index, transaction) {
           var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
           var montantText = transaction.type === 'entree' ?
-            '+' + transaction.montant :
-            '-' + transaction.montant;
+            '+' + formatMoney(transaction.montant) :
+            '-' + formatMoney(transaction.montant);
 
           tableData.push([
             transaction.date,
@@ -942,7 +958,7 @@
             transaction.order_to,
             typeLabel,
             montantText,
-            transaction.solde.toFixed(2) + ' DZD'
+            formatMoney(transaction.solde) + ' DZD'
           ]);
         });
       }

@@ -10,7 +10,7 @@ from t_groupe.models import *
 from t_formations.models import Promos
 from django.db import IntegrityError
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Q
 
 
 
@@ -143,19 +143,22 @@ def StudentBulletin(request, session_line_id, student_id):
                 }
             modules_dict[module.id]['pvs'].append(pv)
         
-        # Get all types of notes that should appear in bulletin (in_pv_deliberation=True)
+        # Get all types of notes that should appear in bulletin
         # We'll collect all unique note types across all PVs
         all_note_types = set()
         for pv in pvs:
             exam_types = pv.exam_types_notes.filter(
-                bloc__in=NoteBloc.objects.filter(in_pv_deliberation=True)
+                bloc__in=NoteBloc.objects.filter(Q(in_pv_deliberation=True) | Q(in_builltin_note=True))
             ).order_by('ordre')
             for et in exam_types:
-                all_note_types.add((et.code, et.libelle, et.ordre))
+                bloc_ordre = et.bloc.ordre if et.bloc else 0
+                bloc_label = et.bloc.label if et.bloc else ""
+                all_note_types.add((et.code, et.libelle, et.ordre, bloc_ordre, bloc_label))
         
-        # Sort note types by ordre
-        sorted_note_types = sorted(list(all_note_types), key=lambda x: x[2])
-        note_types_list = [{'code': code, 'libelle': libelle} for code, libelle, ordre in sorted_note_types]
+        # Sort note types by bloc ordre then note type ordre
+        sorted_note_types = sorted(list(all_note_types), key=lambda x: (x[3], x[2]))
+        
+        note_types_list = [{'code': code, 'libelle': libelle, 'bloc_label': bloc_label} for code, libelle, ordre, bloc_ordre, bloc_label in sorted_note_types]
         
         # Organize data by module
         modules_data = []
@@ -174,7 +177,7 @@ def StudentBulletin(request, session_line_id, student_id):
             for pv in pvs_list:
                 # Get exam types notes that should appear in bulletin
                 exam_types_notes = pv.exam_types_notes.filter(
-                    bloc__in=NoteBloc.objects.filter(in_pv_deliberation=True)
+                    bloc__in=NoteBloc.objects.filter(Q(in_pv_deliberation=True) | Q(in_builltin_note=True))
                 ).order_by('ordre')
                 
                 # Get notes for this student from this PV
@@ -251,6 +254,9 @@ def StudentBulletin(request, session_line_id, student_id):
             'modules_data': [],
         }
     
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    context['is_ajax'] = is_ajax
+    context['base_template'] = 'tenant_folder/base_ajax.html' if is_ajax else 'tenant_folder/base.html'
     return render(request, 'tenant_folder/exams/builltins/student_bulletin.html', context)
 
 

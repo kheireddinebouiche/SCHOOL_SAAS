@@ -90,7 +90,7 @@ class Paiements(models.Model):
     
     is_frais_inscription = models.BooleanField(default=False)
     reference_paiement = models.CharField(max_length=100, null=True, blank=True)
-    context = models.CharField(max_length=100, null=True, blank=True,choices=[('frais_f','Frais de formation'),('autre','Autres'),('dette','Module en dette'),('facture','Paiement facture')])
+    context = models.CharField(max_length=100, null=True, blank=True,choices=[('frais_f','Frais de formation'),('autre','Autres'),('dette','Module en dette'),('facture','Paiement facture'),('rach','Rachât de crédit')])
 
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True, related_name="promo_paiements")
     

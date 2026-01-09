@@ -4,6 +4,7 @@ from t_groupe.models import Groupe
 from t_formations.models import *
 from django.utils import timezone
 
+
 class Etudiant(models.Model):
     
     relation = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)

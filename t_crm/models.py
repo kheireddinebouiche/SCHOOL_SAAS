@@ -174,7 +174,7 @@ class Prospets(models.Model):
     email = models.EmailField(null=True)
     indic = models.CharField(max_length=10, null=True, choices=INDICATIF)
     telephone = models.CharField(max_length=14, null=True)
-    type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise')])
+    type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise'), ('autre', 'Autre')])
     canal = models.CharField(max_length=255, null=True, choices=[('web', 'Recherche sur le web'),('recommandation', 'Recommandation'),('email', 'Email'), ('telephone', 'Téléphone'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicitée'), ('autre', 'Autre')])
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
     nationnalite = models.CharField(max_length=100, null=True, blank=True)
@@ -261,6 +261,11 @@ class Prospets(models.Model):
         # 1ère sauvegarde : obtenir un ID si l'objet n'en a pas
         if not self.id:
             super().save(*args, **kwargs)
+            
+            # Remove force_insert from kwargs strictly after the first save
+            # This prevents IntegrityError when the second save() attempts to INSERT again
+            if 'force_insert' in kwargs:
+                kwargs.pop('force_insert')
 
         # Génération du slug si vide
         if not self.slug:

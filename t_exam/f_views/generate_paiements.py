@@ -38,6 +38,7 @@ def ApiGenerateDuePaiements(request):
                 date_echeance = obj.commission.updated_at,
                 promo = promo,
                 type = 'rach',
+                entite = obj.commission.promo.entite,
                 
             )
             nouveau_paiement.save()

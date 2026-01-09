@@ -176,7 +176,8 @@ def ApiGetTypeNotes(request):
             'is_rachat': type_note.is_rachat,
             'nb_sous_notes': type_note.nb_sous_notes,
             'ordre': type_note.ordre,
-            'in_moyenne': type_note.in_moyenne
+            'in_moyenne': type_note.in_moyenne,
+            'bloc_id': type_note.bloc.id if type_note.bloc else None
         })
 
     return JsonResponse(data, safe=False)
@@ -555,6 +556,7 @@ def ApiAddBloc(request):
         code = request.POST.get('code')
         ordre = request.POST.get('ordre', 0)
         in_pv_deliberation = request.POST.get('in_pv_deliberation') == 'on'
+        in_builltin_note = request.POST.get('in_builltin_note') == 'on'
 
         # Check if code already exists
         if NoteBloc.objects.filter(code=code).exists():
@@ -567,7 +569,8 @@ def ApiAddBloc(request):
             label=label,
             code=code,
             ordre=int(ordre),
-            in_pv_deliberation=in_pv_deliberation
+            in_pv_deliberation=in_pv_deliberation,
+            in_builltin_note=in_builltin_note
         )
 
         return JsonResponse({
@@ -577,7 +580,8 @@ def ApiAddBloc(request):
             'label': bloc.label,
             'code': bloc.code,
             'ordre': bloc.ordre,
-            'in_pv_deliberation': bloc.in_pv_deliberation
+            'in_pv_deliberation': bloc.in_pv_deliberation,
+            'in_builltin_note': bloc.in_builltin_note
         })
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -593,6 +597,7 @@ def ApiUpdateBloc(request):
         code = request.POST.get('code')
         ordre = request.POST.get('ordre', 0)
         in_pv_deliberation = request.POST.get('in_pv_deliberation') == 'on'
+        in_builltin_note = request.POST.get('in_builltin_note') == 'on'
 
         try:
             bloc = NoteBloc.objects.get(id=bloc_id)
@@ -608,6 +613,7 @@ def ApiUpdateBloc(request):
             bloc.code = code
             bloc.ordre = int(ordre)
             bloc.in_pv_deliberation = in_pv_deliberation
+            bloc.in_builltin_note = in_builltin_note
             bloc.save()
 
             return JsonResponse({
@@ -617,7 +623,8 @@ def ApiUpdateBloc(request):
                 'label': bloc.label,
                 'code': bloc.code,
                 'ordre': bloc.ordre,
-                'in_pv_deliberation': bloc.in_pv_deliberation
+                'in_pv_deliberation': bloc.in_pv_deliberation,
+                'in_builltin_note': bloc.in_builltin_note
             })
         except NoteBloc.DoesNotExist:
             return JsonResponse({
@@ -640,7 +647,8 @@ def ApiGetAllBlocs(request):
             'label': bloc.label,
             'code': bloc.code,
             'ordre': bloc.ordre,
-            'in_pv_deliberation': bloc.in_pv_deliberation
+            'in_pv_deliberation': bloc.in_pv_deliberation,
+            'in_builltin_note': bloc.in_builltin_note
         })
 
     return JsonResponse(data, safe=False)

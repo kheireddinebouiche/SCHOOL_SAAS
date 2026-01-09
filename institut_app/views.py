@@ -566,19 +566,35 @@ def ApiDeleteGroup(request):
     obj.delete()
     return JsonResponse({'status' : 'success' , 'message' : "Le groupe à été supprimé avec succès" })
 
+@login_required(login_url='institut_app:login')
 def GetMyProfile(request):
     try:
         obj = Profile.objects.get(user = request.user)
 
+        # Retrieve user roles with related module and role data
+        user_roles = request.user.module_roles.select_related('module', 'role').all()
+        
+        detailed_roles = []
+        for ur in user_roles:
+            # Use the method from the model to get effective permissions
+            permissions = ur.get_effective_permissions()
+            
+            detailed_roles.append({
+                'user_role': ur,
+                'permissions': permissions
+            })
+
         context = {
-            'obj' : obj,
+            'obj': obj,
+            'detailed_roles': detailed_roles,
         }
         return render(request, 'tenant_folder/users/mon-profile.html', context)
     
-    except:
-
+    except Exception as e: 
+        print(f"Error in GetMyProfile: {e}") # Debugging aid
         return render(request, 'tenant_folder/users/mon-profile.html')
-    
+
+@login_required(login_url='institut_app:login')    
 def UpdateMyProfile(request):
     form = ProfileUpdateForm(instance=request.user.profile)
     if request.method == "POST":

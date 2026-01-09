@@ -75,6 +75,10 @@
   }
 </style>
 
+<!-- jsPDF and AutoTable CDNs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
 <div class="main-content">
   <div class="page-content bg-light">
     <div class="container-fluid">
@@ -119,19 +123,19 @@
               <div class="d-flex flex-wrap align-items-center justify-content-between">
                 <div class="d-flex align-items-center me-4 mb-2">
                   <span class="text-muted me-2">Nom:</span>
-                  <strong>Session d'examen de fin de semestre</strong>
+                  <strong id="sessionLabel">Chargement...</strong>
                 </div>
                 <div class="d-flex align-items-center me-4 mb-2">
                   <span class="text-muted me-2">Période:</span>
-                  <span>15 Janvier 2026 - 28 Janvier 2026</span>
+                  <span id="sessionPeriod">Chargement...</span>
                 </div>
                 <div class="d-flex align-items-center me-4 mb-2">
                   <span class="text-muted me-2">Type:</span>
-                  <span class="fw-semibold">Session normale</span>
+                  <span class="fw-semibold" id="sessionType">Chargement...</span>
                 </div>
                 <div class="d-flex align-items-center me-4 mb-2">
                   <span class="text-muted me-2">Statut:</span>
-                  <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+                  <span id="sessionStatus" class="badge bg-secondary bg-opacity-10 text-secondary">Chargement...</span>
                 </div>
                 <div class="d-flex align-items-center mb-2">
                   <span class="text-muted me-2">Groupe:</span>
@@ -158,6 +162,9 @@
                   <button type="button" class="btn btn-primary" id="openPlanExamModal">
                     <i class="ri-add-line me-1"></i>Nouvel examen
                   </button>
+                  <button type="button" class="btn btn-secondary" id="printPlanningBtn">
+                     <i class="ri-printer-line me-1"></i>Imprimer le planning
+                   </button>
                   <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#helpModal">
                     <i class="ri-question-line me-1"></i>Aide
                   </button>
@@ -777,6 +784,8 @@
         const idExamLine = "{{pk}}";
         let groupeName = "";
         let groupeId = "";
+        let currentExamPlans = []; // Store plans for PDF generation
+        let sessionInfo = {}; // Store session info for PDF
 
         function loadExamPlanification(){
             // Reset modal fields to ensure clean state on each load
@@ -795,8 +804,38 @@
                         groupeName = data.planifications.groupe_name;
                         groupeId = data.planifications.groupe_id;
 
+                        // Update Session Info
+                        $('#sessionLabel').text(data.planifications.session_nom);
+                        $('#sessionPeriod').text(data.planifications.date_debut + ' - ' + data.planifications.date_fin);
+                        $('#sessionType').text(data.planifications.type_session);
+                        
+                        // Update status badge
+                        const status = data.planifications.status_session;
+                        let statusBadgeClass = 'bg-secondary bg-opacity-10 text-secondary';
+                        if(status.toLowerCase().includes('activ') || status.toLowerCase().includes('cour')){
+                            statusBadgeClass = 'bg-success bg-opacity-10 text-success';
+                        } else if(status.toLowerCase().includes('clôt') || status.toLowerCase().includes('term')){
+                            statusBadgeClass = 'bg-danger bg-opacity-10 text-danger';
+                        } else if(status.toLowerCase().includes('attente') || status.toLowerCase().includes('venir')){
+                            statusBadgeClass = 'bg-warning bg-opacity-10 text-warning';
+                        }
+                        
+                        $('#sessionStatus').attr('class', 'badge ' + statusBadgeClass).text(status);
+                        
+                        $('#sessionStatus').attr('class', 'badge ' + statusBadgeClass).text(status);
+                        
                         $('#groupName').html(groupeName);
                         $('#groupeId').val(groupeId);
+                        
+                        // Store detailed info for PDF
+                        currentExamPlans = plans;
+                        sessionInfo = {
+                             nom: data.planifications.session_nom,
+                             periode: data.planifications.date_debut + ' - ' + data.planifications.date_fin,
+                             type: data.planifications.type_session,
+                             statut: status,
+                             groupe: groupeName
+                        };
 
 
                         const container = $('#exam-plans-container');
@@ -1619,8 +1658,9 @@
             }
 
             // Disable button and show loading
-            const originalText = $(this).html();
-            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Planification...');
+            const btn = $(this);
+            const originalText = btn.html();
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Planification...');
 
             // Submit the form
             $.ajax({
@@ -1633,16 +1673,16 @@
                 success: function(response) {
                     if(response.status === 'success') {
                         $('#planExamModal').modal('hide');
-                        $(this).prop('disabled', false).html(originalText);
+                        btn.prop('disabled', false).html(originalText);
                         loadExamPlanification(); // Reload the exam plans
                         showNotification(response.message, 'success');
                     } else {
-                        $(this).prop('disabled', false).html(originalText);
+                        btn.prop('disabled', false).html(originalText);
                         showNotification(response.message || 'Erreur lors de la planification', 'error');
                     }
                 },
                 error: function(xhr, status, error) {
-                    $(this).prop('disabled', false).html(originalText);
+                    btn.prop('disabled', false).html(originalText);
                     showNotification('Erreur de connexion: ' + error, 'error');
                 }
             });
@@ -1667,6 +1707,174 @@
       });
 
 
+
+        // Helper to process data into a matrix
+        function processPlanningMatrix() {
+            if (!currentExamPlans || currentExamPlans.length === 0) return null;
+
+            // 1. Extract Unique Dates and Time Slots
+            const uniqueDates = [...new Set(currentExamPlans.map(p => p.date))].sort();
+            
+            const uniqueTimeSlots = [...new Set(currentExamPlans.map(p => {
+                const start = p.heure_debut ? p.heure_debut.substring(0, 5) : '00:00';
+                const end = p.heure_fin ? p.heure_fin.substring(0, 5) : '00:00';
+                return start + ' - ' + end;
+            }))].sort(); // Default string sort works '08:00' < '10:00'
+
+            return { uniqueDates, uniqueTimeSlots };
+        }
+
+        // Function to Show Preview Modal
+        function showPlanningPreview() {
+            if (!currentExamPlans || currentExamPlans.length === 0) {
+                alertify.error("Aucune donnée à prévisualiser.");
+                return;
+            }
+
+            const matrixData = processPlanningMatrix();
+            if(!matrixData) return;
+
+            const { uniqueDates, uniqueTimeSlots } = matrixData;
+
+            // Update Modal Header Info
+            $('#previewSessionName').text(sessionInfo.nom);
+            $('#previewGroupName').text(sessionInfo.groupe);
+
+            // Build HTML Table
+            let html = '<table class="table table-bordered table-nowrap align-middle mb-0"><thead><tr class="table-light">';
+            html += '<th scope="col" class="fw-bold text-center" style="width: 150px; background-color: #f3f6f9;">Jours / Heures</th>';
+            
+            uniqueTimeSlots.forEach(slot => {
+                html += `<th scope="col" class="fw-bold text-center">${slot}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            uniqueDates.forEach(date => {
+                const dateObj = new Date(date);
+                const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+                html += `<tr><td class="fw-bold text-center bg-light">${formattedDate}</td>`;
+
+                uniqueTimeSlots.forEach(slot => {
+                    // Find exam for this date and slot
+                    const exam = currentExamPlans.find(p => {
+                        const pStart = p.heure_debut ? p.heure_debut.substring(0, 5) : '00:00';
+                        const pEnd = p.heure_fin ? p.heure_fin.substring(0, 5) : '00:00';
+                        return p.date === date && (pStart + ' - ' + pEnd) === slot;
+                    });
+
+                    if (exam) {
+                        html += `<td class="text-center p-3">
+                                    <div class="fw-bold text-primary mb-1">${exam.module_nom}</div>
+                                    <div class="badge bg-soft-info text-info mb-1">${exam.salle_nom || 'Salle non définie'}</div>
+                                    <div class="small text-muted">${exam.type_examen}</div>
+                                 </td>`;
+                    } else {
+                        html += '<td class="text-center text-muted">-</td>';
+                    }
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            $('#planningPreviewContainer').html(html);
+            $('#previewPlanningModal').modal('show');
+        }
+
+
+        // Function to generate Landscape PDF from Matrix
+        function generatePlanningPDF() {
+            const matrixData = processPlanningMatrix();
+            if(!matrixData) return;
+
+            const { uniqueDates, uniqueTimeSlots } = matrixData;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+            const primaryColor = [41, 156, 219];
+
+            // --- HEADER ---
+            doc.setFontSize(22);
+            doc.setTextColor(...primaryColor);
+            doc.setFont(undefined, 'bold');
+            doc.text("PLANNING DES EXAMENS", 148.5, 20, null, null, 'center'); // Center of A4 Landscape (297/2)
+
+            // Info Line
+            doc.setFontSize(12);
+            doc.setTextColor(50, 50, 50);
+            doc.text(`${sessionInfo.nom}  |  Groupe: ${sessionInfo.groupe}  |  Période: ${sessionInfo.periode}`, 148.5, 30, null, null, 'center');
+
+            const headers = [['Jours / Heures', ...uniqueTimeSlots]];
+
+            const body = uniqueDates.map(date => {
+                const dateObj = new Date(date);
+                const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                const row = [dateStr.charAt(0).toUpperCase() + dateStr.slice(1)];
+
+                uniqueTimeSlots.forEach(slot => {
+                     const exam = currentExamPlans.find(p => {
+                        const pStart = p.heure_debut ? p.heure_debut.substring(0, 5) : '00:00';
+                        const pEnd = p.heure_fin ? p.heure_fin.substring(0, 5) : '00:00';
+                        return p.date === date && (pStart + ' - ' + pEnd) === slot;
+                    });
+                    
+                    if (exam) {
+                        row.push(`${exam.module_nom}\n(${exam.salle_nom || '?'})\n[${exam.type_examen.substring(0,3)}]`);
+                    } else {
+                        row.push('-');
+                    }
+                });
+                return row;
+            });
+
+            doc.autoTable({
+                startY: 40,
+                head: headers,
+                body: body,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: primaryColor,
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                bodyStyles: {
+                    halign: 'center',
+                    valign: 'middle',
+                    lineColor: [200, 200, 200]
+                },
+                styles: {
+                    cellPadding: 3,
+                    fontSize: 10,
+                    overflow: 'linebreak'
+                },
+                columnStyles: {
+                    0: { fillColor: [245, 245, 245], fontStyle: 'bold', cellWidth: 35 } // Date column
+                },
+                didDrawPage: function (data) {
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(128);
+                    doc.text("Page " + pageCount + " - Généré le " + new Date().toLocaleDateString('fr-FR'), 280, 200, null, null, 'right');
+                }
+            });
+
+            doc.save(`Planning_${(sessionInfo.groupe || 'groupe').replace(/ /g, '_')}_Landscape.pdf`);
+            $('#previewPlanningModal').modal('hide');
+        }
+
+        // Bind Print Button to Preview
+        $('#printPlanningBtn').click(function() {
+            showPlanningPreview();
+        });
+
+        // Bind Download Button in Modal
+        $('#confirmDownloadPdfBtn').click(function() {
+            generatePlanningPDF();
+        });
+
     });
 
    
@@ -1675,5 +1883,38 @@
 
 
 
+
+
+<!-- Preview Planning Modal -->
+<div class="modal fade" id="previewPlanningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light p-3">
+                <h5 class="modal-title" id="previewPlanningModalLabel">Aperçu du Planning</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closePreviewModalBtn"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <h4 class="mb-1">Planning des Examens</h4>
+                    <p class="text-muted mb-0"><span id="previewSessionName">-</span> | <span id="previewGroupName">-</span></p>
+                </div>
+                <div class="table-responsive" id="planningPreviewContainer">
+                    <!-- Table will be injected here -->
+                    <div class="text-center py-5">
+                       <div class="spinner-border text-primary" role="status">
+                           <span class="visually-hidden">Chargement...</span>
+                       </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="confirmDownloadPdfBtn">
+                    <i class="ri-download-line me-1"></i> Télécharger PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}
