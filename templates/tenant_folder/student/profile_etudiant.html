@@ -26,7 +26,7 @@
         background: var(--glass-bg);
         backdrop-filter: blur(10px);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        overflow: hidden;
+        /* overflow: hidden; Removed to allow dropdowns to show */
     }
 
     .card:hover {
@@ -40,8 +40,10 @@
         padding: 2rem;
         color: white;
         border-radius: 1rem 1rem 0 0;
+        border-radius: 1rem 1rem 0 0;
         position: relative;
-        overflow: hidden;
+        z-index: 100; /* Ensure dropdowns are above card content */
+        /* overflow: hidden; Removed to allow dropdowns to show */
     }
 
     .profile-header::before {
@@ -281,7 +283,7 @@
                     <!-- Profile Header -->
                     <div class="card mb-4 border-0">
                         <div class="profile-header">
-                            <div class="d-flex justify-content-between align-items-start position-relative z-2">
+                            <div class="d-flex justify-content-between align-items-start position-relative" style="z-index: 10;">
                                 <div>
                                     <span class="header-badge mb-2 d-inline-block">
                                         <i class="ri-book-open-line me-1"></i> {{specialite_simple}}
@@ -297,9 +299,11 @@
                                         </button>
                                         <ul class="dropdown-menu shadow-lg border-0" aria-labelledby="impressionDropdown">
                                             {% for doc in documents_available %}
-                                                <a class="dropdown-item" target="_blank" href="{% url 't_groupe:generate_student_pdf' pk doc.slug %}">
-                                                    {{ doc.title }}
-                                                </a>
+                                                <li>
+                                                    <a class="dropdown-item" target="_blank" href="{% url 't_groupe:generate_student_pdf' pk doc.slug %}">
+                                                        {{ doc.title }}
+                                                    </a>
+                                                </li>
                                             {% empty %}
                                                 <li>
                                                     <a class="dropdown-item" href="#">
@@ -314,8 +318,13 @@
                             
                             <div class="d-flex align-items-end mt-3 position-relative z-2">
                                 <div class="profile-avatar-wrapper me-4">
-                                    <div class="profile-avatar">
-                                        <i class="ri-user-line"></i>
+                                    <input type="file" id="photoInput" class="d-none" accept="image/*">
+                                    <div class="profile-avatar position-relative overflow-hidden">
+                                        {% if etudiant.photo %}
+                                            <img src="{{ etudiant.photo.url }}" alt="Photo" class="w-100 h-100 object-fit-cover rounded-circle">
+                                        {% else %}
+                                            <i class="ri-user-line"></i>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="mb-2">
@@ -1208,8 +1217,64 @@
     $(document).ready(function(){
 
         const id_etudiant = "{{pk}}";
-        // ... (existing variables preserved if needed, or I can just append the event listener)
         
+        // --- Photo Upload Logic ---
+        
+        // Trigger file input when clicking the avatar wrapper
+        $('.profile-avatar-wrapper').css('cursor', 'pointer').on('click', function(e) {
+            if (e.target.id === 'photoInput') return;
+            $('#photoInput').click();
+        });
+
+        // Handle file selection
+        $('#photoInput').on('change', function() {
+            if (this.files && this.files[0]) {
+                var formData = new FormData();
+                formData.append('photo', this.files[0]);
+                formData.append('id_etudiant', id_etudiant);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                // Visual feedback (opacity)
+                $('.profile-avatar').css('opacity', '0.5');
+
+                $.ajax({
+                    url: "{% url 't_groupe:ApiUpdateStudentPhoto' %}",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if(response.status === 'success') {
+                            // Reload to show new photo
+                            location.reload();
+                        } else {
+                            alert('Erreur: ' + response.message);
+                            $('.profile-avatar').css('opacity', '1');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                        alert('Erreur lors de l\'upload de la photo.');
+                        $('.profile-avatar').css('opacity', '1');
+                    }
+                });
+            }
+        });
+
+        // Hover effect for avatar
+        $('.profile-avatar-wrapper').hover(
+            function() {
+                if($(this).find('.photo-edit-overlay').length === 0) {
+                     $(this).append('<div class="photo-edit-overlay position-absolute top-0 start-0 w-100 h-100 rounded-circle d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 5;"><i class="ri-camera-fill text-white fs-3"></i></div>');
+                }
+            }, 
+            function() {
+                $(this).find('.photo-edit-overlay').remove();
+            }
+        );
+
+        // --- End Photo Upload Logic ---
+    
         // Handle Edit Student Form Submission
         $('#saveStudentBtn').on('click', function() {
             // Show loading state

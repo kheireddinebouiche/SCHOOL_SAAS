@@ -4,82 +4,192 @@
 
 {% block content %}
 <style>
+    :root {
+        --card-border-color: rgba(226, 232, 240, 0.8);
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+
     .stat-card {
-        border-radius: 0.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        background: #fff;
+        border: 1px solid var(--card-border-color);
+        box-shadow: var(--card-shadow);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-radius: 1rem;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--card-hover-shadow);
     }
     
-    .icon-center {
+    .icon-box {
+        width: 48px;
+        height: 48px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 40px;
-        height: 40px;
+        border-radius: 12px;
+        font-size: 1.25rem;
     }
+
+    /* Badges */
+    .badge-soft-success { background-color: rgba(40, 167, 69, 0.15); color: #28a745; }
+    .badge-soft-warning { background-color: rgba(255, 193, 7, 0.15); color: #ffc107; }
+    .badge-soft-primary { background-color: rgba(59, 125, 221, 0.15); color: #3b7ddd; }
+    .badge-soft-danger { background-color: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .badge-soft-info { background-color: rgba(23, 162, 184, 0.15); color: #17a2b8; }
     
-    /* Update badge styles with low opacity but visible text */
-    .badge.bg-success {
-        background-color: rgba(40, 167, 69, 0.2) !important;
-        color: #28a745 !important;
-        font-weight: 500 !important;
+    /* Search Box */
+    .search-input-group {
+        position: relative;
+        min-width: 280px;
     }
-    
-    .badge.bg-warning {
-        background-color: rgba(255, 193, 7, 0.2) !important;
-        color: #ffc107 !important;
-        font-weight: 500 !important;
+    .search-input-group input {
+        padding-left: 2.5rem;
+        border-radius: 50rem;
+        background-color: #f8f9fa;
+        border: 1px solid transparent;
+        transition: all 0.2s;
     }
-    
-    .badge.bg-primary {
-        background-color: rgba(59, 125, 221, 0.2) !important;
-        color: #3b7ddd !important;
-        font-weight: 500 !important;
+    .search-input-group input:focus {
+        background-color: #fff;
+        border-color: var(--card-border-color);
+        box-shadow: 0 0 0 3px rgba(59, 125, 221, 0.1);
     }
-    
-    .badge.bg-danger {
-        background-color: rgba(220, 53, 69, 0.2) !important;
-        color: #dc3545 !important;
-        font-weight: 500 !important;
+    .search-input-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
     }
-    
-    .badge.bg-info {
-        background-color: rgba(23, 162, 184, 0.2) !important;
-        color: #17a2b8 !important;
-        font-weight: 500 !important;
+
+    /* Filter Bar */
+    .filter-bar {
+        background: #fff;
+        border: 1px solid var(--card-border-color);
+        box-shadow: var(--card-shadow);
+        border-radius: 1rem;
     }
-    
-    /* Add search box styling */
-    .search-box {
+
+    /* Student Card */
+    .student-card {
+        border: 1px solid var(--card-border-color);
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #fff;
+        border-radius: 1rem;
+        overflow: hidden;
+        height: 100%;
+    }
+    .student-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--card-hover-shadow);
+        border-color: rgba(59, 125, 221, 0.3);
+    }
+
+    .student-card .card-img-top-wrapper {
+        height: 100px;
+        background: linear-gradient(120deg, #f0f4f8 0%, #d9e2ec 100%);
         position: relative;
     }
     
-    .search-box .search-icon {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none; /* Make sure icon doesn't block input */
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        object-fit: cover;
     }
     
-    /* Ensure search input is accessible */
-    #table-filter {
-        padding-right: 40px; /* Space for search icon */
-        z-index: 1; /* Ensure input is above icon */
+    .student-initials {
+        width: 80px;
+        height: 80px;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        background: #fff;
+        color: #3b7ddd;
     }
-    
-    /* Table styling */
-    .table th {
+
+    .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #939ba5;
         font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-value {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #2c3e50;
+    }
+
+    .card-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .student-card:hover .card-actions {
+        opacity: 1;
+    }
+
+    .btn-action-round {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.9);
+        color: #495057;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: none;
+        transition: all 0.2s;
+    }
+    .btn-action-round:hover {
+        background: #fff;
+        color: #3b7ddd;
+        transform: scale(1.1);
+    }
+
+    /* Refined Table Styles */
+    .table thead th {
+        border-top: none;
+        border-bottom: 2px solid #e9ecef;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: #939ba5;
+        letter-spacing: 0.5px;
+        background-color: #f8f9fa;
+        padding: 1rem;
+    }
+    .table tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f2f5;
+        vertical-align: middle;
+        color: #495057;
+    }
+    .table tbody tr:hover {
         background-color: #f8f9fa;
     }
-    
-    .table td {
-        vertical-align: middle;
+    .table tbody tr:last-child td {
+        border-bottom: none;
     }
-    
-    /* Rounded elements */
-    .rounded-pill {
-        border-radius: 50rem !important;
+
+    /* Force solid background for white text usage */
+    .badge.bg-info.text-white {
+        background-color: #17a2b8 !important;
+        color: #fff !important;
     }
 </style>
 
@@ -134,63 +244,47 @@
 
             <!-- Statistics Section -->
             <div class="row mb-4" id="statisticsSection">
-                <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 stat-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-user-line text-primary fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="totalStudents">0</h5>
-                                    <p class="mb-0 text-muted small">Total étudiants</p>
-                                </div>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Total étudiants</p>
+                            <h3 class="fw-bold mb-0 text-dark" id="totalStudents">0</h3>
+                        </div>
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                            <i class="ri-user-line"></i>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-success bg-opacity-10 stat-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-success bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-graduation-cap-line text-success fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="activeStudents">0</h5>
-                                    <p class="mb-0 text-muted small">Actifs</p>
-                                </div>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Actifs</p>
+                            <h3 class="fw-bold mb-0 text-success" id="activeStudents">0</h3>
+                        </div>
+                        <div class="icon-box bg-success bg-opacity-10 text-success">
+                            <i class="ri-checkbox-circle-line"></i>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-warning bg-opacity-10 stat-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-time-line text-warning fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="pendingStudents">0</h5>
-                                    <p class="mb-0 text-muted small">En attente</p>
-                                </div>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Non affectés</p>
+                            <h3 class="fw-bold mb-0 text-warning" id="pendingStudents">0</h3>
+                        </div>
+                        <div class="icon-box bg-warning bg-opacity-10 text-warning">
+                            <i class="ri-time-line"></i>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card border-0 shadow-sm rounded-3 bg-info bg-opacity-10 stat-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-info bg-opacity-10 rounded-circle icon-center me-3">
-                                    <i class="ri-group-line text-info fs-5"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-0 fw-bold" id="groupedStudents">0</h5>
-                                    <p class="mb-0 text-muted small">Affectés</p>
-                                </div>
-                            </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Groupés</p>
+                            <h3 class="fw-bold mb-0 text-info" id="groupedStudents">0</h3>
+                        </div>
+                        <div class="icon-box bg-info bg-opacity-10 text-info">
+                            <i class="ri-group-line"></i>
                         </div>
                     </div>
                 </div>
@@ -198,57 +292,56 @@
 
             <div class="row">
                 <div class="col-lg-12">
-                    <div class="card border-0 shadow-sm rounded-4">
-                        <div class="card-header border-0 bg-white p-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-filter text-info me-2"></i>
-                                    <h5 class="card-title mb-0 text-info">Filtres</h5>
-                                </div>
+                    <div class="filter-bar p-3 mb-4">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            
+                            <div class="search-input-group">
+                                <i class="ri-search-line"></i>
+                                <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un étudiant...">
+                            </div>
 
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="search-box position-relative">
-                                        <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px; padding-right: 40px; z-index: 1;">
-                                        <i class="fas fa-search text-muted search-icon" style="pointer-events: none;"></i>
-                                    </div>
-                                    
-                                    <div class="d-flex align-items-center">
-                                        <label for="statusFilter" class="me-2 mb-0">Statut:</label>
-                                        <select id="statusFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
-                                            <option value="">Tous</option>
-                                            <option value="active">Actif</option>
-                                            <option value="pending">En attente</option>
-                                            <option value="grouped">Affecté</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="d-flex align-items-center">
-                                        <label for="groupFilter" class="me-2 mb-0">Groupe:</label>
-                                        <select id="groupFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
-                                            <option value="">Tous</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="d-flex align-items-center">
-                                        <label for="specialtyFilter" class="me-2 mb-0">Spécialité:</label>
-                                        <select id="specialtyFilter" class="form-select form-select-sm rounded-pill" style="width: 150px;">
-                                            <option value="">Tous</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div>
-                                        <button id="applyFilters" class="btn btn-primary btn-sm rounded-pill">
-                                            <i class="ri-filter-line me-1"></i>Filtrer
-                                        </button>
-                                        <button id="clearFilters" class="btn btn-light btn-sm rounded-pill">
-                                            <i class="ri-close-line me-1"></i>Effacer
-                                        </button>
-                                    </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <select id="statusFilter" class="form-select border-0 bg-light" style="width: 140px; cursor: pointer;">
+                                    <option value="">Statut (Tous)</option>
+                                    <option value="active">Actif</option>
+                                    <option value="pending">En attente</option>
+                                    <option value="grouped">Affecté</option>
+                                </select>
+                                
+                                <select id="groupFilter" class="form-select border-0 bg-light" style="width: 140px; cursor: pointer;">
+                                    <option value="">Groupe (Tous)</option>
+                                </select>
+
+                                <select id="specialtyFilter" class="form-select border-0 bg-light" style="width: 140px; cursor: pointer;">
+                                    <option value="">Spécialité (Tous)</option>
+                                </select>
+
+                                <div class="border-start mx-2 h-100 d-none d-md-block" style="height: 24px;"></div>
+
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-light active" id="btnGridView" title="Vue Grille">
+                                        <i class="ri-grid-fill"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-light" id="btnListView" title="Vue Liste">
+                                        <i class="ri-list-check-2"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                            
-                        <div class="card-body p-3">
+                    </div>
+
+                    <div class="card border-0 shadow-none bg-transparent">
+                        <!-- Removed old card header, integrated into filter bar above -->
+
+
+                        <!-- Card View Container -->
+                        <div id="cardViewContainer" class="card-body p-0 bg-transparent">
+                            <!-- Cards will be injected here by JS -->
+                            <div class="row g-4" id="cardsGrid"></div>
+                        </div>
+
+                        <!-- Table View Container -->
+                        <div id="tableViewContainer" class="card-body p-3 d-none">
                             <div class="table-responsive">
                                 <table id="example" class="table table-hover align-middle mb-0">
                                     <thead class="bg-light">
@@ -265,16 +358,18 @@
 
                                     </tbody>
                                 </table>
-                                <div id="noResultsMessage" class="d-none text-center py-5">
-                                    <div class="avatar-sm mx-auto mb-4 d-flex align-items-center justify-content-center mx-auto">
-                                        <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                            <i class="ri-search-line"></i>
-                                        </div>
-                                    </div>
-                                    <h5 class="mb-2">Aucun étudiant correspondant à la recherche</h5>
-                                    <p class="text-muted mb-0">Essayez de modifier vos critères de recherche</p>
+                            </div>
+                        </div>
+
+                        <!-- No Results Message (Shared) -->
+                        <div id="noResultsMessage" class="d-none text-center py-5">
+                            <div class="avatar-sm mx-auto mb-4 d-flex align-items-center justify-content-center mx-auto">
+                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                    <i class="ri-search-line"></i>
                                 </div>
                             </div>
+                            <h5 class="mb-2">Aucun étudiant correspondant à la recherche</h5>
+                            <p class="text-muted mb-0">Essayez de modifier vos critères de recherche</p>
                         </div>
                     </div>
                 </div>
@@ -300,6 +395,21 @@
 <script>
     $(document).ready(function(){
        
+        // Handle View Toggle
+        $('#btnGridView').on('click', function() {
+            $(this).addClass('active');
+            $('#btnListView').removeClass('active');
+            $('#cardViewContainer').removeClass('d-none');
+            $('#tableViewContainer').addClass('d-none');
+        });
+        
+        $('#btnListView').on('click', function() {
+            $(this).addClass('active');
+            $('#btnGridView').removeClass('active');
+            $('#tableViewContainer').removeClass('d-none');
+            $('#cardViewContainer').addClass('d-none');
+        });
+
         function loadItems(){
             //affichage de la liste des etudiants
             $.ajax({
@@ -307,22 +417,71 @@
                 dataType: "JSON",
                 type: "GET",
                 success : function(data){
-                    var row = "";
+                    var tableRows = "";
+                    var cardHtml = "";
                     var groups = [];
                     var specialties = [];
                     
                     if (data.length > 0){
                         $.each(data, function(index, p){
-                            row += "<tr>";
-                            row += "<td><a href='/scolarite/groupes/profile-etudiant/"+p.id+"'>"+p.nom+' '+p.prenom+"</a></td>";
-                            row += "<td>"+(p.nin || 'Non renseigner')+"</td>";
-                            row += "<td>"+(p.indic ||'')+''+p.telephone+"</td>";
-                            row += "<td>"+p.email+"</td>";
-                            row += "<td class='specialty-col'>"+p.groupe_line_student__groupe__specialite__label+"</td>";
-                            row += "<td class='group-col'>"+p.groupe_line_student__groupe__nom+"<a href='/scolarite/groupes/details-groupe/"+p.groupe_line_student__groupe__id+"' title='Afficher les détails du groupe'><span class='mdi mdi-link-variant'></span></a></td>";
-                            row += "</tr>";
+                            // --- Table Row Generation ---
+                            tableRows += "<tr>";
+                            tableRows += "<td><a href='/scolarite/groupes/profile-etudiant/"+p.id+"' class='fw-medium text-dark'>"+p.nom+' '+p.prenom+"</a></td>";
+                            tableRows += "<td>"+(p.nin || 'Non renseigner')+"</td>";
+                            tableRows += "<td>"+(p.indic ||'')+''+p.telephone+"</td>";
+                            tableRows += "<td>"+p.email+"</td>";
+                            tableRows += "<td class='specialty-col'><span class='badge bg-info text-white'>"+(p.groupe_line_student__groupe__specialite__label || '-')+"</span></td>";
+                            tableRows += "<td class='group-col'>"+(p.groupe_line_student__groupe__nom || '-')+"<a href='/scolarite/groupes/details-groupe/"+p.groupe_line_student__groupe__id+"' class='ms-2 text-muted' title='Afficher les détails du groupe'><i class='ri-external-link-line'></i></a></td>";
+                            tableRows += "</tr>";
                             
-                            // Collect unique groups and specialties for the dropdowns
+                            // --- Card Generation ---
+                            var photoUrl = p.photo ? '/media/' + p.photo : ''; 
+                            var initials = (p.nom.charAt(0) + p.prenom.charAt(0)).toUpperCase();
+                            var avatarHtml = photoUrl 
+                                ? `<img src="${photoUrl}" alt="${p.nom}" class="student-avatar rounded-circle">`
+                                : `<div class="student-initials rounded-circle shadow-sm">${initials}</div>`;
+                            
+                            var groupName = p.groupe_line_student__groupe__nom || 'Non affecté';
+                            var specialtyName = p.groupe_line_student__groupe__specialite__label || 'Général';
+                             
+                            cardHtml += `
+                                <div class="col-xl-3 col-lg-4 col-md-6 student-card-wrapper" 
+                                     data-search="${(p.nom+' '+p.prenom).toLowerCase()}"
+                                     data-group="${groupName}"
+                                     data-specialty="${specialtyName}"
+                                     data-status="${groupName !== 'Non affecté' ? 'grouped' : 'pending'}">
+                                    <div class="student-card h-100 position-relative">
+                                        <div class="card-img-top-wrapper d-flex justify-content-center align-items-end pb-0">
+                                            
+                                            <div class="card-actions">
+                                                 <a href="/scolarite/groupes/profile-etudiant/${p.id}" class="btn-action-round me-2" title="Voir Profil"><i class="ri-user-line"></i></a>
+                                                 <a href="#" class="btn-action-round" title="Modifier"><i class="ri-pencil-line"></i></a>
+                                            </div>
+
+                                            <div class="position-relative" style="margin-bottom: -40px; z-index: 10;">
+                                                ${avatarHtml}
+                                            </div>
+                                        </div>
+                                        <div class="card-body text-center pt-5 mt-2 px-4">
+                                            <h5 class="fw-bold text-dark mb-1 text-truncate">${p.nom} ${p.prenom}</h5>
+                                            <p class="text-muted small mb-3 text-truncate">${p.email}</p>
+                                            
+                                            <div class="d-flex justify-content-center flex-wrap gap-2 mb-4">
+                                                <span class="badge badge-soft-info px-3 py-2 rounded-pill">${specialtyName}</span>
+                                                <span class="badge badge-soft-primary px-3 py-2 rounded-pill">${groupName}</span>
+                                            </div>
+
+                                            <div class="d-grid">
+                                                <a href="/scolarite/groupes/profile-etudiant/${p.id}" class="btn btn-outline-primary rounded-pill fw-medium">
+                                                    Voir dossier
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Collect unique groups and specialties
                             if (p.groupe_line_student__groupe__nom && !groups.includes(p.groupe_line_student__groupe__nom)) {
                                 groups.push(p.groupe_line_student__groupe__nom);
                             }
@@ -331,49 +490,40 @@
                             }
                         });
                         
-                        // Populate the group dropdown
+                        // Populate Dropdowns
                         var groupFilter = $('#groupFilter');
-                        groupFilter.empty();
-                        groupFilter.append('<option value="">Tous</option>');
+                        groupFilter.empty().append('<option value="">Tous</option>');
                         $.each(groups, function(index, group) {
                             groupFilter.append('<option value="'+group+'">'+group+'</option>');
                         });
                         
-                        // Populate the specialty dropdown
                         var specialtyFilter = $('#specialtyFilter');
-                        specialtyFilter.empty();
-                        specialtyFilter.append('<option value="">Tous</option>');
+                        specialtyFilter.empty().append('<option value="">Tous</option>');
                         $.each(specialties, function(index, specialty) {
                             specialtyFilter.append('<option value="'+specialty+'">'+specialty+'</option>');
                         });
                         
-                        // Show the table and hide the no results message when there are students
-                        $('#listItems').html(row);
-                        $('#noResultsMessage').hide();
-                        $('#listItems').show();
+                        // Inject Content
+                        $('#listItems').html(tableRows);
+                        $('#cardsGrid').html(cardHtml);
+                        
+                        // UI State
+                        $('#noResultsMessage').addClass('d-none');
+                        $('#cardsGrid').removeClass('d-none'); 
+                        $('#listItems').parent().parent().removeClass('d-none'); // Ensure table container logic is handled via toggle listeners
+
                     }else{
+                        // No Data State
                         $('#listItems').html('');
-                        // Clear and reset dropdowns when no data
+                        $('#cardsGrid').html('');
                         $('#groupFilter').empty().append('<option value="">Tous</option>');
                         $('#specialtyFilter').empty().append('<option value="">Tous</option>');
                         
-                        // Show the no results message for no data
-                        $('#noResultsMessage').removeClass('d-none').html(`
-                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                                <div class="avatar-sm mb-4">
-                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                        <i class="ri-user-unfollow-line"></i>
-                                    </div>
-                                </div>
-                                <h5 class="mb-2">Aucun étudiant trouvé</h5>
-                                <p class="text-muted mb-0">Il n'y a aucun étudiant enregistré pour le moment</p>
-                            </div>
-                        `);
-                        $('#noResultsMessage').show();
-                        $('#listItems').hide(); // Hide the table when showing the message
+                        $('#noResultsMessage').removeClass('d-none').show();
+                        $('#tableViewContainer').addClass('d-none');
+                        $('#cardViewContainer').addClass('d-none');
                     }
                     
-                    // Update statistics
                     updateStatistics();
                 }
                     
@@ -382,10 +532,6 @@
         }
 
         function updateStatistics() {
-            // For now, this function can be a placeholder
-            // In a more complete implementation, you would fetch statistics from your API
-            // For example, you could count active, pending, grouped students from the data
-            // For now, we'll just use placeholders or update from the table data
             var totalStudents = $('#listItems tr').length;
             $('#totalStudents').text(totalStudents);
         }
@@ -458,61 +604,66 @@
 
         // Filter table function
         function filterTable(searchTerm, statusFilter, groupFilter, specialtyFilter) {
-            // Get all table rows
+            // --- Filter Table Rows ---
             var $allRows = $('#listItems tr');
+            var $allCards = $('#cardsGrid .student-card-wrapper');
             var visibleCount = 0;
             
-            // Show all student rows first to reset any previous filtering
+            // Show all first
             $allRows.show();
+            $allCards.show();
             
+            // --- Logic for filtering ---
+            
+            $allCards.each(function() {
+                var $card = $(this);
+                // Data attributes are already lowercased or normalized during generation
+                var nameSearch = $card.data('search'); 
+                var groupVal = $card.data('group');
+                var specialtyVal = $card.data('specialty');
+                var statusVal = $card.data('status');
+                
+                var matchesSearch = !searchTerm || nameSearch.indexOf(searchTerm) !== -1;
+                var matchesStatus = !statusFilter || statusVal === statusFilter;
+                var matchesGroup = !groupFilter || groupVal === groupFilter;
+                var matchesSpecialty = !specialtyFilter || specialtyVal === specialtyFilter;
+                
+                if (matchesSearch && matchesStatus && matchesGroup && matchesSpecialty) {
+                    $card.show();
+                    visibleCount++;
+                } else {
+                    $card.hide();
+                }
+            });
+
+            // For Table Rows (mirrored logic)
             $allRows.each(function() {
                 var $row = $(this);
                 var text = $row.text().toLowerCase();
-                
-                // Check if row matches search term
                 var matchesSearch = !searchTerm || text.indexOf(searchTerm) !== -1;
                 
-                // Determine student status for filtering based on available data in the row
-                var groupCell = $row.find('td:eq(5)').text(); // Group column is the 6th column (index 5)
-                var studentStatus = groupCell && groupCell.trim() !== '' && groupCell !== 'null' ? 'grouped' : 'pending';
+                var groupCell = $row.find('td:eq(5)').text();
+                var studentStatus = groupCell && groupCell.trim() !== '' && groupCell.trim() !== '-' ? 'grouped' : 'pending';
                 var matchesStatus = !statusFilter || studentStatus === statusFilter;
                 
-                // Check if row matches selected group
                 var groupText = $row.find('td.group-col').text().trim();
                 var matchesGroup = !groupFilter || groupText === groupFilter;
                 
-                // Check if row matches selected specialty
                 var specialtyText = $row.find('td.specialty-col').text().trim();
                 var matchesSpecialty = !specialtyFilter || specialtyText === specialtyFilter;
                 
-                // Show/hide row based on all filters
-                if (!(matchesSearch && matchesStatus && matchesGroup && matchesSpecialty)) {
-                    $row.hide();
+                if (matchesSearch && matchesStatus && matchesGroup && matchesSpecialty) {
+                    $row.show();
                 } else {
-                    visibleCount++;
+                    $row.hide();
                 }
             });
             
-            // Handle the no results message div
-            if (visibleCount === 0 && $allRows.length > 0) {
-                // When there are students but none match the filter, show "no matching results"
-                $('#noResultsMessage').removeClass('d-none').html(`
-                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                        <div class="avatar-sm mb-4">
-                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                <i class="ri-search-line"></i>
-                            </div>
-                        </div>
-                        <h5 class="mb-2">Aucun étudiant correspondant à la recherche</h5>
-                        <p class="text-muted mb-0">Essayez de modifier vos critères de recherche</p>
-                    </div>
-                `);
-                $('#noResultsMessage').show();
-                $('#listItems').hide(); // Hide the table when showing the message
+            // Handle No Results
+            if (visibleCount === 0 && ($allCards.length > 0 || $allRows.length > 0)) {
+                $('#noResultsMessage').removeClass('d-none').show();
             } else {
-                // When there are matching students, hide the no results message and show the table
-                $('#noResultsMessage').hide();
-                $('#listItems').show();
+                $('#noResultsMessage').addClass('d-none');
             }
         }
 
@@ -528,7 +679,7 @@
                 var rowData = [];
                 var $currentRow = $(this);
                 
-                // First column: Name and Surname (without the link)
+                // First column: Name and Surname
                 var nameCell = $currentRow.find('td:eq(0)').clone();
                 nameCell.find('a').each(function() {
                     $(this).replaceWith($(this).text());
@@ -548,7 +699,7 @@
                 var emailValue = $currentRow.find('td:eq(3)').text().trim();
                 rowData.push(emailValue);
                 
-                // Fifth column: Specialty (without the link)
+                // Fifth column: Specialty
                 var specialtyCell = $currentRow.find('td:eq(4)').clone();
                 specialtyCell.find('a').each(function() {
                     $(this).replaceWith($(this).text());
@@ -556,7 +707,7 @@
                 var specialtyValue = specialtyCell.text().trim();
                 rowData.push(specialtyValue);
                 
-                // Sixth column: Group (without the link)
+                // Sixth column: Group
                 var groupCell = $currentRow.find('td:eq(5)').clone();
                 groupCell.find('a').each(function() {
                     $(this).replaceWith($(this).text());
@@ -658,6 +809,11 @@
             // Create and download the PDF
             pdfMake.createPdf(docDefinition).download('liste_des_etudiants.pdf');
         });
+
+        // Initialize view state - ensure list is hidden on load
+        // Already handled by classes but good verify:
+        $('#cardViewContainer').removeClass('d-none');
+        $('#tableViewContainer').addClass('d-none');
 
     });
 </script>

@@ -35,6 +35,7 @@ urlpatterns = [
 
     path('ApiCancelStudentAffectation', ApiCancelStudentAffectation, name="ApiCancelStudentAffectation"),
     path('ApiUpdate_etudiant',ApiUpdate_etudiant,name="ApiUpdate_etudiant"),
+    path('ApiUpdateStudentPhoto', ApiUpdateStudentPhoto, name="ApiUpdateStudentPhoto"),
     path('ApiSelectSpecialite' , ApiSelectSpecialite, name="ApiSelectSpecialite"),
     path('ApiGetFormation',ApiGetFormation, name="ApiGetFormation"),
     path('ApiListePromo', ApiListePromo, name="ApiListePromo"),

@@ -158,6 +158,30 @@ def ApiUpdate_etudiant(request):
     return JsonResponse({'status': 'success'})
 
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateStudentPhoto(request):
+    """Mise à jour de la photo de l'étudiant via AJAX"""
+    if request.method == 'POST':
+        student_id = request.POST.get('id_etudiant')
+        photo = request.FILES.get('photo')
+        
+        if not student_id or not photo:
+            return JsonResponse({'status': 'error', 'message': 'Données manquantes'})
+            
+        try:
+            student = Prospets.objects.get(id=student_id)
+            student.photo = photo
+            student.save()
+            return JsonResponse({'status': 'success'})
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Étudiant introuvable'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+
 class generate_student_pdf(LoginRequiredMixin, View):
     """Génère et imprime la fiche d'un étudiant en utilisant un template"""
 
