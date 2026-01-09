@@ -226,7 +226,19 @@
                                 <div class="mb-4">
                                     <h6 class="section-title">Imputation & Classification</h6>
                                     <div class="row g-4">
-                                        <div class="col-12">
+                                        <div class="col-lg-6">
+                                            <label class="form-label">Entité (Pour la numérotation)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="ri-building-line text-muted"></i></span>
+                                                <select class="form-select" id="entite" name="entite">
+                                                    <option value="">Sélectionner une entité</option>
+                                                    {% for ent in entites %}
+                                                        <option value="{{ ent.id }}">{{ ent.designation }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
                                             <label class="form-label">Catégorie de Produit / Compte</label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="ri-folder-info-line text-muted"></i></span>
@@ -486,6 +498,7 @@
             var date_paiement = $('#date_paiement').val();
             var compte = $('#compte').val();
             var client = $('#client').val();
+            var entite = $('#entite').val();
 
             if(!label || !montant_paiement || !mode_paiement || !date_operation || !date_paiement) {
                 alert('Veuillez remplir tous les champs obligatoires');
@@ -495,10 +508,11 @@
             $.ajax({
                 url: "{% url 't_tresorerie:ApiStoreAutrePaiement' %}",
                 type: "POST",
+                contentType: "application/json",
                 headers: {
                     'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
                 },
-                data: {
+                data: JSON.stringify({
                     label: label,
                     montant_paiement: montant_paiement,
                     mode_paiement: mode_paiement,
@@ -506,8 +520,9 @@
                     reference: reference,
                     date_paiement: date_paiement,
                     compte: compte,
-                    client: client
-                },
+                    client: client,
+                    entite: entite
+                }),
                 success: function(response) {
                     if(response.success) {
                         alert('Paiement enregistré avec succès');

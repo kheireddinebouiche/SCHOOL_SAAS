@@ -29,7 +29,7 @@ def ApiGetPaiementRequestDetails(request):
     if echeancier_data:
         # Parser les données de l'échéancier
         echeancier_list = json.loads(echeancier_data)
-        
+        echeancier_list = sorted(echeancier_list, key=lambda x: x['date_echeance'])
         # Calculer les totaux
         total_initial = sum(Decimal(e['montant']) for e in echeancier_list)
         total_final = sum(Decimal(e['montant_final']) for e in echeancier_list)
@@ -127,28 +127,47 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
         return JsonResponse({"status": "success"})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
-    
+
+from django.db.models import Q, F
+
 @transaction.atomic
 def ApiStorePaiementsDouble(client,label,date_echeance,montant,promo,echeancier,entite):
-    try:
-        last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
-        ordre = (last.ordre + 1) if last else 1
+    if isinstance(date_echeance, str):
+        try:
+            date_echeance = datetime.strptime(date_echeance, "%Y-%m-%d").date()
+        except ValueError:
+            try:
+                date_echeance = datetime.strptime(date_echeance, "%d/%m/%Y").date()
+            except ValueError:
+                pass
 
-        DuePaiements.objects.create(
-            client=client,
-            label=label,
-            ordre=ordre,
-            montant_due=montant,
-            montant_restant=montant,
-            date_echeance=date_echeance,
-            promo_id = promo,
-            type = "frais_f",
-            ref_echeancier_id = echeancier,
-            entite_id = entite if entite else None,
-        )
-        return JsonResponse({"status": "success"})
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)})
+    paiement = DuePaiements.objects.create(
+        client=client,
+        label=label,
+        ordre=9999,
+        montant_due=montant,
+        montant_restant=montant,
+        date_echeance=date_echeance,
+        promo_id=promo if promo else None,
+        type="frais_f",
+        ref_echeancier_id=echeancier,
+        entite_id=entite if entite else None,
+    )
+    all_paiements = DuePaiements.objects.filter(client=client).order_by('date_echeance', 'id')
+    
+    current_ordre = 0
+    assigned_ordre = 0
+    
+    for p in all_paiements:
+        current_ordre += 1
+        if p.ordre != current_ordre:
+            p.ordre = current_ordre
+            p.save(update_fields=['ordre'])
+
+        if p.id == paiement.id:
+            assigned_ordre = current_ordre
+
+    return JsonResponse({"status": "success","id": paiement.id,"ordre": assigned_ordre})
     
 @login_required(login_url="institut_app:login")
 def ApiApplyRemiseToPaiement(request):

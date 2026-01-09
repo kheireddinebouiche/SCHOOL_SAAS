@@ -1174,7 +1174,30 @@
         </div>
     </div>
 </div>
+</div>
 
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 bg-light">
+                <h5 class="modal-title">Aperçu du document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 bg-secondary bg-opacity-10">
+                <div id="pdfPreviewContainer" class="p-0 d-flex justify-content-center align-items-center" style="min-height: 400px; height: 100%;">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 bg-white">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+                <a href="#" id="downloadPdfBtn" class="btn btn-primary disabled">
+                    <i class="ri-download-line me-1"></i> Télécharger le PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Modal for Bulk Print (PDF Editor) -->
 <div class="modal fade" id="bulkPrintModal" tabindex="-1" aria-labelledby="bulkPrintModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -1341,8 +1364,95 @@
                     return;
                 }
 
-                hiddenInputIds.value = JSON.stringify(selectedIds);
-                form.submit();
+                // Close the selection modal
+                const bulkModal = bootstrap.Modal.getInstance(document.getElementById('bulkPrintModal'));
+                bulkModal.hide();
+
+                // Open the preview modal
+                const pdfPreviewModal = new bootstrap.Modal(document.getElementById('pdfPreviewModal'));
+                pdfPreviewModal.show();
+
+                // Show loading state
+                $('#pdfPreviewContainer').html(`
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Génération de l'aperçu PDF...</p>
+                    </div>
+                `);
+                $('#downloadPdfBtn').addClass('disabled').attr('href', '#');
+
+                // Prepare data
+                const formData = new FormData();
+                formData.append('student_ids', JSON.stringify(selectedIds));
+                formData.append('template_slug', templateSelect.value);
+                formData.append('modal', 'true'); // Flag for JSON response
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                // Send AJAX request
+                $.ajax({
+                    url: "{% url 't_groupe:generate_group_students_pdf' %}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Use iframe to isolate styles
+                        const iframe = document.createElement('iframe');
+                        iframe.style.width = '100%';
+                        iframe.style.height = '85vh';
+                        iframe.style.border = 'none';
+                        iframe.style.background = 'white';
+
+                        $('#pdfPreviewContainer').empty().append(iframe);
+
+                        // Write content to iframe
+                        const doc = iframe.contentWindow.document;
+                        doc.open();
+                        doc.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <style>
+                                    body { margin: 0; padding: 20px; background: #525659; display: flex; justify-content: center; }
+                                    .page-container {
+                                        background: white;
+                                        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                                        padding: 0; /* Let print CSS handle padding */
+                                        width: 210mm; /* A4 width */
+                                        min-height: 297mm; /* A4 height */
+                                        box-sizing: border-box; 
+                                        margin-bottom: 20px;
+                                    }
+                                    ${response.custom_css || ''}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="page-container">
+                                    ${response.preview_html}
+                                </div>
+                            </body>
+                            </html>
+                        `);
+                        doc.close();
+
+                        // Enable download button
+                        if (response.download_url) {
+                            $('#downloadPdfBtn').removeClass('disabled').attr('href', response.download_url);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Erreur:", error);
+                        $('#pdfPreviewContainer').html(`
+                            <div class="text-center text-danger">
+                                <i class="ri-error-warning-line fs-1"></i>
+                                <p class="mt-2">Erreur lors de la génération de l'aperçu.</p>
+                                <button class="btn btn-sm btn-outline-secondary mt-2" onclick="location.reload()">Réessayer</button>
+                            </div>
+                        `);
+                    }
+                });
             });
         }
     });

@@ -14,7 +14,9 @@ import json
 from io import BytesIO
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views import View
+from django.views import View  
 from django.template import Template, Context
+from django.urls import reverse
 
 
 @login_required(login_url="institut_app:login")
@@ -41,6 +43,8 @@ def StudentDetails(request, pk):
         echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
         rachat_due_paiement = DuePaiements.objects.filter(client = student, type='rach')
         documents_available = current_groupe.groupe.specialite.formation.documents.all()
+        # Add fetching of other payments
+        autre_paiements = AutreProduit.objects.filter(client = student).select_related('compte')
 
         try:
             echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
@@ -90,6 +94,7 @@ def StudentDetails(request, pk):
             'logo_partenaire' : logo_partenanire.logo.url if logo_partenanire.logo else "",
             'documents_available':documents_available,
             'rachat_due_paiement' : rachat_due_paiement,
+            'autre_paiements': autre_paiements,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 
@@ -226,6 +231,15 @@ class generate_student_pdf(LoginRequiredMixin, View):
                 rendered_content=rendered_content,
                 generated_by=request.user
             )
+
+            # Check for AJAX/Modal request
+            if request.GET.get('modal') == 'true':
+                return JsonResponse({
+                    'status': 'success',
+                    'preview_html': rendered_content,
+                    'custom_css': template_obj.custom_css,
+                    'download_url': reverse('pdf_editor:document-export', args=[doc_gen.pk])
+                })
 
             return redirect('pdf_editor:document-preview', pk=doc_gen.pk)
 

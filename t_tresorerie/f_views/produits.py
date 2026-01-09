@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from t_crm.models import Prospets
 import json
-
+from institut_app.models import Entreprise
 
 
 @login_required(login_url="institut_app:login")
@@ -170,10 +170,6 @@ def PageAutrePaiements(request):
     """Page to manage other payments"""
     return render(request, 'tenant_folder/comptabilite/paiements/liste_autre_paiements.html')
 
-@login_required(login_url="institut_app:login")
-def PageNouveauAutrePaiement(request):
-    """Page to create a new other payment"""
-    return render(request, 'tenant_folder/comptabilite/paiements/nouveau_autre_paiement.html')
 
 @login_required(login_url="institut_app:login")
 def ApiStoreAutrePaiement(request):
@@ -187,6 +183,8 @@ def ApiStoreAutrePaiement(request):
     reference = data.get('reference')
     date_paiement = data.get('date_paiement')
     compte_id = data.get('compte')
+    client_id = data.get('client')
+    entite_id = data.get('entite')
 
     if not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
         return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
@@ -194,7 +192,26 @@ def ApiStoreAutrePaiement(request):
     # Get the PaymentCategory if provided
     compte = None
     if compte_id:
-        compte = PaymentCategory.objects.get(id=compte_id)
+        try:
+            compte = PaymentCategory.objects.get(id=compte_id)
+        except PaymentCategory.DoesNotExist:
+            pass # Or handle error appropriately
+
+    # Get the Client if provided
+    client = None
+    if client_id:
+        try:
+            client = Prospets.objects.get(id=client_id)
+        except Prospets.DoesNotExist:
+            pass 
+
+    # Get the Entite if provided
+    entite = None
+    if entite_id:
+        try:
+            entite = Entreprise.objects.get(id=entite_id)
+        except Entreprise.DoesNotExist:
+            pass
 
     # Create the AutreProduit instance
     autre_paiement = AutreProduit.objects.create(
@@ -204,7 +221,9 @@ def ApiStoreAutrePaiement(request):
         date_operation=date_operation,
         reference=reference,
         date_paiement=date_paiement,
-        compte=compte
+        compte=compte,
+        client=client,
+        entite=entite
     )
 
     return JsonResponse({
@@ -219,11 +238,23 @@ def ApiStoreAutrePaiement(request):
 def ApiListeAutrePaiements(request):
     """API endpoint to list all other payments"""
     
-    autre_paiements = AutreProduit.objects.all().values('id')
+    paiements = AutreProduit.objects.all().select_related('client', 'compte').order_by('-date_paiement')
+    data = []
 
-    print(autre_paiements)
+    for p in paiements:
+        data.append({
+            'id': p.id,
+            'prospect_nom': p.client.nom if p.client else "Anonyme", # Or "-"
+            'prospect_prenom': p.client.prenom if p.client and p.client.prenom else "",
+            'description': p.label,
+            'num': p.reference if p.reference else f"AUT-{p.id}",
+            'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
+            'context': p.compte.name if p.compte else "Autre",
+            'context_key': 'autre',
+            'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else "-"
+        })
 
-    return JsonResponse(list(autre_paiements), safe=False)
+    return JsonResponse(data, safe=False)
     
 
 @login_required(login_url="institut_app:login")

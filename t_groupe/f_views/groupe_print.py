@@ -1,4 +1,6 @@
 from django.shortcuts import get_object_or_404, redirect
+from django.http import JsonResponse
+from django.urls import reverse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.template import Template, Context
@@ -87,6 +89,15 @@ class GenerateBulkStudentPdf(LoginRequiredMixin, View):
                 rendered_content=full_rendered_content,
                 generated_by=request.user
             )
+
+            # Check for AJAX/Modal request
+            if request.POST.get('modal') == 'true':
+                return JsonResponse({
+                    'status': 'success',
+                    'preview_html': full_rendered_content,
+                    'custom_css': template_obj.custom_css,
+                    'download_url': reverse('pdf_editor:document-export', args=[doc_gen.pk])
+                })
 
             return redirect('pdf_editor:document-preview', pk=doc_gen.pk)
 

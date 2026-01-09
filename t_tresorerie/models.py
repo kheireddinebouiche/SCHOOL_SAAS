@@ -373,16 +373,62 @@ class PaymentCategory(models.Model):
    
 class AutreProduit(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
+    num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de paiement")
     client = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)
     montant_paiement = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('chq','Chéque'),('vir','Virement'),('cach','Cash')])
     date_operation = models.DateField(auto_now_add=True)
     reference = models.CharField(null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
+    entite = models.ForeignKey(Entreprise, on_delete=models.DO_NOTHING, null=True, blank=True)
     compte = models.ForeignKey(PaymentCategory, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.label
+
+    def save(self, *args, **kwargs):
+        if not self.num:
+            if not self.entite:
+                # Fallback or error if entite is required for numbering.
+                # Assuming default behavior or skipping numbering if no entite, 
+                # BUT the pattern uses entite. Let's use "ENTITE" if None to avoid crash,
+                # or better, raise validation error if strict.
+                # Given user request to be "like Paiements", we try to mimic.
+                # Paiements uses self.due_paiements.entite.
+                entite_nom = "ENTITE"
+                wilaya = "00"
+                annexe = "00"
+            else:
+                entite_nom = self.entite.designation or "ENTITE"
+                wilaya = str(self.entite.code_wilaya).zfill(2) if self.entite.code_wilaya else "00"
+                annexe = str(self.entite.numero).zfill(2) if self.entite.numero else "00"
+
+            # 3. Date du paiement
+            date_p = self.date_paiement or datetime.date.today()
+
+            # Conversion si la valeur est une chaîne
+            if isinstance(date_p, str):
+                date_p = datetime.datetime.strptime(date_p, "%Y-%m-%d").date()
+
+            mois = date_p.strftime("%m")
+            annee = date_p.strftime("%y")
+
+            # 4. Génération séquence unique
+            pattern = f"/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
+            last = AutreProduit.objects.filter(num__endswith=pattern)\
+                                    .aggregate(max_num=Max("num"))["max_num"]
+
+            if last:
+                last_seq = int(last.split("/")[0].replace("N°", ""))
+                seq = str(last_seq + 1).zfill(6)
+            else:
+                seq = "000001"
+
+            # 5. Construction du numéro final
+            # Using AP to distinguish from standard Paiements (ST)
+            self.num = f"N°{seq}/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
+
+        super().save(*args, **kwargs)
 ####################### GESTION DES CATEGORIES DE PRODUIT ET DE DEPENSES ##############################################
 
 class PlanComptable(models.Model):

@@ -300,7 +300,7 @@
                                         <ul class="dropdown-menu shadow-lg border-0" aria-labelledby="impressionDropdown">
                                             {% for doc in documents_available %}
                                                 <li>
-                                                    <a class="dropdown-item" target="_blank" href="{% url 't_groupe:generate_student_pdf' pk doc.slug %}">
+                                                    <a class="dropdown-item print-doc-link" href="#" data-url="{% url 't_groupe:generate_student_pdf' pk doc.slug %}">
                                                         {{ doc.title }}
                                                     </a>
                                                 </li>
@@ -642,9 +642,62 @@
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-12">
+                                            <div class="card shadow-sm border-0">
+                                                <div class="card-header bg-light border-0">
+                                                    <h5 class="card-title mb-0 text-primary"><i class="ri-secure-payment-line me-2"></i>Autres Paiements</h5>
+                                                </div>
+                                                <div class="card-body p-0">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover table-nowrap align-middle mb-0">
+                                                            <thead class="bg-light">
+                                                                <tr>
+                                                                    <th scope="col" class="ps-4" style="width: 50px;">#</th>
+                                                                    <th scope="col">Libellé</th>
+                                                                    <th scope="col">Montant</th>
+                                                                    <th scope="col">Date Paiement</th>
+                                                                    <th scope="col">Référence</th>
+                                                                    <th scope="col">Catégorie</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for payment in autre_paiements %}
+                                                                <tr>
+                                                                    <td class="ps-4 fw-medium">{{ payment.num|default:payment.id }}</td>
+                                                                    <td>{{ payment.label }}</td>
+                                                                    <td class="text-success fw-bold">{{ payment.montant_paiement }} DA</td>
+                                                                    <td>{{ payment.date_paiement|date:"d/m/Y" }}</td>
+                                                                    <td>{{ payment.reference|default:"-" }}</td>
+                                                                    <td>
+                                                                        {% if payment.compte %}
+                                                                            <span class="badge bg-info-subtle text-info">{{ payment.compte.name }}</span>
+                                                                        {% else %}
+                                                                            <span class="badge bg-light text-muted">Non catégorisé</span>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                {% empty %}
+                                                                <tr>
+                                                                    <td colspan="6" class="text-center py-4">
+                                                                        <div class="text-muted">
+                                                                            <i class="ri-inbox-line fs-24 d-block mb-2"></i>
+                                                                            Aucun autre paiement trouvé
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Remises Tab -->
+                                 <!-- Remises Tab -->
                                 <div class="tab-pane fade" id="remises" role="tabpanel" aria-labelledby="remises-tab">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <div class="d-flex align-items-center">
@@ -1204,6 +1257,29 @@
         </div>
     </div>
 </div>
+
+<!-- PDF Preview Modal -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 bg-light">
+                <h5 class="modal-title">Aperçu du document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 bg-secondary bg-opacity-10">
+                <div id="pdfPreviewContainer" class="p-0 d-flex justify-content-center align-items-center" style="min-height: 400px; height: 100%;">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 bg-white">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+                <a href="#" id="downloadPdfBtn" class="btn btn-primary disabled">
+                    <i class="ri-download-line me-1"></i> Télécharger le PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- end main content-->
 
 
@@ -1302,6 +1378,96 @@
                     console.error('Error:', error);
                     alert('Une erreur est survenue lors de la communication avec le serveur.');
                     btn.text(originalText).prop('disabled', false);
+                }
+            });
+        });
+
+        // --- Print Document Logic (Modal Preview) ---
+        $('.print-doc-link').on('click', function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            const url = btn.data('url');
+            const title = btn.text().trim();
+            
+            // Prepare modal
+            $('#pdfPreviewModal .modal-title').text(title);
+            const modal = new bootstrap.Modal(document.getElementById('pdfPreviewModal'));
+            modal.show();
+            
+            // Reset state
+            $('#pdfPreviewContainer').html('<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div>');
+            $('#downloadPdfBtn').addClass('disabled').attr('href', '#');
+            
+            // AJAX Fetch
+            $.ajax({
+                url: url,
+                type: 'GET',
+                data: { modal: 'true' },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Use iframe to isolate styles
+                        const iframe = document.createElement('iframe');
+                        iframe.style.width = '100%';
+                        iframe.style.height = '85vh'; // Taller height
+                        iframe.style.border = 'none';
+                        iframe.style.background = 'white'; // fallback
+
+                        $('#pdfPreviewContainer').empty().append(iframe);
+                        
+                        // Construct iframe content
+                        // We wrap content in a layout similar to what PDF expects or just simple container
+                        const docContent = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="utf-8">
+                                <style>
+                                    body { 
+                                        margin: 0; 
+                                        padding: 20px; 
+                                        background-color: #525659; /* PDF viewer background feel */
+                                        display: flex;
+                                        justify-content: center;
+                                        font-family: 'Arial', sans-serif;
+                                    }
+                                    .page-container {
+                                        background: white;
+                                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                                        padding: 0; /* Let template control padding if defined in CSS? No, usually body has margin 0 in CSS */
+                                        /* If the template CSS sets @page size, we can't easily emulate it in HTML without knowing dims. 
+                                           But usually templates have a .page class or similar. */
+                                        width: 210mm; /* Default A4 width approximation for screen */
+                                        min-height: 297mm;
+                                        box-sizing: border-box;
+                                        overflow: hidden; /* Prevent spill */
+                                        position: relative;
+                                    }
+                                    /* Inject User CSS */
+                                    ${response.custom_css}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="page-container">
+                                    ${response.preview_html}
+                                </div>
+                            </body>
+                            </html>
+                        `;
+                        
+                        const doc = iframe.contentWindow.document;
+                        doc.open();
+                        doc.write(docContent);
+                        doc.close();
+                        
+                        // Enable download button
+                        $('#downloadPdfBtn').removeClass('disabled').attr('href', response.download_url);
+                        
+                    } else {
+                        $('#pdfPreviewContainer').html('<div class="text-danger">Erreur: ' + (response.message || 'Impossible de charger l\'aperçu.') + '</div>');
+                    }
+                },
+                error: function(xhr) {
+                    $('#pdfPreviewContainer').html('<div class="text-danger">Erreur serveur (' + xhr.status + ')</div>');
                 }
             });
         });

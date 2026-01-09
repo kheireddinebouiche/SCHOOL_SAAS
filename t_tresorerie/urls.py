@@ -210,7 +210,7 @@ urlpatterns = [
 
     path('paiements/autres/liste/', PageAutrePaiements, name="pageautrespaiement"),
     path('paiements/autres/nouveau/', PageNouveauAutrePaiement, name="PageNouveauAutrePaiement"),
-    path('ApiListeAutresPaiements', ApiListeAutrePaiements, name="ApiListeAutresPaiements"),
+    path('ApiListeAutresPaiements', ApiListeAutresPaiements, name="ApiListeAutresPaiements"),
     path('ApiStoreAutrePaiement', ApiStoreAutrePaiement, name="ApiStoreAutrePaiement"),
     path('ApiGetAutrePaiement/<int:pk>/', ApiGetAutrePaiement, name="ApiGetAutrePaiement"),
     path('ApiUpdateAutrePaiement', ApiUpdateAutrePaiement, name="ApiUpdateAutrePaiement"),
