@@ -29,6 +29,7 @@ class NewFormationForm(forms.ModelForm):
             'code' : 'Code de la formation',
             'type_formation' : "Type de formation",
             'prix_formation' : "Prix de la formation",
+            "entite_legal" : "Entité légale :"
         }
         
 class NewFormationFormMaster(forms.ModelForm):
@@ -57,7 +58,9 @@ class NewFormationFormMaster(forms.ModelForm):
             'type_formation' : "Type de formation",
             'frais_inscription' : "Frais d'inscription",
             'prix_formation' : "Prix de la formation",
-            'qualification' : "Qualification :"
+            'qualification' : "Qualification :",
+            "entite_legal" : "Entité légale :"
+
         }
     def __init__(self, *args, **kwargs):
         current_tenant = kwargs.pop('current_tenant', None)
