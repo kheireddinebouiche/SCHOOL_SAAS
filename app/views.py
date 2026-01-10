@@ -86,7 +86,7 @@ def new_tenant(request):
                 )
                 default_user.save()
 
-            messages.success(request,'Le compte à été crée avec succès')
+            messages.success(request,'Le compte a été créé avec succès')
 
             return redirect('index')
         
@@ -121,7 +121,7 @@ def CreateSuperUser(request):
                 user.save()
 
                 
-            messages.success(request, "L'utilisateur à été crée avec succès")
+            messages.success(request, "L'utilisateur a été créé avec succès")
             return redirect('index')
     else:
 

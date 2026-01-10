@@ -569,7 +569,7 @@ def ApiSaveUser(request):
         form = CreateNewUserForm(request.POST)
         if form.is_valid():
             form.save()
-            return JsonResponse({'success' : True, 'message' : "L'utilisateur à été ajouter avec succès"})
+            return JsonResponse({'success' : True, 'message' : "L'utilisateur a été ajouté avec succès"})
         else:
             return JsonResponse({'success' : False, 'message' : "Erreur de traitement du formulaire"})
     else:

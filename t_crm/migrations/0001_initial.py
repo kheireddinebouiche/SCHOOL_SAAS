@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                 ('is_ets_prospect', models.BooleanField(default=False)),
                 ('is_client', models.BooleanField(default=False)),
                 ('has_special_echeancier', models.BooleanField(default=False)),
-                ('context', models.CharField(blank=True, choices=[('acc', 'Acceuil'), ('con', 'Conseil')], max_length=100, null=True)),
+                ('context', models.CharField(blank=True, choices=[('acc', 'Accueil'), ('con', 'Conseil')], max_length=100, null=True)),
                 ('contact_situation', models.CharField(blank=True, choices=[('fist_contact', 'Premiere visiste'), ('a_appeler', 'Appelle téléphonique'), ('est_passer', "Visiste (Le prospect est déja passer à l'insim)")], max_length=100, null=True)),
                 ('has_refund', models.BooleanField(default=False)),
                 ('prospect_date', models.DateField(blank=True, null=True)),

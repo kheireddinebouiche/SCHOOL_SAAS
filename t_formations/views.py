@@ -422,7 +422,7 @@ def updateSpecialite(request,pk):
             formation.updated = True
             formation.save()
 
-            messages.success(request, "Les données de la spécialitée ont été mis à jours avec succès")
+            messages.success(request, "Les données de la spécialitée ont été mises à jour avec succès")
             return redirect('t_formations:detailSpecialite', pk)
         else:
             messages.error(request, "Une erreur c'est produite lors du traitement de la réquête")
@@ -612,7 +612,7 @@ def ApiUpdateModule(request):
 
     module.save()
 
-    return JsonResponse({'success' : True, 'message' : "Les information du module ont été mis à jours avec succès"})
+    return JsonResponse({'success' : True, 'message' : "Les information du module ont été mises à jour avec succès"})
 
 def archiveFormation(request):
     pass
@@ -846,7 +846,7 @@ def ApiAddDocument(request):
         is_required = _required
     )
 
-    return JsonResponse({"status" : "success","message" : "Le document à été ajouter avec succès"})
+    return JsonResponse({"status" : "success","message" : "Le document a été ajouté avec succès"})
 
 @login_required(login_url="institu_app:login")
 @transaction.atomic

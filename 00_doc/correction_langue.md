@@ -26,9 +26,20 @@ Cependant, des interventions manuelles restent nécessaires pour les termes non 
 ---
 
 ## 2. BACKEND PYTHON (Messages & Labels)
-Ces corrections concernent les fichiers `views.py` (messages `messages.success/error`) et `models.py` (`verbose_name`, `help_text`).
+**Statut Global :** 🟢 **Partiellement Corrigé (Script 10/01/2026)**
+Les fautes de conjugaison lourdes ("à été effectuer") ont été corrigées automatiquement.
 
-### 🔴 Urgence "Visible Utilisateur"
+### Reste à faire (Manuel) :
+*   **URLs :** Le terme `plannification` dans `urls.py` doit être corrigé avec précaution (impact Frontend).
+*   **Contexte fin :** Vérifier les accords pluriels complexes non gérés par regex.
+
+### Corrections Appliquées (10/01/2026) :
+*   `à été [verbe]` -> `a été [verbe]` (créé, supprimé, effectué...)
+*   `suppréssion` -> `suppression`
+*   `Acceuil` -> `Accueil` (Models choices)
+*   `coéfficiant` -> `coefficient`
+
+### 🔴 Urgence "Visible Utilisateur" (Ce qui restait avant correction auto, à vérifier)
 
 #### Module : Core (`institut_app`)
 | Fichier | Ligne Approx | Contexte | Correction |
@@ -56,22 +67,30 @@ Ces corrections concernent les fichiers `views.py` (messages `messages.success/e
 | :--- | :---: | :--- | :--- |
 | `t_crm/views.py` | 126 | `sauvegarder ave succès` | `sauvegardées avec succès` |
 | `t_crm/views.py` | 282 | `incription à été confirmer` | `inscription a été confirmée` |
-| `t_crm/views.py` | 301 | `Action non autorisé` | `Action non autorisée` |
-| `t_etudiants/views.py` | 64 | `La note est enregistrer` | `La note est enregistrée` |
+| `t_crm/models.py` | 228 | `('acc','Acceuil')` | `('acc','Accueil')` (Choix DB) |
 | `t_etudiants/views.py` | 129 | `on été enregistrer avec suucès` | `ont été enregistrées avec succès` |
+| `t_crm/f_views/prospects.py` | 283 | `à été effectuer` | `a été effectuée` |
 
 #### Module : Examens (`t_exam`)
 | Fichier | Ligne Approx | Contexte | Correction |
 | :--- | :---: | :--- | :--- |
-| `views.py` | 273 | `déja planifier` | `déjà planifié` |
+| `views.py` | 86 | `session à été supprimée` | `session a été supprimée` |
+| `views.py` | 120 | `Suppréssion effectuer` | `Suppression effectuée` |
+| `views.py` | 285 | `à été planifier` | `a été planifié` |
+| `urls.py` | 27, 121 | `plannification-examens` | `planification-examens` (URL visible!) |
 | `commission.py` | 53 | `La commision à été crée` | `La commission a été créée` |
-| `commission.py` | 113 | `a été valider` | `a été validée` |
 
-#### Module : Finance (`t_tresorerie`)
+#### Module : Ressources Humaines (`t_rh`)
 | Fichier | Ligne Approx | Contexte | Correction |
 | :--- | :---: | :--- | :--- |
-| `views.py` | 128 | `suppréssion a été effectuer` | `La suppression a été effectuée` |
-| `views.py` | 783 | `remboursement à été enregistrer` | `remboursement a été enregistrée` |
+| `views.py` | 318 | `catégorie à été crée` | `catégorie a été créée` |
+| `views.py` | 465 | `à été ajouter avec suucès` | `a été ajouté avec succès` |
+
+#### Module : Timetable & Tresorerie
+| Fichier | Ligne Approx | Contexte | Correction |
+| :--- | :---: | :--- | :--- |
+| `t_timetable/views.py` | 77 | `L'emploie du temps à été crée` | `L'emploi du temps a été créé` |
+| `t_tresorerie/views.py` | 596 | `suppréssion a été effectuer` | `suppression a été effectuée` |
 
 ---
 *Dernière mise à jour : 10/01/2026*

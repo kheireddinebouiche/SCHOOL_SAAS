@@ -287,7 +287,7 @@ def ApiUpdatePreinscritInfos(request):
         obj.profile_completed = False
     obj.save()
 
-    return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mis à jours avec succès"})
+    return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mises à jour avec succès"})
 
 
 @login_required(login_url='institut_app:login')

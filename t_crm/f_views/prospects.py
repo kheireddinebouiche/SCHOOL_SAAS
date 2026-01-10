@@ -280,7 +280,7 @@ def ApiChangeToStandardCursus(request):
             prosepect.is_double = False
             prosepect.save()
 
-            messages.success(request, "L'inscription de l'étudiant à un cursus standard à été effectuer avec succès")
+            messages.success(request, "L'inscription de l'étudiant à un cursus standard a été effectuée avec succès")
             return JsonResponse({"status":"success"})
 
         except Exception as e:

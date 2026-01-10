@@ -74,7 +74,7 @@ def ApiCreateTimeTable(request):
             description = description,
             annee_scolaire = promo.promotion.annee_academique,
         )
-        messages.success(request,"L'emploie du temps à été crée avec succès")
+        messages.success(request,"L'emploie du temps a été créé avec succès")
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
@@ -94,8 +94,8 @@ def ApiDeleteTimeTable(request):
         #     return JsonResponse({"status":"error","message" : "L'emploie du temps ne peux pas être supprimer."})
         
         obj.delete()
-        messages.success(request, "L'emploie du temps à été supprimer avec succès")
-        return JsonResponse({"status": "success","message":"L'emploie du temps à été supprimer avec succès"})
+        messages.success(request, "L'emploie du temps a été supprimé avec succès")
+        return JsonResponse({"status": "success","message":"L'emploie du temps a été supprimé avec succès"})
     else:
         return JsonResponse({'status':'error'})
 
@@ -255,7 +255,7 @@ def ApiDeleteCoursSession(request):
 
         obj = TimetableEntry.objects.get(id = cours)
         obj.delete()
-        return JsonResponse({'status':"success",'message':"suppréssion effectuer avec succès"})
+        return JsonResponse({'status':"success",'message':"suppression effectuer avec succès"})
     else:
         return JsonResponse({"status":"error","message":"Méthode non autoriser."})
 
@@ -388,7 +388,7 @@ def ApiDeleteRegistre(request):
         
         obj.delete()
 
-        return JsonResponse({"status" : "success",'message' : "La suppréssion à été effectuer avec succès"})
+        return JsonResponse({"status" : "success",'message' : "La suppression a été effectuée avec succès"})
 
     else:
         return JsonResponse({"status" : "error"})

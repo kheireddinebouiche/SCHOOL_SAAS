@@ -271,7 +271,7 @@ def ApiDeleteEcheancier(request):
         echeancierId = request.POST.get('echeancierId')
         obj = EcheancierPaiement.objects.get(id = echeancierId)
         if obj.is_default:
-            return JsonResponse({"status" : "error",'message' : "La suppréssion ne peux pas etre effectuer."})
+            return JsonResponse({"status" : "error",'message' : "La suppression ne peux pas etre effectuer."})
         
         obj.delete()
         return JsonResponse({"status" : "success"})

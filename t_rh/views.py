@@ -92,7 +92,7 @@ def updateEmploye(request,pk):
         form = NouveauEmploye(request.POST, instance=emp)
         if form.is_valid():
             form.save()
-            messages.success(request,"Les informations de l'employe ont été mis à jours.")
+            messages.success(request,"Les informations de l'employe ont été mises à jour.")
             return redirect('t_rh:detailsEmploye', pk)
     
     context = {
@@ -315,7 +315,7 @@ def ApiAddCategorieContrat(request):
             entite_legal = obj_ent,
         )
         new_cat.save()
-        return JsonResponse({'status': "success", 'message' : "La catégorie à été crée avec succès"})
+        return JsonResponse({'status': "success", 'message' : "La catégorie a été créé avec succès"})
     else:
         return JsonResponse({'status' : "error", 'message': "Champs requis manquants, veuillez completer les champs"})
 
@@ -385,7 +385,7 @@ def ApiCreateContrat(request):
     employe.has_contract = True
     employe.save()
 
-    return JsonResponse({"status" : "success", 'message' : "Le contrat à été crée avec succès"})
+    return JsonResponse({"status" : "success", 'message' : "Le contrat a été créé avec succès"})
 
 def ApiGetListContratForEmploye(request):
     id_employe = request.GET.get('id_employe')
@@ -425,7 +425,7 @@ def ApiUpdateCategorieGroupe(request):
         obj.entite_legal = Entreprise.objects.get(id = update_entite)
         obj.save()
 
-        return JsonResponse({"status" : 'success', "message" : "Les informations ont été mis à jours"})
+        return JsonResponse({"status" : 'success', "message" : "Les informations ont été mises à jour"})
     except:
         return JsonResponse({'status' : "error", "message" : "Une erreur est survenue lors du traitement de la réquete"})
 
@@ -462,7 +462,7 @@ def ApiAddPoste(request):
     )
     new_poste.save()
     messages.success(request, 'Le poste à été ajouté avec succès')
-    return JsonResponse({'status' : "success", "message" : "Le poste à été ajouter avec suucès",'id' : new_poste.id})
+    return JsonResponse({'status' : "success", "message" : "Le poste a été ajouté avec suucès",'id' : new_poste.id})
 
 def ListeDesPostes(request):
     context = {

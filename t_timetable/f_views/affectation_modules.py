@@ -164,7 +164,7 @@ def ApiAffectTrainer(request):
                 module_id=moduleId,
                 formateur_id = trainerId
             )
-            return JsonResponse({"status" : "success", "message" : "L'enseignant à été affecter avec succès"})
+            return JsonResponse({"status" : "success", "message" : "L'enseignant a été affecté avec succès"})
         except Exception as e:
             return JsonResponse({"status":"error",'message' : "Le module a été déja affecter a l'enseignant."})
     else:

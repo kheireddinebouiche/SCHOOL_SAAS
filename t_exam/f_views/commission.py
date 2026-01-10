@@ -50,7 +50,7 @@ def NouvelleCommission(request):
         form = CommissionForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "La commision à été crée avec succès")
+            messages.success(request, "La commision a été créé avec succès")
             return redirect('t_exam:PageCommission')
         else:
             # Afficher les erreurs de validation spécifiques
@@ -82,7 +82,7 @@ def UpdateCommission(request, pk):
         form = CommissionForm(request.POST, instance = commission)
         if form.is_valid():
             form.save()
-            messages.success(request,"Les données de la commission ont été mis à jours avec succès")
+            messages.success(request,"Les données de la commission ont été mises à jour avec succès")
             return redirect('t_exam:PageCommission')
         else:
             messages.error(request,"Une erreur c'est produite lors du traitement de la requete")

@@ -225,7 +225,7 @@ class Prospets(models.Model):
     is_client = models.BooleanField(default=False)
     has_special_echeancier = models.BooleanField(default=False)
 
-    context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Acceuil'),('con','Conseil')])
+    context = models.CharField(max_length=100, null=True, blank=True, choices=[('acc','Accueil'),('con','Conseil')])
 
     contact_situation = models.CharField(max_length=100, null=True, blank=True, choices=[('fist_contact','Premier passage'),('a_appeler','Après Appel'),('est_passer','Après visite')])
 

@@ -81,7 +81,7 @@ def ApiCreateGroupe(request):
             end_date = end_date,
             specialite_id = _formSelectSpecialite,
         )
-        messages.success(request,"Le groupe à été crée avec succès")
+        messages.success(request,"Le groupe a été créé avec succès")
         return JsonResponse({"status":"success"})
     except:
         return JsonResponse({"status":"error",'message':"Une erreur c'est produite lors du traitement"})
@@ -140,7 +140,7 @@ def UpdateGroupe(request, pk):
         form = NewGroupeForms(request.POST, instance=groupe)
         if form.is_valid():
             form.save()
-            messages.success(request,"Les informations du groupe on été modifier avec succès")
+            messages.success(request,"Les informations du groupe ont été modifiées avec succès")
             return redirect("t_groupe:detailsgroupe", pk)
         else:
             messages.error(request,"Une erreur c'est produite lors du traitement de la requete")
@@ -165,7 +165,7 @@ def ApiDeleteGroupe(request):
         if obj.etat != "brouillon":
             return JsonResponse({"status":"error",'message':'Le groupe est en cours d\'utilisation, vous ne pouvez pas effectuer la suppression'})
         obj.delete()
-        messages.success(request,"Le groupe à été supprimer avec succès")
+        messages.success(request,"Le groupe a été supprimé avec succès")
         return JsonResponse({"status":"success"})
     else:
         return JsonResponse({"status":"success",'message':"methode non autoriser"})

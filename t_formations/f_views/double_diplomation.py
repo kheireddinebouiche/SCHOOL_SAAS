@@ -403,7 +403,7 @@ def ApiDeleteAssociatedModule(request):
         
         CorrepondanceModule.objects.get(id = association_id).delete()
         
-        return JsonResponse({"status" : "success", 'message' : "L'association à été supprimer avec succès"})
+        return JsonResponse({"status" : "success", 'message' : "L'association a été supprimé avec succès"})
 
     else:
         return JsonResponse({"status":"error"})
