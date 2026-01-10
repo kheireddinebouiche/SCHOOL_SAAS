@@ -127,6 +127,7 @@ def detailsGroupe(request, pk):
         "documents" : documents,
         #"active_templates": DocumentTemplate.objects.filter(is_active=True), # Filtrer par type si nécessaire, ex: template_type='student_info'
         "active_templates": documents, # Filtrer par type si nécessaire, ex: template_type='student_info'
+        "double_students": students.filter(student__is_double = True)
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 

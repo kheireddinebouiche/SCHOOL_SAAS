@@ -111,6 +111,8 @@ urlpatterns = [
     path('ApiChangeUserPassword', ApiChangeUserPassword, name="ApiChangeUserPassword"),
     path('ApiCreateUser', ApiCreateUser, name="ApiCreateUser"),
 
+    #### Dashboard #####
+    path('pedagogie/dashboard/',pedago_dashboard, name="pedago_dashboard"),
     
 
 

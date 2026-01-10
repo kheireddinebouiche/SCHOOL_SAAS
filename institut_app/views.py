@@ -1,5 +1,7 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse, JsonResponse
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django_tenants.utils import schema_context
@@ -13,6 +15,8 @@ from django.template.loader import render_to_string
 from t_crm.models import *
 from t_tresorerie.models import DuePaiements
 from t_formations.models import Promos
+from t_groupe.models import Groupe, GroupeLine
+from t_timetable.models import Timetable, TimetableEntry, Salle
 from .models import UserSession
 from django.contrib.sessions.models import Session
 from django.utils import timezone
@@ -199,6 +203,84 @@ def default_dashboard(request):
 
 def FinanceDashboard(request):
     return render(request, 'tenant_folder/dashboard/finance_dash.html')
+
+@login_required(login_url="institut_app:login")
+def pedago_dashboard(request):
+    # KPIs
+    total_groups = Groupe.objects.count()
+    active_groups = Groupe.objects.filter(etat__in=['enc', 'inscription']).count() # 'enc', 'inscription' derived from model choices
+    total_students = GroupeLine.objects.values('student').distinct().count()
+    active_timetables = Timetable.objects.filter(is_validated=True).count()
+
+    # Today's Sessions
+    days_map = {
+        'Monday': 'Lundi',
+        'Tuesday': 'Mardi',
+        'Wednesday': 'Mercredi',
+        'Thursday': 'Jeudi',
+        'Friday': 'Vendredi',
+        'Saturday': 'Samedi',
+        'Sunday': 'Dimanche'
+    }
+    today_english = datetime.now().strftime("%A")
+    today_french = days_map.get(today_english, today_english)
+    
+    # Filter for today's sessions (temporarily showing ALL for debug/visualization if day match fails)
+    # todays_sessions = TimetableEntry.objects.filter(jour__iexact=today_french).select_related('timetable__groupe', 'cours', 'salle', 'formateur').order_by('heure_debut')
+    todays_sessions = TimetableEntry.objects.filter(timetable__is_validated=True).select_related('timetable__groupe', 'cours', 'salle', 'formateur').order_by('heure_debut')
+
+    # Students per Specialty (Chart)
+    students_per_speciality = GroupeLine.objects.values('groupe__specialite__label').annotate(
+        count=Count('student', distinct=True)
+    ).order_by('-count')
+    
+    speciality_labels = [item['groupe__specialite__label'] for item in students_per_speciality]
+    speciality_counts = [item['count'] for item in students_per_speciality]
+
+    # Room Utilization (Gantt Data)
+    # We need to construct data for ApexCharts rangeBar: [{'x': 'Room Name', 'y': [start_timestamp, end_timestamp], ...}]
+    gantt_data = []
+    
+    # Base date for timestamps (today)
+    today_date = datetime.now().date()
+    
+    for session in todays_sessions:
+        # Combine today's date with time to get datetime
+        start_datetime = datetime.combine(today_date, session.heure_debut)
+        end_datetime = datetime.combine(today_date, session.heure_fin)
+        
+        # Convert to milliseconds timestamp
+        start_ts = int(start_datetime.timestamp() * 1000)
+        end_ts = int(end_datetime.timestamp() * 1000)
+        
+        gantt_data.append({
+            'x': session.salle.nom,
+            'y': [start_ts, end_ts],
+            'course': session.cours.label if session.cours else 'N/A',
+            'group': session.timetable.groupe.nom,
+            'teacher': f"{session.formateur.nom} {session.formateur.prenom}" if session.formateur else "Non assigné"
+        })
+    
+    # Sort by room name
+    gantt_data.sort(key=lambda item: item['x'])
+
+    # Recent Groups activity
+    recent_groups = Groupe.objects.order_by('-updated_at')[:5]
+
+    context = {
+        'tenant': request.tenant,
+        'total_groups': total_groups,
+        'active_groups': active_groups,
+        'total_students': total_students,
+        'active_timetables': active_timetables,
+        'todays_sessions': todays_sessions,
+        'speciality_labels': speciality_labels,
+        'speciality_counts': speciality_counts,
+        'gantt_data': json.dumps(gantt_data, cls=DjangoJSONEncoder),
+        'recent_groups': recent_groups,
+        'today_label': today_french,
+    }
+    return render(request, 'tenant_folder/dashboard/pedago_dashboard.html', context)
 
 @login_required(login_url="institut_app:login")
 def ApiFinanceKPIs(request):
