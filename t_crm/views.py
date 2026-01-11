@@ -113,7 +113,7 @@ def detailsVisiteur(request, pk):
         }
         return render(request,'tenant_folder/crm/details_visiteur.html', context)
     else:
-        messages.error(request,"Vous n'avez pas l'autorisation d'acceder a cette partie.")
+        messages.error(request,"Vous n'avez pas l'autorisation d'accéder à cette partie.")
         return redirect('t_crm:liste_visiteurs')
         
 @transaction.atomic
@@ -124,11 +124,11 @@ def updateVisiteur(request,pk):
         form = VisiteurForm(request.POST, instance=obj)
         if form.is_valid():
             form.save()
-            messages.success(request,"Les informations ont été sauvegarder ave succès")
+            messages.success(request,"Les informations ont été sauvegardées avec succès")
             return redirect("t_crm:details_visiteur", pk)
         
         else:
-            messages.error(request, "Une erreur c'est produite lors du traitement du formulaire")
+            messages.error(request, "Une erreur s'est produite lors du traitement du formulaire")
             return redirect('t_crm:updateVisiteur', pk)
         
     else:
@@ -280,7 +280,7 @@ def ApiConfirmDemandeInscription(request):
     )
     demande_paiement_line2.save()
 
-    return JsonResponse({'status': 'success', 'message' : 'La demande d\'incription à été confirmer avec succès.'})
+    return JsonResponse({'status': 'success', 'message' : 'La demande d\'inscription a été confirmée avec succès.'})
 
 def ApiAnnulerDemandeInscription(request):
     id_demande = request.POST.get('id_demande')
@@ -299,7 +299,7 @@ def ApiRemoveDemandeInscription(request):
         demande.delete()
         return JsonResponse({'status': "success", 'message': 'Demande d\'inscription annulée avec succès'})
     else:
-        return JsonResponse({'status' : "error", "message" : "Action non autorisé pour votre niveau de compte"})
+        return JsonResponse({'status' : "error", "message" : "Action non autorisée pour votre niveau de compte"})
 
 def filter_visiteur(request):
     search = request.GET.get('search')

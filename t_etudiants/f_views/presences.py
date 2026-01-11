@@ -154,7 +154,7 @@ def liste_registres(request):
         
             return JsonResponse({ "status": "error","message": "Une erreur s'est produite lors du traitement de la requête","error": error_message})
     else:
-        return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
+        return JsonResponse({"status" : "error",'message' : "Méthode non autorisée"})
     
 
 @login_required(login_url="institut_app:login")

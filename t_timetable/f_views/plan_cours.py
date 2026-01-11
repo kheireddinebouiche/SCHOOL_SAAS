@@ -249,7 +249,7 @@ def save_session(request):
     
     # D. Autres vérifications métier
     if PreventAffectModuleForOtherTeache(timetable_id, session_professeur, session_module):
-        return JsonResponse({"status": "error", "message": "Le module a été déja affecter a un autre formateur"})
+        return JsonResponse({"status": "error", "message": "Le module a déjà été affecté à un autre formateur"})
     
     if checkAssignedSameHoraire(session_jour,heure_debut,heure_fin,timetable_id):
         return JsonResponse({"status":"error","message": "Une séance est déjà programmée pour le même créneau horaire"})

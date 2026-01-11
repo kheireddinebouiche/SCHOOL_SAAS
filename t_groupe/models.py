@@ -21,7 +21,7 @@ class Groupe(models.Model):
 
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='groupe_specialite', null=True, blank=True)
     date_lancement = models.DateField(null=True, blank=True)
-    etat = models.CharField(max_length=200, choices=[('valider','Groupe valider'),('brouillon','Brouillon'),('inscription',"En cours d'inscription"),('enc', 'En cours'), ('cloture', 'Cloturé')], default='brouillon')
+    etat = models.CharField(max_length=200, choices=[('valider','Groupe validé'),('brouillon','Brouillon'),('inscription',"En cours d'inscription"),('enc', 'En cours'), ('cloture', 'Clôturé')], default='brouillon')
 
     date_creation = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

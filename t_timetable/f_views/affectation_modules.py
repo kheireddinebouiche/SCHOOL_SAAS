@@ -164,11 +164,11 @@ def ApiAffectTrainer(request):
                 module_id=moduleId,
                 formateur_id = trainerId
             )
-            return JsonResponse({"status" : "success", "message" : "L'enseignant à été affecter avec succès"})
+            return JsonResponse({"status" : "success", "message" : "L'enseignant a été affecté avec succès"})
         except Exception as e:
-            return JsonResponse({"status":"error",'message' : "Le module a été déja affecter a l'enseignant."})
+            return JsonResponse({"status":"error",'message' : "Le module a déjà été affecté à l'enseignant."})
     else:
-        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
     
 
 
@@ -200,7 +200,7 @@ def ApiDeaffectTrainer(request):
         except EnseignantModule.DoesNotExist:
             return JsonResponse({"status" : "error", "message" : "L'affectation n'existe pas"})
     else:
-        return JsonResponse({"status" : "error", "message" : "Methode non autorisée"})
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 def ApiDeleteAffectation(request):

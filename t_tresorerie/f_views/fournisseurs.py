@@ -84,7 +84,7 @@ def ApiLoadFournisseur(request):
         liste = Fournisseur.objects.all().values('id','designation')
         return JsonResponse(list(liste), safe=False)
     else:
-        return JsonResponse({"status":"error","message":"methode non autoriser"})
+        return JsonResponse({"status":"error","message":"méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -130,7 +130,7 @@ def UpdateFournisseur(request):
         fournisseur.site_web = site_web
 
         fournisseur.save()
-        messages.success(request, "Informations du fournisseur ont été modifier.")
+        messages.success(request, "Les informations du fournisseur ont été modifiées.")
         return JsonResponse({"status":"success"})
 
     else:

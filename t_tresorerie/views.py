@@ -593,7 +593,7 @@ def ApiDeleteDemandePaiement(request):
     obj = ClientPaiementsRequest(id = id_demande)
     obj.delete()
 
-    return JsonResponse({'status' : 'success', "message" : "La suppréssion a été effectuer avec succès"})
+    return JsonResponse({'status' : 'success', "message" : "La suppression a été effectuée avec succès"})
 
 def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
@@ -618,7 +618,7 @@ def ApiAddNewSeuil(request):
             valeur = valeur
         )
         new_seuil.save()
-        return JsonResponse({'status' : 'success', 'message' : "Les données ont été enregistrer avec succès"})
+        return JsonResponse({'status' : 'success', 'message' : "Les données ont été enregistrées avec succès"})
     else:
         return JsonResponse({'status' : 'error', 'message' : "Veuillez remplir tous les champs"})
     
@@ -723,7 +723,7 @@ def ApiStorePaiement(request):
                 paiement_line_obj.etat = "ter"
 
 
-            return JsonResponse({'status' : 'success', 'message' : 'Le paiement à été enregistrer avec succès'})
+            return JsonResponse({'status' : 'success', 'message' : 'Le paiement a été enregistré avec succès'})
         
         elif paiement_line_obj.montant_restant < Decimal(received_amount):
 
@@ -761,7 +761,7 @@ def ApiDeletePaiement(request):
 
             obj.paiement_line.save()
             obj.delete()
-            return JsonResponse({'status' : 'success', 'message' : "La suppression à été effectuer avec succès"})
+            return JsonResponse({'status' : 'success', 'message' : "La suppression a été effectuée avec succès"})
         else:
             return JsonResponse({'status' : 'error', 'message' : "Erreur, l'objet n'a pas été trouvé !"})
     else:
@@ -780,7 +780,7 @@ def ApiSetRembourssement(request):
     paiement.etat = "dmr"
     paiement.save()
 
-    return JsonResponse({'status' : 'success', 'message' : "La demande de remboursement à été enregistrer avec succès"})
+    return JsonResponse({'status' : 'success', 'message' : "La demande de remboursement a été enregistrée avec succès"})
 
 @login_required(login_url="institut_app:login")
 def ApiGetEntrepriseDetails(request):

@@ -38,7 +38,7 @@ class Formation(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
     entite_legal = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
     partenaire = models.ForeignKey(Partenaires, on_delete=models.SET_NULL, null=True, blank=True, to_field="code")
-    type_formation = models.CharField(choices=[('etrangere', 'Formation étrangere'), ('national', 'Formation Etatique')], max_length=100, null=True, blank=True, default='national')
+    type_formation = models.CharField(choices=[('etrangere', 'Formation étrangère'), ('national', 'Formation Etatique')], max_length=100, null=True, blank=True, default='national')
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     frais_inscription = models.DecimalField(max_digits=10, null=True, blank=True, decimal_places=2)
@@ -86,7 +86,7 @@ class Specialites(models.Model):
     version = models.CharField(max_length=100, null=True, blank=True)
     condition_access = models.TextField(max_length=1000, null=True, blank=True)
 
-    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('last','A jour'),('updated','Mis à jour')], default='last')
+    etat = models.CharField(max_length=10, null=True, blank=True, choices=[('last','À jour'),('updated','Mis à jour')], default='last')
 
     class Meta:
         verbose_name="Spécialité"
@@ -236,8 +236,8 @@ class ProgrammeFormation(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
     class Meta:
-        verbose_name="Repartition du module"
-        verbose_name_plural = "Repartition des modules"
+        verbose_name="Répartition du module"
+        verbose_name_plural = "Répartition des modules"
         unique_together = ('module','specialite','semestre')
 
     def __str__(self):

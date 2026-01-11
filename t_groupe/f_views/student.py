@@ -35,7 +35,7 @@ def StudentDetails(request, pk):
         remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)        
         montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
         montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
-        montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
+        montant_total = DuePaiements.objects.filter(client = student, type='frais_f').aggregate(total=Sum('montant_due'))['total'] or 0
         specialite_simple = FicheDeVoeux.objects.get(prospect = student, is_confirmed=True)
         #modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
         entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
@@ -110,7 +110,7 @@ def StudentDetails(request, pk):
         remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)        
         montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
         montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
-        montant_total = DuePaiements.objects.filter(client = student, type='fras_f').aggregate(total=Sum('montant_due'))['total'] or 0
+        montant_total = DuePaiements.objects.filter(client = student, type='frais_f').aggregate(total=Sum('montant_due'))['total'] or 0
         specialite = FicheVoeuxDouble.objects.filter(prospect = student, is_confirmed=True).first()
 
         context = {
@@ -159,7 +159,7 @@ def ApiUpdate_etudiant(request):
     etu.save()
     print(id,request.POST.get('nationalite'))
 
-    messages.success(request,'Information mises à jours')
+    messages.success(request,'Informations mises à jour')
     return JsonResponse({'status': 'success'})
 
 

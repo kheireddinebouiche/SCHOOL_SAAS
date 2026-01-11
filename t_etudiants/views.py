@@ -43,7 +43,7 @@ def ApiSaveStudentDatas(request):
         } 
         return JsonResponse({'status' : "success", "data" : data})
     else:
-        return JsonResponse({"status" : "error", 'message' : "Methode non autoriser"})
+        return JsonResponse({"status" : "error", 'message' : "Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app:login")
@@ -61,11 +61,11 @@ def ApiSaveStudentNote(request):
                 context = "etudiant"
             )
 
-            return JsonResponse({"status" : "success",'message' : "La note est enregistrer avec succès"})
-        except:
-            return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+            return JsonResponse({"status" : "success",'message' : "La note est enregistrée avec succès"})
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message" : "Une erreur s'est produite lors du traitement de la requête"})
     else:
-        return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+        return JsonResponse({"status" : "error", "message" : "Une erreur s'est produite lors du traitement de la requête"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -83,7 +83,7 @@ def ApiUpdateStudentNote(request):
 
         return JsonResponse({'status': "success"})
     else:
-        return JsonResponse({'status': "error", "message" : "Methode non autoriser"})
+        return JsonResponse({'status': "error", "message" : "Méthode non autorisée"})
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -97,9 +97,9 @@ def ApiAccomplirNote(request):
         note.is_done = True
         note.save()
 
-        return JsonResponse({"status" : "success", "message" : "Le statut de la note a été changer"})
+        return JsonResponse({"status" : "success", "message" : "Le statut de la note a été changé"})
     else:
-        return JsonResponse({"status" : "error", "message":"Methode non autoriser"})
+        return JsonResponse({"status" : "error", "message":"Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app;login")
@@ -126,12 +126,12 @@ def ApiSaveStudentRappel(request):
                 context = "etudiant"
             )
 
-            return JsonResponse({"status" : "success", "message" : "Les informations on été enregistrer avec suucès"})
+            return JsonResponse({"status" : "success", "message" : "Les informations ont été enregistrées avec succès"})
         except:
-            return JsonResponse({"status" : "error", "message" : "Une erreur c'est produite lors du traitement de la requete"})
+            return JsonResponse({"status" : "error", "message" : "Une erreur s'est produite lors du traitement de la requête"})
 
     else:
-        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app:login")

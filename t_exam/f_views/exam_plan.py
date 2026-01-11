@@ -169,7 +169,7 @@ def ApiPlanExam(request):
                 mode_examination = modeExamenSelect,
             )
 
-            return JsonResponse({"status" : "success" , "message" : "Examen planifier avec succès"})
+            return JsonResponse({'status' : 'success' , 'message' : 'Le groupe a été planifié avec succès'})
         except Exception as e:
             return JsonResponse({"status":"error",'message':str(e)})
     else:
@@ -200,7 +200,7 @@ def validate_exam(request):
         decision = request.POST.get('examStatus')
         
         if not exam_plan_id:
-            return JsonResponse({"status" : "error", "message" : "Informations manquante"})
+            return JsonResponse({'status' : 'error' , 'message' : 'Le groupe est déjà planifié'})
 
         exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
 
@@ -1378,7 +1378,7 @@ def close_session_line(request):
             obj.status = "clo"
             obj.save()
 
-            return JsonResponse({"status" : "success", "message" : "Supression effectué avec succès"})
+            return JsonResponse({'status' : 'success','message' : 'Suppression effectuée avec succès'})
         
         except Exception as e:
             return JsonResponse({"status" : "error", "message" : str(e)})

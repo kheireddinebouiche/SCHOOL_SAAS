@@ -183,7 +183,7 @@ def ApiGetReductionDetails(request):
 
         return JsonResponse(data, safe=False)
     else:
-        return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -195,7 +195,7 @@ def ApiActivateRemiseAppliquer(request):
         if remise_obj:
             remise_obj.is_approuved = True
             remise_obj.save()
-            return JsonResponse({"status" : "success" , "message" : "La remise a été activé avec succès"})
+            return JsonResponse({"status" : "success" , "message" : "La remise a été activée avec succès"})
         else:
             return JsonResponse({"status" : "error" , "message" : "La remise n'existe pas"})
             

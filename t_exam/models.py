@@ -50,10 +50,10 @@ class ExamPlanification(models.Model):
     module = models.ForeignKey(Modules, null=True, on_delete=models.DO_NOTHING)
     heure_debut = models.TimeField(null=True, blank=True, help_text="Heure de début de l'examen")
     heure_fin = models.TimeField(null=True, blank=True, help_text="Heure de fin de l'examen")
-    type_examen = models.CharField(max_length=100, null=True, blank=True, choices=[('normal','Ordinaire'),('rachat','Rachat de credit'),('rattrage','Rattrapage')])
+    type_examen = models.CharField(max_length=100, null=True, blank=True, choices=[('normal','Ordinaire'),('rachat','Rachat de crédit'),('rattrage','Rattrapage')])
     mode_examination = models.CharField(max_length=100, null=True, blank=True, choices=[('tr','Travail à remettre'),('exam','Examen'),('ligne','Examen en ligne'),('orale','Présentation orale')])
 
-    statut = models.CharField(max_length=100, null=True, blank=True, choices=[('termine','Termine'),('nabouti','Non abouti'),('att','En attente')], default="att")
+    statut = models.CharField(max_length=100, null=True, blank=True, choices=[('termine','Terminé'),('nabouti','Non abouti'),('att','En attente')], default="att")
     surveillant = models.ForeignKey(Formateurs, on_delete=models.SET_NULL, null=True, blank=True)
 
     passed = models.BooleanField(default=False)
@@ -67,7 +67,7 @@ class ExamPlanification(models.Model):
         return f"{self.exam_line} - {self.module}" if self.exam_line and self.module else "Planification d'examen non définie"
 
 class ModelBuilltins(models.Model):
-    label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de builtins")
+    label = models.CharField(max_length=100, null=True, blank=True, help_text="Label du modèle de bulletins")
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.DO_NOTHING, related_name="model_builtin_formation")
     is_default = models.BooleanField(default=False)
     systeme_notation = models.IntegerField(null=True, blank=True)
@@ -75,7 +75,7 @@ class ModelBuilltins(models.Model):
     updated_at = models.DateTimeField(auto_now=True,null=True, blank=True)
 
     def __str__(self):
-        return self.label if self.label else "Modèle de builtins non défini"
+        return self.label if self.label else "Modèle de bulletins non défini"
 
 class NoteBloc(models.Model):
     label = models.CharField(max_length=100)
@@ -114,8 +114,8 @@ class BuiltinTypeNote(models.Model):
 
     is_calculee = models.BooleanField(default=False)
     type_calcul = models.CharField(max_length=10,choices=CALCUL_CHOICES,default='NONE')
-    is_rattrapage = models.BooleanField(default=False, help_text="Note concerner dans l'examen de rattrapage") 
-    is_rachat = models.BooleanField(default=False, help_text="Note faisant l'objet du rachat crédit")
+    is_rattrapage = models.BooleanField(default=False, help_text="Note concernée dans l'examen de rattrapage") 
+    is_rachat = models.BooleanField(default=False, help_text="Note faisant l'objet du rachat de crédit")
 
     ordre = models.PositiveIntegerField(default=0)
 

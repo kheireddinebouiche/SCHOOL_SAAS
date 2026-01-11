@@ -68,7 +68,7 @@ class NewProspecFormParticulier(forms.ModelForm):
     )
     
     select_type = forms.ChoiceField(
-        choices=[('10','Veuillez sélectionner un type de cursus'),('0','Cursus standard (Une seule formation)'),('1','Cursus double diplômation (Deux spécialitées en même temps)')],
+        choices=[('10','Veuillez sélectionner un type de cursus'),('0','Cursus standard (Une seule formation)'),('1','Cursus double diplômation (Deux spécialités en même temps)')],
         widget=forms.Select(attrs={'class': 'form-control','id':"selectTypeCursusID"}),
         required=True,
     )

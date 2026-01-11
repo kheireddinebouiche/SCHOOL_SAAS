@@ -33,19 +33,19 @@ def ApiGetFormation(request):
         liste = Formation.objects.all().values('code','nom','code')
         return JsonResponse(list(liste), safe=False)
     else:
-        return JsonResponse({"status":"error", "message":"methode non autoriser"})
+        return JsonResponse({"status":"error", "message":"méthode non autorisée"})
 
 @login_required(login_url='institut_app:login')
 def ApiSelectSpecialite(request):
     if request.method == 'GET':
         value = request.GET.get('formation')
         if not value:
-            return JsonResponse({"status":'error',"message":"Valeurs manquante"})
+            return JsonResponse({"status":'error',"message":"Valeurs manquantes"})
         
         liste= Specialites.objects.filter(formation__code=value).values('id','label','version','abr')
         return JsonResponse(list(liste), safe=False)
     else:
-        return JsonResponse({"status" : "error",'message':"methode non autoriser"})
+        return JsonResponse({"status" : "error",'message':"méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 def ApiListePromo(request):
@@ -53,7 +53,7 @@ def ApiListePromo(request):
         liste = Promos.objects.filter().values('id','code','begin_year','end_year','session')
         return JsonResponse(list(liste), safe=False)
     else:
-        return JsonResponse({"status":"error","message" :"Methode non autoriser"})
+        return JsonResponse({"status":"error","message" :"méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -81,10 +81,10 @@ def ApiCreateGroupe(request):
             end_date = end_date,
             specialite_id = _formSelectSpecialite,
         )
-        messages.success(request,"Le groupe à été crée avec succès")
+        messages.success(request,"Le groupe a été créé avec succès")
         return JsonResponse({"status":"success"})
     except:
-        return JsonResponse({"status":"error",'message':"Une erreur c'est produite lors du traitement"})
+        return JsonResponse({"status":"error",'message':"Une erreur s'est produite lors du traitement"})
 
     
 
@@ -140,10 +140,10 @@ def UpdateGroupe(request, pk):
         form = NewGroupeForms(request.POST, instance=groupe)
         if form.is_valid():
             form.save()
-            messages.success(request,"Les informations du groupe on été modifier avec succès")
+            messages.success(request,"Les informations du groupe ont été modifiées avec succès")
             return redirect("t_groupe:detailsgroupe", pk)
         else:
-            messages.error(request,"Une erreur c'est produite lors du traitement de la requete")
+            messages.error(request,"Une erreur s'est produite lors du traitement de la requête")
             return redirect("t_groupe:UpdateGroupe", pk)
         
     context = {
@@ -159,16 +159,16 @@ def ApiDeleteGroupe(request):
     if request.method == "GET":
         id = request.GET.get('id')
         if not id:
-            return JsonResponse({"status" : "error", "message": "Information manquante"})
+            return JsonResponse({"status" : "error", "message": "Informations manquantes"})
         obj = Groupe.objects.get(id = id)
 
         if obj.etat != "brouillon":
             return JsonResponse({"status":"error",'message':'Le groupe est en cours d\'utilisation, vous ne pouvez pas effectuer la suppression'})
         obj.delete()
-        messages.success(request,"Le groupe à été supprimer avec succès")
+        messages.success(request,"Le groupe a été supprimé avec succès")
         return JsonResponse({"status":"success"})
     else:
-        return JsonResponse({"status":"success",'message':"methode non autoriser"})
+        return JsonResponse({"status":"success",'message':"méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -182,7 +182,7 @@ def ApiUpdateGroupeCode(request):
 
         groupe.save()
 
-        return JsonResponse({"status" : "success","message" : "Le code du groupe à été changer avec succès"})
+        return JsonResponse({"status" : "success","message" : "Le code du groupe a été changé avec succès"})
 
     else:
         return JsonResponse({"status" : "erreur"})
@@ -210,7 +210,7 @@ def closeGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "cloture"
     groupe.save()
-    messages.success(request, "Le groupe a été cloturé avec suucès")
+    messages.success(request, "Le groupe a été clôturé avec succès")
     return redirect('t_groupe:detailsgroupe', pk)
 
 @login_required(login_url="institut_app:login")
@@ -221,7 +221,7 @@ def deleteGroupe(request, pk):
         messages.success(request, "Groupe supprimé avec succès")
         return redirect('t_groupe:listegroupes')
     else:
-        messages.error(request, "Le groupe ne peux pas etre supprimer")
+        messages.error(request, "Le groupe ne peut pas être supprimé")
         return redirect('t_groupe:listegroupes')
 
 def PrintSuivieCours(request):

@@ -289,7 +289,7 @@ def ApiGetSpecialiteDatas(request):
 
         return JsonResponse(data, safe=False)
     else:
-        return JsonResponse({"status":"error", "message": "Methode non autoriser"})
+        return JsonResponse({"status":"error", "message": "Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app:login")
@@ -318,7 +318,7 @@ def ApiAffectStudentToGroupe(request):
        
         return JsonResponse({"status":  "success"})
     else:
-        return JsonResponse({"status" : "error", 'message':"Méthode non autoriser"})
+        return JsonResponse({"status" : "error", 'message':"Méthode non autorisée"})
     
 
 @login_required(login_url="institut_app:login")
@@ -329,13 +329,13 @@ def ApiCancelStudentAffectation(request):
         specialite = request.GET.get('specialite')
 
         if not studentId:
-            return JsonResponse({"status":"error","message":"Informations manquante"})
+            return JsonResponse({"status":"error","message":"Informations manquantes"})
         
         obj = GroupeLine.objects.get(student_id = studentId, groupe__specialite__id = specialite)
         obj.delete()
 
         AffectationGroupe.objects.get(etudiant_id = studentId, specialite_id = specialite).delete()
 
-        return JsonResponse({"status":"success","message":"L'affectation à été annuler avec succès"})
+        return JsonResponse({"status":"success","message":"L'affectation a été annulée avec succès"})
     else:
-        return JsonResponse({"status":"error","message":"Methode non autoriser"})
+        return JsonResponse({"status":"error","message":"Méthode non autorisée"})

@@ -59,10 +59,10 @@ def ApiAddSeance(request):
             observation = reason,
            
         )
-        return JsonResponse({"status":"success", "message":"Informations enregistrer avec succès"})
+        return JsonResponse({"status":"success", "message":"Informations enregistrées avec succès"})
 
     else:
-        return JsonResponse({"status":"error",'message':"Methode non autoriser"})
+        return JsonResponse({"status":"error",'message':"Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 def ApiHistoriqueCours(request):

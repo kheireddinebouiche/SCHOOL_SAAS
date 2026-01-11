@@ -9,7 +9,7 @@ class NewFormationForm(forms.ModelForm):
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'description': forms.Textarea(attrs={'class':'form-control'}),
-            'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
+            'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée totale de la formation stage inclus (en mois)"}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
@@ -40,24 +40,26 @@ class NewFormationFormMaster(forms.ModelForm):
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'description': forms.Textarea(attrs={'class':'form-control'}),
-            'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée de total de la formation stage inclus (en mois)"}),
+            'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée totale de la formation stage inclus (en mois)"}),
             'partenaire' : forms.Select(attrs={'class':'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
             'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"}),
             'qualification' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'qualificationId'}),
+            
         }
 
         labels = {
-            'nom' : "Nom de la formation",
-            'code':  "Code de la formation",
-            'description' : "Description de la formation",
-            'duree' : "Durée de la formation",
-            'partenaire' : "Partenaire",
-            'type_formation' : "Type de formation",
-            'frais_inscription' : "Frais d'inscription",
-            'prix_formation' : "Prix de la formation",
-            'qualification' : "Qualification :"
+            'nom' : "Nom de la formation :",
+            'code':  "Code de la formation :",
+            'description' : "Description de la formation :",
+            'duree' : "Durée de la formation :",
+            'partenaire' : "Partenaire :",
+            'type_formation' : "Type de formation :",
+            'frais_inscription' : "Frais d'inscription :",
+            'prix_formation' : "Prix de la formation :",
+            'qualification' : "Qualification :",
+            'entite_legal' : "Entité légale :"
         }
     def __init__(self, *args, **kwargs):
         current_tenant = kwargs.pop('current_tenant', None)
@@ -76,7 +78,7 @@ class NewFormationFormMaster(forms.ModelForm):
             elif current_tenant.tenant_type == "master":
                 self.fields['type_formation'].choices = [
                     ('national', 'Formation Etatique'),
-                    ('etrangere', 'Formation étrangere')
+                    ('etrangere', 'Formation étrangère')
                 ]
                 
                 self.fields['partenaire'].queryset = Partenaires.objects.filter(
@@ -145,14 +147,14 @@ class NewSpecialiteForm(forms.ModelForm):
             'branche' : "Branche :",
             'label' : "Désignation de la spécialité :",
             'code' : "Code la spécialité :",
-            'formation' : "Formation parante :",
-            'duree' : "Durée total de la formation (Stage inclue) ",
+            'formation' : "Formation parente :",
+            'duree' : "Durée totale de la formation (Stage inclus) ",
             'responsable' : "Responsable de spécialité :",
             'nb_semestre' : "Nombre de semestre théorique :",
             'version' : "Version du programme :",
             'condition_access' : "Conditions d'accès :",
             'dossier_inscription' : "Dossier d'inscription :",
-            'abr' : "Abreviation :",
+            'abr' : "Abréviation :",
             'prix' : "Prix (Prix standard de la formation) :",
             'prix_double_diplomation' : "Prix de la formation en double diplomation :"
         }
@@ -196,9 +198,9 @@ class PromoForm(forms.ModelForm):
             'code' : "Code Unique :",
             'begin_year' : "Année de début :",
             'end_year' : "Année de fin :",
-            'date_debut' : "Date de lançement :",
+            'date_debut' : "Date de lancement :",
             'date_fin' : "Date de fin de formation :",
-            'annee_academique' : "Année academique :",
+            'annee_academique' : "Année académique :",
         }
 
 class ImportDataForm(forms.Form):

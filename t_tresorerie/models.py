@@ -44,8 +44,8 @@ class clientPaiementsRequestLine(models.Model):
     montant_restant = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     data_paiement = models.DateField(null=True)
     observation = models.CharField(max_length=1000, null=True, blank=True)
-    motif_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('fin','Frais d\'incription'),('ass','Assurance'),('frf','Frais de formation')])
-    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('auc','Aucun paiement effectuer'),('part','Paiement partiel'), ('tot','Paiement cash'),('ter','Paiement terminer')], default="auc")
+    motif_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('fin','Frais d\'inscription'),('ass','Assurance'),('frf','Frais de formation')])
+    etat = models.CharField(max_length=100, null=True, blank=True, choices=[('auc','Aucun paiement effectué'),('part','Paiement partiel'), ('tot','Paiement cash'),('ter','Paiement terminé')], default="auc")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

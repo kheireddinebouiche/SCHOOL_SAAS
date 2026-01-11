@@ -29,7 +29,7 @@ class Timetable(models.Model):
     is_configured = models.BooleanField(default=False)
 
     is_validated = models.BooleanField(default=False)
-    status = models.CharField(max_length=100, null=True, blank=True, choices=[('bro','Brouillon'),('enc','En cours'),('pau','Pause'),('ter','Terminer')], default='bro')
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('bro','Brouillon'),('enc','En cours'),('pau','Pause'),('ter','Terminé')], default='bro')
 
     is_special = models.BooleanField(default=False)
     creneau = models.ForeignKey('ModelCrenau', on_delete=models.CASCADE, null=True, blank=True)

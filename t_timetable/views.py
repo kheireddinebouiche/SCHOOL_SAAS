@@ -53,7 +53,7 @@ def ApiCreateTimeTable(request):
             try:
                 obj = Timetable.objects.get(groupe_id=groupe, semestre=semestre)
                 if obj:
-                    return JsonResponse({"status":"error",'message' : "Emploie du temps déja crée pour le groupe pour le meme semestre"})
+                    return JsonResponse({"status":"error",'message' : "Emploi du temps déjà créé pour le groupe pour le même semestre"})
             except:
                 pass
         else:
@@ -63,7 +63,7 @@ def ApiCreateTimeTable(request):
                 return JsonResponse({"status" : "error",'message' : f"Veuillez d'abord mettre en pause l'emploi du temps : {timetable_list}"})
 
         if Timetable.objects.filter(groupe_id = groupe, status="enc").exists():
-            return JsonResponse({"status":"error","message":"Veuillez d'abord cloturer l'ancienne emploie du temps"})
+            return JsonResponse({"status":"error","message":"Veuillez d'abord clôturer l'ancien emploi du temps"})
 
         promo = Groupe.objects.get(id = groupe)
 
@@ -74,7 +74,7 @@ def ApiCreateTimeTable(request):
             description = description,
             annee_scolaire = promo.promotion.annee_academique,
         )
-        messages.success(request,"L'emploie du temps à été crée avec succès")
+        messages.success(request,"L'emploi du temps a été créé avec succès")
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
@@ -94,8 +94,8 @@ def ApiDeleteTimeTable(request):
         #     return JsonResponse({"status":"error","message" : "L'emploie du temps ne peux pas être supprimer."})
         
         obj.delete()
-        messages.success(request, "L'emploie du temps à été supprimer avec succès")
-        return JsonResponse({"status": "success","message":"L'emploie du temps à été supprimer avec succès"})
+        messages.success(request, "L'emploi du temps a été supprimé avec succès")
+        return JsonResponse({"status": "success","message":"L'emploi du temps a été supprimé avec succès"})
     else:
         return JsonResponse({'status':'error'})
 
@@ -217,7 +217,7 @@ def ApiActivateTimeTable(request):
         obj = Timetable.objects.get(id = id)
 
         if CheckIfExistsEncTimetable(obj.groupe.id, obj.semestre):
-            return JsonResponse({"status" : "error",'message' : "Une emploie du temps en cours est déja présente"})
+            return JsonResponse({"status" : "error",'message' : "Un emploi du temps en cours est déjà présent"})
 
         obj.status = "enc"
         obj.save()
@@ -240,9 +240,9 @@ def ApiDeleteCoursSession(request):
 
         obj = TimetableEntry.objects.get(id = cours)
         obj.delete()
-        return JsonResponse({'status':"success",'message':"suppréssion effectuer avec succès"})
+        return JsonResponse({'status':"success",'message':"suppression effectuée avec succès"})
     else:
-        return JsonResponse({"status":"error","message":"Méthode non autoriser."})
+        return JsonResponse({"status":"error","message":"Méthode non autorisée."})
 
 ### FONCTION PERMETANT DE CONFIGURER LE MODELE DE CRENEAU ###
 @login_required(login_url="institut_app:login")
@@ -269,7 +269,7 @@ def FilterFormateur(request):
         
         return JsonResponse(list(enseignants), safe=False)
     else:
-        return JsonResponse({"status": "error",'message' : "Methode non autoriser"})
+        return JsonResponse({"status": "error",'message' : "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -282,9 +282,9 @@ def ApiMakeTimetableDone(request):
         timetable.creneau_id = crenau_model_id
         timetable.is_configured=True
         timetable.save()
-        return JsonResponse({"status" : "success","message" : "L'emploi du temps est desormais configurer"})
+        return JsonResponse({"status" : "success","message" : "L'emploi du temps est désormais configuré"})
     else:
-        messages.error(request, "Methode non autoriser")
+        messages.error(request, "Méthode non autorisée")
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
@@ -295,7 +295,7 @@ def ApiValidateTimetable(request):
     obj.is_validated = True
     obj.save()
 
-    messages.success(request, "Opération effectuer avec succès")
+    messages.success(request, "Opération effectuée avec succès")
     return JsonResponse({"status" : "success"})
 
 
@@ -373,7 +373,7 @@ def ApiDeleteRegistre(request):
         
         obj.delete()
 
-        return JsonResponse({"status" : "success",'message' : "La suppréssion à été effectuer avec succès"})
+        return JsonResponse({"status" : "success",'message' : "La suppression a été effectuée avec succès"})
 
     else:
         return JsonResponse({"status" : "error"})
@@ -386,7 +386,7 @@ def ApiMakeTimetableDraft(request):
         obj = Timetable.objects.get(id = id_emploie)
         obj.is_validated = False
         obj.save()
-        messages.success(request,"L'emploie du temps est prêt pour etre modifier")
+        messages.success(request,"L'emploi du temps est prêt pour être modifié")
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
@@ -469,7 +469,7 @@ def save_session(request):
         return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})
     
     if PreventAffectModuleForOtherTeache(timetable, session_professeur, session_module):
-        return JsonResponse({"status": "error", "message": "Le module a été déja affecter a un autre formateur"})
+        return JsonResponse({"status": "error", "message": "Le module a déjà été affecté à un autre formateur"})
     
     if checkAssignedSameHoraire(session_jour,heure_debut,heure_fin,timetable):
         return JsonResponse({"status":"error","message": "Une séance est déjà programmée pour le même créneau horaire"})
@@ -484,7 +484,7 @@ def save_session(request):
         heure_fin = heure_fin
     )
 
-    return JsonResponse({"status" : "success", "message" : "Cours plannifier avec succès"})
+    return JsonResponse({"status" : "success", "message" : "Cours planifié avec succès"})
 
 
 from django.db.models import Q

@@ -29,7 +29,7 @@ class Etudiant(models.Model):
     groupe_sanguin = models.CharField(max_length=5, null=True, blank=True, choices=[
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'), ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-')
     ])
-    sexe = models.CharField(max_length=1, null=True, blank=True, choices=[('M', 'Masculin'), ('F', 'Feminin')])
+    sexe = models.CharField(max_length=1, null=True, blank=True, choices=[('M', 'Masculin'), ('F', 'Féminin')])
 
     situation_familiale = models.CharField(max_length=255, null=True, blank=True, choices=[('C', 'Célibataire'), ('M', 'Marié(e)'), ('D', 'Divorcé(e)'), ('V', 'Veuf(ve)')])
 
@@ -53,7 +53,7 @@ class RegistrePresence(models.Model):
     annee_academique = models.CharField(max_length=100, null=True, blank=True)
     context = models.CharField(max_length=100, null=True, blank=True)
     is_validate = models.BooleanField(default=False)
-    status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Cloturer')], default="enc")
+    status = models.CharField(max_length=100, null=True, blank=True, choices=[('enc','En cours'),('ter','Clôturer')], default="enc")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

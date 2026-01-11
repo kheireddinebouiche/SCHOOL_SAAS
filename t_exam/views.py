@@ -27,7 +27,7 @@ def NewSession(request):
             try:
                 SessionExam.objects.get(code = code)
 
-                return JsonResponse({'statut': False, 'message': "Une session sous le même code existe déja."})
+                return JsonResponse({'statut': False, 'message': "Une session sous le même code existe déjà."})
             
             except SessionExam.DoesNotExist:
                 
@@ -36,7 +36,7 @@ def NewSession(request):
                 
                 return JsonResponse({'statut' : 'success','id' : code})
         else:
-            return JsonResponse({'statut' : False, 'message' : "Une erreur c'est produite lors du traitement du formulaire"})
+            return JsonResponse({'statut' : False, 'message' : "Une erreur s'est produite lors du traitement du formulaire"})
     else:
         form = SessionForm()
         return render(request, 'tenant_folder/exams/template-session-form.html', {'form': form})
@@ -83,7 +83,7 @@ def ApiDeleteSession(request):
     try:
         obj.delete()
 
-        return JsonResponse({'status' : True, 'message': 'La session à été supprimée avec succès'})
+        return JsonResponse({'status' : True, 'message': 'La session a été supprimée avec succès'})
     except IntegrityError as e:
         return JsonResponse({'status' : False, 'message' : str(e)})
     
@@ -117,7 +117,7 @@ def ApiDeleteGroupeSessionLine(request):
     obj = SessionExamLine.objects.get(id = id)
     obj.delete()
 
-    return JsonResponse({'status' : 'success', 'message': "Suppréssion effectuer avec succès"})
+    return JsonResponse({'status' : 'success', 'message': "Suppression effectuée avec succès"})
 
 def ApiUpdateSession(request):
     id = request.POST.get('id')
@@ -138,7 +138,7 @@ def ApiUpdateSession(request):
         if type_session:  # Only update if type_session is provided
             obj.type_session = type_session
         obj.save()
-        return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session on été mis à jours avec succès'})
+        return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session ont été mises à jour avec succès'})
 
 @login_required(login_url="institut_app:login")
 def ApiGetSessionLineDetails(request):
@@ -270,7 +270,7 @@ def ApiPlaneExam(request):
     find_groupe = SessionExamLine.objects.filter(groupe = groupe, semestre=semestre).exists()
 
     if find_groupe:
-        return JsonResponse({'status' : 'error', 'message' : 'Le groupe est déja planifier'})
+        return JsonResponse({'status' : 'error', 'message' : 'Le groupe est déjà planifié'})
     else:
 
         new_session_line = SessionExamLine(
@@ -282,7 +282,7 @@ def ApiPlaneExam(request):
         )
 
         new_session_line.save()
-        return JsonResponse({'status' : 'success', 'message' : 'Le groupe à été planifier'})
+        return JsonResponse({'status' : 'success', 'message' : 'Le groupe a été planifié'})
 
 def ExamConfiguration(request, pk):
     context = {

@@ -21,8 +21,8 @@ class BuilltinForm(forms.ModelForm):
         model = ModelBuilltins
         fields = "__all__"
         labels = {
-            'label' : "Nom du modéle :",
-            'formation' : "Veuillez séléctionner la formation :",
+            'label' : "Nom du modèle :",
+            'formation' : "Veuillez sélectionner la formation :",
             'is_default' : "Définir par défaut ? :",
         }
 

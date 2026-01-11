@@ -78,7 +78,7 @@ def ApiCheckIfFormationCompleted(request):
     specialites = Specialites.objects.filter(formation=formation)
 
     if not specialites.exists():
-        return JsonResponse({'completed': False, 'reason': 'Aucune spécailité trouvée <br> Veuillez ajouter au moins une spécialité.'})
+        return JsonResponse({'completed': False, 'reason': 'Aucune spécialité trouvée <br> Veuillez ajouter au moins une spécialité.'})
 
     # Vérifier que chaque spécialité a au moins un module
     for specialite in specialites:
@@ -102,7 +102,7 @@ def updateFormation(request, pk):
             updated_formation.updated = True
             updated_formation.save()
 
-            messages.success(request, 'Les informations de la formation ont été modifier avec succès')
+            messages.success(request, 'Les informations de la formation ont été modifiées avec succès')
             return redirect('t_formations:listFormations')
         else:
             messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
@@ -426,10 +426,10 @@ def updateSpecialite(request,pk):
             formation.updated = True
             formation.save()
 
-            messages.success(request, "Les données de la spécialitée ont été mis à jours avec succès")
+            messages.success(request, "Les données de la spécialité ont été mises à jour avec succès")
             return redirect('t_formations:detailSpecialite', pk)
         else:
-            messages.error(request, "Une erreur c'est produite lors du traitement de la réquête")
+            messages.error(request, "Une erreur s'est produite lors du traitement de la requête")
             return redirect('t_formations:detailSpecialite', pk)
     
     context = {
@@ -512,7 +512,7 @@ def ApiDeleteCoursRepartition(request):
     if request.method == 'GET':
         id=request.GET.get('id')
         if not id:
-            return JsonResponse({"status" : "error",'message':"Informations manquante"})
+            return JsonResponse({"status" : "error",'message':"Informations manquantes"})
         
         obj = ProgrammeFormation.objects.get(id = id)
         obj.delete()
@@ -535,9 +535,9 @@ def ApiAffectModuleSemestre(request):
             semestre = semestre,
         )
         repartition.save()
-        return JsonResponse({'success' : True, 'message' : "Le module à été affecté avec succès"})
+        return JsonResponse({'success' : True, 'message' : "Le module a été affecté avec succès"})
     except:
-        return JsonResponse({'success' : False, 'message' : "L'affectation du module existe déja"})
+        return JsonResponse({'success' : False, 'message' : "L'affectation du module existe déjà"})
 
 def ApiAddModule(request):
 
@@ -561,7 +561,7 @@ def ApiAddModule(request):
         new_module.save()
         return JsonResponse({'success' : True})
     except IntegrityError:
-        return JsonResponse({'success' : False, 'message' : "Le module existe déja"})
+        return JsonResponse({'success' : False, 'message' : "Le module existe déjà"})
 
 @login_required(login_url='insitut_app:login')
 def deleteModule(request):
@@ -572,7 +572,7 @@ def deleteModule(request):
     # obj.updated_by = request.user,
     obj.save()
    
-    return JsonResponse({'success' : True, 'message' : "Le module à été supprimé avec succès"})
+    return JsonResponse({'success' : True, 'message' : "Le module a été supprimé avec succès"})
 
 @login_required(login_url="institut_app:login")
 def archiveModule(request):
@@ -616,7 +616,7 @@ def ApiUpdateModule(request):
 
     module.save()
 
-    return JsonResponse({'success' : True, 'message' : "Les information du module ont été mis à jours avec succès"})
+    return JsonResponse({'success' : True, 'message' : "Les informations du module ont été mises à jour avec succès"})
 
 def archiveFormation(request):
     pass
@@ -667,7 +667,7 @@ def AddPromo(request):
             messages.success(request, 'Promo ajoutée avec succès')
             return redirect('t_formations:listPromos')
         else:
-            messages.error(request, 'Une erreur c\'est produite lors du traitement de la requête')
+            messages.error(request, 'Une erreur s\'est produite lors du traitement de la requête')
             return redirect('t_formations:AddPromo')
     context = {
         'form' : form,
@@ -719,7 +719,7 @@ def ApiUpdatePromo(request):
             promo.date_fin = new_date_fin
             promo.annee_academique = annee_academique
             promo.save()
-            return JsonResponse({'success' : True, 'message' : 'Promo mis à jours avec succès'})
+            return JsonResponse({'success' : True, 'message' : 'Promo mise à jour avec succès'})
     else:
         return JsonResponse({"status" : "error"})
     
@@ -850,7 +850,7 @@ def ApiAddDocument(request):
         is_required = _required
     )
 
-    return JsonResponse({"status" : "success","message" : "Le document à été ajouter avec succès"})
+    return JsonResponse({"status" : "success","message" : "Le document a été ajouté avec succès"})
 
 @login_required(login_url="institu_app:login")
 @transaction.atomic
@@ -859,9 +859,9 @@ def ApiDeleteDoc(request):
     if id_doc:
         obj = DossierInscription.objects.get(id = id_doc)
         obj.delete()
-        return JsonResponse({'status' : 'success', 'message' : 'Document supprimer avec succès' })
+        return JsonResponse({'status' : 'success', 'message' : 'Document supprimé avec succès' })
     else:
-        return JsonResponse({'status' : 'error', 'message' : 'Une erreur est survenue lors du traitement de la requete' })
+        return JsonResponse({'status' : 'error', 'message' : 'Une erreur est survenue lors du traitement de la requête' })
     
 
 @login_required(login_url="institut_app:login")

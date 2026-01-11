@@ -217,7 +217,7 @@ def ApiCreateDoubleDiplomation(request):
             if voeux_standard.exists():
                 voeux_standard.delete()
 
-            messages.success(request, "Inscription du prospect en double diplômation confirmé.")
+            messages.success(request, "Inscription du prospect en double diplômation confirmée.")
             return JsonResponse({"status" : "success"})
         
         except Exception as e:
@@ -245,7 +245,7 @@ def ApiUpdateDoubleVoeux(request):
         obj.commentaire = comment
         obj.save()
 
-        return JsonResponse({"status" : "success", "message":"Les modifications ont été effectuer avec succès"})
+        return JsonResponse({"status" : "success", "message":"Les modifications ont été effectuées avec succès"})
 
 
 
@@ -280,7 +280,7 @@ def ApiChangeToStandardCursus(request):
             prosepect.is_double = False
             prosepect.save()
 
-            messages.success(request, "L'inscription de l'étudiant à un cursus standard à été effectuer avec succès")
+            messages.success(request, "L'inscription de l'étudiant à un cursus standard a été effectuée avec succès")
             return JsonResponse({"status":"success"})
 
         except Exception as e:
@@ -541,7 +541,7 @@ def ApiUpdateVoeux(request):
     fiche.specialite = Specialites.objects.get(id = id_specialite)
     fiche.promo = Promos.objects.get(code = promo)
     fiche.save()
-    return JsonResponse({'status' : "success", 'message' : "Fiche de voeux mis a jours avec succès"})
+    return JsonResponse({'status' : "success", 'message' : "Fiche de voeux mises à jour avec succès"})
 
 
 @login_required(login_url='institut_app:login')
@@ -566,7 +566,7 @@ def ApiUpdateProspectData(request):
 
     prospect.save()
 
-    return JsonResponse({'status' : 'success', 'message' : "Les informations du prospect ont été mise à jour"})
+    return JsonResponse({'status' : 'success', 'message' : "Les informations du prospect ont été mises à jour"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -583,7 +583,7 @@ def ApiCreateVoeux(request):
         commentaire = comment
     )
 
-    return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrer avec succès"})
+    return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrée avec succès"})
 
 @login_required(login_url="institut_app:login")
 def ApiConfirmeDoubleDiplome(request):

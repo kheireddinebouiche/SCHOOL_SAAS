@@ -27,7 +27,7 @@ class NewGroupeForms(forms.ModelForm):
             'end_date' : "Date de fin de formation :",
             'nom' : "Désignation (Nom du groupe ex: BTS Base de données): ",
             'min_student' : "Minimum d'étudiants pour démarrer la formation :",
-            'max_student' : "Maximum d'étudiants pour cloturer la formation :",
+            'max_student' : "Maximum d'étudiants pour clôturer la formation :",
             'specialite' : "Spécialité :",
             'annee_scolaire' : "Année scolaire :",
             'promotion' : "Veuillez sélectionner la promo :",

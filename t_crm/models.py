@@ -175,17 +175,17 @@ class Prospets(models.Model):
     indic = models.CharField(max_length=10, null=True, choices=INDICATIF)
     telephone = models.CharField(max_length=14, null=True)
     type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise'), ('autre', 'Autre')])
-    canal = models.CharField(max_length=255, null=True, choices=[('web', 'Recherche sur le web'),('recommandation', 'Recommandation'),('email', 'Email'), ('telephone', 'Téléphone'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicitée'), ('autre', 'Autre')])
+    canal = models.CharField(max_length=255, null=True, choices=[('web', 'Recherche sur le web'),('recommandation', 'Recommandation'),('email', 'Email'), ('telephone', 'Téléphone'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicité'), ('autre', 'Autre')])
     etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
     nationnalite = models.CharField(max_length=100, null=True, blank=True)
     num_secu = models.CharField(max_length=100, null=True, blank=True)
     entreprise = models.CharField(max_length=255, null=True, blank=True)
-    poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Résponsable'),('directeur','Directeur'),('gerant','Gérant')])
+    poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Responsable'),('directeur','Directeur'),('gerant','Gérant')])
     observation = models.TextField(null=True, blank=True)
 
     motif_rejet = models.CharField(max_length=100, null=True, blank=True)
 
-    groupe_sanguin = models.CharField(max_length=100, null=True, blank=True, choices=[('a-','A-'),('a+','A+'),('b+','B+'),('b-','B+'),('ab-','AB-'),('ab+','AB+'),('o-','o-'),('o+','o+')])
+    groupe_sanguin = models.CharField(max_length=100, null=True, blank=True, choices=[('a-','A-'),('a+','A+'),('b+','B+'),('b-','B-'),('ab-','AB-'),('ab+','AB+'),('o-','o-'),('o+','o+')])
     nom_arabe = models.CharField(max_length=100, null=True, blank=True)
     prenom_arabe = models.CharField(max_length=100, null=True, blank=True)
     
@@ -214,7 +214,7 @@ class Prospets(models.Model):
     diplome = models.CharField(max_length=100, null=True, blank=True)
     etablissement = models.CharField(max_length=100, null=True, blank=True)
     annee_obtention = models.CharField(max_length=100, null=True, blank=True)
-    statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscript'),('instance','Instance de paiement'),('convertit','Convertit'),('annuler','Inscription Annulé')])
+    statut = models.CharField(max_length=100, null=True, blank=True, default='visiteur', choices=[('visiteur','Visiteur'),('prinscrit','Pré-inscrit'),('instance','Instance de paiement'),('convertit','Convertit'),('annuler','Inscription Annulée')])
 
     profile_completed = models.BooleanField(default=False)
     has_completed_doc = models.BooleanField(default=False)
@@ -341,7 +341,7 @@ class FicheDeVoeuxAddiotionnel(models.Model):
 class NotesProcpects(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     note = models.TextField(null=True, blank=True)
-    tage = models.CharField(max_length=255, null=True, blank=True,choices=[('important', 'Important'), ('a_revoir', 'A revoir'), ('a_contacte', 'A contacter'), ('a_relancer', 'A relancer')])
+    tage = models.CharField(max_length=255, null=True, blank=True,choices=[('important', 'Important'), ('a_revoir', 'A revoir'), ('a_contacte', 'À contacter'), ('a_relancer', 'À relancer')])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

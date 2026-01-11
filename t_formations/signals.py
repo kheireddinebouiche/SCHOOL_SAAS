@@ -8,7 +8,7 @@ from t_crm.middleware import get_current_user
 def log_prospect_save(sender, instance, created, **kwargs):
     user = get_current_user()
     action = 'CREATE' if created else 'UPDATE'
-    details = f"Formation {instance.nom} {'créé' if created else 'modifié'}."
+    details = f"Formation {instance.nom} {'créée' if created else 'modifiée'}."
     
     UserActionLog.objects.create(
         user=user if user and user.is_authenticated else None,
@@ -21,7 +21,7 @@ def log_prospect_save(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Formation)
 def log_prospect_delete(sender, instance, **kwargs):
     user = get_current_user()
-    details = f"Formation {instance.nom} supprimé."
+    details = f"Formation {instance.nom} supprimée."
     
     UserActionLog.objects.create(
         user=user if user and user.is_authenticated else None,

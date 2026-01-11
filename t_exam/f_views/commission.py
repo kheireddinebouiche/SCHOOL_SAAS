@@ -334,6 +334,6 @@ def close_commission(request, pk):
                         else:
                             print(f"ExamPlanification existe déjà: Etudiant={result.etudiants}, Module={module}, Type={type_examen}")
 
-        return JsonResponse({"status": "success", 'message': "La commission a été close avec succès."})
+        return JsonResponse({'status' : 'success', 'message' : "Suppression effectuée avec succès"})
     except Exception as e:
         return JsonResponse({"status": "error", 'message': str(e)})

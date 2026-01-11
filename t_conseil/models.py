@@ -26,7 +26,7 @@ class Thematiques(models.Model):
     description = models.TextField(null=True, blank=True, help_text="Description de la thématique")
     prix = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Prix de la thématique")
     duree = models.PositiveIntegerField(null=True, blank=True, help_text="Durée en minutes")
-    etat = models.CharField(max_length=50, choices=[('archive', 'Archivé'), ('active', 'Active')], default='active')
+    etat = models.CharField(max_length=50, choices=[('archive', 'Archivée'), ('active', 'Active')], default='active')
     
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
