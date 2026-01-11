@@ -1,92 +1,167 @@
-<div class="card-header bg-white border-bottom-0 p-4 pb-2">
+<div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between sticky-top" style="z-index: 10;">
     <div class="d-flex align-items-center">
         <div class="position-relative me-3">
             <div class="avatar-sm">
-                <div class="avatar-title rounded-circle bg-soft-info text-info fw-bold shadow-sm">
+                {% if is_group %}
+                <div class="avatar-title rounded-circle bg-soft-warning text-warning fw-bold shadow-sm h-100 w-100 fs-5">
+                    {{ group.name|slice:":1"|upper }}
+                </div>
+                {% else %}
+                <div class="avatar-title rounded-circle bg-soft-primary text-primary fw-bold shadow-sm h-100 w-100 fs-5">
                     {{ other_user.username|slice:":1"|upper }}
                 </div>
+                <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-white border-2 rounded-circle">
+                    <span class="visually-hidden">En ligne</span>
+                </span>
+                {% endif %}
             </div>
-            <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
-                <span class="visually-hidden">En ligne</span>
-            </span>
         </div>
-        <div class="flex-grow-1">
-            <h5 class="mb-0 fw-bold text-dark">{{ other_user.username }}</h5>
-            <small class="text-muted">En ligne</small>
+        <div>
+            {% if is_group %}
+            <h6 class="mb-0 fw-bold text-dark fs-16">{{ group.name }}</h6>
+            <small class="text-muted">{{ group.members.count }} membres</small>
+            {% else %}
+            <h6 class="mb-0 fw-bold text-dark fs-16">{{ other_user.username }}</h6>
+            <div class="d-flex align-items-center">
+                <span class="badge badge-dot bg-success me-1"></span>
+                <small class="text-muted">En ligne</small>
+            </div>
+            {% endif %}
         </div>
-        <button class="btn btn-light btn-icon rounded-circle shadow-sm" onclick="location.reload()" title="Actualiser">
+    </div>
+    <div class="d-flex gap-2">
+        {% if not is_group %}
+        <button class="btn btn-light btn-sm btn-icon rounded-circle" data-bs-toggle="tooltip" title="Appel audio">
+            <i class="ri-phone-line"></i>
+        </button>
+        <button class="btn btn-light btn-sm btn-icon rounded-circle" data-bs-toggle="tooltip" title="Appel vidéo">
+            <i class="ri-vidicon-line"></i>
+        </button>
+        {% endif %}
+        <button class="btn btn-light btn-sm btn-icon rounded-circle" onclick="location.reload()" data-bs-toggle="tooltip" title="Actualiser">
             <i class="ri-refresh-line"></i>
+        </button>
+        <button class="btn btn-light btn-sm btn-icon rounded-circle" data-bs-toggle="tooltip" title="Plus d'options">
+            <i class="ri-more-2-fill"></i>
         </button>
     </div>
 </div>
 
-<div class="card-body p-4 overflow-auto flex-grow-1" id="messagesContainer" style="max-height: 480px;">
+<div class="card-body p-4 overflow-auto flex-grow-1 custom-scroll" id="messagesContainer" style="background-color: #fbfbfc;">
+    
+    <div class="text-center mb-5 mt-2">
+        <small class="text-muted bg-light px-3 py-1 rounded-pill">Aujourd'hui</small>
+    </div>
+
     {% for msg in messages %}
-    <div class="d-flex {% if msg.sender == request.user %}justify-content-end{% endif %} mb-4">
+    <div class="d-flex {% if msg.sender == request.user %}justify-content-end{% endif %} mb-4 slide-in-bottom">
         {% if msg.sender != request.user %}
-        <div class="flex-shrink-0 me-3">
+        <div class="flex-shrink-0 me-3 align-self-end pb-1">
             <div class="avatar-xs">
-                <span class="avatar-title rounded-circle bg-light text-muted">
+                <span class="avatar-title rounded-circle bg-soft-primary text-primary fs-12" title="{{ msg.sender.username }}">
                     {{ msg.sender.username|slice:":1"|upper }}
                 </span>
             </div>
         </div>
         {% endif %}
         
-        <div class="flex-grow-1 {% if msg.sender == request.user %}me-3 text-end{% endif %}">
-            <div class="chat-bubble {% if msg.sender == request.user %}chat-bubble-sent{% else %}chat-bubble-received{% endif %} d-inline-block text-start" style="max-width: 80%;">
+        <div class="flex-grow-1 {% if msg.sender == request.user %}me-3 text-end{% endif %}" style="max-width: 75%;">
+            {% if is_group and msg.sender != request.user %}
+            <div class="small text-muted mb-1 ms-1">{{ msg.sender.username }}</div>
+            {% endif %}
+            
+            <div class="chat-bubble {% if msg.sender == request.user %}chat-bubble-sent shadow-sm{% else %}chat-bubble-received{% endif %} d-inline-block text-start">
                 {% if msg.file %}
                     <div class="mb-2">
                         {% if msg.file.name|lower|slice:"-4:" == ".jpg" or msg.file.name|lower|slice:"-4:" == ".png" or msg.file.name|lower|slice:"-5:" == ".jpeg" %}
                             <a href="{{ msg.file.url }}" target="_blank">
-                                <img src="{{ msg.file.url }}" alt="Attachment" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                                <img src="{{ msg.file.url }}" alt="Attachment" class="img-fluid rounded-3 mb-1" style="max-height: 250px; border-radius: 12px;">
                             </a>
                         {% else %}
-                            <a href="{{ msg.file.url }}" target="_blank" class="d-flex align-items-center p-2 bg-light rounded text-decoration-none {% if msg.sender == request.user %}text-success{% else %}text-dark{% endif %}">
-                                <i class="ri-file-text-line fs-3 me-2"></i>
-                                <span class="text-truncate" style="max-width: 150px;">{{ msg.file.name|slice:"11:" }}</span>
-                                <i class="ri-download-line ms-auto"></i>
+                            <a href="{{ msg.file.url }}" target="_blank" class="d-flex align-items-center p-3 {% if msg.sender == request.user %}bg-white bg-opacity-25 border-white border-opacity-25 text-white{% else %}bg-light text-dark{% endif %} rounded-3 text-decoration-none border">
+                                <i class="ri-file-text-line fs-3 me-3"></i>
+                                <div class="overflow-hidden">
+                                     <div class="text-truncate fw-medium" style="max-width: 180px;">{{ msg.file.name|slice:"11:" }}</div>
+                                     <small class="opacity-75">Cliquer pour télécharger</small>
+                                </div>
+                                <i class="ri-download-line ms-auto fs-5"></i>
                             </a>
                         {% endif %}
                     </div>
                 {% endif %}
+                
                 {% if msg.content %}
-                {{ msg.content }}
+                <div class="position-relative">
+                    {{ msg.content }}
+                </div>
                 {% endif %}
             </div>
-            <div class="small text-muted mt-1 opacity-75">{{ msg.timestamp|date:"H:i" }}</div>
-        </div>
-
-        {% if msg.sender == request.user %}
-        <div class="flex-shrink-0 order-2">
-            <div class="avatar-xs">
-                <span class="avatar-title rounded-circle bg-success text-white text-xs">Moi</span>
+            
+            <div class="d-flex align-items-center {% if msg.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %} mt-1">
+                <span class="small text-muted me-1" style="font-size: 0.75rem;">{{ msg.timestamp|date:"H:i" }}</span>
+                {% if msg.sender == request.user %}
+                <i class="ri-check-double-line text-success fs-12"></i>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
     </div>
     {% empty %}
-    <div class="text-center p-5 text-muted">
-        <div class="bg-light rounded-circle p-3 d-inline-block mb-3">
-             <i class="ri-chat-1-line fs-2 text-success opacity-50"></i>
+    <div class="text-center p-5">
+        <div class="bg-primary bg-opacity-10 rounded-circle p-4 d-inline-block mb-3">
+             <i class="ri-discuss-line fs-1 text-primary"></i>
         </div>
-        <p class="fw-medium">Pas encore de messages. Dites bonjour !</p>
+        <h5 class="fw-bold text-dark">Démarrez la conversation</h5>
+        <p class="text-muted">
+            {% if is_group %}
+            Envoyez un message au groupe pour commencer.
+            {% else %}
+            Envoyez un message pour commencer à échanger avec {{ other_user.username }}
+            {% endif %}
+        </p>
     </div>
     {% endfor %}
 </div>
 
-<div class="card-footer bg-white border-top-0 p-3 pt-0">
-    <div class="input-group shadow-sm rounded-pill overflow-hidden bg-light">
-        <input type="hidden" id="receiverId" value="{{ other_user.id }}">
+<div class="card-footer bg-white p-3 border-top">
+    <div class="d-flex align-items-end gap-2 bg-light rounded-3 p-2">
+        <div class="d-flex gap-1 pb-1">
+             {% if is_group %}
+             <input type="hidden" id="groupId" value="{{ group.id }}">
+             {% else %}
+             <input type="hidden" id="receiverId" value="{{ other_user.id }}">
+             {% endif %}
+             <input type="file" id="fileInput" class="d-none">
+             
+             <button class="btn btn-light btn-icon rounded-circle text-muted" id="attachBtn" data-bs-toggle="tooltip" title="Joindre un fichier">
+                <i class="ri-attachment-line fs-5"></i>
+            </button>
+             <button class="btn btn-light btn-icon rounded-circle text-muted" data-bs-toggle="tooltip" title="Emoji">
+                <i class="ri-emotion-line fs-5"></i>
+            </button>
+        </div>
         
-        <input type="file" id="fileInput" class="d-none">
-        <button class="btn btn-light px-3 border-end" id="attachBtn" title="Joindre un fichier">
-            <i class="ri-attachment-line text-muted fs-5"></i>
-        </button>
+        <textarea class="form-control bg-transparent border-0" id="msgInput" placeholder="Écrivez votre message..." rows="1" style="resize: none; min-height: 40px; box-shadow: none;"></textarea>
         
-        <input type="text" class="form-control bg-light border-0 ps-3" id="msgInput" placeholder="Écrivez votre message..." style="height: 50px;">
-        <button class="btn btn-success px-4" id="sendMsgBtn">
-            <i class="ri-send-plane-2-fill"></i>
+        <button class="btn btn-primary btn-icon rounded-circle shadow-sm mb-1 me-1" id="sendMsgBtn">
+            <i class="ri-send-plane-fill"></i>
         </button>
     </div>
 </div>
+
+<style>
+    /* Specific styles for conversation part */
+    .slide-in-bottom {
+        animation: slideInBottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    
+    @keyframes slideInBottom {
+        0% {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        100% {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>

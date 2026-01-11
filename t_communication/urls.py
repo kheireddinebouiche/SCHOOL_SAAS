@@ -14,5 +14,7 @@ urlpatterns = [
     # Messaging URLs
     path('messages/', views.messages_view, name='messages'),
     path('messages/<int:user_id>/', views.conversation_view, name='conversation'),
+    path('messages/group/<int:group_id>/', views.group_conversation_view, name='group_conversation'),
     path('api/messages/send/', views.send_message_api, name='send_message_api'),
+    path('api/groups/create/', views.create_group_api, name='create_group_api'),
 ]

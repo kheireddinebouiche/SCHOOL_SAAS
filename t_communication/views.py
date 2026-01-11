@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from .models import Reminder, Message
+from .models import Reminder, Message, ChatGroup
 from django.db.models import Q
 import json
 from django.utils.dateparse import parse_datetime
@@ -30,7 +30,6 @@ def calendar_view(request):
     }
     return render(request, 'tenant_folder/communication/calendar.html', context)
 
-@login_required
 @login_required
 def reminder_api_list(request):
     start = request.GET.get('start')
@@ -121,16 +120,20 @@ def reminder_api_delete(request, pk):
 @login_required
 def messages_view(request):
     # Get all users the current user has chatted with
-    sent_to = Message.objects.filter(sender=request.user).values_list('receiver', flat=True)
-    received_from = Message.objects.filter(receiver=request.user).values_list('sender', flat=True)
+    sent_to = Message.objects.filter(sender=request.user, group__isnull=True).values_list('receiver', flat=True)
+    received_from = Message.objects.filter(receiver=request.user, group__isnull=True).values_list('sender', flat=True)
     contact_ids = set(list(sent_to) + list(received_from))
     
     contacts = User.objects.filter(id__in=contact_ids).exclude(id=request.user.id)
     all_users = User.objects.exclude(id=request.user.id)
     
+    # Get user's groups
+    groups = ChatGroup.objects.filter(members=request.user)
+    
     return render(request, 'tenant_folder/communication/messages.html', {
         'contacts': contacts,
-        'all_users': all_users
+        'all_users': all_users,
+        'groups': groups
     })
 
 @login_required
@@ -146,10 +149,48 @@ def conversation_view(request, user_id):
     
     return render(request, 'tenant_folder/communication/conversation_partial.html', {
         'other_user': other_user,
-        'messages': messages
+        'messages': messages,
+        'is_group': False
     })
 
 @login_required
+def group_conversation_view(request, group_id):
+    group = get_object_or_404(ChatGroup, id=group_id, members=request.user)
+    messages = group.messages.all().order_by('timestamp')
+    
+    return render(request, 'tenant_folder/communication/conversation_partial.html', {
+        'group': group,
+        'messages': messages,
+        'is_group': True
+    })
+
+@login_required
+def create_group_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        name = data.get('name')
+        member_ids = data.get('members', [])
+        
+        if not name:
+             return JsonResponse({'status': 'error', 'message': 'Le nom du groupe est requis'}, status=400)
+             
+        group = ChatGroup.objects.create(
+            name=name,
+            admin=request.user
+        )
+        group.members.add(request.user) # Add creator
+        if member_ids:
+            group.members.add(*member_ids)
+            
+        return JsonResponse({
+            'status': 'success', 
+            'group': {
+                'id': group.id,
+                'name': group.name
+            }
+        })
+    return JsonResponse({'status': 'error'}, status=400)
+
 @login_required
 def send_message_api(request):
     if request.method == 'POST':
@@ -157,32 +198,39 @@ def send_message_api(request):
         if request.content_type == 'application/json':
             data = json.loads(request.body)
             receiver_id = data.get('receiver_id')
+            group_id = data.get('group_id')
             content = data.get('content')
             file = None
         else:
             # Assume multipart/form-data
             receiver_id = request.POST.get('receiver_id')
+            group_id = request.POST.get('group_id')
             content = request.POST.get('content')
             file = request.FILES.get('file')
         
-        if not receiver_id:
-            return JsonResponse({'status': 'error', 'message': 'Missing receiver_id'}, status=400)
+        if not receiver_id and not group_id:
+            return JsonResponse({'status': 'error', 'message': 'Missing receiver_id or group_id'}, status=400)
             
         if not content and not file:
             return JsonResponse({'status': 'error', 'message': 'Message cannot be empty'}, status=400)
+        
+        sender = request.user
+        msg = Message(sender=sender, content=content if content else "", file=file)
+        
+        if group_id:
+            group = get_object_or_404(ChatGroup, id=group_id, members=request.user)
+            msg.group = group
+        else:
+            receiver = get_object_or_404(User, id=receiver_id)
+            msg.receiver = receiver
             
-        receiver = get_object_or_404(User, id=receiver_id)
-        msg = Message.objects.create(
-            sender=request.user,
-            receiver=receiver,
-            content=content if content else "",
-            file=file
-        )
+        msg.save()
         
         response_data = {
             'status': 'success', 
             'message_id': msg.id,
-            'timestamp': msg.timestamp.strftime('%H:%M')
+            'timestamp': msg.timestamp.strftime('%H:%M'),
+            'sender_name': sender.username # Useful for group chat
         }
         
         if msg.file:
