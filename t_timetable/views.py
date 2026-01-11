@@ -211,38 +211,7 @@ def ApiActivateTimeTable(request):
         return JsonResponse({"status" : "error"})
 
 
-### FONCTION PERMETANT DE CONFIGURER LES LIGNES DE LEMPLOIE DU TEMPS ###
-@login_required(login_url="institut_app:login")
-def timetable_edit(request, pk):
-    timetable = Timetable.objects.get(id = pk)
 
-    creneau_data = timetable.creneau.jour_data
-    creneau_horaire = timetable.creneau.horaire_data
-
-    modules = ProgrammeFormation.objects.filter(specialite = timetable.groupe.specialite, semestre = timetable.semestre)
-    sales = Salle.objects.all()
-
-    historique = TimetableEntry.objects.filter(timetable = timetable)
-
-    context = {
-        'timetable' : timetable,
-        'jour_data' : creneau_data,
-        'horaire_data' : creneau_horaire,
-        'modules' : modules,
-        'salles' : sales,
-        'pk' : pk,
-        'historique' : historique,
-    }
-    if timetable.is_configured:
-        return render(request, 'tenant_folder/timetable/configure_timetable_cours.html', context)
-    else:
-        return render(request, 'tenant_folder/timetable/configuration_emploie.html', context)
-
-@login_required(login_url="institut_app:login")
-def ApiLoadTableEntry(request):
-    timetable=request.GET.get('timetable')
-    historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code','timetable__is_validated')
-    return JsonResponse(list(historique), safe=False)
 
 
 @login_required(login_url="institut_app:login")

@@ -6,6 +6,7 @@ from .f_views.crenaux import *
 from .f_views.affectation_modules import *
 from .f_views.suivie_cours import *
 from .f_views.rapport_avancement import *
+from .f_views.plan_cours import *
 
 app_name="t_timetable"
 
