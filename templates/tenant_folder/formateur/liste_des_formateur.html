@@ -4,66 +4,103 @@
 
 {% block content %}
 <style>
-  .search-box {
-    position: relative;
+  /* Modern styling for Teacher List */
+  :root {
+    --primary-soft: #eef2ff;
+    --primary-main: #4f46e5;
+    --success-soft: #ecfdf5;
+    --success-main: #10b981;
+    --warning-soft: #fffbeb;
+    --warning-main: #f59e0b;
+    --info-soft: #f0f9ff;
+    --info-main: #0ea5e9;
   }
-  .search-box .search-icon {
+
+  .stat-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  .search-box-integrated {
+    position: relative;
+    max-width: 300px;
+  }
+  .search-box-integrated .search-icon {
     position: absolute;
-    right: 15px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    pointer-events: none; /* Allow clicks to pass through to the input */
+    color: #94a3b8;
   }
-  .table th {
+  .search-box-integrated input {
+    padding-left: 35px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  .table-modern {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+  .table-modern thead th {
+    background: transparent;
+    border: none;
+    color: #64748b;
     font-weight: 600;
-    background-color: #f8f9fa;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    padding: 12px 16px;
   }
-  .table td {
-    vertical-align: middle;
+  .table-modern tbody tr {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
   }
-  .badge {
-    padding: 0.5em 1em;
-    font-weight: 500;
+  .table-modern tbody tr:hover {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
   }
-  .dropdown-item {
-    padding: 0.5rem 1rem;
+  .table-modern tbody td {
+    padding: 16px;
+    border: none;
   }
-  .dropdown-item i {
-    width: 1.2rem;
+  .table-modern tbody td:first-child {
+    border-radius: 8px 0 0 8px;
   }
-  .btn-group .btn {
-    padding: 0.375rem 0.75rem;
+  .table-modern tbody td:last-child {
+    border-radius: 0 8px 8px 0;
   }
-  .modal-header .btn-close:focus {
-    box-shadow: none;
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: white;
+  }
+  .btn-action {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
   }
   
-  /* Formateur type cards */
-  .formateur-type-card {
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-  }
-  
-  .formateur-type-card:hover {
-    transform: translateY(-5px);
-    border-color: #dc3545;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-  }
-  
-  /* Fix dropdown z-index issue */
-  .table-responsive {
-    overflow-x: visible;
-  }
-  
-  .table td.text-end {
-    position: relative;
-    overflow: visible;
-  }
-  
-  .table .dropdown-menu {
-    z-index: 1050;
-    position: absolute;
+  /* Dropdown styling */
+  .table-responsive { overflow: visible !important; }
+  .dropdown-menu {
+    border: none;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 8px;
   }
 </style>
 
@@ -71,78 +108,132 @@
   <div class="page-content bg-light">
     <div class="container-fluid">
       <!-- start page title -->
-      <div class="row mb-3">
+      <div class="row mb-4">
         <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
-            <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="fas fa-chalkboard-teacher text-info"></i>
-              </div>
-              <h4 class="mb-0 text-info">Liste des formateurs</h4>
+          <div class="d-flex align-items-center justify-content-between p-2">
+            <div>
+              <h4 class="mb-1 font-weight-bold">Gestion des Enseignants</h4>
+              <p class="text-muted mb-0">Consultez et gérez la liste de vos formateurs et leurs disponibilités.</p>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);">Formateurs</a>
-                  </li>
-                  <li class="breadcrumb-item active">Liste des formateurs</li>
-                </ol>
-              </nav>
+            <button id="newFormateurBtn" type="button" class="btn btn-primary px-4 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#newFormateurModal">
+              <i class="ri-add-line me-1"></i> Nouveau formateur
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card stat-card shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle me-3" style="background-color: var(--primary-main);">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div>
+                  <h6 class="text-muted mb-1">Total Formateurs</h6>
+                  <h3 class="mb-0 font-weight-bold">{{ formateurs|length }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle me-3" style="background-color: var(--success-main);">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                  <h6 class="text-muted mb-1">Actifs ce mois</h6>
+                  <h3 class="mb-0 font-weight-bold">{{ formateurs|length }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle me-3" style="background-color: var(--info-main);">
+                  <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div>
+                  <h6 class="text-muted mb-1">Dernières Disponibilités</h6>
+                  <h3 class="mb-0 font-weight-bold">A jour</h3>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <!-- end page title -->
+
       <div class="row">
         <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-search text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Recherche</h5>
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white border-0 py-3">
+              <div class="d-flex justify-content-between align-items-center px-2">
+                <div class="search-box-integrated">
+                  <i class="fas fa-search search-icon"></i>
+                  <input type="text" placeholder="Rechercher un enseignant..." id="table-filter" class="form-control" autocomplete="off"/>
                 </div>
-
-                <div class="d-flex align-items-center gap-3">
-                  <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;" autocomplete="off"/>
-                    <i class="fas fa-search text-muted search-icon"></i>
-                  </div>
-                  
-                  <button id="newFormateurBtn" type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#newFormateurModal">
-                    <i class="ri-add-line me-1"></i> Nouveau formateur
-                  </button>
+                <div class="d-flex gap-2">
+                   <!-- Placeholder for filters if needed -->
                 </div>
               </div>
             </div>
-            <div class="card-body p-3" id="cardContentBody">
-              <div class="table-responsive" style="overflow-x: visible;">
-                <table id="example" class="table table-hover align-middle mb-0">
-                  <thead class="bg-light">
+            <div class="card-body p-0" id="cardContentBody">
+              <div class="table-responsive">
+                <table id="example" class="table table-modern align-middle mb-0">
+                  <thead>
                     <tr>
-                      <th class="border-0 rounded-start">Nom & Prénom</th>
-                      <th class="border-0">Téléphone</th>
-                      <th class="border-0">Email</th>
-                      <th class="border-0 rounded-end text-center">Actions</th>
+                      <th class="ps-4">Nom & Prénom</th>
+                      <th>Téléphone</th>
+                      <th>Email</th>
+                      <th class="text-end pe-4">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="listeItem" class="border-top-0">
+                  <tbody id="listeItem">
                   {% if formateurs %}
                     {% for formateur in formateurs %}
                       <tr>
-                        <td>{{formateur.nom}} {{formateur.prenom}}</td>
-                        <td>{{formateur.telephone}}</td>
-                        <td>{{formateur.email}}</td>
-                        <td class="text-end">
+                        <td class="ps-4">
+                          <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3" style="background-color: {% cycle '#4f46e5' '#10b981' '#f59e0b' '#0ea5e9' '#ec4899' %};">
+                              {{ formateur.nom|slice:":1"|upper }}{{ formateur.prenom|slice:":1"|upper }}
+                            </div>
+                            <div>
+                              <h6 class="mb-0 font-weight-bold">{{formateur.nom}} {{formateur.prenom}}</h6>
+                              <span class="badge bg-light text-dark fw-normal mt-1 border" style="font-size: 0.7rem;">{{ formateur.diplome|default:"Enseignant" }}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center text-muted">
+                            <i class="ri-phone-line me-2"></i>
+                            <span>{{formateur.telephone}}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center text-muted">
+                            <i class="ri-mail-line me-2"></i>
+                            <span>{{formateur.email}}</span>
+                          </div>
+                        </td>
+                        <td class="text-end pe-4">
                           <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                              Actions
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item view-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-eye text-info me-2"></i>Voir le profil</a></li>
-                              <li><a class="dropdown-item edit-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-edit text-warning me-2"></i>Modifier</a></li>
-                              <li><a class="dropdown-item dispo-profile" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="fas fa-edit text-warning me-2"></i>Disponiblité</a></li>
+                            <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" style="width: 32px; height: 32px; padding: 0;">
+                              <i class="ri-more-2-fill text-muted"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
+                              <li><a class="dropdown-item view-profile py-2" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="ri-eye-line text-info me-2"></i>Voir le profil</a></li>
+                              <li><a class="dropdown-item edit-profile py-2" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="ri-edit-line text-warning me-2"></i>Modifier</a></li>
+                              <li><a class="dropdown-item dispo-profile py-2" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}" data-formateur-email="{{ formateur.email }}" data-formateur-telephone="{{ formateur.telephone }}" data-formateur-diplome="{{ formateur.diplome }}"><i class="ri-time-line text-success me-2"></i>Disponibilité</a></li>
+                              <li><hr class="dropdown-divider opacity-50"></li>
+                              <li><a class="dropdown-item print-global-timetable py-2" href="#" data-formateur-id="{{ formateur.id }}" data-formateur-nom="{{ formateur.nom }}" data-formateur-prenom="{{ formateur.prenom }}"><i class="ri-printer-line text-primary me-2"></i>Imprimer Emploi Global</a></li>
                             </ul>
                           </div>
                         </td>
@@ -1341,11 +1432,182 @@
       }
     });
   });
+  
+  // --- PRINT TEACHER TIMETABLE LOGIC ---
+  
+  function loadPDFLibraries() {
+    return new Promise((resolve, reject) => {
+      if (window.jspdf) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function generateTeacherTimetablePDF(data, teacherName) {
+      await loadPDFLibraries();
+
+      const allDaysSet = new Set();
+      data.forEach(p => {
+        if (p.jour) {
+          const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+          allDaysSet.add(normalizedDay);
+        }
+      });
+      const dayOrder = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+      const days = dayOrder.filter(d => Array.from(allDaysSet).includes(d));
+      if (days.length === 0) days.push(...Array.from(allDaysSet));
+
+      const timeSlots = [...new Set(data.filter(p => p.heure_debut && p.heure_fin)
+        .map(p => p.heure_debut + ' - ' + p.heure_fin))].sort();
+
+      if (days.length === 0 || timeSlots.length === 0) {
+          alert("Aucune séance trouvée pour ce formateur dans les emplois du temps en cours.");
+          return;
+      }
+
+      const doc = new window.jspdf.jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const scheduleMap = {};
+      data.forEach(p => {
+         if (p.jour && p.heure_debut && p.heure_fin) {
+           const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+           const slot = p.heure_debut + ' - ' + p.heure_fin;
+           const key = `${normalizedDay}_${slot}`;
+           if (!scheduleMap[key]) scheduleMap[key] = [];
+           scheduleMap[key].push(p);
+         }
+      });
+
+      const pageWidth = 297; 
+      const pageHeight = 210;
+      const leftMargin = 10;
+      const topMargin = 10;
+      const contentWidth = pageWidth - 20;
+      let yPosition = topMargin;
+
+      doc.setFontSize(16);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Emploi du Temps Global Enseignant", pageWidth/2, yPosition + 5, {align:'center'});
+      yPosition += 15;
+
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.setFont(undefined, 'bold');
+      doc.text("Enseignant: " + teacherName, leftMargin + 5, yPosition);
+      yPosition += 10;
+
+      const headerColWidth = 30; 
+      const timeColWidth = (contentWidth - headerColWidth) / timeSlots.length;
+      const rowHeight = 20; 
+
+      doc.setFillColor(59, 125, 221); 
+      doc.rect(leftMargin, yPosition, headerColWidth, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.text("Jours", leftMargin + headerColWidth/2, yPosition + 6, {align:'center'});
+
+      timeSlots.forEach((slot, idx) => {
+          const x = leftMargin + headerColWidth + (idx * timeColWidth);
+          doc.setFillColor(59, 125, 221); 
+          doc.rect(x, yPosition, timeColWidth, 10, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(8);
+          doc.text(slot, x + timeColWidth/2, yPosition + 6, {align:'center'});
+      });
+
+      yPosition += 10;
+      doc.setTextColor(0, 0, 0);
+
+      days.forEach((day, rIdx) => {
+          const rowY = yPosition;
+          doc.setFillColor(245, 245, 245); 
+          doc.rect(leftMargin, rowY, headerColWidth, rowHeight, 'F');
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(50, 50, 50);
+          doc.text(day, leftMargin + headerColWidth/2, rowY + rowHeight/2, {align:'center'});
+
+          timeSlots.forEach((slot, cIdx) => {
+              const x = leftMargin + headerColWidth + (cIdx * timeColWidth);
+              const key = `${day}_${slot}`;
+              const sessions = scheduleMap[key]; // This is now an array
+
+              doc.setDrawColor(200, 200, 200);
+              doc.rect(x, rowY, timeColWidth, rowHeight); 
+
+              if (sessions && sessions.length > 0) {
+                  sessions.forEach((session, sIdx) => {
+                      const sessionHeight = rowHeight / sessions.length;
+                      const sessionRowY = rowY + (sIdx * sessionHeight);
+
+                      const module = session.cours__label || session.cours__code;
+                      const room = session.salle__nom || "";
+
+                      doc.setTextColor(0, 0, 0);
+                      doc.setFontSize(sessions.length > 1 ? 6 : 7);
+                      doc.setFont(undefined, 'bold');
+                      const modText = doc.splitTextToSize(module, timeColWidth - 4);
+                      doc.text(modText, x + 2, sessionRowY + (sessions.length > 1 ? 3 : 5));
+
+                      doc.setFont(undefined, 'italic');
+                      doc.setTextColor(100, 100, 100);
+                      doc.setFontSize(sessions.length > 1 ? 5 : 6);
+                      doc.text(room, x + timeColWidth - 2, sessionRowY + (sessions.length > 1 ? sessionHeight - 2 : 17), {align:'right'});
+                      
+                      if (sIdx < sessions.length - 1) {
+                          doc.setDrawColor(230, 230, 230);
+                          doc.line(x + 2, sessionRowY + sessionHeight, x + timeColWidth - 2, sessionRowY + sessionHeight);
+                      }
+                  });
+              }
+          });
+          yPosition += rowHeight;
+      });
+      
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Généré le ${new Date().toLocaleDateString()}`, leftMargin, pageHeight - 5);
+
+      doc.save(`Emploi_Global_${teacherName.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  $(document).on('click', '.print-global-timetable', function(e) {
+      e.preventDefault();
+      var btn = $(this);
+      var teacherId = btn.data('formateur-id');
+      var teacherName = btn.data('formateur-nom') + ' ' + btn.data('formateur-prenom');
+      
+      var icon = btn.find('i');
+      var originalClass = icon.attr('class');
+      icon.attr('class', 'fas fa-spinner fa-spin me-2');
+      
+      $.ajax({
+          url: "{% url 't_timetable:ApiLoadTeacherGlobalTimetable' %}",
+          type: "GET",
+          data: { 'teacher_id': teacherId },
+          success: function(data) {
+              generateTeacherTimetablePDF(data, teacherName);
+          },
+          error: function() {
+              alert("Erreur lors de la récupération de l'emploi du temps.");
+          },
+          complete: function() {
+              icon.attr('class', originalClass);
+          }
+      });
+  });
 
   });
-    
-
-  
 </script>
 
 {% endblock content %}

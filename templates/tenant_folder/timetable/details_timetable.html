@@ -12,6 +12,40 @@
 <div class="main-content">
   <div class="page-content bg-light">
     <div class="container-fluid">
+    
+      <style>
+        .timetable-container {
+            max-height: 70vh;
+            overflow: auto;
+            position: relative;
+        }
+        .table-sticky thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 2;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .table-sticky td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #fff;
+            z-index: 1;
+            box-shadow: 1px 0 2px rgba(0,0,0,0.05);
+        }
+        .table-sticky thead th:first-child {
+            z-index: 3;
+        }
+        .course-item {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: default;
+        }
+        .course-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+      </style>
+
       <!-- start page title -->
       <div class="row mb-3">
         <div class="col-12">
@@ -62,82 +96,117 @@
                     Générer les registres de présences
                   </button>
 
-                  <!-- Bouton Imprimer -->
+                  <!-- Boutons Imprimer -->
                   <button class="btn btn-secondary btn-label waves-effect waves-light" type="button" id="printTimetableBtn">
                     <i class="ri-printer-line label-icon align-middle fs-16 me-2"></i>
-                    Imprimer
+                    Imprimer (Global)
                   </button>
+                  
+                  <button class="btn btn-info btn-label waves-effect waves-light" type="button" id="openTeacherModalBtn">
+                    <i class="ri-user-voice-line label-icon align-middle fs-16 me-2"></i>
+                    Imprimer par Enseignant
+                  </button>
+
+                  {% if has_double_degree_students %}
+                  <button class="btn btn-warning btn-label waves-effect waves-light" type="button" id="printDDTimetableBtn">
+                    <i class="ri-file-copy-2-line label-icon align-middle fs-16 me-2"></i>
+                    Imprimer (Double Diplôme)
+                  </button>
+                  {% endif %}
                 </div>
               </div>
             </div>
 
             <div class="card-body p-4">
-              <div class="row mb-4">
-                <div class="col-md-12">
-                  <div class="d-flex flex-wrap gap-4">
-                    <div style="min-width: 200px;">
-                      <div class="d-flex align-items-center mb-1">
-                        <i class="ri-shield-check-line text-primary fs-5 me-2"></i>
-                        <label class="form-label fw-bold text-dark mb-0">Nom</label>
-                      </div>
-                      <div class="bg-light p-2 rounded">
-                        <p class="mb-0 fw-semibold text-dark">{{ timetable.label|default:"Emploi du Temps" }}</p>
-                      </div>
-                    </div>
-
-                    <div style="min-width: 200px;">
-                      <div class="d-flex align-items-center mb-1">
-                        <i class="ri-team-line text-secondary fs-5 me-2"></i>
-                        <label class="form-label fw-bold text-dark mb-0">Groupe</label>
-                      </div>
-                      <div class="bg-light p-2 rounded">
-                        <p class="mb-0 text-dark">
-                          {% if timetable.groupe %}
-                            {{ timetable.groupe.nom }}
-                          {% else %}
-                            <em class="text-muted">Non spécifié</em>
-                          {% endif %}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style="min-width: 150px;">
-                      <div class="d-flex align-items-center mb-1">
-                        <i class="ri-calendar-2-line text-secondary fs-5 me-2"></i>
-                        <label class="form-label fw-bold text-dark mb-0">Semestre</label>
-                      </div>
-                      <div class="bg-light p-2 rounded">
-                        <p class="mb-0 text-dark">
-                          {% if timetable.semestre %}
-                            {{ timetable.get_semestre_display }}
-                          {% else %}
-                            <em class="text-muted">Non spécifié</em>
-                          {% endif %}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style="min-width: 150px;">
-                      <div class="d-flex align-items-center mb-1">
-                        <i class="ri-toggle-line text-success fs-5 me-2"></i>
-                        <label class="form-label fw-bold text-dark mb-0">Etat</label>
-                      </div>
-                      <div class="bg-light p-2 rounded">
-                        <div class="d-flex align-items-center">
-                          {% if timetable.extraordinary_timetable %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle border-opacity-25">
-                              <i class="ri-file-add-line me-1"></i>Extraordinaire
-                            </span>
-                          {% else %}
-                            <span class="badge bg-success-subtle text-success border border-success-subtle border-opacity-25">
-                              <i class="ri-file-line me-1"></i>Ordinaire
-                            </span>
-                          {% endif %}
+              <!-- Info & Quick Stats Row -->
+              <div class="row mb-4 g-3">
+                 <!-- Groupe Card -->
+                 <div class="col-md-3 col-sm-6">
+                    <div class="card shadow-none border h-100 mb-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-3">
+                                    <i class="ri-team-line"></i>
+                                </span>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase fw-semibold mb-1">Groupe</h6>
+                                <h5 class="mb-0 text-dark">
+                                    {% if timetable.groupe %}
+                                        {{ timetable.groupe.nom }}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Non spécifié</span>
+                                    {% endif %}
+                                </h5>
+                            </div>
                         </div>
-                      </div>
                     </div>
-                  </div>
-                </div>
+                 </div>
+                 
+                 <!-- Semestre Card -->
+                 <div class="col-md-3 col-sm-6">
+                    <div class="card shadow-none border h-100 mb-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <span class="avatar-title bg-info-subtle text-info rounded-circle fs-3">
+                                    <i class="ri-calendar-event-line"></i>
+                                </span>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase fw-semibold mb-1">Semestre</h6>
+                                <h5 class="mb-0 text-dark">
+                                    {% if timetable.semestre %}
+                                        {{ timetable.get_semestre_display }}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">N/A</span>
+                                    {% endif %}
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+
+                 <!-- Status Card -->
+                 <div class="col-md-3 col-sm-6">
+                    <div class="card shadow-none border h-100 mb-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <span class="avatar-title bg-success-subtle text-success rounded-circle fs-3">
+                                    <i class="ri-checkbox-circle-line"></i>
+                                </span>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase fw-semibold mb-1">Etat</h6>
+                                <h5 class="mb-0">
+                                   {% if timetable.extraordinary_timetable %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Extraordinaire</span>
+                                   {% else %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Ordinaire</span>
+                                   {% endif %}
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+
+                 <!-- Last Update Card -->
+                 <div class="col-md-3 col-sm-6">
+                    <div class="card shadow-none border h-100 mb-0">
+                        <div class="card-body d-flex align-items-center">
+                             <div class="avatar-sm flex-shrink-0 me-3">
+                                <span class="avatar-title bg-secondary-subtle text-secondary rounded-circle fs-3">
+                                    <i class="ri-history-line"></i>
+                                </span>
+                            </div>
+                            <div>
+                                <h6 class="text-muted text-uppercase fw-semibold mb-1">Mis à jour</h6>
+                                <h5 class="mb-0 text-dark fs-6">
+                                    {{ timetable.date_modification|date:"d M Y" }}
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
               </div>
 
               <!-- Section de l'emploi du temps -->
@@ -156,23 +225,30 @@
                   <div class="card border-0 shadow-sm">
                     <div class="card-body p-0">
                       <!-- Main Timetable -->
-                      <div class="table-responsive">
+                      <div class="timetable-container">
                         <!-- Header Row with Times -->
-                        <table class="table table-bordered mb-0">
+                        <table class="table table-bordered mb-0 table-sticky table-hover">
                           <thead class="bg-light">
                             <tr>
-                              <th class="text-center" style="width: 15%;">Jours</th>
+                              <th class="text-center bg-light" style="width: 150px; min-width: 120px;">Jours</th>
                               {% for time_slot in time_slots %}
-                                <th class="text-center">{{ time_slot }}</th>
+                                <th class="text-center bg-light" style="min-width: 150px;">
+                                    <div class="d-flex flex-column align-items-center justify-content-center">
+                                        <i class="ri-time-line text-muted mb-1"></i>
+                                        <span>{{ time_slot }}</span>
+                                    </div>
+                                </th>
                               {% endfor %}
                             </tr>
                           </thead>
                           <tbody>
                             {% for day in unique_days %}
                             <tr>
-                              <td class="bg-light text-center align-middle" style="font-weight: bold; font-size: 0.9rem;">{{ day|title }}</td>
+                              <td class="bg-light text-center align-middle fw-bold border-end" style="z-index: 1;">
+                                <div class="py-3">{{ day|title }}</div>
+                              </td>
                               {% for time_slot in time_slots %}
-                                <td class="align-top p-1" style="min-height: 80px;">
+                                <td class="align-top p-2" style="min-height: 100px; background-color: #fff;">
                                   {% for session in sessions %}
                                     <!-- Check if session day matches and time slot matches -->
                                     {% if session.jour|lower == day %}
@@ -372,6 +448,7 @@
                 <!-- Content will be injected here -->
             </div>
         </div>
+
       </div>
       <div class="modal-footer border-top">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
@@ -383,306 +460,407 @@
   </div>
 </div>
 
-<script>
-  // Variable globale pour stocker le titre (pour le nom de fichier)
-  let currentTimetableTitle = "Emploi_du_Temps";
+<!-- Modal de Sélection des Enseignants pour Impression -->
+<div class="modal fade" id="printTeacherModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="ri-printer-line me-2"></i>Imprimer par Enseignant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+             <label class="form-label mb-0 fw-bold">Sélectionner les enseignants :</label>
+             <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllTeachers">Tout sélectionner</button>
+        </div>
+        <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;" id="teacherListContainer">
+             <!-- Checkboxes will be injected here via JS -->
+             <div class="text-center text-muted py-3">
+                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Chargement...
+             </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-info" id="confirmPrintTeachersBtn">
+            <i class="ri-printer-line me-2"></i>Imprimer les sélectionnés
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-  // Fonction pour générer le contenu HTML de l'emploi du temps
-  function generateTimetableHtml() {
-      const timetableSection = document.querySelector('.table-responsive');
-      if (!timetableSection) {
-        console.error('Tableau de l\'emploi du temps non trouvé');
-        return null;
+<script>
+
+
+  // --- UTILS & GLOBAL STATE ---
+  let cachedTimetableData = null;
+
+  function loadPDFLibraries() {
+    return new Promise((resolve, reject) => {
+      if (window.jspdf) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function fetchTimetableData(mode = null) {
+      return new Promise((resolve, reject) => {
+          // Only cache normal mode
+          if (!mode && cachedTimetableData) {
+              resolve(cachedTimetableData);
+              return;
+          }
+          
+          const params = { 'timetable' : "{{ timetable.id }}" };
+          if(mode) params['mode'] = mode;
+
+          $.ajax({
+            url : "{% url 't_timetable:ApiLoadTableEntry' %}",
+            dataType : "JSON",
+            type: "GET",
+            data: params,
+            success : function(data){
+              if(!mode) cachedTimetableData = data;
+              resolve(data);
+            },
+            error: function(err) {
+                reject(err);
+            }
+          });
+      });
+  }
+
+  // --- PDF GENERATION CORE ---
+  async function generateTimetablePDF(data, teachersList = null, titlePrefix = '') {
+      await loadPDFLibraries();
+
+      // 1. Prepare Global Matrix Layout (Days/Times based on ALL data to keep structure)
+      const allDaysSet = new Set();
+      data.forEach(p => {
+        if (p.jour) {
+          const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+          allDaysSet.add(normalizedDay);
+        }
+      });
+      const allDays = Array.from(allDaysSet);
+      const dayOrder = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+      const days = dayOrder.filter(d => allDays.includes(d));
+      if (days.length === 0) days.push(...allDays); // Fallback
+
+      const timeSlots = [...new Set(data.filter(p => p.heure_debut && p.heure_fin)
+        .map(p => p.heure_debut + ' - ' + p.heure_fin))].sort();
+
+      // IF no data at all
+      if (days.length === 0 || timeSlots.length === 0) {
+          alert("Aucune donnée à imprimer.");
+          return;
       }
 
-      // On récupère les données de base
-      const title = "{{ timetable.label|default:'Emploi du Temps'|escapejs }}";
-      currentTimetableTitle = title.replace(/\s+/g, '_');
-      
-      const group = "{{ timetable.groupe.nom|default:'N/A'|escapejs }}";
-      const semester = "{{ timetable.get_semestre_display|default:'N/A'|escapejs }}";
-      const type = "{% if timetable.extraordinary_timetable %}Extraordinaire{% else %}Ordinaire{% endif %}";
-      const date = "{{ timetable.date_modification|date:'d/m/Y' }}";
-
-      return `
-        <style>
-          @page {
-            size: A4 landscape;
-            margin: 10mm;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .pdf-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #0ea5e9; /* Sky-500 equivalent */
-            padding-bottom: 15px;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          }
-          .pdf-brand h1 {
-            color: #0f172a; /* Slate-900 */
-            font-size: 24px;
-            font-weight: 800;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .pdf-brand p {
-            color: #64748b; /* Slate-500 */
-            font-size: 10px;
-            margin: 2px 0 0;
-            font-weight: 500;
-          }
-          .pdf-meta {
-            text-align: right;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          }
-          .pdf-meta-item {
-            display: inline-block;
-            margin-left: 15px;
-            font-size: 10px;
-            color: #475569;
-          }
-          .pdf-meta-item strong {
-            display: block;
-            color: #0ea5e9;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 1px;
-          }
-          
-          /* Table Styles */
-          .pdf-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px;
-            background: #fff;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          }
-          .pdf-table th {
-            background-color: #f1f5f9; /* Slate-100 */
-            color: #475569; /* Slate-600 */
-            font-weight: 700;
-            text-transform: uppercase;
-            padding: 8px 4px;
-            border: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 8px;
-            letter-spacing: 0.5px;
-          }
-          .pdf-table td {
-            border: 1px solid #e2e8f0; /* Slate-200 */
-            padding: 4px;
-            vertical-align: top;
-            height: 60px; /* Fixed styling height */
-          }
-          
-          /* Day Column */
-          .pdf-day-cell {
-            background-color: #f8fafc;
-            color: #334155;
-            font-weight: 700;
-            text-align: center;
-            vertical-align: middle !important;
-            width: 80px;
-            font-size: 10px;
-            text-transform: capitalize;
-          }
-
-          /* Course Cards in PDF */
-          .pdf-course {
-            background-color: #f0f9ff; /* Sky-50 */
-            border-left: 3px solid #0ea5e9;
-            border-radius: 4px;
-            padding: 4px 6px;
-            margin-bottom: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          }
-          .pdf-course-title {
-            color: #0369a1; /* Sky-700 */
-            font-weight: 700;
-            font-size: 9px;
-            display: block;
-            margin-bottom: 2px;
-            line-height: 1.2;
-          }
-          .pdf-course-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            color: #525252;
-            font-size: 8px;
-            margin-top: 2px;
-          }
-          .pdf-course-icon {
-            display: inline-flex;
-            align-items: center;
-            opacity: 0.8;
-          }
-          .icon-user::before { content: "👤"; margin-right: 2px; font-size: 7px; }
-          .icon-map::before { content: "📍"; margin-right: 2px; font-size: 7px; }
-
-          .pdf-footer {
-            margin-top: 10px;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 8px;
-            display: flex;
-            justify-content: space-between;
-            color: #94a3b8;
-            font-size: 8px;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          }
-        </style>
-
-        <!-- Header -->
-        <div class="pdf-header">
-          <div class="pdf-brand">
-            <h1>${title}</h1>
-            <p>PLANNING ACADÉMIQUE</p>
-          </div>
-          <div class="pdf-meta">
-            <div class="pdf-meta-item">
-              <strong>Groupe</strong> ${group}
-            </div>
-            <div class="pdf-meta-item">
-              <strong>Semestre</strong> ${semester}
-            </div>
-            <div class="pdf-meta-item">
-              <strong>Type</strong> ${type}
-            </div>
-            <div class="pdf-meta-item">
-              <strong>Édité le</strong> ${date}
-            </div>
-          </div>
-        </div>
-
-        <!-- Timetable Content -->
-        <table class="pdf-table">
-            <thead>
-                <tr>
-                    <th>Jours</th>
-                    {% for time_slot in time_slots %}
-                    <th>{{ time_slot }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for day in unique_days %}
-                <tr>
-                    <td class="pdf-day-cell">{{ day|title }}</td>
-                    {% for time_slot in time_slots %}
-                    <td>
-                         {% for session in sessions %}
-                            {% if session.jour|lower == day %}
-                                {% with session_start=session.heure_debut|time:"H:i" %}
-                                    {% if session_start == time_slot|slice:":5" %}
-                                        <div class="pdf-course">
-                                            <span class="pdf-course-title">{{ session.cours.label|escapejs }}</span>
-                                            <div class="pdf-course-info">
-                                                <span class="pdf-course-icon icon-user">
-                                                    {% if session.formateur %}{{ session.formateur.nom|slice:":1" }}.{{ session.formateur.prenom }}{% else %}N/A{% endif %}
-                                                </span>
-                                                <span class="pdf-course-icon icon-map">{{ session.salle.nom|default:'?' }}</span>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-                                {% endwith %}
-                            {% endif %}
-                        {% endfor %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <!-- Footer -->
-        <div class="pdf-footer">
-          <span>Généré automatiquement par School SaaS</span>
-          <span>Page 1/1</span>
-        </div>
-      `;
-  }
-
-  // Fonction appelée par le bouton "Imprimer" principal
-  function openPrintPreview() {
-    const content = generateTimetableHtml();
-    if (!content) return;
-
-    const previewContainer = document.getElementById('printPreviewContainer');
-    previewContainer.innerHTML = content;
-
-    // Ouvrir la modal
-    const modal = new bootstrap.Modal(document.getElementById('printPreviewModal'));
-    modal.show();
-  }
-
-  // Fonction appelée pour imprimer via le navigateur (native print)
-  function printPdfFromPreview() {
-    const container = document.getElementById('printPreviewContainer');
-    const content = container.innerHTML;
-
-    // Créer une iframe invisible
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-
-    // Écrire le contenu dans l'iframe
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Emploi_Du_Temps_${currentTimetableTitle}</title>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Lancer l'impression une fois chargé
-    iframe.contentWindow.focus();
-    setTimeout(() => {
-        iframe.contentWindow.print();
-        // Nettoyage après impression (délai pour laisser le temps au dialogue)
-        setTimeout(() => {
-            document.body.removeChild(iframe);
-        }, 1000);
-    }, 500);
-  }
-
-  // Event Listeners
-  document.addEventListener('DOMContentLoaded', function() {
-    // Bouton principal pour ouvrir la preview
-    document.getElementById('printTimetableBtn').addEventListener('click', function() {
-      openPrintPreview();
-    });
-
-    // Bouton de confirmation dans la modal
-    document.getElementById('confirmPrintBtn').addEventListener('click', function() {
-      printPdfFromPreview();
-    });
-
-    // Gestion du bouton d'export existant (inchangé)
-    const exportBtn = document.querySelectorAll('.btn.btn-success.btn-label[type="button"]')[0];
-    if(exportBtn) {
-      exportBtn.addEventListener('click', function() {
-        alert('Fonctionnalité d\'export en développement');
+      // Initialize PDF
+      const doc = new window.jspdf.jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
       });
-    }
+
+      // Define targets: either single 'ALL' (Group View) or list of Teacher Names
+      const targets = teachersList && teachersList.length > 0 ? teachersList : ['ALL_GROUP'];
+
+      targets.forEach((target, index) => {
+          if (index > 0) doc.addPage('landscape');
+
+          // Filter Data for this specific page
+          let pageData = data;
+          let title = "Emploi du Temps";
+          let subTitle = "Groupe: {{ timetable.groupe.nom|escapejs }}";
+          
+          if (target !== 'ALL_GROUP') {
+              pageData = data.filter(d => {
+                  const tName = `${d.formateur__nom || ''} ${d.formateur__prenom || ''}`.trim();
+                  return tName === target;
+              });
+              title = "Emploi du Temps Enseignant";
+              subTitle = "Enseignant: " + target;
+          }
+          
+          if(titlePrefix) title += " " + titlePrefix;
+
+          // Build Map for this page
+          const scheduleMap = {};
+          pageData.forEach(p => {
+             if (p.jour && p.heure_debut && p.heure_fin) {
+               const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+               const slot = p.heure_debut + ' - ' + p.heure_fin;
+               scheduleMap[`${normalizedDay}_${slot}`] = p;
+             }
+          });
+
+          // Draw Page Content
+          const pageWidth = 297; 
+          const pageHeight = 210;
+          const leftMargin = 10;
+          const topMargin = 10;
+          const contentWidth = pageWidth - 20;
+          let yPosition = topMargin;
+
+          // Header
+          doc.setFontSize(16);
+          doc.setTextColor(40, 40, 40);
+          doc.text(title, pageWidth/2, yPosition + 5, {align:'center'});
+          yPosition += 15;
+
+          doc.setFontSize(10);
+          doc.setTextColor(60, 60, 60);
+          doc.setFont(undefined, 'bold');
+          doc.text(subTitle, leftMargin + 5, yPosition);
+          
+          if (target === 'ALL_GROUP') {
+             // Show extra info only for group view
+             doc.text("Semestre: {{ timetable.get_semestre_display|default:''|escapejs }}", leftMargin + 80, yPosition);
+             doc.text("Année: {{ timetable.annee_scolaire|default:''|escapejs }}", leftMargin + 160, yPosition);
+          } else {
+             // Show Group context for Teacher view? Maybe keeps it simple.
+             doc.text("Groupe: {{ timetable.groupe.nom|escapejs }}", leftMargin + 80, yPosition); // Context
+          }
+          yPosition += 10;
+
+          // Matrix Calculations
+          const headerColWidth = 30; 
+          const timeColWidth = (contentWidth - headerColWidth) / timeSlots.length;
+          const rowHeight = 20; 
+
+          // -- HEADER ROW (Time Slots) --
+          doc.setFillColor(59, 125, 221); // Primary Blue
+          doc.rect(leftMargin, yPosition, headerColWidth, 10, 'F');
+          
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(9);
+          doc.text("Jours", leftMargin + headerColWidth/2, yPosition + 6, {align:'center'});
+
+          timeSlots.forEach((slot, idx) => {
+              const x = leftMargin + headerColWidth + (idx * timeColWidth);
+              doc.setFillColor(59, 125, 221); 
+              doc.rect(x, yPosition, timeColWidth, 10, 'F');
+              
+              doc.setTextColor(255, 255, 255);
+              doc.setFontSize(8);
+              doc.text(slot, x + timeColWidth/2, yPosition + 6, {align:'center'});
+          });
+
+          yPosition += 10;
+
+          // -- ROWS (Days) --
+          doc.setTextColor(0, 0, 0);
+
+          days.forEach((day, rIdx) => {
+              // Check Page Break? (Unlikely for single week but good practice)
+              if (yPosition + rowHeight > pageHeight - 10) {
+                   doc.addPage('landscape');
+                   yPosition = 10; 
+                   // Re-draw header? For simplicity assume it fits single page for now.
+              }
+
+              const rowY = yPosition;
+
+              // Day Header
+              doc.setFillColor(245, 245, 245); 
+              doc.rect(leftMargin, rowY, headerColWidth, rowHeight, 'F');
+              doc.setFont(undefined, 'bold');
+              doc.setFontSize(9);
+              doc.setTextColor(50, 50, 50);
+              doc.text(day, leftMargin + headerColWidth/2, rowY + rowHeight/2, {align:'center'});
+
+              // Cells
+              doc.setFont(undefined, 'normal');
+              timeSlots.forEach((slot, cIdx) => {
+                  const x = leftMargin + headerColWidth + (cIdx * timeColWidth);
+                  const key = `${day}_${slot}`;
+                  const session = scheduleMap[key];
+
+                  doc.setDrawColor(200, 200, 200);
+                  doc.rect(x, rowY, timeColWidth, rowHeight); 
+
+                  if (session) {
+                      const module = session.cours__label || session.cours__code;
+                      // Show teacher name in Group view, show Room in Teacher view?
+                      // Actually standard info is fine.
+                      const teacherName = (session.formateur__nom || "") + " " + (session.formateur__prenom ? session.formateur__prenom.charAt(0)+"." : "");
+                      const room = session.salle__nom || "";
+
+                      doc.setTextColor(0, 0, 0);
+                      doc.setFontSize(7);
+                      doc.setFont(undefined, 'bold');
+                      const modText = doc.splitTextToSize(module, timeColWidth - 4);
+                      doc.text(modText, x + 2, rowY + 4);
+
+                      doc.setFont(undefined, 'normal');
+                      doc.setFontSize(6);
+                      // In Teacher View, Teacher Name is redundant but OK to keep
+                      doc.text(teacherName, x + 2, rowY + 12);
+
+                      doc.setFont(undefined, 'italic');
+                      doc.setTextColor(100, 100, 100);
+                      doc.text(room, x + timeColWidth - 2, rowY + 17, {align:'right'});
+                  }
+              });
+              yPosition += rowHeight;
+          });
+          
+          // Page Footer
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text(`Imprimé le ${new Date().toLocaleDateString()}`, leftMargin, pageHeight - 5);
+      });
+
+      // Save
+      const filenameLabel = teachersList ? 'Enseignants' : 'Groupe' + (titlePrefix ? '_DD' : '');
+      doc.save(`Emploi_du_temps_${filenameLabel}.pdf`);
+  }
+
+  // --- EVENTS ---
+  document.addEventListener('DOMContentLoaded', function() {
+      
+      // 1. Main Print Button (Group)
+      const groupPrintBtn = document.getElementById('printTimetableBtn');
+      if(groupPrintBtn) {
+          groupPrintBtn.addEventListener('click', function() {
+              const originalText = this.innerHTML;
+              this.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i>Chargement...';
+              this.disabled = true;
+
+              fetchTimetableData().then(data => {
+                  return generateTimetablePDF(data, null); // Null = Group View
+              }).catch(err => {
+                  console.error(err);
+                  alert("Erreur lors de la génération.");
+              }).finally(() => {
+                  this.innerHTML = originalText;
+                  this.disabled = false;
+              });
+          });
+      }
+
+      // 2. Double Degree Print Button
+      const ddPrintBtn = document.getElementById('printDDTimetableBtn');
+      if(ddPrintBtn) {
+          ddPrintBtn.addEventListener('click', function() {
+              const originalText = this.innerHTML;
+              this.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i>Chargement...';
+              this.disabled = true;
+
+              fetchTimetableData('double_degree').then(data => {
+                  return generateTimetablePDF(data, null, '(Double Diplôme)');
+              }).catch(err => {
+                  console.error(err);
+                  alert("Erreur lors de la génération DD.");
+              }).finally(() => {
+                  this.innerHTML = originalText;
+                  this.disabled = false;
+              });
+          });
+      }
+
+      // 2. Open Modal Logic
+      const openModalBtn = document.getElementById('openTeacherModalBtn');
+      if(openModalBtn) {
+          openModalBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              const modalElement = document.getElementById('printTeacherModal');
+              const modal = new bootstrap.Modal(modalElement);
+              modal.show();
+          });
+      }
+
+      const modalElement = document.getElementById('printTeacherModal');
+      if(modalElement) {
+          modalElement.addEventListener('show.bs.modal', function() {
+              const container = document.getElementById('teacherListContainer');
+              container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Chargement...</div>';
+              
+              fetchTimetableData().then(data => {
+                  // Extract unique teachers
+                  const teacherSet = new Set();
+                  data.forEach(d => {
+                      if(d.formateur__nom) {
+                          const name = `${d.formateur__nom} ${d.formateur__prenom || ''}`.trim();
+                          teacherSet.add(name);
+                      }
+                  });
+                  const teachers = Array.from(teacherSet).sort();
+
+                  if(teachers.length === 0) {
+                      container.innerHTML = '<div class="text-muted text-center p-2">Aucun enseignant trouvé.</div>';
+                      return;
+                  }
+
+                  let html = '';
+                  teachers.forEach(t => {
+                      html += `
+                        <div class="form-check mb-2">
+                           <input class="form-check-input teacher-checkbox" type="checkbox" value="${t}" id="chk_${t.replace(/\s/g, '')}" checked>
+                           <label class="form-check-label" for="chk_${t.replace(/\s/g, '')}">${t}</label>
+                        </div>
+                      `;
+                  });
+                  container.innerHTML = html;
+              }).catch(err => {
+                  container.innerHTML = '<div class="text-danger text-center p-2">Erreur de chargement.</div>';
+              });
+          });
+      }
+
+      // 3. Select All Toggle
+      document.getElementById('selectAllTeachers')?.addEventListener('click', function() {
+          const checkboxes = document.querySelectorAll('.teacher-checkbox');
+          const allChecked = Array.from(checkboxes).every(c => c.checked);
+          checkboxes.forEach(c => c.checked = !allChecked);
+          this.textContent = allChecked ? "Tout sélectionner" : "Tout désélectionner";
+      });
+
+      // 4. Confirm Print Teachers
+      document.getElementById('confirmPrintTeachersBtn')?.addEventListener('click', function() {
+          const selected = [];
+          document.querySelectorAll('.teacher-checkbox:checked').forEach(c => selected.push(c.value));
+          
+          if(selected.length === 0) {
+              alert("Veuillez sélectionner au moins un enseignant.");
+              return;
+          }
+
+          const btn = this;
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i>Génération...';
+          btn.disabled = true;
+
+          fetchTimetableData().then(data => {
+              return generateTimetablePDF(data, selected);
+          }).then(() => {
+              // Close modal logic if needed, or just standard bootstrap close
+              const modal = bootstrap.Modal.getInstance(document.getElementById('printTeacherModal'));
+              modal.hide();
+          }).catch(err => {
+              console.error(err);
+              alert("Erreur lors de l'impression.");
+          }).finally(() => {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+          });
+      });
+
+      // 5. Existing Export Button Logic (unchanged)
+      const exportBtn = document.querySelectorAll('.btn.btn-success.btn-label[type="button"]')[0];
+      if(exportBtn) {
+          exportBtn.addEventListener('click', function() {
+            alert('Fonctionnalité d\'export en développement');
+          });
+      }
 
     // Gestion du bouton de génération des registres de présences (inchangé)
     $(document).on('click','#generateAttendanceBtn', function() {

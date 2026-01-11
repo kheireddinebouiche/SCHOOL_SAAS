@@ -74,4 +74,6 @@ urlpatterns = [
     path('ApiFilterModules', ApiFilterModules, name="ApiFilterModules"),
     path('ApiLoaAffectation', ApiLoaAffectation,name="ApiLoaAffectation"),
     path('ApiDeleteRegistre', ApiDeleteRegistre, name="ApiDeleteRegistre"),
+    path('ApiCheckSharedSession', ApiCheckSharedSession, name="ApiCheckSharedSession"),
+    path('ApiLoadTeacherGlobalTimetable', ApiLoadTeacherGlobalTimetable, name="ApiLoadTeacherGlobalTimetable"),
 ]

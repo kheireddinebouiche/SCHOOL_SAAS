@@ -142,12 +142,28 @@ def timetable_view(request, pk):
     # For this simple case, we'll sort alphabetically but could improve to order by week days
     sorted_days = sorted(list(days_set))
     
+    # Check for Double Degree Students in this Group
+    has_double_degree_students = False
+    current_specialite = timetable.groupe.specialite
+    dd_check = DoubleDiplomation.objects.filter(Q(specialite1=current_specialite) | Q(specialite2=current_specialite)).first()
+    
+    if dd_check:
+        partner_spec = dd_check.specialite2 if dd_check.specialite1 == current_specialite else dd_check.specialite1
+        # Get students in current group
+        my_students = GroupeLine.objects.filter(groupe=timetable.groupe).values_list('student_id', flat=True)
+        # Check overlap with partner speciality groups
+        has_double_degree_students = GroupeLine.objects.filter(
+            student_id__in=my_students,
+            groupe__specialite=partner_spec
+        ).exists()
+
     context = {
         'timetable': timetable,
         'sessions': sessions,
         'day_names': day_names,
         'unique_days': sorted_days,
         'time_slots': sorted_time_slots,
+        'has_double_degree_students': has_double_degree_students,
     }
     return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 

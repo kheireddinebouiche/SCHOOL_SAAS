@@ -615,6 +615,18 @@
           <strong>Information:</strong> Les modules affichés sont filtrés préalablement par rapport au semestre et à la répartition semestrielle déjà configurée.
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+
+        <div id="sharedSessionAlert" class="alert alert-info border-0 bg-info bg-opacity-10 text-info d-none" role="alert">
+          <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                  <i class="ri-information-line fs-5"></i>
+              </div>
+              <div class="flex-grow-1">
+                  <h6 class="alert-heading fw-bold mb-1">Double Diplomation détectée</h6>
+                  <p class="mb-0 small" id="sharedSessionMsg"></p>
+              </div>
+          </div>
+        </div>
         
         <form id="addSessionForm">
           <div class="row g-3">
@@ -1069,262 +1081,158 @@
             success : function(data){
               // Process the data directly in the PDF without creating HTML
               
-              // Create a structured timetable with hours as rows and days as columns
-              // First, we need to organize the data by hours and days
-              // Get all unique days from the data and normalize them
+              // Create a structured timetable with TIMES as COLUMNS and DAYS as ROWS
+              
+              // 1. Get unique Days and sort them
               const allDaysSet = new Set();
               data.forEach(p => {
-                if (p.jour && p.heure_debut && p.heure_fin) {  // Only add days that have complete time information
-                  // Normalize day names (capitalize first letter)
+                if (p.jour) {
                   const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
                   allDaysSet.add(normalizedDay);
                 }
               });
               const allDays = Array.from(allDaysSet);
+              const dayOrder = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+              const days = dayOrder.filter(d => allDays.includes(d));
+              if (days.length === 0) days.push(...allDays);
               
-              // Define standard day order
-              const dayOrder = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-              
-              // Sort the days according to our preferred order, only including days that have sessions
-              const orderedDays = dayOrder.filter(day => allDays.includes(day));
-              
-              // Get unique time slots and sort them
+              // 2. Get unique Time Slots and sort them
               const timeSlots = [...new Set(data.filter(p => p.heure_debut && p.heure_fin)
-                .map(p => p.heure_debut + '-' + p.heure_fin))].sort();
-              
-              // Create a mapping of the data by time and day
+                .map(p => p.heure_debut + ' - ' + p.heure_fin))].sort();
+                
+              // 3. Create Map
               const scheduleMap = {};
               data.forEach(p => {
-                if (p.jour && p.heure_debut && p.heure_fin) {
-                  const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
-                  const timeSlot = p.heure_debut + '-' + p.heure_fin;
-                  const key = normalizedDay + '_' + timeSlot;
-                  scheduleMap[key] = p;
-                }
+                 if (p.jour && p.heure_debut && p.heure_fin) {
+                   const normalizedDay = p.jour.charAt(0).toUpperCase() + p.jour.slice(1).toLowerCase();
+                   const slot = p.heure_debut + ' - ' + p.heure_fin;
+                   scheduleMap[`${normalizedDay}_${slot}`] = p;
+                 }
               });
-              
-              // Generate PDF using jsPDF with native drawing
+
+              // Generate PDF
               const doc = new window.jspdf.jsPDF({
                 orientation: 'landscape',
                 unit: 'mm',
                 format: 'a4'
               });
-              
-              // Set up initial position and margins for landscape
-              let yPosition = 20; // Start 20mm from top
-              const pageHeight = 210; // A4 page height in landscape mm
-              const pageWidth = 297; // A4 page width in landscape mm
-              const leftMargin = 15;
-              const rightMargin = 15;
-              const contentWidth = pageWidth - leftMargin - rightMargin; // A4 width minus margins
-              
-              // Add title
-              doc.setFontSize(20);
-              doc.text('Emploi du Temps', pageWidth/2, yPosition, { align: 'center' });
+
+              const pageWidth = 297; 
+              const pageHeight = 210;
+              const leftMargin = 10;
+              const rightMargin = 10;
+              const topMargin = 10;
+              const bottomMargin = 10;
+              const contentWidth = pageWidth - leftMargin - rightMargin;
+
+              let yPosition = topMargin;
+
+              // Title and Info
+              doc.setFontSize(18);
+              doc.setTextColor(40, 40, 40);
+              doc.text("Emploi du Temps", pageWidth/2, yPosition + 5, {align:'center'});
               yPosition += 15;
-              
-              // Add timetable details
-              doc.setFontSize(12);
-              doc.setFont(undefined, 'bold');
-              doc.text(`Label:`, leftMargin, yPosition);
-              doc.setFont(undefined, 'normal');
-              doc.text(`{{ timetable.label }}`, leftMargin + 25, yPosition);
-              yPosition += 7;
-              
-              doc.setFont(undefined, 'bold');
-              doc.text(`Groupe:`, leftMargin, yPosition);
-              doc.setFont(undefined, 'normal');
-              doc.text(`{{ timetable.groupe.nom }}`, leftMargin + 25, yPosition);
-              yPosition += 7;
-              
-              doc.setFont(undefined, 'bold');
-              doc.text(`Classe:`, leftMargin, yPosition);
-              doc.setFont(undefined, 'normal');
-              doc.text(`{{ timetable.groupe.classe.nom }}`, leftMargin + 25, yPosition);
-              yPosition += 7;
-              
-              doc.setFont(undefined, 'bold');
-              doc.text(`Semestre:`, leftMargin, yPosition);
-              doc.setFont(undefined, 'normal');
-              doc.text(`{{ timetable.semestre }}`, leftMargin + 25, yPosition);
-              yPosition += 7;
-              
-              {% if timetable.description %}
-                doc.setFont(undefined, 'bold');
-                doc.text(`Description:`, leftMargin, yPosition);
-                doc.setFont(undefined, 'normal');
-                doc.text(`{{ timetable.description }}`, leftMargin + 25, yPosition);
-                yPosition += 7;
-              {% endif %}
-              
-              yPosition += 10; // Add some space before the table
-              
-              // Define table headers (time slots) and row headers (days)
-              const days = orderedDays;
-              if (data.length === 0 || days.length === 0) {
-                // No sessions
-                doc.setFontSize(12);
-                doc.text('Aucune séance de cours programmée', pageWidth/2, yPosition, { align: 'center' });
-                yPosition += 10;
-                
-                // Add footer
-                doc.setFontSize(8);
-                doc.setFont(undefined, 'normal');
-                doc.text(`Impression générée le ${new Date().toLocaleString('fr-FR')}`, pageWidth/2, pageHeight - 10, { align: 'center' });
-                
-                // Save the PDF with a smaller file size
-                doc.save(`Emploi_du_temps-${document.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
-                
-                // Restore button
-                $('#printTimetableBtn').html(originalBtnText);
-                $('#printTimetableBtn').prop('disabled', false);
-                return; // Exit early
-              }
-              
-              // Calculate column widths based on number of time slots
-              const headerCols = 1; // One column for days
-              const numCols = timeSlots.length + headerCols; // Additional columns for each time slot
-              const colWidth = contentWidth / numCols;
-              
-              // Draw table header with time slots
-              doc.setFillColor(242, 242, 242); // Light gray background for header
-              doc.rect(leftMargin, yPosition, colWidth, 10, 'F'); // Day header column
-              doc.setFont(undefined, 'bold');
+
               doc.setFontSize(10);
-              doc.text('Jours', leftMargin + colWidth/2, yPosition + 6, { align: 'center' });
-              
-              // Draw time slot headers
-              for (let i = 0; i < timeSlots.length; i++) {
-                const x = leftMargin + (i + 1) * colWidth;
-                doc.rect(x, yPosition, colWidth, 10, 'F');
-                doc.text(timeSlots[i], x + colWidth/2, yPosition + 6, { align: 'center' });
-              }
-              
-              // Draw borders
-              for (let i = 0; i <= numCols; i++) {
-                const x = leftMargin + i * colWidth;
-                doc.line(x, yPosition, x, yPosition + 10); // Vertical lines
-              }
-              doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
-              doc.line(leftMargin, yPosition + 10, leftMargin + contentWidth, yPosition + 10); // Bottom horizontal line
-              
+              doc.setTextColor(60, 60, 60);
+              const infoX = leftMargin + 5;
+              doc.setFont(undefined, 'bold');
+              doc.text(`Groupe: {{ timetable.groupe.nom }}`, infoX, yPosition);
+              doc.text(`Semestre: {{ timetable.semestre }}`, infoX + 80, yPosition);
+              doc.text(`Année: {{ timetable.annee_scolaire|default:'' }}`, infoX + 160, yPosition);
               yPosition += 10;
-              
-              // Add table rows for each day
-              doc.setFont(undefined, 'normal');
-              doc.setFontSize(9);
-              
-              // Process each day as a row
-              if(days.length > 0){
-                $.each(days, function(index, day){
-                  // Check if we need a new page
-                  if(yPosition > 180) { // Leave margin at bottom of landscape page
-                    doc.addPage('landscape', 'a4'); // Ensure new pages are also landscape
-                    yPosition = 20; // Reset position on new page
-                    
-                    // Add title and basic info again on new page if needed
-                    doc.setFontSize(20);
-                    doc.text('Emploi du Temps (suite)', pageWidth/2, yPosition, { align: 'center' });
-                    yPosition += 10;
-                    
-                    // Draw table header again on new page
-                    doc.setFillColor(242, 242, 242); // Light gray background for header
-                    doc.rect(leftMargin, yPosition, colWidth, 10, 'F'); // Day header column
-                    doc.setFont(undefined, 'bold');
-                    doc.setFontSize(10);
-                    doc.text('Jours', leftMargin + colWidth/2, yPosition + 6, { align: 'center' });
-                    
-                    // Draw time slot headers
-                    for (let i = 0; i < timeSlots.length; i++) {
-                      const x = leftMargin + (i + 1) * colWidth;
-                      doc.rect(x, yPosition, colWidth, 10, 'F');
-                      doc.text(timeSlots[i], x + colWidth/2, yPosition + 6, { align: 'center' });
-                    }
-                    
-                    // Draw borders
-                    for (let i = 0; i <= numCols; i++) {
-                      const x = leftMargin + i * colWidth;
-                      doc.line(x, yPosition, x, yPosition + 10); // Vertical lines
-                    }
-                    doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
-                    doc.line(leftMargin, yPosition + 10, leftMargin + contentWidth, yPosition + 10); // Bottom horizontal line
-                    
-                    yPosition += 10;
-                    doc.setFont(undefined, 'normal');
-                    doc.setFontSize(9);
-                  }
-                  
-                  // Set row height based on content
-                  const rowHeight = 15;
-                  
-                  // Draw row background (alternating)
-                  if(index % 2 === 0) {
-                    doc.setFillColor(255, 255, 255); // White background
-                  } else {
-                    doc.setFillColor(249, 249, 249); // Light gray for alternating rows
-                  }
-                  doc.rect(leftMargin, yPosition, contentWidth, rowHeight, 'F');
-                  
-                  // Draw vertical lines for columns
-                  for (let i = 0; i <= numCols; i++) {
-                    const x = leftMargin + i * colWidth;
-                    doc.line(x, yPosition, x, yPosition + rowHeight);
-                  }
-                  
-                  // Draw horizontal line
-                  doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition);
-                  doc.line(leftMargin, yPosition + rowHeight, leftMargin + contentWidth, yPosition + rowHeight);
-                  
-                  // Add day name in the first column
-                  doc.text(day, leftMargin + 2, yPosition + 9);
-                  
-                  // Add course info for each time slot in this day
-                  for (let j = 0; j < timeSlots.length; j++) {
-                    const timeSlot = timeSlots[j];
-                    const key = day + '_' + timeSlot;
-                    const x = leftMargin + (j + 1) * colWidth + 2;
-                    
-                    if (scheduleMap[key]) {
-                      const course = scheduleMap[key];
-                      // Limit text length to fit in cell
-                      const courseCode = course.cours__code ? course.cours__code.substring(0, 10) : '';
-                      const courseLabel = course.cours__label ? course.cours__label.substring(0, 15) : '';
-                      const teacher = course.formateur__nom ? 
-                        (course.formateur__prenom ? 
-                          `${course.formateur__nom} ${course.formateur__prenom.substring(0, 1)}.` : 
-                          course.formateur__nom) 
-                        : '';
-                      const room = course.salle__nom ? course.salle__nom.substring(0, 8) : '';
-                      
-                      const cellText = `${courseCode}-${courseLabel}\n${teacher}\n${room}`;
-                      doc.text(cellText, x, yPosition + 4);
-                    }
-                  }
-                  
-                  // Move to next row
-                  yPosition += rowHeight;
-                });
+
+              // Matrix Config
+              if (days.length === 0 || timeSlots.length === 0) {
+                 doc.text("Aucun cours programmé.", pageWidth/2, yPosition + 20, {align:'center'});
               } else {
-                // No sessions row
-                const rowHeight = 15;
-                
-                // Draw empty row background
-                doc.setFillColor(255, 255, 255);
-                doc.rect(leftMargin, yPosition, contentWidth, rowHeight, 'F');
-                
-                // Draw borders
-                for (let i = 0; i <= numCols; i++) {
-                  const x = leftMargin + i * colWidth;
-                  doc.line(x, yPosition, x, yPosition + rowHeight); // Vertical lines
-                }
-                doc.line(leftMargin, yPosition, leftMargin + contentWidth, yPosition); // Top horizontal line
-                doc.line(leftMargin, yPosition + rowHeight, leftMargin + contentWidth, yPosition + rowHeight); // Bottom horizontal line
-                
-                // Add "No sessions" text centered in the first cell
-                doc.text('Aucune séance', leftMargin + colWidth/2, yPosition + 7, { align: 'center' });
-                
-                yPosition += rowHeight;
+                  // Calculate Cell Dimensions
+                  const headerColWidth = 30; // 'Day' column width
+                  const timeColWidth = (contentWidth - headerColWidth) / timeSlots.length;
+                  const rowHeight = 20; // Row height for each day
+                  
+                  // -- HEADER ROW (Time Slots) --
+                  doc.setFillColor(59, 125, 221); // Primary Blue
+                  doc.setTextColor(255, 255, 255);
+                  
+                  // Corner cell
+                  doc.rect(leftMargin, yPosition, headerColWidth, 10, 'F');
+                  doc.setFontSize(9);
+                  doc.text("Jours", leftMargin + headerColWidth/2, yPosition + 6, {align:'center'});
+                  
+                  // Time headers
+                  timeSlots.forEach((slot, index) => {
+                      const x = leftMargin + headerColWidth + (index * timeColWidth);
+                      doc.setFillColor(59, 125, 221); // Primary Blue
+                      doc.rect(x, yPosition, timeColWidth, 10, 'F');
+                      
+                      doc.setTextColor(255, 255, 255); // White
+                      doc.setFontSize(8);
+                      doc.text(slot, x + timeColWidth/2, yPosition + 6, {align:'center'});
+                  });
+                  
+                  yPosition += 10;
+                  
+                  // -- ROWS (Days) --
+                  doc.setTextColor(0, 0, 0);
+                  
+                  days.forEach((day, rowIndex) => {
+                      if (yPosition + rowHeight > pageHeight - bottomMargin) {
+                          doc.addPage('landscape');
+                          yPosition = topMargin;
+                          // Ideally redraw header here (omitted for brevity)
+                      }
+                      
+                      const rowY = yPosition;
+                      
+                      // 1. Day Header (Left)
+                      doc.setFillColor(245, 245, 245); 
+                      doc.rect(leftMargin, rowY, headerColWidth, rowHeight, 'F');
+                      doc.setFont(undefined, 'bold');
+                      doc.setFontSize(9);
+                      doc.setTextColor(50, 50, 50);
+                      doc.text(day, leftMargin + headerColWidth/2, rowY + rowHeight/2, {align:'center'});
+                      
+                      // 2. Session Cells (Time Slots)
+                      doc.setFont(undefined, 'normal');
+                      timeSlots.forEach((slot, colIndex) => {
+                          const x = leftMargin + headerColWidth + (colIndex * timeColWidth);
+                          const key = `${day}_${slot}`;
+                          const session = scheduleMap[key];
+                          
+                          doc.setDrawColor(200, 200, 200);
+                          doc.rect(x, rowY, timeColWidth, rowHeight); 
+                          
+                          if (session) {
+                              const module = session.cours__label || session.cours__code;
+                              const teacher = (session.formateur__nom || "") + " " + (session.formateur__prenom ? session.formateur__prenom.charAt(0)+"." : "");
+                              const room = session.salle__nom || "";
+                              
+                              doc.setTextColor(0, 0, 0);
+                              doc.setFontSize(7); // Smaller font for horizontal layout compatibility
+                              doc.setFont(undefined, 'bold');
+                              
+                              const modText = doc.splitTextToSize(module, timeColWidth - 4);
+                              doc.text(modText, x + 2, rowY + 4);
+                              
+                              doc.setFont(undefined, 'normal');
+                              doc.setFontSize(6);
+                              doc.text(teacher, x + 2, rowY + 12);
+                              
+                              doc.setFont(undefined, 'italic');
+                              doc.setTextColor(100, 100, 100);
+                              doc.text(room, x + timeColWidth - 2, rowY + 17, {align:'right'});
+                          }
+                      });
+                      
+                      yPosition += rowHeight;
+                  });
               }
+
+              // Footer
+              doc.setFontSize(8);
+              doc.setTextColor(150, 150, 150);
+              doc.text(`Généré le ${new Date().toLocaleDateString()}`, leftMargin, pageHeight - 5);
               
               // Add footer
               doc.setFontSize(8);
@@ -1407,7 +1315,29 @@
     });
 
 
+
+    // Reset modal when opening
+    var addSessionModalObj = document.getElementById('addSessionModal');
+    if (addSessionModalObj) {
+      addSessionModalObj.addEventListener('show.bs.modal', function (event) {
+          // Reset the form
+          var form = document.getElementById('addSessionForm');
+          if(form) form.reset();
+          
+          // Reset selects just in case
+          $('#session_module').val('');
+          $('#session_professeur').html('<option value="">Sélectionnez un professeur</option>'); // Reset teacher list as it depends on module
+          $('#session_salle').val('');
+          
+          // Hide alerts and sections
+          $('#teacherAvailabilitySection').hide();
+          $('#sharedSessionAlert').addClass('d-none');
+          $('#salles_cards').html('');
+      });
+    }
+
     $(document).on('change','#session_module', function(){
+      checkSharedSession();
       var id_module = $(this).val();
       
       $.ajax({
@@ -1440,11 +1370,85 @@
         // Here we can fetch and display teacher availability data
         // For now, we'll populate with placeholder data or call an API
         loadTeacherAvailability(selectedTeacherId);
+
+        // Check for Shared Session
+        checkSharedSession();
       } else {
         // Hide the availability section if no teacher is selected
         $('#teacherAvailabilitySection').hide();
+        $('#sharedSessionAlert').addClass('d-none');
       }
     });
+
+    // Check for Shared Session Conflict/Info
+    function checkSharedSession(){
+        var moduleCode = $('#session_module').val();
+        var timetableId = "{{ pk }}";
+
+        if(moduleCode){
+             $.ajax({
+                url: '{% url "t_timetable:ApiCheckSharedSession" %}',
+                type: 'GET',
+                data: {
+                    'timetable_id': timetableId,
+                    'module_code': moduleCode
+                },
+                success: function(response){
+                    if(response.found){
+                        var msg = "Ce cours est déjà programmé pour le groupe <strong>" + response.group + "</strong> : <br>" +
+                                  "📅 <strong>" + response.day + "</strong> de " + response.start_time + " à " + response.end_time + "<br>" +
+                                  "🏫 Salle : <strong>" + response.room + "</strong><br>" +
+                                  "👨‍🏫 Formateur : <strong>" + response.teacher + "</strong><br>" +
+                                  "📚 Module Partenaire : <strong>" + response.module_matched + "</strong><br><br>" +
+                                  "<button id='btnQuickSaveShared' class='btn btn-sm btn-success text-white' " +
+                                  "data-teacher='" + response.teacher_id + "' " +
+                                  "data-room='" + response.salle_id + "' " +
+                                  "data-day='" + response.day + "' " +
+                                  "data-start='" + response.start_time + "' " +
+                                  "data-end='" + response.end_time + "'>" +
+                                  "<i class='ri-check-double-line me-1'></i> S'aligner et Ajouter la séance</button>";
+                        
+                        $('#sharedSessionMsg').html(msg);
+                        $('#sharedSessionAlert').removeClass('d-none');
+                        
+                        // Handler for Quick Save
+                        $('#btnQuickSaveShared').on('click', function(e){
+                            e.preventDefault();
+                            var btn = $(this);
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Ajout...');
+                            
+                            $.ajax({
+                                url: "{% url 't_timetable:save_session' %}",
+                                type: "POST",
+                                data: {
+                                    'session_module': moduleCode,
+                                    'session_professeur': btn.data('teacher'),
+                                    'session_salle': btn.data('room'),
+                                    'session_jour': btn.data('day'),
+                                    'heure_debut': btn.data('start'),
+                                    'heure_fin': btn.data('end'),
+                                    'pk': timetableId,
+                                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                },
+                                success: function(saveResp){
+                                    if(saveResp.status == "success"){
+                                        alertify.success(saveResp.message);
+                                        $('#addSessionModal').modal('hide');
+                                        location.reload(); 
+                                    } else {
+                                        alertify.error(saveResp.message);
+                                        btn.prop('disabled', false).html("<i class='ri-check-double-line me-1'></i> Réessayer (Erreur)");
+                                    }
+                                }
+                            });
+                        });
+                    } else {
+                        $('#sharedSessionAlert').addClass('d-none');
+                    }
+                }
+             });
+        }
+    }
 
     // Function to load teacher availability information
     function loadTeacherAvailability(teacherId) {
