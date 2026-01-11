@@ -29,3 +29,28 @@ def module_permission_required(module_name, permission):
             return view_func(request, *args, **kwargs)
         return _wrapped_view
     return decorator
+
+
+def role_required(module_name, roles):
+    """
+    roles: liste de noms de rôles autorisés (ex: ['Administrateur'])
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            try:
+                umr = UserModuleRole.objects.select_related(
+                    'role', 'module'
+                ).get(
+                    user=request.user,
+                    module__name=module_name
+                )
+            except UserModuleRole.DoesNotExist:
+                return redirect('institut_app:Error404')
+
+            if umr.role.name not in roles:
+                return redirect('institut_app:Error404')
+
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator

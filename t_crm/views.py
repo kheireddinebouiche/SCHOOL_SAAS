@@ -1,3 +1,4 @@
+from institut_app.decorators import ajax_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from .models import *
@@ -329,6 +330,9 @@ def filter_visiteur(request):
     return JsonResponse({'filtred': data})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('crm','view')
+@module_permission_required('crm','add')
+@role_required('crm', ['Administrateur','Utilisateur'])
 @transaction.atomic
 def InscriptionParticulier(request):
     form = NewProspecFormParticulier()
@@ -410,6 +414,7 @@ def InscriptionEntreprise(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('crm','view')
+@role_required('crm', ['Administrateur','Manager'])
 def ListeDesProspects(request):
     context = {
         'tenant' : request.tenant,
@@ -419,6 +424,7 @@ def ListeDesProspects(request):
 from django.utils.dateformat import format
 
 @login_required(login_url='institut_app:login')
+@ajax_required
 def ApiLoadProspects(request):
     prospects = Prospets.objects.all().values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
     for l in prospects:

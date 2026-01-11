@@ -200,3 +200,15 @@ class PromoForm(forms.ModelForm):
             'date_fin' : "Date de fin de formation :",
             'annee_academique' : "Année academique :",
         }
+
+class ImportDataForm(forms.Form):
+    DATA_TYPES = [
+        ('Partenaires', 'Partenaires'),
+        ('Formation', 'Formations'),
+        ('Specialites', 'Spécialités'),
+        ('Modules', 'Modules'),
+        ('Formateurs', 'Formateurs'),
+    ]
+    
+    file = forms.FileField(label="Fichier (Excel ou JSON)", widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.xlsx, .xls, .json'}))
+    data_type = forms.ChoiceField(choices=DATA_TYPES, label="Type de données", widget=forms.Select(attrs={'class': 'form-control'}))

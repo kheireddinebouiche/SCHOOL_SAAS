@@ -106,4 +106,6 @@ urlpatterns = [
     path('ApiLoadAssociatedModules', ApiLoadAssociatedModules, name="ApiLoadAssociatedModules"),
     path('AssiciateModuleDouble', AssiciateModuleDouble, name="AssiciateModuleDouble"),
     path('ApiDeleteAssociatedModule', ApiDeleteAssociatedModule, name="ApiDeleteAssociatedModule"),
+    
+    path('import-data/', import_data_view, name="import_data_view"),
 ]

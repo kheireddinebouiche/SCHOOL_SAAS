@@ -5,6 +5,89 @@ from t_formations.models import DossierInscription
 from django.utils import timezone
 from t_groupe.models import GroupeLine, Groupe
 
+def nombre_en_lettre(nombre):
+    if not nombre:
+        return ""
+    
+    try:
+        n = int(nombre)
+    except:
+        return str(nombre)
+        
+    if n == 0: return "zéro"
+    
+    units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"]
+    teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"]
+    tens = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"]
+    
+    def convert_chunk(num):
+        if num < 10: return units[num]
+        if num < 20: return teens[num-10]
+        
+        d = num // 10
+        u = num % 10
+        
+        if d in [2,3,4,5,6]:
+            base = tens[d]
+            if u == 1: return base + " et un"
+            if u > 0: return base + "-" + units[u]
+            return base
+            
+        if d == 7:
+            base = "soixante"
+            rest = num - 60
+            if rest == 11: return base + " et onze"
+            return base + "-" + teens[rest-10]
+            
+        if d == 8:
+            base = "quatre-vingt"
+            if u == 0: return base + "s"
+            return base + "-" + units[u]
+            
+        if d == 9:
+            base = "quatre-vingt"
+            rest = num - 80
+            return base + "-" + teens[rest-10]
+            
+        return ""
+
+    parts = []
+    
+    # Millions
+    if n >= 1000000:
+        m = n // 1000000
+        n %= 1000000
+        if m == 1:
+            parts.append("un million")
+        else:
+            parts.append(convert_chunk(m) if m < 100 else nombre_en_lettre(m)) # Recursion simplified
+            parts.append("millions")
+            
+    # Milliers
+    if n >= 1000:
+        k = n // 1000
+        n %= 1000
+        if k == 1:
+            parts.append("mille")
+        else:
+             # Recursive call safely or handle hundreds for k
+            k_text = convert_chunk(k) if k < 100 else nombre_en_lettre(k)
+            parts.append(k_text + " mille")
+            
+    # Centaines
+    if n >= 100:
+        h = n // 100
+        n %= 100
+        if h == 1:
+            parts.append("cent")
+        else:
+            parts.append(units[h] + " cent" + ("s" if n == 0 else ""))
+            
+    if n > 0:
+        parts.append(convert_chunk(n))
+        
+    return " ".join(parts).strip()
+
 def get_student_context(student_id, group_id=None):
     student = get_object_or_404(Prospets, pk=student_id)
 
@@ -156,6 +239,7 @@ def get_student_context(student_id, group_id=None):
         "date_debut" : current_groupe.start_date.isoformat() if current_groupe and current_groupe.start_date else '',
         "date_fin" : current_groupe.end_date.isoformat() if current_groupe and current_groupe.end_date else '',
         "montant_specialite" : float(montant_specialite) if montant_specialite else 0.0,
+        "montant_specialite_lettre" : nombre_en_lettre(montant_specialite) if montant_specialite else "",
     }
     
     return context_data

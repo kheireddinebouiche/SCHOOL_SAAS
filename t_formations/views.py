@@ -6,7 +6,10 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
 from django.http import JsonResponse
+from django.core.exceptions import ValidationError
 from django.db.models import Q
+from .import_utils import handle_uploaded_file, verify_data, import_data
+import json
 
 TenantModel = get_tenant_model()
 
@@ -22,6 +25,7 @@ def listSpecialites(request):
     }
     return render(request, 'tenant_folder/formations/liste_des_specialites.html', context)
 
+@login_required(login_url="institut_app:login")
 def listFormations(request):
     formations = Formation.objects.all()
     context = {
@@ -951,3 +955,65 @@ def get_print_documents(request, pk):
 
     
 
+@login_required(login_url="institut_app:login")
+def import_data_view(request):
+    if request.method == 'POST':
+        # Check if it's the confirmation step
+        if 'confirm_import' in request.POST:
+            data_json = request.session.get('import_data')
+            data_type = request.session.get('import_data_type')
+            
+            if not data_json or not data_type:
+                messages.error(request, "Session expirée ou données manquantes. Veuillez recommencer.")
+                return redirect('t_formations:import_data_view')
+            
+            try:
+                # data_json is a JSON string of list of dicts or list of dicts directly logic?
+                # session stores python types usually, so list of dicts.
+                count = import_data(data_json, data_type, user=request.user)
+                messages.success(request, f"{count} enregistrements importés/mis à jour avec succès.")
+                
+                # Clear session
+                del request.session['import_data']
+                del request.session['import_data_type']
+                
+                return redirect('t_formations:import_data_view')
+            except Exception as e:
+                messages.error(request, f"Erreur lors de l'import : {str(e)}")
+                return redirect('t_formations:import_data_view')
+        
+        # Upload Step
+        form = ImportDataForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                file = request.FILES['file']
+                data_type = form.cleaned_data['data_type']
+                
+                parsed_data = handle_uploaded_file(file)
+                report = verify_data(parsed_data, data_type)
+                
+                # Store valid rows for confirmation (if any)
+                # We store only the valid rows to be imported.
+                # If there are errors, user might want to fix file and re-upload, or proceed with valid rows?
+                # Let's assume we allow proceeding with valid rows.
+                
+                if report['valid_rows']:
+                     request.session['import_data'] = report['valid_rows']
+                     request.session['import_data_type'] = data_type
+                
+                context = {
+                    'report': report,
+                    'data_type': data_type,
+                    'tenant': request.tenant,
+                    'has_valid_rows': len(report['valid_rows']) > 0
+                }
+                return render(request, 'tenant_folder/formations/import_preview.html', context)
+                
+            except ValidationError as e:
+                messages.error(request, e.message)
+            except Exception as e:
+                messages.error(request, f"Erreur inattendue : {str(e)}")
+    else:
+        form = ImportDataForm()
+
+    return render(request, 'tenant_folder/formations/import_data.html', {'form': form, 'tenant': request.tenant})
