@@ -17,7 +17,7 @@ from t_tresorerie.models import DuePaiements
 from t_formations.models import Promos
 from t_groupe.models import Groupe, GroupeLine
 from t_timetable.models import Timetable, TimetableEntry, Salle
-from .models import UserSession
+from .models import UserSession, Profile
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django_otp.decorators import otp_required
@@ -304,15 +304,8 @@ def ApiFinanceKPIs(request):
 
 @login_required(login_url="institut_app:login")
 def Index(request):
-    tenant = getattr(request, 'tenant', None)
-    # Get the schema name or set it to "Unknown" if no tenant is found
-    schema_name = tenant.schema_name if tenant else "Unknown"
-    is_crm = request.user.groups.filter(name="CRM").exists()
-
-    if is_crm:
-        return crm_dashboard(request)
-    else:
-        return crm_dashboard(request)
+    # Afficher le calendrier personnel de l'utilisateur (t_communication)
+    return render(request, 'tenant_folder/communication/calendar.html')
 
 def logout_view(request):
     if request.user.is_authenticated:
@@ -698,4 +691,61 @@ def UpdateMyProfile(request):
 def Error404(request):
     return render(request,'tenant_folder/not_authorized.html')
 
+@login_required(login_url='institut_app:login')
+def active_sessions_view(request):
+    """
+    List all active user sessions.
+    Only shows sessions that have not expired.
+    """
+    user_sessions = UserSession.objects.exclude(last_session_key__isnull=True).exclude(last_session_key="")
+    
+    active_data = []
+    now = timezone.now()
+    
+    for us in user_sessions:
+        try:
+            session = Session.objects.get(session_key=us.last_session_key)
+            if session.expire_date > now:
+                active_data.append({
+                    'user': us.user,
+                    'session_key': us.last_session_key,
+                    'expire_date': session.expire_date,
+                    'last_login': us.user.last_login
+                })
+        except Session.DoesNotExist:
+            # Cleanup orphaned session keys
+            us.last_session_key = None
+            us.save(update_fields=["last_session_key"])
+            
+    context = {
+        'active_sessions': active_data,
+        'tenant': request.tenant
+    }
+    return render(request, 'tenant_folder/users/active_sessions.html', context)
 
+@login_required(login_url='institut_app:login')
+def terminate_session_api(request):
+    """
+    API endpoint to manually terminate a user session.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_key = data.get('session_key')
+            
+            if session_key:
+                # 1. Delete from Django's Session table
+                Session.objects.filter(session_key=session_key).delete()
+                
+                # 2. Update UserSession model
+                us = UserSession.objects.get(last_session_key=session_key)
+                us.last_session_key = None
+                us.save(update_fields=["last_session_key"])
+                
+                return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
+        except UserSession.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Session non trouvée.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+                
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)

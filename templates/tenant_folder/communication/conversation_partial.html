@@ -1,0 +1,92 @@
+<div class="card-header bg-white border-bottom-0 p-4 pb-2">
+    <div class="d-flex align-items-center">
+        <div class="position-relative me-3">
+            <div class="avatar-sm">
+                <div class="avatar-title rounded-circle bg-soft-info text-info fw-bold shadow-sm">
+                    {{ other_user.username|slice:":1"|upper }}
+                </div>
+            </div>
+            <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
+                <span class="visually-hidden">En ligne</span>
+            </span>
+        </div>
+        <div class="flex-grow-1">
+            <h5 class="mb-0 fw-bold text-dark">{{ other_user.username }}</h5>
+            <small class="text-muted">En ligne</small>
+        </div>
+        <button class="btn btn-light btn-icon rounded-circle shadow-sm" onclick="location.reload()" title="Actualiser">
+            <i class="ri-refresh-line"></i>
+        </button>
+    </div>
+</div>
+
+<div class="card-body p-4 overflow-auto flex-grow-1" id="messagesContainer" style="max-height: 480px;">
+    {% for msg in messages %}
+    <div class="d-flex {% if msg.sender == request.user %}justify-content-end{% endif %} mb-4">
+        {% if msg.sender != request.user %}
+        <div class="flex-shrink-0 me-3">
+            <div class="avatar-xs">
+                <span class="avatar-title rounded-circle bg-light text-muted">
+                    {{ msg.sender.username|slice:":1"|upper }}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="flex-grow-1 {% if msg.sender == request.user %}me-3 text-end{% endif %}">
+            <div class="chat-bubble {% if msg.sender == request.user %}chat-bubble-sent{% else %}chat-bubble-received{% endif %} d-inline-block text-start" style="max-width: 80%;">
+                {% if msg.file %}
+                    <div class="mb-2">
+                        {% if msg.file.name|lower|slice:"-4:" == ".jpg" or msg.file.name|lower|slice:"-4:" == ".png" or msg.file.name|lower|slice:"-5:" == ".jpeg" %}
+                            <a href="{{ msg.file.url }}" target="_blank">
+                                <img src="{{ msg.file.url }}" alt="Attachment" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                            </a>
+                        {% else %}
+                            <a href="{{ msg.file.url }}" target="_blank" class="d-flex align-items-center p-2 bg-light rounded text-decoration-none {% if msg.sender == request.user %}text-success{% else %}text-dark{% endif %}">
+                                <i class="ri-file-text-line fs-3 me-2"></i>
+                                <span class="text-truncate" style="max-width: 150px;">{{ msg.file.name|slice:"11:" }}</span>
+                                <i class="ri-download-line ms-auto"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                {% if msg.content %}
+                {{ msg.content }}
+                {% endif %}
+            </div>
+            <div class="small text-muted mt-1 opacity-75">{{ msg.timestamp|date:"H:i" }}</div>
+        </div>
+
+        {% if msg.sender == request.user %}
+        <div class="flex-shrink-0 order-2">
+            <div class="avatar-xs">
+                <span class="avatar-title rounded-circle bg-success text-white text-xs">Moi</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="text-center p-5 text-muted">
+        <div class="bg-light rounded-circle p-3 d-inline-block mb-3">
+             <i class="ri-chat-1-line fs-2 text-success opacity-50"></i>
+        </div>
+        <p class="fw-medium">Pas encore de messages. Dites bonjour !</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card-footer bg-white border-top-0 p-3 pt-0">
+    <div class="input-group shadow-sm rounded-pill overflow-hidden bg-light">
+        <input type="hidden" id="receiverId" value="{{ other_user.id }}">
+        
+        <input type="file" id="fileInput" class="d-none">
+        <button class="btn btn-light px-3 border-end" id="attachBtn" title="Joindre un fichier">
+            <i class="ri-attachment-line text-muted fs-5"></i>
+        </button>
+        
+        <input type="text" class="form-control bg-light border-0 ps-3" id="msgInput" placeholder="Écrivez votre message..." style="height: 50px;">
+        <button class="btn btn-success px-4" id="sendMsgBtn">
+            <i class="ri-send-plane-2-fill"></i>
+        </button>
+    </div>
+</div>

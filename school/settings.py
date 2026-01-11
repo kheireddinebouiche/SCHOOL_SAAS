@@ -61,6 +61,7 @@ TENANT_APPS = [
     't_exam',
     't_conseil',
     't_remise',
+    't_communication',
     't_timetable',
     'pdf_editor',
     'taggit',

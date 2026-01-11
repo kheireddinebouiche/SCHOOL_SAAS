@@ -18,7 +18,7 @@ urlpatterns = [
     path('conseil/', include('t_conseil.urls', namespace='t_conseil')),
     path('remises/', include('t_remise.urls', namespace='t_remise')),
     path('editeur-documents/', include('pdf_editor.urls', namespace="pdf_editor")),
-    
+    path('communication/', include('t_communication.urls', namespace='t_communication')),
     
     
 ]

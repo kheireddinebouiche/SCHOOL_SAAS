@@ -113,7 +113,7 @@ urlpatterns = [
 
     #### Dashboard #####
     path('pedagogie/dashboard/',pedago_dashboard, name="pedago_dashboard"),
-    
+    path('crm/dashboard/',crm_dashboard, name="crm_dashboard"),
 
 
 
@@ -123,6 +123,9 @@ urlpatterns = [
 
 
 
+    #### Sessions Management #####
+    path('sessions-actives/', active_sessions_view, name="active_sessions"),
+    path('ApiTerminateSession', terminate_session_api, name="terminate_session"),
 ]
 
 

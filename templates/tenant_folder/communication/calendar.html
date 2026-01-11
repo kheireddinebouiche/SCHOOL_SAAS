@@ -1,0 +1,474 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Mon Calendrier {% endblock title %}
+
+{% block content %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<style>
+    /* Custom Calendar Styling */
+    .fc {
+        font-family: 'Inter', sans-serif;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #344767;
+    }
+    .fc .fc-button {
+        background-color: #f8f9fa;
+        border-color: #f8f9fa;
+        color: #6c757d;
+        font-weight: 500;
+        text-transform: capitalize;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
+    }
+    .fc .fc-button:hover, .fc .fc-button-active {
+        background-color: #e9ecef !important;
+        border-color: #e9ecef !important;
+        color: #344767 !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .fc .fc-button-primary:not(:disabled).fc-button-active, 
+    .fc .fc-button-primary:not(:disabled):active {
+        background-color: #cb0c9f !important;
+        border-color: #cb0c9f !important;
+        color: white !important;
+    }
+    .fc-daygrid-day.fc-day-today {
+        background-color: rgba(203, 12, 159, 0.05) !important;
+    }
+    .fc-event {
+        border-radius: 4px;
+        border: none;
+        padding: 2px 4px;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+    }
+    .fc-event:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .card {
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+    
+    /* Filtering Styles */
+    .calendar-container.hide-owner .event-owner {
+        display: none !important;
+    }
+    .calendar-container.hide-invited .event-invited {
+        display: none !important;
+    }
+    .calendar-container.hide-completed .event-completed {
+        display: none !important;
+    }
+    
+    /* Visual distinction for invited events */
+    .event-invited {
+        border: 2px dashed rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Completed events style */
+    .event-completed {
+        opacity: 0.6;
+        text-decoration: line-through;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- page title -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-3 shadow-lg p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-gradient-primary rounded-3 p-3 me-3 d-flex align-items-center justify-content-center shadow-sm">
+                                <i class="ri-calendar-todo-line text-white fs-4"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 text-dark fw-bold">Mon Calendrier</h4>
+                                <p class="mb-0 text-muted small">Gérez vos rappels et événements personnels</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-lg shadow-sm rounded-3 mt-3 mt-sm-0" id="addEventBtn">
+                            <i class="ri-add-line me-2"></i>Nouveau Rappel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Widgets -->
+            <div class="row mb-4">
+                <div class="col-xl-4 col-sm-6">
+                    <div class="card shadow-sm border-0 overflow-hidden">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-lg bg-soft-primary rounded-3 text-primary">
+                                        <i class="ri-task-line fs-1 m-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">Total Tâches</h6>
+                                    <h3 class="mb-0 fw-bold">{{ stats.total }}</h3>
+                                    <p class="text-muted mb-0 small">Assignées ou invitées</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-sm-6">
+                    <div class="card shadow-sm border-0 overflow-hidden">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-lg bg-soft-success rounded-3 text-success">
+                                        <i class="ri-checkbox-circle-line fs-1 m-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">Terminées</h6>
+                                    <h3 class="mb-0 fw-bold">{{ stats.completed }}</h3>
+                                    <p class="text-muted mb-0 small">Tâches accomplies</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-sm-6">
+                    <div class="card shadow-sm border-0 overflow-hidden">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-lg bg-soft-warning rounded-3 text-warning">
+                                        <i class="ri-time-line fs-1 m-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">En Cours</h6>
+                                    <h3 class="mb-0 fw-bold">{{ stats.pending }}</h3>
+                                    <p class="text-muted mb-0 small">Nécessite une action</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-lg border-0">
+                        <div class="card-header bg-white border-bottom-0 p-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                             <h5 class="mb-0 text-muted fw-bold">Planning</h5>
+                             <div class="d-flex align-items-center gap-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="filterOwner" checked>
+                                    <label class="form-check-label fw-medium cursor-pointer" for="filterOwner">Mes Tâches</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="filterInvited" checked>
+                                    <label class="form-check-label fw-medium cursor-pointer" for="filterInvited">Invitations</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="filterCompleted" checked>
+                                    <label class="form-check-label fw-medium cursor-pointer" for="filterCompleted">Terminées</label>
+                                </div>
+                             </div>
+                        </div>
+                        <div class="card-body p-4 pt-2">
+                            <div id='calendar' class="calendar-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Modal -->
+<div class="modal fade" id="reminderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-2xl">
+            <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
+                <h5 class="modal-title fw-bold text-dark fs-4" id="modalTitle">Nouveau Rappel</h5>
+                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <form id="reminderForm">
+                    <input type="hidden" id="reminderId">
+                    <div class="mb-3">
+                        <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Titre</label>
+                        <input type="text" class="form-control form-control-lg bg-light border-0 rounded-3" id="title" placeholder="Ex: Réunion d'équipe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Description</label>
+                        <textarea class="form-control bg-light border-0 rounded-3" id="description" rows="3" placeholder="Détails supplémentaires..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Catégorie</label>
+                        <select class="form-select border-0 bg-light rounded-3" id="category">
+                            <option value="bg-primary">Travail (Bleu)</option>
+                            <option value="bg-success">Personnel (Vert)</option>
+                            <option value="bg-danger">Important (Rouge)</option>
+                            <option value="bg-warning">A faire (Jaune)</option>
+                            <option value="bg-info">Autre (Ciel)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Inviter des participants</label>
+                        <select class="form-select border-0 bg-light rounded-3" id="participants" multiple size="3">
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-xs">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs personnes.</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Début</label>
+                            <input type="datetime-local" class="form-control bg-light border-0 rounded-3" id="start_time" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Fin</label>
+                            <input type="datetime-local" class="form-control bg-light border-0 rounded-3" id="end_time">
+                        </div>
+                    </div>
+                    <div class="form-check mt-3 p-3 bg-light rounded-3" id="completedContainer" style="display:none;">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="is_completed">
+                        <label class="form-check-label fw-medium" for="is_completed">
+                            Marquer comme terminé
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 px-4 pb-4 pt-2">
+                <button type="button" class="btn btn-link text-danger text-decoration-none me-auto fw-medium" id="deleteBtn" style="display:none;">
+                    <i class="ri-delete-bin-line me-1"></i>Supprimer
+                </button>
+                <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" id="saveBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var reminderModal = new bootstrap.Modal(document.getElementById('reminderModal'));
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        themeSystem: 'bootstrap5',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today:    "Aujourd'hui",
+            month:    'Mois',
+            week:     'Semaine',
+            day:      'Jour',
+            list:     'Liste'
+        },
+        locale: 'fr',
+        events: '{% url "t_communication:reminder_api_list" %}',
+        selectable: true,
+        editable: true,
+        droppable: true,
+        height: 'auto',
+        
+        eventDidMount: function(info) {
+            // Add custom icon for invited events
+            if (info.event.classNames.includes('event-invited')) {
+                let content = info.el.querySelector('.fc-event-title');
+                if (content) {
+                    content.innerHTML = '<i class="ri-user-shared-line me-1"></i>' + content.innerHTML;
+                }
+            }
+        },
+        
+        select: function(info) {
+            resetForm();
+            document.getElementById('start_time').value = info.startStr.slice(0, 16);
+            document.getElementById('end_time').value = info.endStr.slice(0, 16);
+            document.getElementById('modalTitle').innerText = "Nouveau Rappel";
+            reminderModal.show();
+        },
+        
+        eventClick: function(info) {
+            resetForm();
+            var event = info.event;
+            var isOwner = event.extendedProps.is_owner;
+            
+            document.getElementById('reminderId').value = event.id;
+            document.getElementById('title').value = event.title;
+            document.getElementById('description').value = event.extendedProps.description || '';
+            document.getElementById('category').value = event.extendedProps.category || 'bg-primary';
+            document.getElementById('start_time').value = event.start.toISOString().slice(0, 16);
+            if (event.end) {
+                document.getElementById('end_time').value = event.end.toISOString().slice(0, 16);
+            }
+            document.getElementById('is_completed').checked = event.extendedProps.is_completed;
+            
+            // Set participants
+            var participantsSelect = document.getElementById('participants');
+            var participantIds = event.extendedProps.participants || [];
+            for (var i = 0; i < participantsSelect.options.length; i++) {
+                participantsSelect.options[i].selected = participantIds.includes(parseInt(participantsSelect.options[i].value));
+            }
+            
+            document.getElementById('completedContainer').style.display = 'flex';
+            document.getElementById('modalTitle').innerText = isOwner ? "Modifier le Rappel" : "Détails (Invité)";
+            
+            // Handle permissions
+            var saveBtn = document.getElementById('saveBtn');
+            var deleteBtn = document.getElementById('deleteBtn');
+            var inputs = document.querySelectorAll('#reminderForm input, #reminderForm select, #reminderForm textarea');
+            
+            if (isOwner) {
+                deleteBtn.style.display = 'block';
+                saveBtn.style.display = 'block';
+                inputs.forEach(el => el.disabled = false);
+            } else {
+                deleteBtn.style.display = 'none';
+                saveBtn.style.display = 'none'; // Guests cannot save changes
+                inputs.forEach(el => el.disabled = true);
+            }
+            
+            reminderModal.show();
+        },
+
+        eventDrop: function(info) {
+            updateEventTimes(info.event);
+        },
+        eventResize: function(info) {
+            updateEventTimes(info.event);
+        }
+    });
+    
+    calendar.render();
+
+    // Filter Logic
+    const filterOwner = document.getElementById('filterOwner');
+    const filterInvited = document.getElementById('filterInvited');
+    const filterCompleted = document.getElementById('filterCompleted');
+    const calendarContainer = document.getElementById('calendar');
+
+    function updateFilters() {
+        if (!filterOwner.checked) calendarContainer.classList.add('hide-owner');
+        else calendarContainer.classList.remove('hide-owner');
+
+        if (!filterInvited.checked) calendarContainer.classList.add('hide-invited');
+        else calendarContainer.classList.remove('hide-invited');
+        
+        if (!filterCompleted.checked) calendarContainer.classList.add('hide-completed');
+        else calendarContainer.classList.remove('hide-completed');
+    }
+
+    if (filterOwner && filterInvited && filterCompleted) {
+        filterOwner.addEventListener('change', updateFilters);
+        filterInvited.addEventListener('change', updateFilters);
+        filterCompleted.addEventListener('change', updateFilters);
+    }
+    document.getElementById('addEventBtn').addEventListener('click', function() {
+        resetForm();
+        document.getElementById('modalTitle').innerText = "Nouveau Rappel";
+        reminderModal.show();
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', function() {
+        var id = document.getElementById('reminderId').value;
+        var participantsSelect = document.getElementById('participants');
+        var selectedParticipants = Array.from(participantsSelect.selectedOptions).map(option => option.value);
+
+        var data = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            category: document.getElementById('category').value,
+            participants: selectedParticipants,
+            start: document.getElementById('start_time').value,
+            end: document.getElementById('end_time').value,
+            is_completed: document.getElementById('is_completed').checked
+        };
+
+        var url = id ? `/communication/api/reminders/${id}/update/` : '/communication/api/reminders/create/';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                calendar.refetchEvents();
+                reminderModal.hide();
+                alertify.success('Rappel enregistré avec succès');
+            }
+        });
+    });
+
+    document.getElementById('deleteBtn').addEventListener('click', function() {
+        var id = document.getElementById('reminderId').value;
+        if (confirm('Voulez-vous vraiment supprimer ce rappel ?')) {
+            fetch(`/communication/api/reminders/${id}/delete/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    calendar.refetchEvents();
+                    reminderModal.hide();
+                    alertify.success('Rappel supprimé');
+                }
+            });
+        }
+    });
+
+    function resetForm() {
+        document.getElementById('reminderForm').reset();
+        document.getElementById('reminderId').value = '';
+        document.getElementById('category').value = 'bg-primary';
+        document.getElementById('completedContainer').style.display = 'none';
+        document.getElementById('deleteBtn').style.display = 'none';
+        
+        // Reset specific fields
+        var participantsSelect = document.getElementById('participants');
+        for (var i = 0; i < participantsSelect.options.length; i++) {
+            participantsSelect.options[i].selected = false;
+        }
+
+        // Reset disabled state (in case previous view was guest view)
+        var saveBtn = document.getElementById('saveBtn');
+        saveBtn.style.display = 'block';
+        var inputs = document.querySelectorAll('#reminderForm input, #reminderForm select, #reminderForm textarea');
+        inputs.forEach(el => el.disabled = false);
+    }
+
+    function updateEventTimes(event) {
+        var data = {
+            start: event.start.toISOString(),
+            end: event.end ? event.end.toISOString() : null
+        };
+        fetch(`/communication/api/reminders/${event.id}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        });
+    }
+});
+</script>
+{% endblock content %}

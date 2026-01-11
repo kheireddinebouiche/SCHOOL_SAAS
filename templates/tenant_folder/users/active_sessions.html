@@ -1,0 +1,161 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Gestion des Sessions Actives {% endblock title %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="ri-shield-user-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Sessions Actives</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow border-0 rounded-3">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="ps-4">Utilisateur</th>
+                                            <th>Email</th>
+                                            <th>Dernière Connexion</th>
+                                            <th>Expiration</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for s in active_sessions %}
+                                        <tr id="session-{{ s.session_key }}">
+                                            <td class="ps-4">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-xs me-3">
+                                                        <div class="avatar-title rounded-circle bg-soft-info text-info">
+                                                            {{ s.user.username|slice:":1"|upper }}
+                                                        </div>
+                                                    </div>
+                                                    <span class="fw-medium text-dark">{{ s.user.username }}</span>
+                                                    {% if s.user == request.user %}
+                                                    <span class="badge bg-success bg-opacity-10 text-success ms-2">Vous</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>{{ s.user.email }}</td>
+                                            <td>{{ s.last_login|date:"d/m/Y H:i" }}</td>
+                                            <td>
+                                                <span class="text-muted small">{{ s.expire_date|date:"d/m/Y H:i" }}</span>
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                {% if s.user != request.user %}
+                                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="showTerminateModal('{{ s.session_key }}', '{{ s.user.username }}')">
+                                                    <i class="ri-logout-box-r-line me-1"></i>Déconnecter
+                                                </button>
+                                                {% else %}
+                                                <span class="text-muted small italic">Session actuelle</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-5 text-muted">
+                                                <i class="ri-user-line fs-1 d-block mb-3"></i>
+                                                <h5>Aucune session active trouvée</h5>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terminate Session Modal -->
+<div class="modal fade" id="terminateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <h5 class="modal-title fw-semibold text-danger">
+                    <i class="ri-alert-line me-2"></i>Confirmer la déconnexion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">Êtes-vous sûr de vouloir déconnecter l'utilisateur <strong id="modalUsername"></strong> ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action prendra effet immédiatement et l'utilisateur devra se reconnecter.</p>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmTerminateBtn">
+                    <i class="ri-logout-box-r-line me-1"></i>Déconnecter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSessionKey = null;
+    const terminateModal = new bootstrap.Modal(document.getElementById('terminateModal'));
+
+    window.showTerminateModal = function(sessionKey, username) {
+        currentSessionKey = sessionKey;
+        document.getElementById('modalUsername').textContent = username;
+        terminateModal.show();
+    };
+
+    document.getElementById('confirmTerminateBtn').addEventListener('click', function() {
+        if (currentSessionKey) {
+            terminateSession(currentSessionKey);
+        }
+    });
+
+    function terminateSession(sessionKey) {
+        fetch("{% url 'institut_app:terminate_session' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                session_key: sessionKey
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            terminateModal.hide();
+            if (data.status === 'success') {
+                document.getElementById('session-' + sessionKey).remove();
+                alertify.success(data.message);
+            } else {
+                alertify.error(data.message);
+            }
+            currentSessionKey = null;
+        })
+        .catch(error => {
+            terminateModal.hide();
+            console.error('Error:', error);
+            alertify.error("Une erreur s'est produite.");
+            currentSessionKey = null;
+        });
+    }
+});
+</script>
+{% endblock content %}
