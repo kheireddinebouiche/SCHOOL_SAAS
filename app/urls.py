@@ -4,6 +4,8 @@ from .views import *
 from django.conf import settings
 from django.conf.urls.static import static
 
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',include('institut_app.urls',namespace='institut_app')),
@@ -20,6 +22,9 @@ urlpatterns = [
     path('editeur-documents/', include('pdf_editor.urls', namespace="pdf_editor")),
     path('communication/', include('t_communication.urls', namespace='t_communication')),
     
+    # Cross-Tenant Communication
+    path('communication/inter-etablissements/', tenant_comm_hub, name='tenant_comm_hub'),
+    path('communication/inter-etablissements/<int:tenant_id>/', tenant_comm_detail, name='tenant_comm_detail'),
     
 ]
 

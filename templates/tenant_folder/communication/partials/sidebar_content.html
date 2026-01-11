@@ -1,0 +1,80 @@
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="text-uppercase fw-semibold fs-13 mb-0 text-muted">
+                                                {% if current_folder %}
+                                                {{ current_folder.name }}
+                                                {% else %}
+                                                Dossiers Partagés
+                                                {% endif %}
+                                            </h6>
+                                            {% if current_folder %}
+                                            <a href="#" onclick="loadFolder({{ current_folder.parent.id|default:'null' }}); return false;" class="btn btn-sm btn-ghost-primary" title="Retour">
+                                                <i class="ri-arrow-up-line"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="vstack gap-2 overflow-auto flex-grow-1">
+                                            <!-- Folders -->
+                                            {% for folder in folders %}
+                                            <a href="#" onclick="loadFolder({{ folder.id }}); return false;" class="text-decoration-none text-body">
+                                                <div class="d-flex align-items-center border rounded p-2 bg-light bg-opacity-50 hover-bg-light mb-2">
+                                                    <div class="flex-shrink-0 avatar-xs me-2">
+                                                        <div class="avatar-title bg-soft-warning text-warning rounded-circle">
+                                                            <i class="ri-folder-2-line"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 overflow-hidden">
+                                                        <h6 class="fs-13 mb-0 text-truncate">{{ folder.name }}</h6>
+                                                        <small class="text-muted">Dossier</small>
+                                                    </div>
+                                                    {% if folder.sender.id == request.tenant.id %}
+                                                    <div class="flex-shrink-0 ms-2">
+                                                        <button type="button" class="btn btn-icon btn-sm btn-ghost-danger" onclick="deleteItem(event, 'folder', {{ folder.id }})" title="Supprimer">
+                                                            <i class="ri-delete-bin-line"></i>
+                                                        </button>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </a>
+                                            {% endfor %}
+
+                                            <!-- Documents -->
+                                            {% for doc in documents %}
+                                            <div class="d-flex align-items-center border rounded p-2 bg-light bg-opacity-50 mb-2">
+                                                <div class="flex-shrink-0 avatar-xs me-2">
+                                                    <div class="avatar-title bg-soft-info text-info rounded-circle">
+                                                        <i class="ri-file-text-line"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <h6 class="fs-13 mb-0 text-truncate">
+                                                        <a href="{{ doc.file.url }}" target="_blank" class="text-dark">{{ doc.description }}</a>
+                                                    </h6>
+                                                    <small class="text-muted">Fichier</small>
+                                                </div>
+                                                <div class="flex-shrink-0 ms-2 d-flex gap-1">
+                                                    <a href="{{ doc.file.url }}" download class="btn btn-icon btn-sm btn-ghost-secondary"><i class="ri-download-2-line"></i></a>
+                                                    {% if doc.sender.id == request.tenant.id %}
+                                                    <button type="button" class="btn btn-icon btn-sm btn-ghost-danger" onclick="deleteItem(event, 'file', {{ doc.id }})" title="Supprimer">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            
+                                            {% if not folders and not documents %}
+                                            <div class="text-center text-muted mt-5">
+                                                <i class="ri-folder-unknow-line fs-24 mb-2"></i>
+                                                {% if current_folder %}
+                                                <p class="small">Dossier vide</p>
+                                                {% else %}
+                                                <p class="small">Aucun dossier ou fichier partagé</p>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+
+                                        </div>
+                                        <div class="mt-3 pt-3 border-top">
+                                            <button class="btn btn-soft-primary w-100" data-bs-toggle="modal" data-bs-target="#createFolderModal"><i class="ri-add-line align-middle me-1"></i> Nouveau dossier</button>
+                                        </div>

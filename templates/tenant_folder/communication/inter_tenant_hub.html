@@ -1,0 +1,407 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+
+{% block title %}Flux Inter-Etablissements{% endblock %}
+
+{% block content %}
+<style>
+    /* Custom Scrollbar for chat */
+    .chat-conversation::-webkit-scrollbar {
+        width: 6px;
+    }
+    .chat-conversation::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .chat-conversation::-webkit-scrollbar-thumb {
+        background-color: rgba(0,0,0,0.1);
+        border-radius: 20px;
+    }
+    
+    /* Modern Chat Bubble Styles */
+    .chat-list.right .ctext-wrap-content {
+        background-color: #dcf8c6; /* WhatsApp-like green or use theme primary */
+        color: #212529;
+        border-radius: 12px 0 12px 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        text-align: left;
+    }
+    /* Override for theme consistency if needed */
+    .chat-list.right .ctext-wrap-content {
+        background-color: var(--vz-primary);
+        color: #fff;
+    }
+    .chat-list.right .conversation-name small {
+        color: rgba(255,255,255,0.8) !important;
+    }
+    .chat-list.right .check-message-icon {
+        color: rgba(255,255,255,0.8) !important;
+    }
+
+    .chat-list.left .ctext-wrap-content {
+        background-color: #fff;
+        border-radius: 0 12px 12px 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .chat-input-section {
+        background-color: #fff;
+        border-top: 1px solid #eff2f7;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            
+            {% if messages %}
+            <div class="row">
+                <div class="col-12">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Page Title -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Flux Inter-Etablissements</h4>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Communication</a></li>
+                                <li class="breadcrumb-item active">Flux Inter-Etablissements</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Row -->
+            <div class="row" style="height: calc(100vh - 180px);">
+                
+                <!-- Sidebar: List of Tenants (Seconds or Masters) -->
+                <div class="col-lg-3 col-md-4 h-100">
+                    <div class="card h-100 mb-0 shadow-sm">
+                        <div class="card-header border-bottom bg-transparent">
+                            <h5 class="card-title mb-0">
+                                {% if is_master %}Etablissements{% else %}Comptes Maîtres{% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body p-0 overflow-auto custom-scrollbar">
+                            <div class="list-group list-group-flush">
+                                {% for sub in tenants_list %}
+                                <a href="{% url 'tenant_comm_detail' sub.id %}" onclick="loadTenant(event, {{ sub.id }})" class="list-group-item list-group-item-action border-0 py-3 px-3 {% if target_tenant.id == sub.id %}bg-light mt-1{% endif %} tenant-link" id="tenant-link-{{ sub.id }}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-xs flex-shrink-0 me-3">
+                                            <span class="avatar-title rounded-circle bg-light text-primary">
+                                                <i class="ri-building-line"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <h5 class="text-truncate mb-1 fs-14 text-dark">{{ sub.nom }}</h5>
+                                            {% if not is_master and sub.tenant_type == 'master' %}
+                                                <span class="badge badge-soft-success">Master</span>
+                                            {% else %}
+                                                <small class="text-muted">En ligne</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                                {% empty %}
+                                <div class="text-center p-4">
+                                    <div class="text-muted">Aucun correspondant trouvé.</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Chat Area -->
+                <div class="col-lg-9 col-md-8 h-100" id="main-chat-container">
+                    {% if target_tenant %}
+                        {% include 'tenant_folder/communication/partials/main_chat.html' %}
+                    {% else %}
+                       <!-- Empty State -->
+                       <div class="card h-100 mb-0 shadow-sm">
+                            <div class="card-body d-flex justify-content-center align-items-center" style="background: url('{% static 'design/assets/images/auth-one-bg.jpg' %}') center/cover;">
+                                <div class="bg-white p-5 rounded-4 shadow-lg text-center" style="max-width: 450px;">
+                                    <div class="avatar-xl mx-auto mb-4">
+                                        <div class="avatar-title bg-soft-primary text-primary rounded-circle display-4 shadow">
+                                            <i class="ri-community-line"></i>
+                                        </div>
+                                    </div>
+                                    <h4 class="mb-3 fw-bold text-dark">Flux Inter-Etablissements</h4>
+                                    <p class="text-muted mb-4 fs-15">Sélectionnez un établissement dans la liste à gauche pour démarrer une conversation ou partager des documents.</p>
+                                    <button class="btn btn-primary waves-effect waves-light">Guide d'utilisation</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // State to track current folder
+    let currentFolderId = "{{ current_folder.id|default:'' }}";
+
+    // Initial scroll
+    scrollToBottom();
+
+    function scrollToBottom() {
+        const chatBox = document.getElementById('chat-conversation');
+        if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    // --- Message Sending (AJAX) ---
+    async function sendMessage(event) {
+        event.preventDefault();
+        
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('action', 'send_message');
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    appendMessage(data);
+                    input.value = ''; 
+                    const emptyState = document.getElementById('empty-state');
+                    if(emptyState) emptyState.remove();
+                }
+            }
+        } catch (error) { console.error("Error:", error); }
+    }
+
+    function appendMessage(data) {
+        const chatBoxList = document.getElementById('chat-box');
+        const li = document.createElement('li');
+        li.className = 'chat-list right mb-3';
+        li.innerHTML = `
+            <div class="conversation-list">
+                <div class="user-chat-content">
+                    <div class="ctext-wrap">
+                        <div class="ctext-wrap-content p-3 shadow-none">
+                            <p class="mb-0 ctext-content fs-14">${escapeHtml(data.message)}</p>
+                        </div>
+                        <div class="conversation-name mt-1">
+                            <small class="text-muted time">${data.created_at}</small> 
+                            <span class="text-success check-message-icon ms-1"><i class="ri-check-double-line align-bottom"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        chatBoxList.appendChild(li);
+        scrollToBottom();
+    }
+
+    // --- File/Folder AJAX Logic ---
+
+    // 1. Load Folder Content (Navigation)
+    async function loadFolder(folderId) {
+        if (folderId === null) folderId = '';
+        const url = new URL(window.location.href);
+        url.searchParams.set('folder_id', folderId);
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateSidebar(data);
+                }
+            }
+        } catch (error) { console.error("Error loading folder:", error); }
+    }
+
+    // 2. Create Folder (AJAX)
+    async function handleCreateFolder(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        // Ensure parent_id is strictly current
+        formData.set('parent_id', currentFolderId);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateSidebar(data);
+                    // Close Modal
+                    const modalEl = document.getElementById('createFolderModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    form.reset();
+                }
+            }
+        } catch (error) { console.error("Error creating folder:", error); }
+    }
+
+    // 3. Upload File (AJAX)
+    async function handleFileUpload() {
+        const input = document.getElementById('file-upload');
+        if (!input.files.length) return;
+
+        const form = document.getElementById('file-upload-form');
+        const formData = new FormData(form);
+        formData.set('parent_id', currentFolderId);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateSidebar(data);
+                    form.reset();
+                }
+            }
+        } catch (error) { console.error("Error uploading file:", error); }
+    }
+
+    // 4. Load Tenant (Full Chat AJAX)
+    async function loadTenant(event, tenantId) {
+        event.preventDefault();
+        
+        // Update URL
+        // We need to construct the URL manually or use the href
+        const targetUrl = event.currentTarget.href;
+        window.history.pushState({}, '', targetUrl);
+
+        try {
+            const response = await fetch(targetUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success' && data.type === 'full_chat') {
+                    // Update Main Chat Container
+                    document.getElementById('main-chat-container').innerHTML = data.html;
+                    
+                    // Reset folder state
+                    currentFolderId = '';
+                    
+                    // Scroll to bottom
+                    scrollToBottom();
+
+                    // Update Active State in Sidebar
+                    document.querySelectorAll('.tenant-link').forEach(el => {
+                        el.classList.remove('bg-light', 'mt-1');
+                    });
+                    const activeLink = document.getElementById('tenant-link-' + tenantId);
+                    if (activeLink) activeLink.classList.add('bg-light', 'mt-1');
+                }
+            }
+        } catch (error) { console.error("Error loading tenant:", error); }
+    }
+
+    // State for deletion
+    let deleteType = null;
+    let deleteId = null;
+
+    // 5. Delete Item (Open Modal)
+    function deleteItem(event, type, id) {
+        event.preventDefault();
+        event.stopPropagation(); // Prevent navigating into the folder
+        
+        deleteType = type;
+        deleteId = id;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    // 6. Confirm Delete (Execute AJAX)
+    async function confirmDelete() {
+        if (!deleteType || !deleteId) return;
+
+        const formData = new FormData();
+        formData.append('action', deleteType === 'folder' ? 'delete_folder' : 'delete_file');
+        formData.append('item_id', deleteId);
+        formData.append('parent_id', currentFolderId);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateSidebar(data);
+                    
+                    // Close Modal
+                    const modalEl = document.getElementById('deleteConfirmModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                }
+            }
+        } catch (error) { console.error("Error deleting item:", error); }
+    }
+
+    function updateSidebar(data) {
+        // Replace Sidebar Content
+        const container = document.getElementById('sidebar-files-container');
+        if (container) {
+             container.innerHTML = data.html;
+        }
+        
+        // Update State
+        currentFolderId = data.current_folder_id;
+        
+        // Update Hidden Inputs for next actions
+        const createParentInput = document.getElementById('create-folder-parent-id');
+        if (createParentInput) createParentInput.value = currentFolderId;
+    }    
+        // Update File Upload hidden input (if it exists outside the partial)
+        // Actually, I removed it from the form in HTML above, relying on formData.set()
+        // But if I kept it... no, JS FormData.set is safer.
+
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

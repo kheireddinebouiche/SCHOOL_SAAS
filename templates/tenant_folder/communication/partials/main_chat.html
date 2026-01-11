@@ -1,0 +1,168 @@
+{% load static %}
+                    <div class="card h-100 mb-0 shadow-sm" id="main-chat-card">
+                        {% if target_tenant %}
+                            <div class="card-header border-bottom p-3 d-flex align-items-center justify-content-between bg-white sticky-top">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm flex-shrink-0 me-3">
+                                        <span class="avatar-title rounded-circle bg-primary fs-20">
+                                            <i class="ri-building-line"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-0 fs-16 text-dark">{{ target_tenant.nom }}</h5>
+                                        <p class="mb-0 text-muted fs-12"><span class="badge badge-dot bg-success me-1"></span>En ligne</p>
+                                    </div>
+                                </div>
+                                <!-- Actions menu -->
+                                <div>
+                                    <button type="button" class="btn btn-ghost-primary btn-icon" data-bs-toggle="modal" data-bs-target="#createFolderModal" title="Nouveau dossier">
+                                        <i class="ri-folder-add-line fs-20"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0 d-flex position-relative">
+                                <!-- Chat Conversation -->
+                                <div class="flex-grow-1 d-flex flex-column h-100">
+                                    <!-- Chat History -->
+                                    <div class="chat-conversation p-3 p-lg-4 bg-light bg-opacity-25" id="chat-conversation" style="overflow-y: auto; flex: 1; background-image: url('{% static 'design/assets/images/chat-bg-pattern.png' %}');">
+                                        <ul class="list-unstyled chat-conversation-list" id="chat-box">
+                                            {% for msg in messages_list %}
+                                            <li class="chat-list {% if msg.sender.id == request.tenant.id %}right{% else %}left{% endif %} mb-3">
+                                                <div class="conversation-list">
+                                                    <div class="user-chat-content">
+                                                        <div class="ctext-wrap">
+                                                            <div class="ctext-wrap-content p-3 shadow-none">
+                                                                <p class="mb-0 ctext-content fs-14">{{ msg.message }}</p>
+                                                            </div>
+                                                            <div class="conversation-name mt-1">
+                                                                <small class="text-muted time">{{ msg.created_at|date:"H:i" }}</small> 
+                                                                {% if msg.sender.id == request.tenant.id %}
+                                                                <span class="text-success check-message-icon ms-1"><i class="ri-check-double-line align-bottom"></i></span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                            {% empty %}
+                                            <div class="text-center mt-5 pt-5" id="empty-state">
+                                                <div class="avatar-lg mx-auto mb-3">
+                                                    <div class="avatar-title rounded-circle bg-soft-primary text-primary display-5">
+                                                        <i class="ri-chat-smile-2-line"></i>
+                                                    </div>
+                                                </div>
+                                                <h5 class="text-muted">Aucun message</h5>
+                                                <p class="text-muted">Commencez la discussion maintenant !</p>
+                                            </div>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Input Section -->
+                                    <div class="chat-input-section p-3 p-lg-4">
+                                        <form id="chatinput-form" onsubmit="sendMessage(event)">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="send_message">
+                                            <div class="row g-0 align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="chat-input-links me-2">
+                                                        <button type="button" class="btn btn-link header-item waves-effect text-muted" onclick="document.getElementById('file-upload').click()" data-bs-toggle="tooltip" title="Joindre un fichier">
+                                                            <i class="ri-attachment-line align-middle fs-20"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col">
+                                                    <input type="text" id="message-input" name="message" class="form-control chat-input bg-light border-light" placeholder="Écrivez votre message..." autocomplete="off">
+                                                </div>
+                                                <div class="col-auto">
+                                                    <div class="chat-input-links ms-2">
+                                                        <button type="submit" class="btn btn-success chat-send waves-effect waves-light shadow-sm">
+                                                            <i class="ri-send-plane-2-fill align-bottom"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        
+                                        <!-- Hidden Forms for Actions -->
+                                        <form id="file-upload-form" method="post" enctype="multipart/form-data" style="display: none;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="upload_file">
+                                            {% if current_folder %}
+                                            <input type="hidden" name="parent_id" value="{{ current_folder.id }}">
+                                            {% endif %}
+                                            <input type="file" id="file-upload" name="file" onchange="handleFileUpload()">
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Shared Files Sidebar (Hidden on mobile) -->
+                                <div class="flex-shrink-0 d-none d-xl-block bg-white border-start" style="width: 300px;">
+                                    <div class="p-4 h-100 d-flex flex-column" id="sidebar-files-container">
+                                        {% include 'tenant_folder/communication/partials/sidebar_content.html' %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Create Folder Modal -->
+                            <div class="modal fade" id="createFolderModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Créer un nouveau dossier</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form id="create-folder-form" onsubmit="handleCreateFolder(event)">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="create_folder">
+                                            <input type="hidden" name="parent_id" id="create-folder-parent-id" value="{{ current_folder.id }}">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label for="folderName" class="form-label">Nom du dossier</label>
+                                                    <input type="text" class="form-control" id="folderName" name="folder_name" placeholder="Ex: Contrats, Factures..." required>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                                <button type="submit" class="btn btn-primary">Créer</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delete Confirmation Modal -->
+                            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-danger">Supprimer l'élément</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Voulez-vous vraiment supprimer cet élément ? Cette action est irréversible.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Supprimer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        {% else %}
+                            <!-- Empty State -->
+                            <div class="card-body d-flex justify-content-center align-items-center" style="background: url('{% static 'design/assets/images/auth-one-bg.jpg' %}') center/cover;">
+                                <div class="bg-white p-5 rounded-4 shadow-lg text-center" style="max-width: 450px;">
+                                    <div class="avatar-xl mx-auto mb-4">
+                                        <div class="avatar-title bg-soft-primary text-primary rounded-circle display-4 shadow">
+                                            <i class="ri-community-line"></i>
+                                        </div>
+                                    </div>
+                                    <h4 class="mb-3 fw-bold text-dark">Flux Inter-Etablissements</h4>
+                                    <p class="text-muted mb-4 fs-15">Sélectionnez un établissement dans la liste à gauche pour démarrer une conversation ou partager des documents.</p>
+                                    <button class="btn btn-primary waves-effect waves-light">Guide d'utilisation</button>
+                                </div>
+                            </div>
+                        {% endif %}
