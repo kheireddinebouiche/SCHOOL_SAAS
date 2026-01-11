@@ -1,0 +1,161 @@
+{% extends 'tenant_folder/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="card-title">Liste des Contrats Formateurs</h4>
+                            <a href="{% url 't_ressource_humaine:contrat_create' %}" class="btn btn-primary ajax-modal-trigger">
+                                <i class="feather icon-plus"></i> Nouveau Contrat
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Formateur</th>
+                                            <th>Type</th>
+                                            <th>Début</th>
+                                            <th>Fin</th>
+                                            <th>Salaire</th>
+                                            <th>État</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for contrat in contrats %}
+                                        <tr>
+                                            <td>{{ contrat.formateur }}</td>
+                                            <td><span class="badge badge-info">{{ contrat.get_type_contrat_display }}</span></td>
+                                            <td>{{ contrat.date_debut }}</td>
+                                            <td>{{ contrat.date_fin|default:"-" }}</td>
+                                            <td>
+                                                {% if contrat.salaire_horaire %}
+                                                    {{ contrat.salaire_horaire|intcomma }} DA/h
+                                                {% else %}
+                                                    {{ contrat.salaire_base|intcomma }} DA
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if contrat.actif %}
+                                                    <span class="badge badge-success">Actif</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">Inactif</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 't_ressource_humaine:contrat_update' contrat.pk %}" class="btn btn-sm btn-warning ajax-modal-trigger" title="Modifier">
+                                                    <i class="feather icon-edit"></i>
+                                                </a>
+                                                <a href="{% url 't_ressource_humaine:generer_paie' contrat.pk %}" class="btn btn-sm btn-success ajax-modal-trigger" title="Générer Paie">
+                                                    <i class="feather icon-dollar-sign"></i>
+                                                </a>
+                                                <a href="{% url 't_ressource_humaine:contrat_print' contrat.pk %}" class="btn btn-sm btn-secondary" target="_blank" title="Imprimer Contrat">
+                                                    <i class="feather icon-printer"></i>
+                                                </a>
+                                                <a href="{% url 't_ressource_humaine:fiche_paie_list' %}?contrat={{ contrat.pk }}" class="btn btn-sm btn-info" title="Historique des paies">
+                                                    <i class="feather icon-list"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">Aucun contrat trouvé.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="contratModal" tabindex="-1" role="dialog" aria-labelledby="contratModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contratModalLabel">Contrat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="modal-form-content">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Open Modal
+        $(document).on('click', '.ajax-modal-trigger', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            var btn = $(this);
+            
+            var title = "Contrat";
+            if (btn.hasClass('btn-primary')) title = "Nouveau Contrat";
+            else if (btn.hasClass('btn-warning')) title = "Modifier Contrat";
+            else if (btn.hasClass('btn-success')) title = "Générer Fiche de Paie";
+
+            $('#contratModalLabel').text(title);
+            $('#modal-form-content').html('<div class="p-4 text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Chargement...</p></div>');
+            $('#contratModal').modal('show');
+            $('#contratModal').data('url', url); 
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    $('#modal-form-content').html(data);
+                },
+                error: function() {
+                    $('#modal-form-content').html('<div class="alert alert-danger m-3">Erreur lors du chargement.</div>');
+                }
+            });
+        });
+
+        // Handle Form Submission (Works for both forms if they follow the pattern)
+        $(document).on('submit', '#contratForm, #paieForm', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var submitUrl = $('#contratModal').data('url');
+             
+            $.ajax({
+                url: submitUrl,
+                type: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                   if (response.status === 'success') {
+                       alertify.success(response.message);
+                       $('#contratModal').modal('hide');
+                       
+                       if (response.redirect_url) {
+                           setTimeout(function(){ window.location.href = response.redirect_url; }, 1000);
+                       } else {
+                           setTimeout(function(){ location.reload(); }, 1000); 
+                       }
+                   } else if (response.status === 'invalid') {
+                       $('#modal-form-content').html(response.html);
+                   } else if (response.status === 'error') {
+                       alertify.error(response.message);
+                   }
+                },
+                error: function() {
+                     alertify.error('Une erreur est survenue lors de l\'enregistrement.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

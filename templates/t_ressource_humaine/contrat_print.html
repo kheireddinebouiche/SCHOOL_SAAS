@@ -1,0 +1,84 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Contrat de Travail - {{ object.formateur }}</title>
+    <style>
+        body { font-family: 'Times New Roman', serif; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { width: 21cm; margin: 0 auto; min-height: 29.7cm; padding: 20px; background: white; }
+        h1 { text-align: center; text-transform: uppercase; text-decoration: underline; margin-bottom: 30px; }
+        .section { margin-bottom: 20px; text-align: justify; }
+        .signature { margin-top: 50px; display: flex; justify-content: space-between; }
+        .signature div { width: 45%; text-align: center; }
+        @media print {
+            body { background: none; padding: 0; }
+            .container { width: 100%; border: none; margin: 0; padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: right; margin-bottom: 10px;">
+        <button onclick="window.print()">Imprimer</button>
+    </div>
+    <div class="container">
+        <h1>CONTRAT DE TRAVAIL {{ object.get_type_contrat_display|upper }}</h1>
+        
+        <div class="section">
+            <p><strong>ENTRE LES SOUSSIGNÉS :</strong></p>
+            <p>L'École ________________________, représentée par son Directeur,</p>
+            <p style="text-align: right;">Ci-après désignée <strong>"L'Employeur"</strong></p>
+        </div>
+        
+        <div class="section">
+            <p><strong>ET :</strong></p>
+            <p>M./Mme <strong>{{ object.formateur.nom }} {{ object.formateur.prenom }}</strong></p>
+            <p>Demeurant à : ________________________</p>
+            <p style="text-align: right;">Ci-après désigné(e) <strong>"Le Salarié"</strong></p>
+        </div>
+        
+        <div class="section">
+            <p><strong>IL A ÉTÉ CONVENU CE QUI SUIT :</strong></p>
+            
+            <p><strong>Article 1 : Nature et Durée du Contrat</strong><br>
+            L'Employeur engage le Salarié en qualité de Formateur. Ce contrat est un {{ object.get_type_contrat_display }}.
+            Il prend effet le <strong>{{ object.date_debut|date:"d/m/Y" }}</strong>.
+            {% if object.date_fin %}
+            Il prendra fin le <strong>{{ object.date_fin|date:"d/m/Y" }}</strong>.
+            {% endif %}
+            </p>
+            
+            <p><strong>Article 2 : Rémunération</strong><br>
+            En contrepartie de ses services, le Salarié percevra :
+            {% if object.salaire_horaire %}
+            Une rémunération horaire brute de <strong>{{ object.salaire_horaire|intcomma }} DA</strong>.
+            {% else %}
+            Une rémunération mensuelle brute de base de <strong>{{ object.salaire_base|intcomma }} DA</strong>.
+            {% endif %}
+            </p>
+            
+            {% if object.prime_transport or object.prime_panier %}
+            <p><strong>Article 3 : Primes et Indemnités</strong><br>
+            Le Salarié bénéficiera des indemnités suivantes :
+            <ul>
+                {% if object.prime_panier %}<li>Indemnité de Panier : {{ object.prime_panier|intcomma }} DA/jour travaillé</li>{% endif %}
+                {% if object.prime_transport %}<li>Indemnité de Transport : {{ object.prime_transport|intcomma }} DA/jour travaillé</li>{% endif %}
+            </ul>
+            </p>
+            {% endif %}
+        </div>
+        
+        <div class="signature">
+            <div>
+                <strong>L'Employeur</strong><br><br><br>
+                (Signature et Cachet)
+            </div>
+            <div>
+                <strong>Le Salarié</strong><br><br><br>
+                (Lu et approuvé)
+            </div>
+        </div>
+    </div>
+</body>
+</html>

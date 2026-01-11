@@ -45,6 +45,40 @@ def StudentDetails(request, pk):
         documents_available = current_groupe.groupe.specialite.formation.documents.all()
         # Add fetching of other payments
         autre_paiements = AutreProduit.objects.filter(client = student).select_related('compte')
+        
+        # Historique Absence
+        from t_etudiants.models import HistoriqueAbsence
+        historique_absence = HistoriqueAbsence.objects.filter(etudiant=student).select_related('ligne_presence__module')
+        
+        # Aggregation Logic
+        attendance_summary = {}
+
+        for record in historique_absence:
+            if record.historique:
+                for entry in record.historique:
+                    for d in entry.get('data', []):
+                        code = d.get('code')
+                        etat = d.get('etat')
+                        module_label = record.ligne_presence.module.label if record.ligne_presence and record.ligne_presence.module else d.get('module')
+
+                        if code:
+                            if code not in attendance_summary:
+                                attendance_summary[code] = {
+                                    'label': module_label,
+                                    'code': code,
+                                    'P': 0,
+                                    'A': 0,
+                                    'J': 0,
+                                    'details': []
+                                }
+                            
+                            if etat in ['P', 'A', 'J']:
+                                attendance_summary[code][etat] += 1
+                                
+                            attendance_summary[code]['details'].append({
+                                'date': entry.get('date'),
+                                'etat': etat
+                            })
 
         try:
             echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
@@ -95,6 +129,7 @@ def StudentDetails(request, pk):
             'documents_available':documents_available,
             'rachat_due_paiement' : rachat_due_paiement,
             'autre_paiements': autre_paiements,
+            'historique_absence': attendance_summary.values(),
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html',context)
 

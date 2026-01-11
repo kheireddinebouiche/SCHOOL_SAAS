@@ -21,6 +21,7 @@ urlpatterns = [
     path('remises/', include('t_remise.urls', namespace='t_remise')),
     path('editeur-documents/', include('pdf_editor.urls', namespace="pdf_editor")),
     path('communication/', include('t_communication.urls', namespace='t_communication')),
+    path('rh-formateurs/', include('t_ressource_humaine.urls', namespace='t_ressource_humaine')),
     
     # Cross-Tenant Communication
     path('communication/inter-etablissements/', tenant_comm_hub, name='tenant_comm_hub'),

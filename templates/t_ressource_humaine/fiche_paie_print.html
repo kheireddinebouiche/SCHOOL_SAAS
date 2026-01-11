@@ -1,0 +1,124 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche de Paie - {{ fiche.mois }}/{{ fiche.annee }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #000; padding: 20px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+        .info-table td { padding: 5px; }
+        .paie-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .paie-table th, .paie-table td { border: 1px solid #000; padding: 8px; text-align: right; }
+        .paie-table th { background-color: #f0f0f0; text-align: center; }
+        .paie-table td.label { text-align: left; }
+        .footer { margin-top: 30px; text-align: center; font-size: 10px; }
+        @media print {
+            .no-print { display: none; }
+            .container { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px;">
+        <button onclick="window.print()">Imprimer</button>
+        <button onclick="history.back()">Retour</button>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <div>
+                <h3>ÉCOLE DE FORMATION</h3>
+                <p>Adresse...<br>Matricule Fiscal...</p>
+            </div>
+            <div style="text-align: right;">
+                <h2>BULLETIN DE PAIE</h2>
+                <p>Période : <strong>{{ fiche.get_mois_display }} {{ fiche.annee }}</strong></p>
+            </div>
+        </div>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Matricule :</strong> {{ fiche.contrat.formateur.id }}</td>
+                <td><strong>Nom & Prénom :</strong> {{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</td>
+            </tr>
+            <tr>
+                <td><strong>Fonction :</strong> Formateur</td>
+                <td><strong>Mode de paiement :</strong> Virement / Chèque</td>
+            </tr>
+            <tr>
+                <td><strong>Jours travaillés :</strong> {{ fiche.jours_travailles }}</td>
+                <td><strong>Heures travaillées :</strong> {{ fiche.heures_travailles }}</td>
+            </tr>
+        </table>
+        
+        <table class="paie-table">
+            <thead>
+                <tr>
+                    <th>Rubriques</th>
+                    <th>Base / Taux</th>
+                    <th>Gains (Revenus)</th>
+                    <th>Retenues</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">Salaire de Base</td>
+                    <td></td>
+                    <td>{{ fiche.salaire_base_calcule|intcomma }}</td>
+                    <td></td>
+                </tr>
+                {% if fiche.prime_panier %}
+                <tr>
+                    <td class="label">Indemnité Panier</td>
+                    <td></td>
+                    <td>{{ fiche.prime_panier|intcomma }}</td>
+                    <td></td>
+                </tr>
+                {% endif %}
+                {% if fiche.prime_transport %}
+                <tr>
+                    <td class="label">Indemnité Transport</td>
+                    <td></td>
+                    <td>{{ fiche.prime_transport|intcomma }}</td>
+                    <td></td>
+                </tr>
+                {% endif %}
+                
+                <!-- Sous-total Brut -->
+                
+                <tr>
+                    <td class="label">Sécurité Sociale (9%)</td>
+                    <td>{{ fiche.base_ss|intcomma }}</td>
+                    <td></td>
+                    <td>{{ fiche.montant_ss|intcomma }}</td>
+                </tr>
+                
+                <tr>
+                    <td class="label">IRG (Sur {{ fiche.salaire_imposable|intcomma }})</td>
+                    <td></td>
+                    <td></td>
+                    <td>{{ fiche.irg|intcomma }}</td>
+                </tr>
+                
+                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                    <td class="label">TOTAL</td>
+                    <td></td>
+                    <td>{{ fiche.net_a_payer|add:fiche.montant_ss|add:fiche.irg|intcomma }}</td> <!-- Approx Brut Global -->
+                    <td>{{ fiche.montant_ss|add:fiche.irg|intcomma }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="border: 2px solid #000; padding: 10px; text-align: right; font-size: 16px;">
+            <strong>NET À PAYER : {{ fiche.net_a_payer|intcomma }} DA</strong>
+        </div>
+        
+        <div style="margin-top: 50px;">
+            <p>Signature de l'Employeur</p>
+        </div>
+    </div>
+</body>
+</html>
