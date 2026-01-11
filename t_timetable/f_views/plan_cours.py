@@ -194,6 +194,19 @@ def timetable_edit(request, pk):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadTableEntry(request):
-    timetable=request.GET.get('timetable')
-    historique = TimetableEntry.objects.filter(timetable = timetable).values('id','cours__label','cours__code','heure_debut','heure_fin','jour','formateur__nom','formateur__prenom','salle__nom','salle__code','timetable__is_validated')
-    return JsonResponse(list(historique), safe=False)
+    timetable = request.GET.get('timetable')
+    historique = list(TimetableEntry.objects.filter(timetable=timetable).values(
+        'id', 'cours__label', 'cours__code', 'heure_debut', 'heure_fin', 
+        'jour', 'formateur__nom', 'formateur__prenom', 'salle__nom', 
+        'salle__code', 'timetable__is_validated'
+    ))
+    
+    # Custom sorting or processing if needed
+    # Ensure time is in HH:MM format for frontend matching
+    for entry in historique:
+        if entry['heure_debut']:
+            entry['heure_debut'] = str(entry['heure_debut'])[:5]
+        if entry['heure_fin']:
+            entry['heure_fin'] = str(entry['heure_fin'])[:5]
+            
+    return JsonResponse(historique, safe=False)
