@@ -19,4 +19,6 @@ urlpatterns = [
     path('contrats/<int:contrat_id>/generer-paie/', views.generer_paie, name='generer_paie'),
     path('fiches/', views.FichePaieListView.as_view(), name='fiche_paie_list'),
     path('fiches/<int:pk>/', views.FichePaieDetailView.as_view(), name='fiche_paie_detail'),
+    path('config/', views.config_paie, name='config_paie'),
+    path('select-entreprise/', views.select_entreprise_paie, name='select_entreprise_paie'),
 ]

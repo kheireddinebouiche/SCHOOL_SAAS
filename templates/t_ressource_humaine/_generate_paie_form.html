@@ -1,28 +1,55 @@
 <form method="post" id="paieForm" action="{% url 't_ressource_humaine:generer_paie' contrat_id=contrat.id %}">
     {% csrf_token %}
-    <div class="modal-body">
-        <p class="text-muted mb-4">Génération de la fiche de paie pour : <strong>{{ contrat.formateur }}</strong></p>
-        <div class="row">
+    <div class="modal-body p-4">
+        <div class="alert alert-soft-info border-0 d-flex align-items-center mb-4" role="alert">
+            <i class="ri-information-line fs-24 me-3"></i>
+            <div>
+                Calcul de la paie pour <span class="fw-bold">{{ contrat.formateur }}</span><br>
+                <small class="text-muted">Assurez-vous que les informations de présence sont correctes.</small>
+            </div>
+        </div>
+
+        <div class="row g-4">
             {% for field in form %}
-            <div class="col-md-6 mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                <div class="text-danger small">
-                    {{ field.errors|first }}
+            <div class="{% if 'primes_fixe' in field.name %}col-12{% else %}col-md-6{% endif %}">
+                {% if 'primes_fixe' in field.name %}
+                <div class="form-check form-switch form-switch-success mt-2">
+                    {{ field }}
+                    <label class="form-check-label fw-medium ms-1" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                </div>
+                {% else %}
+                <label class="form-label fw-medium mb-1" for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+                <div class="input-group">
+                    {% if 'mois' in field.name %}
+                    <span class="input-group-text bg-light border-light text-muted"><i class="ri-calendar-todo-line"></i></span>
+                    {% elif 'annee' in field.name %}
+                    <span class="input-group-text bg-light border-light text-muted"><i class="ri-time-line"></i></span>
+                    {% elif 'jours' in field.name or 'heures' in field.name %}
+                    <span class="input-group-text bg-light border-light text-muted"><i class="ri-edit-2-line"></i></span>
+                    {% endif %}
+                    {{ field }}
                 </div>
                 {% endif %}
-                {% if field.help_text %}
-                <div class="text-muted small">
-                    {{ field.help_text }}
+
+                {% if field.errors %}
+                <div class="invalid-feedback d-block mt-1">
+                    {{ field.errors|first }}
                 </div>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="submit" class="btn btn-success">Calculer et Générer</button>
+    <div class="modal-footer bg-light p-3">
+        <button type="button" class="btn btn-ghost-danger btn-sm" data-bs-dismiss="modal">
+            <i class="ri-close-line align-bottom me-1"></i> Annuler
+        </button>
+        <button type="submit" class="btn btn-success btn-sm px-4">
+            <i class="ri-calculator-line align-bottom me-1"></i> Calculer & Générer
+        </button>
     </div>
 </form>

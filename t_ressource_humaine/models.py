@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from t_formations.models import Formateurs
+from institut_app.models import Entreprise
 
 class TypeContrat(models.TextChoices):
     CDI = 'CDI', 'Contrat à Durée Indéterminée'
@@ -8,6 +9,7 @@ class TypeContrat(models.TextChoices):
     VACATION = 'VACATION', 'Vacation (Paiement à l\'heure)'
 
 class Contrat(models.Model):
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='contrats_rh')
     formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, related_name='contrats')
     type_contrat = models.CharField(max_length=20, choices=TypeContrat.choices, default=TypeContrat.CDD)
     
@@ -38,6 +40,7 @@ class FichePaie(models.Model):
     ]
     
     contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='fiches_paie')
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='fiches_paie_rh')
     mois = models.IntegerField(choices=MOIS_CHOICES)
     annee = models.IntegerField()
     
@@ -70,7 +73,23 @@ class FichePaie(models.Model):
     
     class Meta:
         unique_together = ['contrat', 'mois', 'annee']
-        ordering = ['-annee', '-mois']
+
+class ParametresPaie(models.Model):
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='parametres_paie')
+    taux_ss = models.DecimalField(max_digits=5, decimal_places=4, default=0.09, help_text="Taux de sécurité sociale (ex: 0.09 pour 9%)")
+    jours_travailles_standard = models.IntegerField(default=22, help_text="Nombre de jours travaillés standard par mois")
+    seuil_exoneration_irg = models.DecimalField(max_digits=12, decimal_places=2, default=30000, help_text="Seuil d'exonération IRG")
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Paramètres de paie"
+        verbose_name_plural = "Paramètres de paie"
 
     def __str__(self):
-        return f"Fiche {self.mois}/{self.annee} - {self.contrat.formateur}"
+        return "Configuration de la paie"
+
+    @classmethod
+    def get_config(cls, entreprise=None):
+        config, created = cls.objects.get_or_create(entreprise=entreprise)
+        return config

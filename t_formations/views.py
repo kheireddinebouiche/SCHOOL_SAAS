@@ -10,6 +10,11 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from .import_utils import handle_uploaded_file, verify_data, import_data
 import json
+from django.core.paginator import Paginator
+from django.db.models import Q
+
+import json
+from .data.modules_data import MODULES_DATA
 
 TenantModel = get_tenant_model()
 
@@ -251,6 +256,67 @@ def update_or_create_module_in_tenant(module, specialite, institut_schema):
             return sync_module
     except IntegrityError:
         raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du module.")
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiImportModulesSpecialite(request):
+    if request.method != "POST":
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+    id_specialite = request.POST.get('id_specialite')
+    
+    try:
+        specialite = Specialites.objects.get(id=id_specialite)
+    except Specialites.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Spécialité introuvable'})
+
+    # Find matching data
+    spec_data = None
+    for item in MODULES_DATA:
+        # Match by code or label (case insensitive)
+        if (item.get('code') and item.get('code') == specialite.code) or \
+           (item.get('specialite').lower() == specialite.label.lower()):
+            spec_data = item
+            break
+    
+    if not spec_data:
+        return JsonResponse({'status': 'error', 'message': f'Aucun module par défaut trouvé pour cette spécialité: {specialite.label}'})
+
+    count_created = 0
+    count_updated = 0
+
+    for module_data in spec_data.get('modules', []):
+        code_interne = module_data.get('code_interne') or module_data.get('code')
+        designation = module_data.get('designation')
+
+        if not code_interne:
+            continue
+
+        module, created = Modules.objects.update_or_create(
+            specialite=specialite,
+            code_interne=code_interne,
+            defaults={
+                'label': designation,
+                'created_by': request.user
+            }
+        )
+        
+        # Ensure code is generated if empty
+        if created and not module.code:
+             module.save() # Triggers generate_code in save()
+
+        if created:
+            count_created += 1
+        else:
+            count_updated += 1
+
+    return JsonResponse({
+        'status': 'success', 
+        'message': f'Importation terminée: {count_created} créés, {count_updated} mis à jour.',
+        'created': count_created
+    })
+
 ######### methode de syncronisation des formations #############################################
 
 ##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
@@ -488,9 +554,9 @@ def detailSpecialite(request, pk):
 
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
-    modules = Modules.objects.filter(specialite = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider').order_by('created_at')
+    modules = Modules.objects.filter(specialite_id = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider').order_by('created_at')
 
-    specialite = Specialites.objects.get(code = id)
+    specialite = Specialites.objects.get(id = id)
 
     data  = {
        'modules' : list(modules),
@@ -525,7 +591,7 @@ def ApiAffectModuleSemestre(request):
     semestre = request.POST.get('semestre')
     id_specialite = request.POST.get('id_specialite')
     try:
-        specialite = Specialites.objects.get(code = id_specialite)
+        specialite = Specialites.objects.get(id = id_specialite)
         module = Modules.objects.get(id = id_module)
 
         repartition = ProgrammeFormation(
@@ -536,8 +602,8 @@ def ApiAffectModuleSemestre(request):
         )
         repartition.save()
         return JsonResponse({'success' : True, 'message' : "Le module a été affecté avec succès"})
-    except:
-        return JsonResponse({'success' : False, 'message' : "L'affectation du module existe déjà"})
+    except Exception as e:
+        return JsonResponse({'success' : False, 'message' : str(e)})
 
 def ApiAddModule(request):
 
@@ -547,14 +613,14 @@ def ApiAddModule(request):
     id = request.POST.get('id')
     code = request.POST.get('code_module')
 
-    specialite = Specialites.objects.get(code = id)
+    specialite = Specialites.objects.get(id = id)
     try:
         new_module = Modules.objects.create(
             label = label,
             coef = coef,
             duree = duree,
             specialite = specialite,
-            code = code,
+            code_interne = code,
             created_by = request.user,
         )
 
@@ -602,7 +668,7 @@ def ApiUpdateModule(request):
     systeme_eval = request.POST.get('systeme_eval')
 
     module = Modules.objects.get(id= id)
-    module.code = code
+    module.code_interne = code
     module.duree = duree
     module.label = label
     module.coef = coef
@@ -741,8 +807,45 @@ def PageListeModules(request):
     return render(request, 'tenant_folder/formations/modules/modules.html', {'tenant' : request.tenant})
 
 def ApiGetModules(request):
-    liste = Modules.objects.all().values('id', 'label', 'coef', 'duree', 'code','est_valider')
-    return JsonResponse(list(liste), safe=False)
+    try:
+        # Get parameters
+        page_number = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        search_query = request.GET.get('search', '')
+        
+        # Base query
+        queryset = Modules.objects.filter(is_archived=False).values(
+            'id', 'label', 'coef', 'duree', 'code', 'est_valider', 'created_at'
+        ).order_by('-created_at')
+        
+        # Apply search filter
+        if search_query:
+            queryset = queryset.filter(
+                Q(label__icontains=search_query) | 
+                Q(code__icontains=search_query)
+            )
+            
+        # Pagination
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page_number)
+        
+        data = {
+            'data': list(page_obj.object_list),
+            'pagination': {
+                'total_pages': paginator.num_pages,
+                'current_page': page_number,
+                'total_items': paginator.count,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+                'start_index': page_obj.start_index(),
+                'end_index': page_obj.end_index()
+            }
+        }
+        
+        return JsonResponse(data, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 def ApiGetModuleDetails(request):
     id = request.GET.get('id')

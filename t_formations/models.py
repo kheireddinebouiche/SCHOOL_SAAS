@@ -4,7 +4,7 @@ from institut_app.models import Entreprise
 from t_rh.models import *
 from t_crm.tenant_path import *
 from pdf_editor.models import *
-
+from django.db.models import Max
 
 class Partenaires(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -114,8 +114,9 @@ class DoubleDiplomation(models.Model):
     
 class Modules(models.Model):
    
-    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True, to_field="code")
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     code = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    code_interne = models.CharField(max_length=100, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
     
     duree = models.IntegerField(null=True, blank=True)
@@ -134,12 +135,43 @@ class Modules(models.Model):
     created_by = models.ForeignKey(User, on_delete = models.SET_NULL, blank=True, null=True, related_name="module_created_by")
     updated_by = models.ForeignKey(User, on_delete = models.SET_NULL, blank=True, null=True, related_name="module_updated_by")
     
+
     class Meta:
         verbose_name="Module"
         verbose_name_plural="Modules"
+        unique_together = ('code_interne', 'specialite')
 
     def __str__(self):
         return self.code
+    
+    # 🔹 Génération du code
+    def generate_code(self):
+        if not self.specialite:
+            return None
+
+        # Numéro de la spécialité
+        specialite_index = self.specialite.id
+
+        # Dernier numéro utilisé pour cette spécialité
+        last_code = (
+            Modules.objects
+            .filter(specialite=self.specialite, code__isnull=False)
+            .aggregate(max_code=Max('code'))
+        )['max_code']
+
+        if last_code:
+            last_number = int(last_code.split('-')[-1])
+            next_number = last_number + 1
+        else:
+            next_number = 1
+
+        return f"M-{specialite_index}-{str(next_number).zfill(3)}"
+
+    # 🔹 Override save()
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_code()
+        super().save(*args, **kwargs)
 
 class CorrepondanceModule(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
@@ -229,8 +261,8 @@ class FraisInscription(models.Model):
         return self.label
     
 class ProgrammeFormation(models.Model):
-    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True,to_field="code")
-    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True, to_field="code")
+    module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
+    specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     semestre = models.CharField(max_length=10, null=True, blank=True)
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -238,7 +270,7 @@ class ProgrammeFormation(models.Model):
     class Meta:
         verbose_name="Répartition du module"
         verbose_name_plural = "Répartition des modules"
-        unique_together = ('module','specialite','semestre')
+        unique_together = ('module', 'semestre')
 
     def __str__(self):
         return f"{self.module.label} - {self.semestre}"

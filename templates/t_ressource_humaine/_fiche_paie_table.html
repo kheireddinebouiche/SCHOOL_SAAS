@@ -1,0 +1,77 @@
+{% load humanize %}
+<table class="table table-nowrap align-middle table-hover mb-0">
+    <thead class="table-light text-muted">
+        <tr>
+            <th scope="col">Période</th>
+            {% if not filter_contrat %}<th scope="col">Formateur</th>{% endif %}
+            <th scope="col">Activité</th>
+            <th scope="col">Salaire Base</th>
+            <th scope="col">Net à Payer</th>
+            <th scope="col">Généré le</th>
+            <th scope="col" class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fiche in fiches %}
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-xs me-2">
+                        <div class="avatar-title bg-soft-info text-info rounded fs-11 fw-bold">
+                            {{ fiche.annee }}
+                        </div>
+                    </div>
+                    <span class="fw-semibold">{{ fiche.get_mois_display }}</span>
+                </div>
+            </td>
+            {% if not filter_contrat %}
+            <td>
+                <h6 class="fs-14 mb-0">{{ fiche.contrat.formateur }}</h6>
+            </td>
+            {% endif %}
+            <td>
+                <div class="text-muted">
+                    {% if fiche.contrat.type_contrat == 'VACATION' %}
+                        <i class="ri-time-line me-1 align-bottom"></i>{{ fiche.heures_travailles }} h
+                    {% else %}
+                        <i class="ri-briefcase-line me-1 align-bottom"></i>{{ fiche.jours_travailles }} j
+                    {% endif %}
+                </div>
+            </td>
+            <td>{{ fiche.salaire_base_calcule|intcomma }} <small class="text-muted">DA</small></td>
+            <td>
+                <span class="badge bg-success-subtle text-success fs-13 px-3 py-2">
+                    {{ fiche.net_a_payer|intcomma }} DA
+                </span>
+            </td>
+            <td class="text-muted fs-12">{{ fiche.generated_at|date:"d/m/Y H:i" }}</td>
+            <td class="text-end">
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport">
+                        <i class="ri-more-fill align-middle"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.id %}" target="_blank" class="dropdown-item">
+                                <i class="ri-printer-line align-bottom me-2 text-muted"></i> Imprimer
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-3">
+                    <div class="avatar-title bg-light text-muted rounded-circle fs-24">
+                        <i class="ri-file-shred-line"></i>
+                    </div>
+                </div>
+                <h5 class="text-muted">Aucune fiche de paie trouvée</h5>
+                <p class="text-muted mb-0">Les fiches de paie générées pour les formateurs apparaîtront dans cette liste.</p>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

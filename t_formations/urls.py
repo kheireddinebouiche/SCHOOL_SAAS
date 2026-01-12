@@ -43,7 +43,8 @@ urlpatterns = [
     path('details-partenaire/<int:pk>/', detailsPartenaire, name="detailsPartenaire"),
     path('supprimer-partenaire/<int:pk>/', deletePartenaire, name="deletePartenaire"),
 
-    path('apigetmodules',ApiGetSpecialiteModule, name="ApiGeSpecialitetModules"),
+    path('apigetmodulesSpecialite',ApiGetSpecialiteModule, name="ApiGeSpecialitetModules"),
+    path('ApiImportModulesSpecialite', ApiImportModulesSpecialite, name="ApiImportModulesSpecialite"),
     path('ApiGetRepartitionModule', ApiGetRepartitionModule, name="ApiGetRepartitionModule"),
     path('ApiAffectModuleSemestre', ApiAffectModuleSemestre, name="ApiAffectModuleSemestre"),
     path('ApiDeleteCoursRepartition',ApiDeleteCoursRepartition, name="ApiDeleteCoursRepartition"),

@@ -1,11 +1,20 @@
 {% extends 'tenant_folder/base.html' %}
 {% load humanize %}
-
+{% block title %}Historique des Fiches de Paie{% endblock %}
 {% block content %}
+<style>
+    /* Fix dropdown clipping in responsive tables */
+    .table-responsive {
+        overflow: visible !important;
+    }
+    .dropdown-menu {
+        z-index: 1060 !important;
+    }
+</style>
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Header -->
+            <!-- Page Header -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -20,16 +29,108 @@
                 </div>
             </div>
 
-            {% if filter_contrat %}
+            <!-- Entity Selector -->
             <div class="row mb-3">
                 <div class="col-12">
-                    <div class="alert alert-info border-0 shadow-sm mb-0">
-                        <div class="d-flex align-items-center">
-                            <i class="ri-user-line fs-3 me-2"></i>
-                            <div>
-                                <h6 class="mb-0 fw-bold">Historique pour : {{ filter_contrat.formateur }}</h6>
-                                <p class="mb-0 small">{{ filter_contrat.get_type_contrat_display }} - Début : {{ filter_contrat.date_debut }}</p>
+                    <div class="card shadow-sm border-0 border-start border-primary border-3">
+                        <div class="card-body py-3">
+                            <form action="{% url 't_ressource_humaine:select_entreprise_paie' %}" method="POST" class="row align-items-center g-3">
+                                {% csrf_token %}
+                                <div class="col-auto">
+                                    <label class="form-label mb-0 fw-bold text-primary">
+                                        <i class="ri-building-line me-1"></i> Entité Active :
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <select name="entreprise_id" class="form-select form-select-sm border-light-subtle shadow-none" onchange="this.form.submit()">
+                                        <option value="">-- Sélectionner une entreprise --</option>
+                                        <option value="none" {% if active_entreprise_id == 'none' %}selected{% endif %}>Non-affectés (Archives/Divers)</option>
+                                        {% for ent in entreprises %}
+                                            <option value="{{ ent.id }}" {% if active_entreprise_id|slugify == ent.id|slugify %}selected{% endif %}>
+                                                {{ ent.designation }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    {% if not active_entreprise_id %}
+                                        <span class="badge bg-danger-subtle text-danger animate__animated animate__pulse animate__infinite">
+                                            <i class="ri-error-warning-line me-1"></i> Veuillez sélectionner une entité pour voir l'historique
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if filter_contrat %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm bg-primary-subtle">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-md flex-shrink-0 me-3">
+                                    <div class="avatar-title bg-primary text-white rounded-circle fs-20">
+                                        <i class="ri-user-star-line"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fw-bold text-primary">Historique pour : {{ filter_contrat.formateur }}</h5>
+                                    <p class="mb-0 text-muted">
+                                        <span class="badge bg-white text-primary me-2">{{ filter_contrat.get_type_contrat_display }}</span>
+                                        Depuis le {{ filter_contrat.date_debut|date:"d M, Y" }}
+                                    </p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <a href="{% url 't_ressource_humaine:contrat_list' %}" class="btn btn-primary btn-sm">
+                                        <i class="ri-arrow-left-line align-bottom me-1"></i> Retour aux contrats
+                                    </a>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Filter Bar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <form method="GET" id="paie-filter-form" class="row g-3 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label text-muted fw-medium">Sélectionner un Enseignant</label>
+                                    <select name="formateur" class="form-select border-light-subtle">
+                                        <option value="">Tous les enseignants</option>
+                                        {% for f in formateurs %}
+                                            <option value="{{ f.id }}" {% if selected_formateur == f.id %}selected{% endif %}>
+                                                {{ f.nom }} {{ f.prenom }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted fw-medium">Année</label>
+                                    <select name="annee" class="form-select border-light-subtle">
+                                        <option value="">Toutes les années</option>
+                                        {% for year in years %}
+                                            <option value="{{ year }}" {% if selected_annee == year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="ri-filter-3-line align-bottom me-1"></i> Filtrer
+                                        </button>
+                                        <a href="{% url 't_ressource_humaine:fiche_paie_list' %}" class="btn btn-soft-secondary w-100" id="reset-filters">
+                                            <i class="ri-refresh-line align-bottom me-1"></i> Réinitialiser
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -39,64 +140,15 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card shadow-sm border-0">
+                        <div class="card-header border-bottom-dashed d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">Tous les enregistrements</h5>
+                            <div id="filter-loader" class="spinner-border spinner-border-sm text-primary d-none" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                        </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Période</th>
-                                            {% if not filter_contrat %}<th>Formateur</th>{% endif %}
-                                            <th>Jours/Heures</th>
-                                            <th>Salaire Base</th>
-                                            <th>Net à Payer</th>
-                                            <th>Date Génération</th>
-                                            <th class="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for fiche in fiches %}
-                                        <tr>
-                                            <td>
-                                                <span class="fw-bold">{{ fiche.get_mois_display }} {{ fiche.annee }}</span>
-                                            </td>
-                                            {% if not filter_contrat %}
-                                            <td>{{ fiche.contrat.formateur }}</td>
-                                            {% endif %}
-                                            <td>
-                                                {% if fiche.contrat.type_contrat == 'VACATION' %}
-                                                    {{ fiche.heures_travailles }} h
-                                                {% else %}
-                                                    {{ fiche.jours_travailles }} j
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ fiche.salaire_base_calcule|intcomma }} DA</td>
-                                            <td>
-                                                <span class="badge bg-success-subtle text-success fs-13">
-                                                    {{ fiche.net_a_payer|intcomma }} DA
-                                                </span>
-                                            </td>
-                                            <td class="text-muted">{{ fiche.generated_at|date:"d/m/Y H:i" }}</td>
-                                            <td class="text-end">
-                                                <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.id %}" target="_blank" class="btn btn-soft-primary btn-sm">
-                                                    <i class="ri-printer-line me-1"></i> Imprimer
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="7" class="text-center py-5">
-                                                <div class="avatar-lg mx-auto mb-3">
-                                                    <div class="avatar-title bg-light text-muted rounded-circle fs-24">
-                                                        <i class="ri-file-list-3-line"></i>
-                                                    </div>
-                                                </div>
-                                                <h5 class="text-muted">Aucune fiche de paie trouvée</h5>
-                                                <p class="text-muted mb-0">Les fiches de paie générées apparaîtront ici.</p>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="table-responsive table-card" id="paie-table-container">
+                                {% include 't_ressource_humaine/_fiche_paie_table.html' %}
                             </div>
                         </div>
                     </div>
@@ -105,4 +157,57 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        // Fix dropdown clipping in responsive tables
+        $(document).on('show.bs.dropdown', function(e) {
+            var dropdownMenu = $(e.target).find('.dropdown-menu');
+            if (dropdownMenu.length) {
+                dropdownMenu.css({
+                    'z-index': '1060',
+                    'position': 'absolute'
+                });
+            }
+        });
+
+        // AJAX Filtering
+        function updateTable(url) {
+            $('#filter-loader').removeClass('d-none');
+            $('#paie-table-container').css('opacity', '0.5');
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    $('#paie-table-container').html(data);
+                    $('#paie-table-container').css('opacity', '1');
+                    $('#filter-loader').addClass('d-none');
+                    
+                    // Update URL without reload
+                    window.history.pushState({}, '', url);
+                },
+                error: function() {
+                    alertify.error('Une erreur est survenue lors du filtrage.');
+                    $('#paie-table-container').css('opacity', '1');
+                    $('#filter-loader').addClass('d-none');
+                }
+            });
+        }
+
+        $('#paie-filter-form').on('submit', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('action') || window.location.pathname;
+            url += '?' + $(this).serialize();
+            updateTable(url);
+        });
+
+        $('#reset-filters').on('click', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            $('#paie-filter-form')[0].reset();
+            updateTable(url);
+        });
+    });
+</script>
 {% endblock %}

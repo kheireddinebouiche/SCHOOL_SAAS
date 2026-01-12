@@ -1,0 +1,69 @@
+{% load humanize %}
+<div class="modal-body p-4">
+    <div class="alert alert-success border-0 d-flex align-items-center mb-4" role="alert">
+        <i class="ri-checkbox-circle-line fs-24 me-3"></i>
+        <div>
+            <h6 class="alert-heading mb-1">Fiche de paie générée avec succès !</h6>
+            <p class="mb-0 text-muted">Voici le résumé pour <strong>{{ fiche.get_mois_display }} {{ fiche.annee }}</strong>.</p>
+        </div>
+    </div>
+
+    <div class="row g-4 overflow-hidden">
+        <div class="col-md-6 border-end">
+            <h6 class="text-uppercase fw-bold text-muted mb-3 fs-11">Détails Formateur</h6>
+            <div class="d-flex align-items-center mb-2">
+                <div class="avatar-xs flex-shrink-0 me-3">
+                    <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                        <i class="ri-user-follow-line"></i>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="mb-0">{{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</h6>
+                    <small class="text-muted">#{{ fiche.contrat.formateur.id|stringformat:"04d" }}</small>
+                </div>
+            </div>
+            <p class="mb-1 text-muted fs-12"><i class="ri-file-list-3-line me-1"></i> {{ fiche.contrat.get_type_contrat_display }}</p>
+            <p class="mb-0 text-muted fs-12">
+                <i class="ri-time-line me-1"></i> 
+                {% if fiche.contrat.type_contrat == 'VACATION' %}
+                    {{ fiche.heures_travailles }} Heures
+                {% else %}
+                    {{ fiche.jours_travailles }} Jours
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-6">
+            <h6 class="text-uppercase fw-bold text-muted mb-3 fs-11">Récapitulatif (DA)</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Salaire de Base</span>
+                <span class="fw-medium text-dark">{{ fiche.salaire_base_calcule|intcomma }}</span>
+            </div>
+            {% if fiche.prime_panier or fiche.prime_transport %}
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Primes (Panier/Transp)</span>
+                <span class="fw-medium text-success">+{{ fiche.prime_panier|add:fiche.prime_transport|intcomma }}</span>
+            </div>
+            {% endif %}
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Cotisation SS (9%)</span>
+                <span class="fw-medium text-danger">-{{ fiche.montant_ss|intcomma }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                <span class="text-muted">Impôt (IRG)</span>
+                <span class="fw-medium text-danger">-{{ fiche.irg|intcomma }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold fs-14">Net à Payer</span>
+                <span class="fw-bold fs-18 text-primary">{{ fiche.net_a_payer|intcomma }} DA</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-footer bg-light p-3">
+    <button type="button" class="btn btn-ghost-secondary btn-sm" data-bs-dismiss="modal">
+        <i class="ri-close-line align-bottom me-1"></i> Fermer
+    </button>
+    <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.pk %}" target="_blank" class="btn btn-soft-primary btn-sm px-4">
+        <i class="ri-printer-line align-bottom me-1"></i> Imprimer Bulletin
+    </a>
+</div>

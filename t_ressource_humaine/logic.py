@@ -1,4 +1,5 @@
 from decimal import Decimal
+from .models import ParametresPaie
 
 class PaieEngine:
     """
@@ -7,10 +8,10 @@ class PaieEngine:
     TAUX_SS = Decimal('0.09') # 9%
 
     @staticmethod
-    def calculer_irg(imposable):
+    def calculer_irg(imposable, config=None):
         """
         Calcul de l'IRG selon le barème 2022 (Loi de finances 2022)
-        Exonération totale pour salaire imposable < 30 000 DA
+        Exonération totale pour salaire imposable < Seuil configuration
         """
         imposable = Decimal(imposable)
         
@@ -54,7 +55,10 @@ class PaieEngine:
         # NOUVEAU BAREME 2024? Non 2022 :
         # Exonération pour < 30000
         
-        if imposable <= 30000:
+        if config is None:
+            config = ParametresPaie.get_config()
+            
+        if imposable <= config.seuil_exoneration_irg:
             return Decimal('0.00')
             
         # Abattement proportionnel pour 30000 < R <= 35000
@@ -86,53 +90,43 @@ class PaieEngine:
         return irg_brut.quantize(Decimal('0.01'))
 
     @staticmethod
-    def calculer_paie(contrat, jours_travailles=22, heures_travailles=0, primes_fixe=True):
+    def calculer_paie(contrat, jours_travailles=None, heures_travailles=0, primes_fixe=True):
         """
         Calcule la fiche de paie complète.
         """
+        config = ParametresPaie.get_config(entreprise=getattr(contrat, 'entreprise', None))
+        taux_ss = config.taux_ss
+        jours_std = config.jours_travailles_standard
+        
         # 1. Salaire de base
-        if contrat.type_contrat == 'VACATION':
+        # Fallback to hourly if mensalized base is 0 but hourly rate is present
+        if contrat.type_contrat == 'VACATION' or (not (contrat.salaire_base or 0) and (contrat.salaire_horaire or 0) > 0):
             # Base = Taux * Heures
             salaire_base = (contrat.salaire_horaire or 0) * Decimal(heures_travailles)
-            # Vacation often just flat tax 15%? Or standard ?
-            # Assuming standard logic for now unless 'Vacataire' implies 'Honoraires' (Stagiaires/Prestation).
-            # If standard employee logic:
         else:
             # Base mensualisée
-            # Prorata si jours < 22 ?
-            # Salaire Base Contrat est pour le mois complet usually.
-            salaire_base = contrat.salaire_base
-            if jours_travailles < 22:
-                 # Prorata temporis (Base * Jours / 22)
-                 salaire_base = (salaire_base * Decimal(jours_travailles)) / Decimal('22')
+            salaire_base = contrat.salaire_base or 0
+            if jours_travailles < jours_std:
+                 # Prorata temporis (Base * Jours / Standard)
+                 salaire_base = (salaire_base * Decimal(jours_travailles)) / Decimal(jours_std)
 
-        # 2. Primes (Transport/Panier non cotisables généralement)
-        # Mais ici on va assumer que ce sont des primes FIXES du contrat
+        # 2. Primes
         p_panier = contrat.prime_panier if primes_fixe else 0
         p_transport = contrat.prime_transport if primes_fixe else 0
         
-        # 3. Base SS (Cotisable)
-        # En général: Base + IEP + Primes Cotisables
-        # Panier/Transport sont souvent NON-COTISABLES (donc exclus de la base SS)
-        # On assume qu'il n'y a QUE salaire_base qui est cotisable.
+        # 3. Base SS
         base_ss = salaire_base 
         
         # 4. Montant SS
-        montant_ss = base_ss * PaieEngine.TAUX_SS
+        montant_ss = base_ss * taux_ss
         
         # 5. Imposable
-        # Brut = Base + Primes
-        # Imposable = Brut - SS
-        # Si Panier/Transport sont NON COTISABLES mais IMPOSABLES ? 
-        # La loi: Panier/Transport exonérés IRG/SS dans la limite de seuils.
-        # Simplification: On les considère totalement exonérés (Net direct) pour l'instant.
         salaire_imposable = base_ss - montant_ss
         
         # 6. IRG
-        irg = PaieEngine.calculer_irg(salaire_imposable)
+        irg = PaieEngine.calculer_irg(salaire_imposable, config=config)
         
         # 7. Net
-        # Net = (Imposable - IRG) + Primes Non Imposables (Panier/Transport)
         net_a_payer = (salaire_imposable - irg) + p_panier + p_transport
         
         return {

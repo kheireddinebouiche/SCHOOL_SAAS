@@ -203,6 +203,35 @@
                   <tbody id="ListItems" class="border-top-0"></tbody>
                 </table>
               </div>
+              
+              <!-- Pagination Controls -->
+              <div class="row align-items-center mt-3" id="paginationContainer" style="display: none;">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0" id="paginationInfo">Affichage de 0 à 0 sur 0 entrées</p>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-end mb-0" id="paginationLinks">
+                            <!-- Helper buttons will be inserted here -->
+                        </ul>
+                    </nav>
+                </div>
+              </div>
+              
+              <!-- Pagination Controls -->
+              <div class="row align-items-center mt-3" id="paginationContainer" style="display: none;">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0" id="paginationInfo">Affichage de 0 à 0 sur 0 entrées</p>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-end mb-0" id="paginationLinks">
+                            <!-- Helper buttons will be inserted here -->
+                        </ul>
+                    </nav>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -702,15 +731,27 @@
       }
     });
 
-    function loadItems(){
+    let currentPage = 1;
+
+    function loadItems(page = 1, searchQuery = ''){
+        $('#ListItems').html('<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>');
+        
         $.ajax({
           url : '{% url "t_formations:ApiGetModules" %}',
           dataType: "JSON",
           type: 'GET',
-          success : function(data){
+          data: {
+              page: page,
+              search: searchQuery
+          },
+          success : function(response){
+            var data = response.data;
+            var pagination = response.pagination;
             var row = "";
+            
             if (data.length === 0) {
               row += "<tr><td colspan='6' class='text-center text-muted'>Aucun module trouvé</td></tr>";
+              $('#paginationContainer').hide();
             }else{
               $.each(data, function(index, item){
                 row += "<tr class='align-middle'>";
@@ -746,31 +787,104 @@
                 row += "</tr>";
             });
             
+            // Render Pagination
+            renderPagination(pagination);
+            $('#paginationContainer').show();
+            
           }
 
           $("#ListItems").html(row);
           
-          // Update KPIs
-          updateKPIs(data);
+          // Update KPIs based on total items if available
+          if (pagination) {
+              $('#totalModules').text(pagination.total_items);
+              // Use total items for "Active" as placeholder since we filter active only in backend currently
+              $('#modulesActifs').text(pagination.total_items); 
+          }
         }
       });
     }
     
     function updateKPIs(data) {
-      // Total modules
-      $('#totalModules').text(data.length);
-      
-      // Count by status (assuming default to active for now)
-      let actifs = data.length;
-      let inactifs = 0;
-      let enAttente = 0;
-      
-      // In a real implementation, you would check item.status property
-      // For now, setting placeholders
-      $('#modulesActifs').text(actifs);
-      $('#modulesInactifs').text(inactifs);
-      $('#enAttenteCount').text(enAttente);
+        // Total modules
+        $('#totalModules').text(data.length);
+        
+        // Count by status (assuming default to active for now)
+        let actifs = data.length;
+        let inactifs = 0;
+        let enAttente = 0;
+        
+        // In a real implementation, you would check item.status property
+        // For now, setting placeholders
+        $('#modulesActifs').text(actifs);
+        $('#modulesInactifs').text(inactifs);
+        $('#enAttenteCount').text(enAttente);
     }
+    
+    function renderPagination(pagination) {
+        var html = '';
+        var totalPages = pagination.total_pages;
+        var currentPage = pagination.current_page;
+        
+        // Info text
+        if (pagination.total_items > 0) {
+            $('#paginationInfo').text(`Affichage de ${pagination.start_index} à ${pagination.end_index} sur ${pagination.total_items} entrées`);
+        } else {
+            $('#paginationInfo').text('Aucune entrée');
+        }
+
+        // Previous button
+        html += `<li class="page-item ${!pagination.has_previous ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}" tabindex="-1">Précédent</a>
+                 </li>`;
+
+        // Page numbers logic (simplified range)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                     </li>`;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+        }
+
+        // Next button
+        html += `<li class="page-item ${!pagination.has_next ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">Suivant</a>
+                 </li>`;
+
+        $('#paginationLinks').html(html);
+    }
+
+    // Event listener for pagination clicks
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        var page = $(this).data('page');
+        if (page && !$(this).parent().hasClass('disabled')) {
+            currentPage = page;
+            loadItems(currentPage, $('#table-filter').val());
+        }
+    });
+
+    // Search input handler with debounce
+    let searchTimeout;
+    $('#table-filter').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            currentPage = 1; // Reset to first page
+            loadItems(currentPage, $('#table-filter').val());
+        }, 500);
+    });
 
     loadItems();
 

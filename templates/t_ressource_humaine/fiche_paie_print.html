@@ -3,121 +3,242 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Fiche de Paie - {{ fiche.mois }}/{{ fiche.annee }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulletin de Paie - {{ fiche.get_mois_display }} {{ fiche.annee }}</title>
+    <!-- Use a modern font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; }
-        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #000; padding: 20px; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
-        .info-table td { padding: 5px; }
-        .paie-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .paie-table th, .paie-table td { border: 1px solid #000; padding: 8px; text-align: right; }
-        .paie-table th { background-color: #f0f0f0; text-align: center; }
-        .paie-table td.label { text-align: left; }
-        .footer { margin-top: 30px; text-align: center; font-size: 10px; }
+        :root {
+            --primary-color: #0ab39c;
+            --text-dark: #212529;
+            --text-muted: #878a99;
+            --border-color: #e9ebec;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            font-size: 13px; 
+            color: var(--text-dark);
+            background-color: #f3f3f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(56, 65, 74, 0.15);
+            padding: 40px;
+            border-radius: 8px;
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+            margin-bottom: 40px; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 20px; 
+        }
+        .school-info h3 { margin: 0 0 10px 0; color: var(--primary-color); text-transform: uppercase; letter-spacing: 1px; }
+        .school-info p { margin: 2px 0; color: var(--text-muted); line-height: 1.4; }
+        .bulletin-title { text-align: right; }
+        .bulletin-title h2 { margin: 0; font-size: 24px; font-weight: 700; color: var(--text-dark); }
+        .bulletin-title p { margin: 5px 0 0 0; font-size: 15px; color: var(--primary-color); font-weight: 600; }
+
+        .info-grid { 
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+        .info-value { font-size: 14px; font-weight: 600; }
+
+        .paie-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .paie-table th { 
+            background-color: #f3f6f9; 
+            padding: 12px 15px; 
+            text-align: left; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            font-size: 11px; 
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .paie-table td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); }
+        .paie-table td.text-end { text-align: right; }
+        .paie-table .fw-bold { font-weight: 600; }
+        
+        .total-box { 
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .total-label { font-size: 14px; text-transform: uppercase; font-weight: 600; }
+        .total-amount { font-size: 20px; font-weight: 700; }
+
+        .signatures { margin-top: 60px; display: flex; justify-content: space-between; padding: 0 20px; }
+        .signature-box { text-align: center; border-top: 1px dashed var(--text-muted); width: 200px; padding-top: 10px; color: var(--text-muted); font-size: 11px; }
+
+        .no-print { 
+            max-width: 800px; 
+            margin: 0 auto 20px auto; 
+            display: flex; 
+            gap: 10px; 
+        }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .btn-print { background-color: var(--primary-color); color: white; }
+        .btn-back { background-color: var(--text-dark); color: white; }
+
         @media print {
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
             .no-print { display: none; }
-            .container { border: none; }
+            .total-box { background-color: #eee !important; color: black !important; border: 1px solid #000; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print" style="margin-bottom: 20px;">
-        <button onclick="window.print()">Imprimer</button>
-        <button onclick="history.back()">Retour</button>
+    <div class="no-print">
+        <a href="javascript:void(0)" onclick="window.print()" class="btn btn-print">
+            <i class="ri-printer-line"></i> Imprimer
+        </a>
+        <a href="javascript:history.back()" class="btn btn-back">
+            <i class="ri-arrow-left-line"></i> Retour
+        </a>
     </div>
     
     <div class="container">
         <div class="header">
-            <div>
-                <h3>ÉCOLE DE FORMATION</h3>
-                <p>Adresse...<br>Matricule Fiscal...</p>
+            <div class="school-info">
+                <h3>SALDAE ÉDUCATION</h3>
+                <p>Centre de Formation Professionnelle</p>
+                <p>NIF: 000106090123456 | RC: 06/00-1234567B21</p>
+                <p>Tél: +213 (0) 34 12 34 56</p>
             </div>
-            <div style="text-align: right;">
+            <div class="bulletin-title">
                 <h2>BULLETIN DE PAIE</h2>
-                <p>Période : <strong>{{ fiche.get_mois_display }} {{ fiche.annee }}</strong></p>
+                <p>{{ fiche.get_mois_display }} {{ fiche.annee }}</p>
             </div>
         </div>
         
-        <table class="info-table">
-            <tr>
-                <td><strong>Matricule :</strong> {{ fiche.contrat.formateur.id }}</td>
-                <td><strong>Nom & Prénom :</strong> {{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</td>
-            </tr>
-            <tr>
-                <td><strong>Fonction :</strong> Formateur</td>
-                <td><strong>Mode de paiement :</strong> Virement / Chèque</td>
-            </tr>
-            <tr>
-                <td><strong>Jours travaillés :</strong> {{ fiche.jours_travailles }}</td>
-                <td><strong>Heures travaillées :</strong> {{ fiche.heures_travailles }}</td>
-            </tr>
-        </table>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Employé / Formateur</span>
+                <span class="info-value">{{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Type de Contrat</span>
+                <span class="info-value">{{ fiche.contrat.get_type_contrat_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ID Formateur</span>
+                <span class="info-value">#{{ fiche.contrat.formateur.id|stringformat:"04d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Activité du Mois</span>
+                <span class="info-value">
+                    {% if fiche.contrat.type_contrat == 'VACATION' %}
+                        {{ fiche.heures_travailles }} Heures
+                    {% else %}
+                        {{ fiche.jours_travailles }} Jours
+                    {% endif %}
+                </span>
+            </div>
+        </div>
         
         <table class="paie-table">
             <thead>
                 <tr>
-                    <th>Rubriques</th>
-                    <th>Base / Taux</th>
-                    <th>Gains (Revenus)</th>
-                    <th>Retenues</th>
+                    <th>Désignation des Rubriques</th>
+                    <th class="text-end">Base / Taux</th>
+                    <th class="text-end">Gains (+)</th>
+                    <th class="text-end">Retenues (-)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="label">Salaire de Base</td>
-                    <td></td>
-                    <td>{{ fiche.salaire_base_calcule|intcomma }}</td>
-                    <td></td>
+                    <td class="fw-bold">Salaire de Base</td>
+                    <td class="text-end">
+                        {% if fiche.contrat.type_contrat == 'VACATION' %}
+                            {{ fiche.contrat.salaire_horaire|intcomma }} /h
+                        {% else %}
+                            {{ fiche.contrat.salaire_base|intcomma }} /m
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ fiche.salaire_base_calcule|intcomma }}</td>
+                    <td class="text-end"></td>
                 </tr>
                 {% if fiche.prime_panier %}
                 <tr>
-                    <td class="label">Indemnité Panier</td>
-                    <td></td>
-                    <td>{{ fiche.prime_panier|intcomma }}</td>
-                    <td></td>
+                    <td>Indemnité de Panier</td>
+                    <td class="text-end"></td>
+                    <td class="text-end">{{ fiche.prime_panier|intcomma }}</td>
+                    <td class="text-end"></td>
                 </tr>
                 {% endif %}
                 {% if fiche.prime_transport %}
                 <tr>
-                    <td class="label">Indemnité Transport</td>
-                    <td></td>
-                    <td>{{ fiche.prime_transport|intcomma }}</td>
-                    <td></td>
+                    <td>Indemnité de Transport</td>
+                    <td class="text-end"></td>
+                    <td class="text-end">{{ fiche.prime_transport|intcomma }}</td>
+                    <td class="text-end"></td>
                 </tr>
                 {% endif %}
                 
-                <!-- Sous-total Brut -->
-                
                 <tr>
-                    <td class="label">Sécurité Sociale (9%)</td>
-                    <td>{{ fiche.base_ss|intcomma }}</td>
-                    <td></td>
-                    <td>{{ fiche.montant_ss|intcomma }}</td>
+                    <td>Cotisation Sécurité Sociale</td>
+                    <td class="text-end">9.00%</td>
+                    <td class="text-end"></td>
+                    <td class="text-end">{{ fiche.montant_ss|intcomma }}</td>
                 </tr>
                 
                 <tr>
-                    <td class="label">IRG (Sur {{ fiche.salaire_imposable|intcomma }})</td>
-                    <td></td>
-                    <td></td>
-                    <td>{{ fiche.irg|intcomma }}</td>
-                </tr>
-                
-                <tr style="font-weight: bold; background-color: #f9f9f9;">
-                    <td class="label">TOTAL</td>
-                    <td></td>
-                    <td>{{ fiche.net_a_payer|add:fiche.montant_ss|add:fiche.irg|intcomma }}</td> <!-- Approx Brut Global -->
-                    <td>{{ fiche.montant_ss|add:fiche.irg|intcomma }}</td>
+                    <td>Impôt sur le Revenu (IRG)</td>
+                    <td class="text-end">Barème</td>
+                    <td class="text-end"></td>
+                    <td class="text-end">{{ fiche.irg|intcomma }}</td>
                 </tr>
             </tbody>
         </table>
         
-        <div style="border: 2px solid #000; padding: 10px; text-align: right; font-size: 16px;">
-            <strong>NET À PAYER : {{ fiche.net_a_payer|intcomma }} DA</strong>
+        <div class="total-box">
+            <span class="total-label">Net à Payer (Versé)</span>
+            <span class="total-amount">{{ fiche.net_a_payer|intcomma }} DA</span>
         </div>
         
-        <div style="margin-top: 50px;">
-            <p>Signature de l'Employeur</p>
+        <p style="margin-top: 15px; font-style: italic; color: var(--text-muted); font-size: 11px;">
+            Arrêté le présent bulletin de paie à la somme de : <strong>{{ fiche.net_a_payer|intcomma }} Dinars Algériens.</strong>
+        </p>
+        
+        <div class="signatures">
+            <div class="signature-box">Signature de l'Employé</div>
+            <div class="signature-box">Cachet et Signature de l'École</div>
+        </div>
+        
+        <div style="margin-top: 60px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <p style="font-size: 10px; color: var(--text-muted); margin: 0;">Fiche de paie générée automatiquement par SCHOOL_SAAS le {{ fiche.generated_at|date:"d/m/Y à H:i" }}</p>
         </div>
     </div>
 </body>
