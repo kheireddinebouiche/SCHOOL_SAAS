@@ -280,7 +280,6 @@ class Caisse(models.Model):
     pass
 
 
-
 class Depenses(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     fournisseur = models.ForeignKey(Fournisseur, null=True, blank=True, on_delete=models.CASCADE)
@@ -351,7 +350,6 @@ class DepensesCategory(models.Model):
     def __str__(self):
         return self.name
    
-
 class PaymentCategory(models.Model):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey(

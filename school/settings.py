@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import environ
 import os
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -167,11 +168,15 @@ TENANT_DOMAIN_MODEL = "app.Domaine"  # Modèle Domain
 
 
 
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'FR-fr'
+
+LANGUAGES = [('fr', _('French')), ('en', _('English'))]
+
+TIME_ZONE = 'GMT'
+
 USE_I18N = True
+
 USE_TZ = True
-LANGUAGE_CODE = 'fr'
-USE_L10N = True
 
 
 
