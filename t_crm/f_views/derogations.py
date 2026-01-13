@@ -8,9 +8,14 @@ from datetime import datetime
 from ..models import *
 from django.db import transaction
 from django.utils.dateformat import format
+from institut_app.decorators import *
 
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('crm','view')
+@module_permission_required('crm','add')
+@module_permission_required('crm','approuv')
+@role_required('crm', ['Administrateur','Superviseur'])
 def liste_derogations(request):
    
     context = {

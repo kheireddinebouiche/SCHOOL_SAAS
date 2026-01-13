@@ -412,8 +412,185 @@ MODULES_DATA = [
       { "code": "420-P33-SH", "designation": "Sécurité, qualité et déploiement" },
       { "code": "420-P34-SH", "designation": "Stage d'intégration en entreprise" }
     ]
-  }
+  },
+  {
+    "specialite": "Secrétariat Bureautique",
+    "code_specialite": "TAG 0709",
+    "niveau": "IV (BT)",
+    "description": "Gestion administrative, traitement de texte et outils bureautiques.",
+    "modules": [
+      { "code": "MQ01-S1", "designation": "Traitement de texte Word" },
+      { "code": "MQ06-S1", "designation": "Classement" },
+      { "code": "MQ07-S1", "designation": "Communication" },
+      { "code": "MC02-S1", "designation": "Français" },
+      { "code": "MC03-S1", "designation": "Arabe" },
 
+      { "code": "MQ01-S2", "designation": "Traitement de texte Word" },
+      { "code": "MQ02-S2", "designation": "Excel" },
+      { "code": "MQ08-S2", "designation": "Rédaction de correspondances administratives et commerciales" },
+      { "code": "MC01-S2", "designation": "Anglais" },
+      { "code": "MC07-S2", "designation": "Documents commerciaux" },
+
+      { "code": "MQ02-S3", "designation": "Excel" },
+      { "code": "MQ03-S3", "designation": "PowerPoint" },
+      { "code": "MQ04-S3", "designation": "Publisher" },
+      { "code": "MC04-S3", "designation": "Statistiques" },
+      { "code": "MC05-S3", "designation": "Mathématiques commerciales et financières" },
+      { "code": "MC08-S3", "designation": "Comptabilité" },
+
+      { "code": "MQ05-S4", "designation": "MS. Outlook" },
+      { "code": "MC06-S4", "designation": "Législation du travail" },
+      { "code": "STAGE-S4", "designation": "Stage pratique" }
+    ]
+  },
+
+  {
+    "specialite": "Comptabilité",
+    "code_specialite": "TAG 0710",
+    "niveau": "IV (BT)",
+    "description": "Tenue de comptes, travaux d'inventaire et fiscalité de base.",
+    "modules": [
+      { "code": "MQ1-S1", "designation": "Gestion comptable des opérations commerciales" },
+      { "code": "MC1-S1", "designation": "Informatique" },
+      { "code": "MC2-S1", "designation": "Economie générale" },
+      { "code": "MC5-S1", "designation": "Mathématiques générales" },
+      { "code": "MC8-S1", "designation": "Documents commerciaux" },
+      { "code": "MC9-S1", "designation": "Techniques d’expression française" },
+
+      { "code": "MQ2-S2", "designation": "Comptabilisation des salaires" },
+      { "code": "MQ3-S2", "designation": "Gestion des immobilisations" },
+      { "code": "MQ4-S2", "designation": "Gestion de la trésorerie" },
+      { "code": "MC3-S2", "designation": "Organisation et gestion d’entreprises" },
+      { "code": "MC6-S2", "designation": "Statistiques descriptives" },
+      { "code": "MC7-S2", "designation": "Mathématiques financières" },
+
+      { "code": "MQ5-S3", "designation": "Travaux de fin d’exercice" },
+      { "code": "MQ6-S3", "designation": "Elaboration des états financiers" },
+      { "code": "MQ9-S3", "designation": "Concepts et traitements des charges" },
+      { "code": "MQ10-S3", "designation": "Calcul des couts par les différentes méthodes" },
+      { "code": "MC4-S3", "designation": "Environnement juridique" },
+      { "code": "MC10-S3", "designation": "Anglais commercial" },
+
+      { "code": "MQ7-S4", "designation": "Fiscalité de l’entreprise" },
+      { "code": "MQ8-S4", "designation": "Analyse des états financiers" },
+      { "code": "MQ11-S4", "designation": "Gestion budgétaire" },
+      { "code": "MQ12-S4", "designation": "Comptabilité des sociétés" }
+    ]
+  },
+
+  {
+    "specialite": "Banque",
+    "code_specialite": "TAG 0723",
+    "niveau": "IV (BT)",
+    "description": "Opérations de guichet, produits bancaires et initiation au crédit.",
+    "modules": [
+      { "code": "MQ1-S1", "designation": "Accueillir la clientèle" },
+      { "code": "MQ2-S1", "designation": "Réalisation des opérations de dépôt" },
+      { "code": "MC1-S1", "designation": "Techniques d’expression et de communication" },
+      { "code": "MC3-S1", "designation": "Mathématiques générales" },
+      { "code": "MC5-S1", "designation": "Economie générale" },
+
+      { "code": "MQ3-S2", "designation": "Réalisation des opérations de paiement de fonds" },
+      { "code": "MQ4-S2", "designation": "Réalisation des opérations de virement" },
+      { "code": "MC2-S2", "designation": "Comptabilité générale" },
+      { "code": "MC4-S2", "designation": "Droit commercial et civil" },
+      { "code": "MC7-S2", "designation": "Economie Monétaire, financière et bancaire" },
+
+      { "code": "MQ5-S3", "designation": "Encaissement des effets de commerce et des chèques" },
+      { "code": "MQ6-S3", "designation": "Escompte des effets de commerce et des chèques" },
+      { "code": "MQ7-S3", "designation": "Exécution des opérations liées à l’achat ou à la vente de valeurs" },
+      { "code": "MQ8-S3", "designation": "Achat de la devise" },
+
+      { "code": "MQ9-S4", "designation": "Vente de la devise" },
+      { "code": "MQ10-S4", "designation": "Participation à la gestion des opérations du commerce extérieur" },
+      { "code": "MC6-S4", "designation": "Législation" },
+      { "code": "MC10-S4", "designation": "Anglais" }
+    ]
+  },
+
+  {
+    "specialite": "Achat et Approvisionnement",
+    "code_specialite": "TAG 1203",
+    "niveau": "IV (BT)",
+    "description": "Techniques d'achat, négociation fournisseurs et gestion des stocks.",
+    "modules": [
+      { "code": "MC1-S1", "designation": "Informatique" },
+      { "code": "MC2-S1", "designation": "Statistique descriptives" },
+      { "code": "MC9-S1", "designation": "Arithmétiques commerciales" },
+      { "code": "MC10-S1", "designation": "Communication" },
+
+      { "code": "MQ1-S2", "designation": "Etude de marché" },
+      { "code": "MQ2-S2", "designation": "Négociation des achats" },
+      { "code": "MC3-S2", "designation": "Environnement économique" },
+      { "code": "MC5-S2", "designation": "Documents commerciaux" },
+      { "code": "MC7-S2", "designation": "Techniques d’expression (français)" },
+
+      { "code": "MQ3-S3", "designation": "Prévisions des achats" },
+      { "code": "MQ4-S3", "designation": "Gestion des stocks" },
+      { "code": "MC4-S3", "designation": "Gestion budgétaire" },
+      { "code": "MC6-S3", "designation": "Correspondance commerciale" },
+      { "code": "MC8-S3", "designation": "Environnement juridique" },
+
+      { "code": "MQ5-S4", "designation": "Planification des achats" },
+      { "code": "MQ6-S4", "designation": "Interprétation comptable et financière des documents d’achat" },
+      { "code": "MQ7-S4", "designation": "Mise en place d’un plan d’action" },
+      { "code": "MC11-S4", "designation": "Anglais commercial" }
+    ]
+  },
+
+  {
+    "specialite": "Gestion des Stocks",
+    "code_specialite": "TAG 1206",
+    "niveau": "IV (BT)",
+    "description": "Organisation des magasins, inventaire et suivi des flux.",
+    "modules": [
+      { "code": "MQ1-S1", "designation": "Collection des informations" },
+      { "code": "MQ2-S1", "designation": "Participation à l'élaboration des études commerciales" },
+      { "code": "MQ3-S1", "designation": "Identification des besoins en produit ou matières" },
+
+      { "code": "MQ4-S2", "designation": "Établissement et suivi des commandes" },
+      { "code": "MQ5-S2", "designation": "Le Suivi et le contrôle des stocks" },
+      { "code": "MQ1-S2", "designation": "Collection des informations (Suite)" },
+      { "code": "MQ3-S2", "designation": "Identification des besoins (Suite)" },
+
+      { "code": "MQ6-S3", "designation": "Enregistrement et contrôle des approvisionnements" },
+      { "code": "MQ7-S3", "designation": "Le suivi des approvisionnements" },
+      { "code": "MQ2-S3", "designation": "Participation à l'élaboration des études commerciales (Suite)" },
+
+      { "code": "STAGE-S4", "designation": "Stage pratique en entreprise" }
+    ]
+  },
+
+  {
+    "specialite": "Agent en documentation et Archives",
+    "code_specialite": "TAG 0708",
+    "niveau": "IV (BT)",
+    "description": "Classement, archivage et gestion de l'information documentaire.",
+    "modules": [
+      { "code": "MQ1-S1", "designation": "Introduction aux systèmes d’information documentaire" },
+      { "code": "MQ2-S1", "designation": "Typologie des documents" },
+      { "code": "MQ3-S1", "designation": "Traitement des documents" },
+      { "code": "MC2-S1", "designation": "Informatique documentaire" },
+      { "code": "MC4-S1", "designation": "Techniques d’expression (Français)" },
+      { "code": "MC6-S1", "designation": "Anglais technique" },
+
+      { "code": "MQ4-S2", "designation": "Accueil et Orientation du Public" },
+      { "code": "MQ5-S2", "designation": "Recherche documentaire" },
+      { "code": "MQ6-S2", "designation": "Communication et prêt des documents" },
+      { "code": "MC1-S2", "designation": "Statistiques descriptives" },
+      { "code": "MC3-S2", "designation": "Techniques d’expression (Arabe)" },
+
+      { "code": "MQ7-S3", "designation": "Conservation des documents" },
+      { "code": "MQ8-S3", "designation": "Animation culturelle" },
+      { "code": "MQ9-S3", "designation": "Techniques d’archivage" },
+      { "code": "MC5-S3", "designation": "Terminologie documentaire et archivistique" },
+
+      { "code": "MQ7-S4", "designation": "Conservation des documents (Suite)" },
+      { "code": "MQ8-S4", "designation": "Animation culturelle (Suite)" },
+      { "code": "MQ9-S4", "designation": "Techniques d’archivage (Suite)" },
+      { "code": "MC4-S4", "designation": "Techniques d’expression (Français) - Approfondissement" }
+    ]
+  }
 
 
 

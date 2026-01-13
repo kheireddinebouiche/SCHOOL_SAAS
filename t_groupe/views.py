@@ -73,7 +73,7 @@ def ApiCreateGroupe(request):
         Groupe.objects.create(
             nom = id_numero_groupe,
             annee_scolaire = _annee_scolaire,
-            promotion = Promos.objects.get(code=id_promotion),
+            promotion = Promos.objects.get(id=id_promotion),
             num_groupe = id_numero_libre,
             min_student = min_student,
             max_student = max_student,
@@ -83,8 +83,8 @@ def ApiCreateGroupe(request):
         )
         messages.success(request,"Le groupe a été créé avec succès")
         return JsonResponse({"status":"success"})
-    except:
-        return JsonResponse({"status":"error",'message':"Une erreur s'est produite lors du traitement"})
+    except Exception as e:
+        return JsonResponse({"status":"error",'message':str(e)})
 
     
 

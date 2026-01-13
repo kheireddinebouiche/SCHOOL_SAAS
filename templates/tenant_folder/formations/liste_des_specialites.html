@@ -115,47 +115,89 @@
               </div>
             </div>
             <div class="card-body p-3" id="cardContentBody">
-              <div class="table-responsive" style="overflow-x: visible;">
-                <table id="example" class="table table-hover align-middle mb-0">
-                  <thead class="bg-light">
-                    <tr>
-                      <th class="border-0 rounded-start"># Code</th>
-                      <th class="border-0">Nom de la spécialité</th>
-                      <th class="border-0">Version</th>
-                      <th class="border-0">Formation</th>
-                      <th class="border-0">Partenaire</th>
-                      <th class="border-0">Frais d'inscription</th>
-                    </tr>
-                  </thead>
-                  <tbody id="listeItem">
-                    {% if liste.count != 0 %}
-                      {% for i in liste %}
-                        <tr> 
-                          <td><b><a href="{% url 't_formations:detailSpecialite' pk=i.id %}">{{i.code}}</a></b></td>
-                          <td><b><a href="{% url 't_formations:detailSpecialite' pk=i.id %}">{{i.label}}</a></b></td>
-                          <td>{{i.version}}</td>
-                          <td>{{i.formation.nom}}</td>
-                          <td class="text-center">{% if not i.formation.partenaire %} -- {% else %} {{i.formation.partenaire}}{% endif %}</td>
-                          <td>{{i.prix}} DZD</td>
-                        
-                        </tr>
-                      {% endfor %}
-                    {% else %}
-                      <tr><td colspan="6" class="text-muted text-center">
-                        <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                            <div class="avatar-sm mb-4">
-                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                    <i class="ri-file-line"></i>
-                                </div>
-                            </div>
-                            <h5 class="mb-2">Aucune spécialité trouvée</h5>
-                            <p class="text-muted mb-0">Il n'y a aucune spécialité enregistrée pour le moment</p>
-                        </div>
-                      </td></tr>
-                    {% endif %}
-                  </tbody>
-                </table>
+              {% regroup liste by formation as grouped_specialites %}
+              
+              {% if grouped_specialites %}
+              <div class="accordion" id="specialitesAccordion">
+                  {% for formation_group in grouped_specialites %}
+                  <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+                      <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                          <button class="accordion-button collapsed fw-semibold text-dark bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+                              <div class="d-flex align-items-center w-100">
+                                  <div class="avatar-xs me-3">
+                                      <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center">
+                                          <i class="ri-book-mark-line"></i>
+                                      </div>
+                                  </div>
+                                  <div class="flex-grow-1">
+                                      <span class="fs-15">{{ formation_group.grouper.nom }}</span>
+                                      <span class="text-muted ms-2 fs-12 fw-normal">
+                                          {% if formation_group.grouper.partenaire %}({{ formation_group.grouper.partenaire }}){% endif %}
+                                      </span>
+                                  </div>
+                                  <div class="me-4 text-muted fs-13">
+                                      <span class="badge bg-light text-dark border">{{ formation_group.list|length }} Spécialité(s)</span>
+                                  </div>
+                              </div>
+                          </button>
+                      </h2>
+                      <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#specialitesAccordion">
+                          <div class="accordion-body bg-light bg-opacity-10 border-top p-0">
+                              <div class="table-responsive">
+                                  <table class="table table-hover align-middle mb-0">
+                                      <thead class="bg-light">
+                                          <tr>
+                                              <th class="border-0 ps-4">Code</th>
+                                              <th class="border-0">Nom de la spécialité</th>
+                                              <th class="border-0">Version</th>
+                                              <th class="border-0">Frais d'inscription</th>
+                                              <th class="border-0 text-end pe-4">Actions</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          {% for item in formation_group.list %}
+                                          <tr>
+                                              <td class="ps-4">
+                                                  <a href="{% url 't_formations:detailSpecialite' pk=item.id %}" class="fw-medium text-primary">{{ item.code }}</a>
+                                              </td>
+                                              <td>
+                                                  <div class="d-flex align-items-center">
+                                                      <div class="avatar-xs me-2">
+                                                          <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-16 d-flex align-items-center justify-content-center">
+                                                              <i class="ri-file-list-line"></i>
+                                                          </div>
+                                                      </div>
+                                                      <a href="{% url 't_formations:detailSpecialite' pk=item.id %}" class="text-dark">{{ item.label }}</a>
+                                                  </div>
+                                              </td>
+                                              <td><span class="badge bg-info text-white">{{ item.version }}</span></td>
+                                              <td class="fw-medium">{{ item.prix }} DZD</td>
+                                              <td class="text-end pe-4">
+                                                  <a href="{% url 't_formations:detailSpecialite' pk=item.id %}" class="btn btn-sm btn-soft-info">
+                                                      <i class="ri-eye-line align-middle"></i>
+                                                  </a>
+                                              </td>
+                                          </tr>
+                                          {% endfor %}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  {% endfor %}
               </div>
+              {% else %}
+              <div class="text-center py-5">
+                  <div class="avatar-sm mb-4 mx-auto">
+                      <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                          <i class="ri-file-search-line"></i>
+                      </div>
+                  </div>
+                  <h5 class="mb-2">Aucune spécialité trouvée</h5>
+                  <p class="text-muted mb-0">Il n'y a aucune spécialité enregistrée pour le moment</p>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>

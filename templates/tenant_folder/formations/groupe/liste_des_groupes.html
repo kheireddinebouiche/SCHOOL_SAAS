@@ -448,21 +448,20 @@
           var id = $row.data("id");   // 👈 ICI l'ID
           
           var cells = $row.find('td');
-          if (cells.length > 0) {
+
+          // Check if it's a valid data row (has ID and sufficient cells)
+          if (id && cells.length > 1) {
               var nom = cells.eq(0).text().trim();
-              if (nom !== 'Aucun groupe trouvé') {
-
-                  templateData.push({
-                      id: id,  // 👈 on stocke ici
-                      nom: nom,
-                      start_date: cells.eq(1).text().trim(),
-                      end_date: cells.eq(2).text().trim(),
-                      specialite: cells.eq(3).text().trim(),
-                      annee_scolaire: cells.eq(4).text().trim(),
-                      etat: cells.eq(5).find('span').text().trim()
-                  });
-
-              }
+              
+              templateData.push({
+                  id: id,
+                  nom: nom,
+                  start_date: cells.eq(1).text().trim(),
+                  end_date: cells.eq(2).text().trim(),
+                  specialite: cells.eq(3).text().trim(),
+                  annee_scolaire: cells.eq(4).text().trim(),
+                  etat: cells.eq(5).find('span').text().trim()
+              });
           }
       });
       
@@ -529,8 +528,19 @@
       var gridCards = "";
 
       if (data.length === 0) {
-        tableRows += "<tr><td colspan='7' class='text-center text-muted'>Aucun groupe trouvé</td></tr>";
-        gridCards = '<div class="col-12"><div class="text-center py-5"><div class="avatar-lg mx-auto mb-4"><div class="avatar-title bg-light text-muted rounded-circle fs-1"><i class="ri-group-2-line"></i></div></div><h5 class="mb-2">Aucun groupe trouvé</h5><p class="text-muted mb-0">Essayez de modifier vos filtres</p></div></div>';
+        var emptyContent = `
+            <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                <div class="avatar-sm mb-4">
+                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                        <i class="ri-group-2-line"></i>
+                    </div>
+                </div>
+                <h5 class="mb-2">Aucun groupe trouvé</h5>
+                <p class="text-muted mb-0">Il n'y a aucun groupe enregistré pour le moment</p>
+            </div>
+        `;
+        tableRows += "<tr><td colspan='7' class='text-center'>" + emptyContent + "</td></tr>";
+        gridCards = '<div class="col-12">' + emptyContent + '</div>';
       } else {
         $.each(data, function(index, item) {
           // --- Table Row Rendering ---
