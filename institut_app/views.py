@@ -23,6 +23,9 @@ from django.utils import timezone
 from django_otp.decorators import otp_required
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum
+from t_tresorerie.models import DuePaiements, Paiements, Depenses
+import calendar
+from django.db.models.functions import TruncMonth
 
 
 @login_required(login_url='institut_app:login')
@@ -201,8 +204,115 @@ def rh_dashboard(request):
 def default_dashboard(request):
     pass
 
+@login_required(login_url="institut_app:login")
 def FinanceDashboard(request):
-    return render(request, 'tenant_folder/dashboard/finance_dash.html')
+    # 1. Unpaid Dues by Promo
+    # Try fetching promo from the echeancier model if direct promo is null
+    unpaid_dues_by_promo = DuePaiements.objects.filter(is_done=False).values('ref_echeancier__model__promo__label').annotate(
+        promo_label=models.F('ref_echeancier__model__promo__label'),
+        total_amount=Sum('montant_restant')
+    ).order_by('-total_amount')
+
+    # Calculate total unpaid
+    total_unpaid = DuePaiements.objects.filter(is_done=False).aggregate(Sum('montant_restant'))['montant_restant__sum'] or 0
+
+    # 2. Monthly Financial Analysis (Revenue vs Expenses)
+    # Get last 6 months
+    today = datetime.now()
+    monthly_stats = []
+    
+    for i in range(6):
+        month_date = today - timedelta(days=i*30) # approx
+        month_start = datetime(month_date.year, month_date.month, 1)
+        # End of month
+        next_month = month_start + timedelta(days=32)
+        month_end = datetime(next_month.year, next_month.month, 1) - timedelta(days=1)
+        
+        # Revenue: Sum of Paiements in this month
+        revenue = Paiements.objects.filter(
+            date_paiement__gte=month_start, 
+            date_paiement__lte=month_end
+        ).aggregate(Sum('montant_paye'))['montant_paye__sum'] or 0
+        
+        # Expenses: Sum of Depenses in this month
+        expenses = Depenses.objects.filter(
+            date_paiement__gte=month_start,
+            date_paiement__lte=month_end
+        ).aggregate(Sum('montant_ttc'))['montant_ttc__sum'] or 0
+        
+        profit = revenue - expenses
+        margin = (profit / revenue * 100) if revenue > 0 else 0
+        
+        monthly_stats.append({
+            'period': month_start.strftime('%B %Y'),
+            'revenue': revenue,
+            'expenses': expenses,
+            'profit': profit,
+            'margin': margin,
+            'is_positive': profit >= 0
+        })
+
+    # 3. Full Payment Situation (History)
+    # Aggregate Paiements by Year-Month
+    payment_qs = Paiements.objects.annotate(
+        month=TruncMonth('date_paiement')
+    ).values('month').annotate(
+        total_revenue=Sum('montant_paye'),
+        count=Count('id')
+    ).order_by('-month')
+
+    # Aggregate Depenses by Year-Month
+    expense_qs = Depenses.objects.annotate(
+        month=TruncMonth('date_paiement')
+    ).values('month').annotate(
+        total_expense=Sum('montant_ttc')
+    ).order_by('-month')
+    
+    # Merge data
+    history_map = {}
+    
+    for p in payment_qs:
+        m = p['month']
+        if m: # filter out None dates if any
+            key = m.strftime('%Y-%m')
+            history_map[key] = {
+                'date': m,
+                'revenue': p['total_revenue'] or 0,
+                'count': p['count'],
+                'expense': 0
+            }
+            
+    for e in expense_qs:
+        m = e['month']
+        if m:
+            key = m.strftime('%Y-%m')
+            if key not in history_map:
+                history_map[key] = {
+                    'date': m,
+                    'revenue': 0,
+                    'count': 0,
+                    'expense': 0
+                }
+            history_map[key]['expense'] = e['total_expense'] or 0
+    
+    # Convert to list and calculate result
+    payment_history = []
+    for key, val in history_map.items():
+        val['result'] = val['revenue'] - val['expense']
+        val['is_positive'] = val['result'] >= 0
+        payment_history.append(val)
+        
+    # Sort by date descending
+    payment_history.sort(key=lambda x: x['date'], reverse=True)
+
+    context = {
+        'tenant': request.tenant,
+        'unpaid_dues_by_promo': unpaid_dues_by_promo,
+        'total_unpaid': total_unpaid,
+        'monthly_stats': monthly_stats,
+        'payment_history': payment_history,
+    }
+    return render(request, 'tenant_folder/dashboard/finance_dash.html', context)
 
 @login_required(login_url="institut_app:login")
 def pedago_dashboard(request):
@@ -284,21 +394,57 @@ def pedago_dashboard(request):
 
 @login_required(login_url="institut_app:login")
 def ApiFinanceKPIs(request):
-    total_due_payments = DuePaiements.objects.filter(is_done=False).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
-
-    echeance_passer = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
-    liste_echeance_echue = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).select_related('client').order_by('date_echeance').values('id','client__nom','client__prenom','montant_due','date_echeance','label')
+    # 1. Total Collected (Revenue)
+    total_collected = Paiements.objects.aggregate(Sum('montant_paye'))['montant_paye__sum'] or 0
     
+    # 2. Total Remaining Due (for collection rate calculation)
+    total_remaining = DuePaiements.objects.filter(is_done=False).aggregate(Sum('montant_restant'))['montant_restant__sum'] or 0
+    
+    # 3. Collection Rate
+    total_potential = total_collected + total_remaining
+    collection_rate = (total_collected / total_potential * 100) if total_potential > 0 else 0
+    
+    # 4. Overdue Amount
+    overdue_amount = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
+    lists_overdue = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).select_related('client').order_by('date_echeance').values('id','client__nom','client__prenom','montant_due','date_echeance','label')
+    
+    # 5. Upcoming Deadlines (Next 30 days)
+    upcoming_start = datetime.now()
+    upcoming_end = upcoming_start + timedelta(days=30)
+    upcoming_deadlines_count = DuePaiements.objects.filter(
+        is_done=False, 
+        date_echeance__gte=upcoming_start,
+        date_echeance__lte=upcoming_end
+    ).count()
+    
+    # 6. Today's payments (Due today)
     echeance_du_jours = (DuePaiements.objects.filter(is_done=False, date_echeance = datetime.now())
                         .select_related('client')
                         .order_by('date_echeance')
                         .values('id','client__nom','client__prenom','montant_due','date_echeance','label'))
 
+    # 7. Pending Amount (Total outstanding)
+    pending_amount = total_remaining
+
+    # 8. Upcoming Deadlines List (Next 30 days details)
+    liste_echeance_avenir = (DuePaiements.objects.filter(
+        is_done=False, 
+        date_echeance__gt=datetime.now(),
+        date_echeance__lte=upcoming_end
+    ).select_related('client')
+    .order_by('date_echeance')
+    .values('id','client__nom','client__prenom','montant_due','date_echeance','label'))
+
     data = {
-        'total_due_payments': total_due_payments,
-        'echeance_passer': echeance_passer,
-        'liste_echeance_echue': list(liste_echeance_echue),
+        'total_collected': total_collected,
+        'collection_rate': round(collection_rate, 2),
+        'upcoming_deadlines_count': upcoming_deadlines_count,
+        'echeance_passer': overdue_amount, # keeping key for compatibility or updating front-end
+        'overdue_amount': overdue_amount,
+        'liste_echeance_echue': list(lists_overdue),
         'echeance_du_jours' : list(echeance_du_jours),
+        'liste_echeance_avenir': list(liste_echeance_avenir),
+        'pending_amount': pending_amount,
     }
     return JsonResponse(data)
 

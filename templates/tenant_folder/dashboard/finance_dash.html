@@ -4,704 +4,527 @@
 
 {% block content %}
 <style>
-    /* Update badge styles with low opacity but visible text */
-    .badge.bg-success {
-        background-color: rgba(40, 167, 69, 0.2) !important;
-        color: #28a745 !important;
-        font-weight: 500 !important;
+    :root {
+        --finance-primary: #4361ee;
+        --finance-secondary: #3f37c9;
+        --finance-accent: #4895ef;
+        --finance-success: #4cc9f0;
+        --finance-warning: #f72585;
     }
     
-    .badge.bg-warning {
-        background-color: rgba(255, 193, 7, 0.2) !important;
-        color: #ffc107 !important;
-        font-weight: 500 !important;
+    .finance-card {
+        border-radius: 16px;
+        border: none;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
     }
     
-    .badge.bg-primary {
-        background-color: rgba(59, 125, 221, 0.2) !important;
-        color: #3b7ddd !important;
-        font-weight: 500 !important;
+    .finance-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
     
-    .badge.bg-danger {
-        background-color: rgba(220, 53, 69, 0.2) !important;
-        color: #dc3545 !important;
-        font-weight: 500 !important;
+    .card-gradient-1 { background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%); color: white; }
+    .card-gradient-2 { background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%); color: white; }
+    .card-gradient-3 { background: linear-gradient(135deg, #f72585 0%, #b5179e 100%); color: white; }
+    .card-gradient-4 { background: linear-gradient(135deg, #480ca8 0%, #560bad 100%); color: white; }
+    
+    .finance-icon {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
     }
     
-    .badge.bg-info {
-        background-color: rgba(23, 162, 184, 0.2) !important;
-        color: #17a2b8 !important;
-        font-weight: 500 !important;
+    .table-modern {
+        border-collapse: separate;
+        border-spacing: 0 8px;
     }
     
-    /* Card styling */
-    .table th {
-        font-weight: 600;
-        background-color: #f8f9fa;
+    .table-modern tbody tr {
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: transform 0.2s;
+        border-radius: 8px;
     }
     
-    .table td {
-        vertical-align: middle;
+    .table-modern tbody tr:hover {
+        transform: scale(1.005);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
     
-    /* Dashboard specific styles */
-    .upcoming-deadlines .table-responsive {
-        max-height: 400px;
-        overflow-y: auto;
+    .table-modern td {
+        border: none;
+        padding: 16px 20px;
     }
     
-    .deadline-status {
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.875rem;
+    .table-modern td:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+    
+    .table-modern td:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
         font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
     
-    .status-overdue {
-        background-color: rgba(220, 53, 69, 0.1);
-        color: #dc3545;
-    }
+    .status-upcoming { background: rgba(67, 97, 238, 0.1); color: #4361ee; }
+    .status-today { background: rgba(247, 37, 133, 0.1); color: #f72585; }
     
-    .status-upcoming {
-        background-color: rgba(40, 167, 69, 0.1);
-        color: #28a745;
+    .chart-container {
+        position: relative;
+        height: 350px;
+        border-radius: 16px;
+        background: white;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
     }
-    
-    .status-due-soon {
-        background-color: rgba(255, 193, 7, 0.1);
-        color: #ffc107;
+
+    /* Scrollbar invisible but functional */
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
     }
-    
-    .progress {
-        height: 8px;
-    }
-    
-    .progress-bar {
-        background-color: #3b7ddd;
-    }
-    
-    /* Prevent horizontal scrolling */
-    .main-content {
-        overflow-x: hidden;
-    }
-    
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    /* Set max width for tables to prevent overflow */
-    .table {
-        max-width: 100%;
-        table-layout: auto;
-    }
-    
-    /* Specific fix for small screens */
-    @media (max-width: 768px) {
-        .table th,
-        .table td {
-            white-space: nowrap;
-            font-size: 0.85rem;
-        }
-        
-        .table th:nth-child(1),
-        .table td:nth-child(1) {
-            min-width: 100px;
-        }
-        
-        .table th:nth-child(2),
-        .table td:nth-child(2) {
-            min-width: 80px;
-        }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #e9ecef;
+        border-radius: 3px;
     }
 </style>
 
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid">
+        <div class="container-fluid user-select-none">
 
-            <!-- start page title -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Tableau de bord financier</h4>
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="fs-24 fw-bold text-dark mb-1">Aperçu Financier</h4>
+                        <p class="text-muted mb-0">Suivi des paiements, recouvrements et projections</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light shadow-sm"><i class="ri-calendar-line me-2"></i>Ce mois</button>
+                        <button class="btn btn-primary shadow-sm"><i class="ri-download-line me-2"></i>Rapport</button>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="page-title-right">
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="javascript: void(0);">Finance</a></li>
-                                <li class="breadcrumb-item active">Tableau de bord</li>
-                            </ol>
+            <!-- KPI Cards -->
+            <div class="row g-4 mb-4">
+                <!-- Total Collected -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card finance-card card-gradient-1 h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div>
+                                    <p class="mb-1 opacity-75 fw-medium">Revenus Encaissés</p>
+                                    <h3 class="fw-bold mb-0 text-white"><span id="totalPayments">--</span></h3>
+                                </div>
+                                <div class="finance-icon">
+                                    <i class="ri-wallet-3-line fs-24 text-white"></i>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center opacity-75">
+                                <i class="ri-arrow-up-circle-line me-1"></i>
+                                <span class="small">Mis à jour à l'instant</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collection Rate -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card finance-card card-gradient-2 h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div>
+                                    <p class="mb-1 opacity-75 fw-medium">Taux de Recouvrement</p>
+                                    <h3 class="fw-bold mb-0 text-white"><span id="collectionRate">--</span></h3>
+                                </div>
+                                <div class="finance-icon">
+                                    <i class="ri-pie-chart-line fs-24 text-white"></i>
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 6px; background: rgba(255,255,255,0.2);">
+                                <div class="progress-bar bg-white" id="collectionProgressBar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Due Today -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card finance-card card-gradient-3 h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div>
+                                    <p class="mb-1 opacity-75 fw-medium">À Encaisser Aujourd'hui</p>
+                                    <h3 class="fw-bold mb-0 text-white"><span id="todayDueAmount">--</span></h3>
+                                </div>
+                                <div class="finance-icon">
+                                    <i class="ri-alarm-warning-line fs-24 text-white"></i>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="badge bg-white text-danger bg-opacity-25"><span id="todayDueCount">0</span> paiements</span>
+                                <a href="#today-section" class="text-white small text-decoration-underline">Voir liste</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overdue -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card finance-card card-gradient-4 h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div>
+                                    <p class="mb-1 opacity-75 fw-medium">Impayés / Retard</p>
+                                    <h3 class="fw-bold mb-0 text-white"><span id="overdueAmount">--</span></h3>
+                                </div>
+                                <div class="finance-icon">
+                                    <i class="ri-error-warning-line fs-24 text-white"></i>
+                                </div>
+                            </div>
+                             <div class="d-flex align-items-center opacity-75">
+                                <i class="ri-history-line me-1"></i>
+                                <span class="small">Action requise</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- end page title -->
 
-            <!-- Overview Row - KPIs -->
-            <div class="row">
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Total Paiements</p>
-                                </div>
-                                <div class="flex-shrink-0">
-                                    <h5 class="text-success fs-14 mb-0">
-                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +12.34 %
-                                    </h5>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-end justify-content-between mt-4">
-                                <div>
-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="totalPayments">0 DA</span></h4>
-                                    <a href="#" class="text-decoration-underline">Voir détails</a>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-primary-subtle rounded fs-3">
-                                        <i class="ri-money-dollar-circle-line text-primary"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div><!-- end card body -->
-                    </div><!-- end card -->
-                </div><!-- end col -->
-
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Paiements en retard</p>
-                                </div>
-                                <div class="flex-shrink-0">
-                                    <h5 class="text-danger fs-14 mb-0">
-                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +5.21 %
-                                    </h5>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-end justify-content-between mt-4">
-                                <div>
-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="overdueAmount">0 DA</span></h4>
-                                    <a href="#" class="text-decoration-underline" id="viewOverdueDetailsBtn">Voir détails</a>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-danger-subtle rounded fs-3">
-                                        <i class="ri-time-line text-danger"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div><!-- end card body -->
-                    </div><!-- end card -->
-                </div><!-- end col -->
-
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Échéances à venir</p>
-                                </div>
-                                <div class="flex-shrink-0">
-                                    <h5 class="text-success fs-14 mb-0">
-                                        <i class="ri-arrow-down-line fs-13 align-middle"></i> -2.45 %
-                                    </h5>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-end justify-content-between mt-4">
-                                <div>
-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="upcomingDeadlinesCount">0</span></h4>
-                                    <a href="#" class="text-decoration-underline">Voir détails</a>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-warning-subtle rounded fs-3">
-                                        <i class="ri-calendar-2-line text-warning"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div><!-- end card body -->
-                    </div><!-- end card -->
-                </div><!-- end col -->
-
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Taux de recouvrement</p>
-                                </div>
-                                <div class="flex-shrink-0">
-                                    <h5 class="text-success fs-14 mb-0">
-                                        <i class="ri-arrow-up-line fs-13 align-middle"></i> +3.67 %
-                                    </h5>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-end justify-content-between mt-4">
-                                <div>
-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span id="collectionRate">0%</span></h4>
-                                    <a href="#" class="text-decoration-underline">Voir détails</a>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-info-subtle rounded fs-3">
-                                        <i class="ri-chart-line text-info"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div><!-- end card body -->
-                    </div><!-- end card -->
-                </div><!-- end col -->
-            </div> <!-- end row -->
-
-            <!-- Main Content Row -->
-            <div class="row">
-                <!-- Left Column - Upcoming Deadlines -->
+            <!-- Charts & Analysis -->
+            <div class="row mb-5">
                 <div class="col-xl-8">
-                    <!-- Upcoming Deadlines Section -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Échéances à Venir</h4>
-                            <div class="flex-shrink-0">
-                                <button type="button" class="btn btn-soft-info btn-sm" id="refreshDashboard">
-                                    <i class="ri-refresh-line align-middle"></i> Actualiser
-                                </button>
-                                <button type="button" class="btn btn-soft-primary btn-sm ms-2">
-                                    + Nouveau
-                                </button>
-                            </div>
-                        </div><!-- end card header -->
-
-                        <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 500px;">
-                                    <thead class="text-muted table-light">
-                                        <tr>
-                                            <th scope="col">Client</th>
-                                            <th scope="col">Facture</th>
-                                            <th scope="col">Montant</th>
-                                            <th scope="col">Date d'échéance</th>
-                                            <th scope="col">Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="deadlinesTableBody">
-                                        <!-- Demo data will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-3 text-center">
-                                <a href="javascript:void(0);" class="text-muted text-decoration-underline">Voir tous les paiements</a>
-                            </div>
-                        </div><!-- end cardbody -->
-                    </div><!-- end card -->
-                    
-                    <!-- Additional financial metrics section -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Analyse Financière</h4>
-                            <div class="flex-shrink-0">
-                                <div class="dropdown card-header-dropdown">
-                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Date<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end">
-                                        <a class="dropdown-item" href="#">Date</a>
-                                        <a class="dropdown-item" href="#">Montant</a>
-                                        <a class="dropdown-item" href="#">Client</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- end card header -->
-
-                        <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 500px;">
-                                    <thead class="text-muted table-light">
-                                        <tr>
-                                            <th scope="col">Période</th>
-                                            <th scope="col">Revenus</th>
-                                            <th scope="col">Dépenses</th>
-                                            <th scope="col">Bénéfice</th>
-                                            <th scope="col">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td><h6 class="mb-0">Ce mois</h6></td>
-                                            <td>245,300 DA</td>
-                                            <td>185,200 DA</td>
-                                            <td><span class="badge bg-success">+60,100 DA</span></td>
-                                            <td><span class="text-success">24.5%</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td><h6 class="mb-0">Mois dernier</h6></td>
-                                            <td>220,150 DA</td>
-                                            <td>175,800 DA</td>
-                                            <td><span class="badge bg-success">+44,350 DA</span></td>
-                                            <td><span class="text-success">20.1%</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td><h6 class="mb-0">Moyenne</h6></td>
-                                            <td>210,450 DA</td>
-                                            <td>180,300 DA</td>
-                                            <td><span class="badge bg-success">+30,150 DA</span></td>
-                                            <td><span class="text-success">14.3%</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Daily Collection Status Section -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Situation de Recouvrement du Jour</h4>
-                            <div class="flex-shrink-0">
-                                <h5 class="text-muted mb-0" id="currentDate"></h5>
-                            </div>
+                    <div class="card shadow-none h-100">
+                        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold text-dark mb-0">Analyse Mensuelle (Revenus vs Dépenses)</h5>
+                            <button class="btn btn-sm btn-soft-primary rounded-pill">Détails <i class="ri-arrow-right-line ms-1"></i></button>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-centered table-nowrap mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Client</th>
-                                            <th>Type</th>
-                                            <th>Montant</th>
-                                            <th>Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dailyPaymentsTableBody">
-                                        <!-- Daily payments will be loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div id="noDailyPayments" class="text-center py-4" style="display: none;">
-                                <i class="ri-check-double-line ri-2x text-success mb-3"></i>
-                                <h5>Aucun paiement prévu</h5>
-                                <p class="text-muted">Aucun paiement enregistré pour aujourd'hui</p>
-                            </div>
+                            <div id="revenueChart" style="height: 350px;"></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Right Column - Financial Distribution and Metrics -->
                 <div class="col-xl-4">
-                    <!-- Répartition des paiements par statut -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Répartition par Statut</h4>
-                            <div class="flex-shrink-0">
-                                <div class="dropdown card-header-dropdown">
-                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Volume<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end">
-                                        <a class="dropdown-item" href="#">Volume</a>
-                                        <a class="dropdown-item" href="#">Montant</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- end card header -->
-
-                        <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 300px;">
-                                    <thead class="text-muted table-light">
-                                        <tr>
-                                            <th scope="col">Statut</th>
-                                            <th scope="col">Volume</th>
-                                            <th scope="col">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td><h6 class="mb-0">Payé</h6></td>
-                                            <td>145</td>
-                                            <td>65%</td>
-                                        </tr>
-                                        <tr>
-                                            <td><h6 class="mb-0">En attente</h6></td>
-                                            <td>45</td>
-                                            <td>20%</td>
-                                        </tr>
-                                        <tr>
-                                            <td><h6 class="mb-0">En retard</h6></td>
-                                            <td>35</td>
-                                            <td>15%</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="card shadow-none h-100">
+                         <div class="card-header bg-transparent border-0">
+                            <h5 class="fw-bold text-dark mb-0">Reste à Recouvrer par Promo</h5>
                         </div>
-                    </div>
-
-                    <!-- Répartition par méthode de paiement -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Répartition par Méthode</h4>
-                            <div class="flex-shrink-0">
-                                <div class="dropdown card-header-dropdown">
-                                    <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <span class="fw-semibold text-uppercase fs-12">Trier par: </span><span class="text-muted">Montant<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end">
-                                        <a class="dropdown-item" href="#">Montant</a>
-                                        <a class="dropdown-item" href="#">Volume</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- end card header -->
-
-                        <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0" style="min-width: 300px;">
-                                    <thead class="text-muted table-light">
+                        <div class="card-body px-0">
+                            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                <table class="table table-borderless align-middle mb-0">
+                                    <thead class="bg-light text-muted">
                                         <tr>
-                                            <th scope="col">Méthode</th>
-                                            <th scope="col">Volume</th>
-                                            <th scope="col">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-shrink-0 me-2">
-                                                        <div class="avatar-xs">
-                                                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-6">
-                                                                <i class="ri-bank-card-line"></i>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">Carte</h6>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>98</td>
-                                            <td>44%</td>
-                                        </tr>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-shrink-0 me-2">
-                                                        <div class="avatar-xs">
-                                                            <span class="avatar-title bg-info-subtle text-info rounded-circle fs-6">
-                                                                <i class="ri-bank-line"></i>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">Virement</h6>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>72</td>
-                                            <td>32%</td>
-                                        </tr>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-shrink-0 me-2">
-                                                        <div class="avatar-xs">
-                                                            <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-6">
-                                                                <i class="ri-cash-line"></i>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">Espèces</h6>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>55</td>
-                                            <td>24%</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Progress Section -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Progression Financière</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Taux de recouvrement</span>
-                                <span class="fw-bold" id="collectionRate">0%</span>
-                            </div>
-                            <div class="progress mb-4" style="height: 8px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="collectionProgressBar"></div>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Paiements en cours</span>
-                                <span class="fw-bold" id="pendingAmount">0 DA</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="pendingProgressBar"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Unpaid Dues by Promo Section -->
-                    <div class="card">
-                        <div class="card-header align-items-center d-flex">
-                            <h4 class="card-title mb-0 flex-grow-1">Échéances Non Recouvrées par Promo</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-centered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Promo</th>
-                                            <th>Montant</th>
+                                            <th class="ps-4">Promo</th>
+                                            <th class="text-end pe-4">Reste Dû</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for item in unpaid_dues_by_promo %}
                                         <tr>
-                                            <td>{{ item.promo_label }}</td>
-                                            <td class="fw-medium">{{ item.total_amount|floatformat:2|floatformat:"g" }} DA</td>
+                                            <td class="ps-4 fw-medium">{{ item.promo_label }}</td>
+                                            <td class="text-end pe-4 text-danger fw-bold">{{ item.total_amount|floatformat:2|floatformat:"g" }} DA</td>
                                         </tr>
                                         {% empty %}
-                                        <tr>
-                                            <td colspan="2" class="text-center text-muted">Aucune donnée disponible</td>
-                                        </tr>
+                                        <tr><td colspan="2" class="text-center text-muted py-4">Tout est à jour !</td></tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
-                            </div>
-                            <div class="mt-3 pt-2 border-top">
-                                <h6 class="mb-1">Total Non Recouvré</h6>
-                                <h4 class="text-danger mb-0">{{ total_unpaid|floatformat:2|floatformat:"g" }} DA</h4>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Payment Situation History -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-none">
+                         <div class="card-header bg-transparent border-0">
+                            <h5 class="fw-bold text-dark mb-0">Situation Mensuelle des Paiements</h5>
+                        </div>
+                        <div class="card-body">
+                             <div class="table-responsive">
+                                <table class="table table-modern w-100">
+                                    <thead>
+                                        <tr class="text-muted text-uppercase fs-12">
+                                            <th style="border:none;">Année</th>
+                                            <th style="border:none;">Mois</th>
+                                            <th style="border:none;">Nb Transactions</th>
+                                            <th style="border:none;">Total Encaissé</th>
+                                            <th style="border:none;">Total Dépenses</th>
+                                            <th style="border:none;">Résultat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in payment_history %}
+                                        <tr>
+                                            <td class="fw-medium">{{ row.date|date:"Y" }}</td>
+                                            <td class="text-capitalize">{{ row.date|date:"F" }}</td>
+                                            <td><span class="badge bg-light text-dark">{{ row.count }}</span></td>
+                                            <td class="fw-bold text-success">{{ row.revenue|floatformat:0|floatformat:"g" }} DA</td>
+                                            <td class="fw-bold text-danger">{{ row.expense|floatformat:0|floatformat:"g" }} DA</td>
+                                            <td>
+                                                <span class="badge {% if row.is_positive %}bg-soft-success text-success{% else %}bg-soft-danger text-danger{% endif %} rounded-pill px-3">
+                                                    {{ row.result|floatformat:0|floatformat:"g" }} DA
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">Aucun historique disponible</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEADLINES LISTS -->
+            <div class="row g-4">
+                
+                <!-- Today's Deadlines -->
+                <div class="col-lg-6" id="today-section">
+                    <div class="d-flex align-items-center mb-3">
+                         <div class="finance-icon bg-danger-subtle text-danger me-3" style="width: 40px; height: 40px;">
+                            <i class="ri-calendar-check-line fs-20"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">Échéances du Jour</h5>
+                            <small class="text-muted">Paiements attendus aujourd'hui</small>
+                        </div>
+                         <span class="badge bg-danger ms-auto rounded-pill px-3" id="todayCountBadge">0</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-modern w-100">
+                             <thead>
+                                <tr class="text-muted text-uppercase fs-12">
+                                    <th style="border:none;">Étudiant</th>
+                                    <th style="border:none;">Motif</th>
+                                    <th style="border:none;">Montant</th>
+                                    <th style="border:none;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyPaymentsTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                        <div id="noDailyPayments" class="text-center py-5 bg-white rounded-3 shadow-sm" style="display:none;">
+                            <i class="ri-checkbox-circle-line ri-3x text-success opacity-50 mb-2"></i>
+                            <p class="text-muted fw-medium mb-0">Aucun paiement pour aujourd'hui</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Deadlines -->
+                <div class="col-lg-6">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="finance-icon bg-primary-subtle text-primary me-3" style="width: 40px; height: 40px;">
+                            <i class="ri-calendar-event-line fs-20"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">Prochaines Échéances</h5>
+                            <small class="text-muted">30 prochains jours</small>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-link ms-auto">Voir tout</a>
+                    </div>
+
+                    <div class="table-responsive">
+                         <table class="table table-modern w-100">
+                             <thead>
+                                <tr class="text-muted text-uppercase fs-12">
+                                    <th style="border:none;">Date</th>
+                                    <th style="border:none;">Étudiant</th>
+                                    <th style="border:none;">Montant</th>
+                                    <th style="border:none;">Jours restants</th>
+                                </tr>
+                            </thead>
+                            <tbody id="upcomingPaymentsTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                         <div id="noUpcomingPayments" class="text-center py-5 bg-white rounded-3 shadow-sm" style="display:none;">
+                            <i class="ri-calendar-line ri-3x text-muted opacity-50 mb-2"></i>
+                            <p class="text-muted fw-medium mb-0">Aucune échéance à venir</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-        <!-- container-fluid -->
     </div>
-    <!-- End Page-content -->
 </div>
 
-<!-- Modal for overdue payments -->
-<div class="modal fade" id="overduePaymentsModal" tabindex="-1" aria-labelledby="overduePaymentsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="overduePaymentsModalLabel">Paiements en Retard</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-centered table-nowrap mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Étudiant</th>
-                                <th>Type de paiement</th>
-                                <th>Montant</th>
-                                <th>Date d'échéance</th>
-                            </tr>
-                        </thead>
-                        <tbody id="overduePaymentsTableBody">
-                            <!-- Overdue payments will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="noOverduePayments" class="text-center py-4" style="display: none;">
-                    <i class="ri-check-double-line ri-2x text-success mb-3"></i>
-                    <h5>Aucun paiement en retard</h5>
-                    <p class="text-muted">Tous les paiements sont à jour</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 <script>
     $(document).ready(function(){
-        var liste_overdue = [];
-        let today = new Date().toLocaleDateString();
-       
+        
+        // --- 1. Load Data ---
         function loadKpiData(){
             $.ajax({
                 url : "{% url 'institut_app:ApiFinanceKPIs' %}",
                 dataType: "JSON",
                 type : 'GET',
                 success : function(data){
-                    $('#overdueAmount').text(data.echeance_passer+' DA');
-                    liste_overdue = data.liste_echeance_echue;
                     
-                    // Update daily collection status with the same data
-                    var dailyPayments = data.echeance_du_jours || [];
-                    var tableBody = $('#dailyPaymentsTableBody');
-                    tableBody.empty(); // Clear existing data
+                    // Formatters
+                    const dzFormat = new Intl.NumberFormat('fr-DZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     
-                    if (dailyPayments.length > 0) {
-                        // Show the table and hide the "no payments" message
+                    // --- KPIs ---
+                    $('#totalPayments').text(dzFormat.format(data.total_collected) + ' DA');
+                    $('#collectionRate').text(data.collection_rate + '%');
+                    $('#collectionProgressBar').css('width', data.collection_rate + '%');
+                    
+                    $('#overdueAmount').text(dzFormat.format(data.overdue_amount) + ' DA');
+                    
+                    // --- Today's Deadlines ---
+                    const daily = data.echeance_du_jours || [];
+                    const todayTotal = daily.reduce((sum, item) => sum + parseFloat(item.montant_due || 0), 0);
+                    
+                    $('#todayDueAmount').text(dzFormat.format(todayTotal) + ' DA');
+                    $('#todayDueCount').text(daily.length);
+                    $('#todayCountBadge').text(daily.length);
+                    
+                    const dailyBody = $('#dailyPaymentsTableBody');
+                    dailyBody.empty();
+                    
+                    if (daily.length > 0) {
                         $('#noDailyPayments').hide();
-                        tableBody.show();
-                        
-                        // Populate the table with daily payments
-                        $.each(dailyPayments, function(index, payment) {
-                            var row = $('<tr>');
-                            row.append($('<td>').text(payment.client__nom + ' ' + payment.client__prenom));
-                            row.append($('<td>').text(payment.label));
-                            row.append($('<td>').text(payment.montant_due + ' DA'));
-                            row.append($('<td>').html('<span class="badge bg-warning">En Attente</span>'));
-                            tableBody.append(row);
+                        daily.forEach(item => {
+                            dailyBody.append(`
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs me-2">
+                                                <span class="avatar-title rounded-circle bg-primary-subtle text-primary text-uppercase">
+                                                    ${item.client__nom.charAt(0)}${item.client__prenom.charAt(0)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fs-14">${item.client__nom} ${item.client__prenom}</h6>
+                                                <small class="text-muted">ID: ${item.id}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border">${item.label || 'Échéance'}</span></td>
+                                    <td class="fw-bold text-dark">${dzFormat.format(item.montant_due)} DA</td>
+                                    <td><button class="btn btn-sm btn-soft-success rounded-pill px-3">Encaisser</button></td>
+                                </tr>
+                            `);
                         });
                     } else {
-                        // Show the "no payments" message and hide the table
                         $('#noDailyPayments').show();
-                        tableBody.hide();
+                    }
+
+                    // --- Upcoming Deadlines ---
+                    const upcoming = data.liste_echeance_avenir || [];
+                    const upcomingBody = $('#upcomingPaymentsTableBody');
+                    upcomingBody.empty();
+
+                    if (upcoming.length > 0) {
+                        $('#noUpcomingPayments').hide();
+                        upcoming.forEach(item => {
+                            // Calculate days remaining
+                            const today = new Date();
+                            const due = new Date(item.date_echeance);
+                            const diffTime = Math.abs(due - today);
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                            
+                            upcomingBody.append(`
+                                <tr>
+                                    <td><i class="ri-calendar-line text-muted me-1"></i> ${new Date(item.date_echeance).toLocaleDateString()}</td>
+                                    <td>
+                                        <div class="fw-medium text-dark">${item.client__nom} ${item.client__prenom}</div>
+                                        <small class="text-muted">${item.label || ''}</small>
+                                    </td>
+                                    <td class="fw-bold">${dzFormat.format(item.montant_due)} DA</td>
+                                    <td><span class="badge bg-soft-primary text-primary">J-${diffDays}</span></td>
+                                </tr>
+                            `);
+                        });
+                    } else {
+                        $('#noUpcomingPayments').show();
                     }
                 }
             });
         }
 
-
         loadKpiData();
-
-
-        $(document).on('click', '#viewOverdueDetailsBtn', function(){
-            var modalBody = $('#overduePaymentsTableBody');
-            modalBody.empty(); // Clear previous data
-
-            if (liste_overdue.length > 0) {
-                // Populate the table with overdue payments
-                $.each(liste_overdue, function(index, payment) {
-                    var row = $('<tr>');
-                    row.append($('<td>').text(payment.client__nom + ' ' + payment.client__prenom));
-                    row.append($('<td>').text(payment.label));
-                    row.append($('<td>').text(payment.montant_due + ' DA'));
-                    row.append($('<td>').text(payment.date_echeance));
-                    modalBody.append(row);
-                });
-            } else {
-               
-                modalBody.append($('<tr>').append($('<td colspan="6" class="text-center text-muted">Aucune donnée disponible</td>')));
-            }
-
-            $('#overduePaymentsModal').modal('show');
-        });
-
         
+        // --- 2. Chart Initialization ---
+        // (Assuming you passed monthly_stats from view as JSON or loop)
+        // For dynamic charts, we'd normally pass data via json_script. 
+        // Here I'll mock init with data from context if available, else static for demo structure
+        var options = {
+          series: [{
+            name: 'Revenus',
+            data: [{% for stat in monthly_stats %}{{ stat.revenue }},{% endfor %}]
+          }, {
+            name: 'Dépenses',
+            data: [{% for stat in monthly_stats %}{{ stat.expenses }},{% endfor %}]
+          }],
+          chart: {
+            height: 350,
+            type: 'area',
+            toolbar: { show: false },
+            fontFamily: 'inherit'
+          },
+          dataLabels: { enabled: false },
+          stroke: { curve: 'smooth', width: 2 },
+          xaxis: {
+            categories: [{% for stat in monthly_stats %}'{{ stat.period }}',{% endfor %}]
+          },
+          colors: ['#4361ee', '#f72585'],
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shadeIntensity: 1,
+              opacityFrom: 0.7,
+              opacityTo: 0.2,
+              stops: [0, 90, 100]
+            }
+          },
+          grid: {
+            borderColor: '#f1f1f1',
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val + " DA"
+              }
+            }
+          }
+        };
 
-        // Load KPI data when page loads (this also updates daily collection status)
+        // Only render if we have data
+        if(document.querySelector("#revenueChart")) {
+            var chart = new ApexCharts(document.querySelector("#revenueChart"), options);
+            chart.render();
+        }
+
     });
 </script>
 
-         
 {% endblock content %}
