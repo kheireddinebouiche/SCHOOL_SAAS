@@ -289,6 +289,8 @@ def ApiImportModulesSpecialite(request):
     for module_data in spec_data.get('modules', []):
         code_interne = module_data.get('code_interne') or module_data.get('code')
         designation = module_data.get('designation')
+        coef = module_data.get('coef')
+        duree= module_data.get('duree')
 
         if not code_interne:
             continue
@@ -298,6 +300,8 @@ def ApiImportModulesSpecialite(request):
             code_interne=code_interne,
             defaults={
                 'label': designation,
+                'coef' : coef,
+                'duree' : duree,
                 'created_by': request.user
             }
         )

@@ -63,7 +63,7 @@ def ApiFilterModules(request):
     if request.method == "GET":
         specialite = request.GET.get('id')
 
-        liste_module = Modules.objects.filter(specialite__code = specialite).values('id','code','label')
+        liste_module = Modules.objects.filter(specialite_id = specialite).values('id','code','label')
         return JsonResponse(list(liste_module), safe=False)
 
     else:
