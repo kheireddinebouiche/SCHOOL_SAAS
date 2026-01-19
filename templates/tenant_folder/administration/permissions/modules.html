@@ -194,6 +194,16 @@
                     <option value="created_at">Date (ancien)</option>
                   </select>
 
+                  <div class="btn-group">
+                    <button id="importModuleBtn" type="button" class="btn btn-outline-secondary rounded-pill me-2">
+                        <i class="ri-upload-cloud-line me-1"></i> Importer
+                    </button>
+                    <button id="exportModuleBtn" type="button" class="btn btn-outline-secondary rounded-pill me-2">
+                        <i class="ri-download-cloud-line me-1"></i> Exporter
+                    </button>
+                  </div>
+                  <input type="file" id="importModuleInput" accept=".json" style="display: none;">
+
                   <button id="addModuleBtn" type="button" class="btn btn-primary rounded-pill">
                     <i class="ri-add-line me-1"></i> Nouveau module
                   </button>
@@ -771,6 +781,51 @@
     // Handle sort filter
     $('#date_filter-module').on('change', function() {
       // In a real implementation, you'd re-sort the data based on the selected option
+    });
+
+    // Handle Export
+    $('#exportModuleBtn').on('click', function() {
+        window.location.href = "{% url 'institut_app:ApiExportModules' %}";
+    });
+
+    // Handle Import Trigger
+    $('#importModuleBtn').on('click', function() {
+        $('#importModuleInput').click();
+    });
+
+    // Handle File Selection and Upload
+    $('#importModuleInput').on('change', function() {
+        var file = this.files[0];
+        if (file) {
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            // Show loading indicator if desired
+            alertify.message('Import en cours...');
+
+            $.ajax({
+                url: "{% url 'institut_app:ApiImportModules' %}",
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        loadModules(); // Refresh the list
+                    } else {
+                        alertify.error(response.message);
+                    }
+                    // Reset input
+                    $('#importModuleInput').val('');
+                },
+                error: function(xhr, status, error) {
+                    alertify.error("Erreur lors de l'import : " + error);
+                    $('#importModuleInput').val('');
+                }
+            });
+        }
     });
 
     // Handle edit module

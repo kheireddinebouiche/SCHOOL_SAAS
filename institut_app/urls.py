@@ -74,6 +74,8 @@ urlpatterns = [
     path('ApiAddModule', ApiAddModule, name="ApiAddModule"),
     path('ApiChangeModuleStatus', ApiChangeModuleStatus, name="ApiChangeModuleStatus"),
     path('ApiUpdateModule', ApiUpdateModule, name="ApiUpdateModule"),
+    path('ApiExportModules', ApiExportModules, name="ApiExportModules"),
+    path('ApiImportModules', ApiImportModules, name="ApiImportModules"),
 
     path('administration/roles/liste', roles_page, name="roles_page"),
     path('ApiListeRoles',ApiListeRoles, name="ApiListeRoles"),
@@ -114,7 +116,7 @@ urlpatterns = [
     #### Dashboard #####
     path('pedagogie/dashboard/',pedago_dashboard, name="pedago_dashboard"),
     path('crm/dashboard/',crm_dashboard, name="crm_dashboard"),
-
+    path('direction/dashboard/', directeur_dashboard, name="directeur_dashboard"),
 
 
 

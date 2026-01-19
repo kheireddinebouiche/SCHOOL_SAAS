@@ -13,6 +13,7 @@ from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
 from t_crm.models import *
+from t_exam.models import *
 from t_tresorerie.models import DuePaiements
 from t_formations.models import Promos
 from t_groupe.models import Groupe, GroupeLine
@@ -23,7 +24,7 @@ from django.utils import timezone
 from django_otp.decorators import otp_required
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum
-from t_tresorerie.models import DuePaiements, Paiements, Depenses
+from t_tresorerie.models import DuePaiements, Paiements, Depenses, ClientPaiementsRequest
 import calendar
 from django.db.models.functions import TruncMonth
 
@@ -889,9 +890,97 @@ def terminate_session_api(request):
                 us.save(update_fields=["last_session_key"])
                 
                 return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
+            return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
         except UserSession.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Session non trouvée.'}, status=404)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
                 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+@login_required(login_url='institut_app:login')
+def directeur_dashboard(request):
+    # --- 1. Commercial & Admission ---
+    # Prospects du mois
+    today = datetime.now()
+    start_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    new_prospects_month = Prospets.objects.filter(created_at__gte=start_of_month).count()
+    
+    # Taux de conversion global
+    total_prospects_all = Prospets.objects.count()
+    converted_clients = Prospets.objects.filter(is_client=True).count()
+    conversion_rate = (converted_clients / total_prospects_all * 100) if total_prospects_all > 0 else 0
+    
+    # Demandes en attente
+    # Demandes en attente
+    pending_inscriptions = ClientPaiementsRequest.objects.filter(client__statut='instance').count()
+    
+    # RDV aujourd'hui
+    today_date = today.date()
+    rdv_today = RendezVous.objects.filter(date_rendez_vous=today_date).count()
+    
+    # Top Channels
+    top_channels = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')[:3]
+
+    # --- 2. Finance ---
+    # CA du mois (Paiements)
+    revenue_month = Paiements.objects.filter(date_paiement__gte=start_of_month).aggregate(Sum('montant_paye'))['montant_paye__sum'] or 0
+    
+    # Dépenses du mois
+    expenses_month = Depenses.objects.filter(date_paiement__gte=start_of_month).aggregate(Sum('montant_ttc'))['montant_ttc__sum'] or 0
+    
+    balance = revenue_month - expenses_month
+    
+    # Reste à recouvrer (Global)
+    total_due_remaining = DuePaiements.objects.filter(is_done=False).aggregate(Sum('montant_restant'))['montant_restant__sum'] or 0
+    
+    # Impayés critiques (< today)
+    critical_dues_count = DuePaiements.objects.filter(is_done=False, date_echeance__lt=today_date).count()
+
+    # --- 3. Pédago ---
+    # Groupes actifs
+    active_groups = Groupe.objects.filter(etat__in=['valider', 'enc']).count()
+    
+    # Salles occupées aujourd'hui
+    days_map = {'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi', 'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'}
+    today_fr = days_map.get(today.strftime("%A"), "")
+    occupied_rooms_count = TimetableEntry.objects.filter(timetable__is_validated=True, jour__iexact=today_fr).values('salle').distinct().count()
+
+    # --- 4. Examens ---
+    # Taux réussite
+    total_decisions = ExamDecisionEtudiant.objects.count()
+    admis_count = ExamDecisionEtudiant.objects.filter(statut='valide').count()
+    success_rate = (admis_count / total_decisions * 100) if total_decisions > 0 else 0
+    
+    # PVs en attente
+    pending_pvs = PvExamen.objects.filter(est_valide=False).count()
+
+    context = {
+        'tenant': request.tenant,
+        'kpis': {
+            'commercial': {
+                'new_prospects': new_prospects_month,
+                'conversion_rate': round(conversion_rate, 1),
+                'pending_inscriptions': pending_inscriptions,
+                'rdv_today': rdv_today,
+                'top_channels': top_channels
+            },
+            'finance': {
+                'revenue_month': revenue_month,
+                'expenses_month': expenses_month,
+                'balance': balance,
+                'total_due': total_due_remaining,
+                'critical_dues': critical_dues_count
+            },
+            'pedago': {
+                'active_groups': active_groups,
+                'occupied_rooms': occupied_rooms_count,
+            },
+            'exam': {
+                'success_rate': round(success_rate, 1),
+                'pending_pvs': pending_pvs
+            }
+        }
+    }
+    return render(request, 'tenant_folder/directeur/directeur.html', context)

@@ -1259,3 +1259,84 @@ def ApiGetRolePermissionsByRoleId(request):
             'status': 'error',
             'message': str(e)
         })
+
+
+import json
+
+@login_required(login_url="institut_app:login")
+def ApiExportModules(request):
+    try:
+        modules = Module.objects.all().prefetch_related('permissions')
+        data = []
+        for module in modules:
+            permissions = []
+            for perm in module.permissions.all():
+                permissions.append({
+                    'permission_type': perm.permission_type,
+                    'description': perm.description
+                })
+            
+            data.append({
+                'name': module.name,  # Code (crm, ped, etc.)
+                'description': module.description,
+                'is_active': module.is_active,
+                'permissions': permissions
+            })
+            
+        json_data = json.dumps(data, indent=4)
+        response = HttpResponse(json_data, content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename="modules_export.json"'
+        return response
+        
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiImportModules(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            json_file = request.FILES['file']
+            data = json.load(json_file)
+            
+            created_count = 0
+            updated_count = 0
+            
+            for item in data:
+                # Update or create Module
+                # Note: name is unique, so we can use it for lookup
+                module, created = Module.objects.update_or_create(
+                    name=item['name'],
+                    defaults={
+                        'description': item.get('description', ''),
+                        'is_active': item.get('is_active', True)
+                    }
+                )
+                
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+                
+                # Update or create permissions for the module
+                if 'permissions' in item:
+                    for perm_data in item['permissions']:
+                        ModulePermission.objects.update_or_create(
+                            module=module,
+                            permission_type=perm_data['permission_type'],
+                            defaults={
+                                'description': perm_data.get('description', '')
+                            }
+                        )
+            
+            return JsonResponse({
+                "status": "success", 
+                "message": f"Import réussi: {created_count} modules créés, {updated_count} mis à jour."
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Fichier JSON invalide"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+            
+    return JsonResponse({"status": "error", "message": "Aucun fichier fourni"})

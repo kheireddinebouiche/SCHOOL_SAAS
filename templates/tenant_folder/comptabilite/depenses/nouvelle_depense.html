@@ -150,7 +150,7 @@
                                         </div>
                                     </div>
                                     <div class="row g-4 mt-1">
-                                         <div class="col-lg-4">
+                                         <div class="col-lg-6">
                                             <label class="form-label">Date <span class="text-danger">*</span></label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="ri-calendar-event-line text-muted"></i></span>
@@ -158,19 +158,12 @@
                                             </div>
                                             <div class="invalid-feedback">Veuillez sélectionner la date</div>
                                         </div>
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-6">
                                             <label class="form-label">Catégorie <span class="text-danger">*</span></label>
                                             <select class="form-select" id="typeSelect" name="type" required>
                                                 <!-- Loaded via JS -->
                                             </select>
                                             <div class="invalid-feedback">Veuillez sélectionner le type</div>
-                                        </div>
-                                        <div class="col-lg-4">
-                                            <label class="form-label">Sous-catégorie <span class="text-danger">*</span></label>
-                                            <select class="form-select" id="typeSelectSousCategorie" name="type" required>
-                                                <option value='0'>Veuillez selectionner une sous catégorie</option>
-                                            </select>
-                                            <div class="invalid-feedback">Veuillez sélectionner la sous-catégorie</div>
                                         </div>
                                     </div>
                                 </div>
@@ -258,47 +251,60 @@
 
 <script>
     $(document).ready(function(){
-
-
+        
         function loadCategories(){
             $.ajax({
-                url : "{% url 't_tresorerie:ApiGetCategorie' %}",
+                url : "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
                 dataType : "JSON",
                 type:"GET",
                 success : function(data){
+                    
                     var option="<option value='0'>Veuillez selectionner une catégorie</option>";
-                    $.each(data, function(index, p){
-                        option += "<option value="+p.id+">"+p.label+"</option>";
+                    
+                    // Helper to find name of parent
+                    const getCategoryName = (id) => {
+                        const cat = data.find(c => c.id === id);
+                        return cat ? cat.name : '';
+                    };
+
+                    // We can sort them or group them. 
+                    // Let's just list parents, then their children indented or with prefix
+                    
+                    // Filter parents
+                    var parents = data.filter(c => c.parent_id === null);
+
+                    $.each(parents, function(index, p){
+                        option += `<option value="${p.id}" style="font-weight: bold;">${p.name}</option>`;
+                        
+                        // Find children for this parent
+                        var children = data.filter(c => c.parent_id === p.id);
+                        $.each(children, function(i, c){
+                             option += `<option value="${c.id}">&nbsp;&nbsp;&nbsp;↳ ${c.name}</option>`;
+                        });
                     });
+                    
+                    // Also handle orphans if any (shouldn't happen with strict logic but good for safety) or just append all others if logic above misses any? 
+                    // The above logic covers all if tree is max 2 levels deep as per standard usage.
+                    // If we want to be safe and just list all:
+                    /*
+                    $.each(data, function(index, cat){
+                         let label = cat.name;
+                         if(cat.parent_name) {
+                             label = `${cat.parent_name} > ${cat.name}`;
+                         }
+                         option += `<option value="${cat.id}">${label}</option>`;
+                    });
+                     */
+
                     $('#typeSelect').html(option);
+                },
+                error: function(err) {
+                    console.error("Error loading categories", err);
                 }
             });
-            
         }
 
         loadCategories();
-
-        $(document).on('change', '#typeSelect', function(){
-            var option = $(this).val();
-
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiFilterSousCategrorie' %}",
-                dataType: "JSON",
-                type : "GET",
-                data:{
-                    'option' : option,
-                },
-                success : function(data){
-                    var option = "<option value='0'>Veuillez selectionner une sous catégorie</option>";
-                    $.each(data, function(index, t){
-                        option += "<option value="+t.id+">"+t.label+"</option>";
-                    });
-                    $('#typeSelectSousCategorie').html(option);
-                }
-
-            });
-
-        });
 
         // Calculation for TTC amount
         function calculateTTC() {
@@ -367,8 +373,11 @@
             var formData = new FormData();
             formData.append('label', $('#label').val());
             formData.append('fournisseur', $('#fournisseur').val());
-            formData.append('typeSelect', $('#typeSelect').val());
-            formData.append('typeSelectSousCategorie', $('#typeSelectSousCategorie').val());
+            
+            // Single select for category
+            var categoryId = $('#typeSelect').val();
+            formData.append('category', categoryId);
+
             formData.append('date_depense', $('#date_depense').val());
             formData.append('montant_ht', $('#montant_ht').val());
             formData.append('tva', $('#tva').val());

@@ -106,6 +106,19 @@
   tr:hover td {
     background-color: #f8f9fa;
   }
+
+  /* Avatar styling */
+  .avatar-sm {
+      height: 3rem;
+      width: 3rem;
+  }
+  .avatar-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      width: 100%;
+  }
 </style>
 
 <div class="main-content">
@@ -195,33 +208,43 @@
   <!-- End Page-content -->
 </div>
 
-<!-- Add/Edit Category Modal -->
+<!-- "Streamlined Focus" Category Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="categoryModalLabel">Ajouter une catégorie</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-body p-4 p-sm-5">
+        
+        <div class="text-center mb-4">
+           <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 64px; height: 64px;">
+              <i class="ri-folder-add-line fs-2"></i>
+           </div>
+           <h4 class="modal-title fw-bold" id="categoryModalLabel">Nouvelle Catégorie</h4>
+           <p class="text-muted small">Créez une nouvelle classification pour vos produits</p>
+        </div>
+
         <form id="categoryForm">
           <input type="hidden" id="categoryId">
-          <div class="mb-3">
-            <label for="categoryName" class="form-label">Nom de la catégorie</label>
-            <input type="text" class="form-control" id="categoryName" placeholder="Entrez le nom de la catégorie" required>
+          
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control rounded-3" id="categoryName" placeholder="T-shirts, Électronique, etc." required>
+            <label for="categoryName">Nom de la catégorie</label>
           </div>
-          <div class="mb-3">
-            <label for="categoryParent" class="form-label">Catégorie parente (optionnel)</label>
-            <select class="form-select" id="categoryParent">
-              <option value="">Aucune (catégorie racine)</option>
-              <!-- Options will be loaded via AJAX -->
+
+          <div class="form-floating mb-4">
+            <select class="form-select rounded-3" id="categoryParent" aria-label="Catégorie parente">
+              <option value="">Aucune (Principal)</option>
+              <!-- Options loaded via AJAX -->
             </select>
+            <label for="categoryParent">Catégorie Parente (Optionnel)</label>
+          </div>
+
+          <div class="d-grid gap-2">
+             <button type="button" class="btn btn-primary btn-lg rounded-pill shadow-sm" id="saveCategory">
+               <i class="ri-check-line me-1"></i> Enregistrer
+             </button>
+             <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Annuler</button>
           </div>
         </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary" id="saveCategory">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -295,7 +318,22 @@ $(document).ready(function() {
         tbody.empty();
 
         if (!categories || categories.length === 0) {
-            tbody.html('<tr><td colspan="6" class="text-muted text-center">Aucune catégorie trouvée</td></tr>');
+            tbody.html(`
+                <tr>
+                    <td colspan="6">
+                        <div class="text-center py-5">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                <i class="ri-folder-add-line text-primary" style="font-size: 32px;"></i>
+                            </div>
+                            <h5 class="mb-2">Aucune catégorie définie</h5>
+                            <p class="text-muted mb-4">Commencez par ajouter votre première catégorie de produits pour organiser votre catalogue.</p>
+                            <button class="btn btn-primary rounded-pill px-4" onclick="$('#addCategoryBtn').click()">
+                                <i class="ri-add-line me-1"></i> Créer une catégorie
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
             return;
         }
 
@@ -471,7 +509,8 @@ $(document).ready(function() {
 
     // Event handlers
     $('#addCategoryBtn').on('click', function() {
-        $('#categoryModalLabel').text('Ajouter une catégorie');
+        $('#categoryModalLabel').text('Nouvelle Catégorie');
+        $('#categoryModal .text-muted.small').text('Créez une nouvelle classification pour vos produits');
         $('#categoryId').val('');
         $('#categoryName').val('');
         $('#categoryParent').val('');
@@ -531,7 +570,8 @@ $(document).ready(function() {
         const name = $(this).closest('tr').find('td:first').text().replace(/^\s*[▶▼]?\s*/, '').trim();
         const parentId = $(this).data('parent-id');
 
-        $('#categoryModalLabel').text('Modifier la catégorie');
+        $('#categoryModalLabel').text('Modifier la Catégorie');
+        $('#categoryModal .text-muted.small').text('Modifiez les informations de cette classification');
         $('#categoryId').val(id);
         $('#categoryName').val(name);
         $('#categoryParent').val(parentId || '');

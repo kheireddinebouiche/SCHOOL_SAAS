@@ -118,7 +118,7 @@ urlpatterns = [
     path('groupe-deliberation-results/<int:pk>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
 
 
-    path('details-session/exams/plannification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
+    path('details-session/exams/planification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
 
     path('ApiLoadFormateur',ApiLoadFormateur ,name="ApiLoadFormateur"),
 

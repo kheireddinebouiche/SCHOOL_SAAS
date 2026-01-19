@@ -12,7 +12,7 @@ def PageDepenses(request):
 
 @login_required(login_url="institut_app:ApiListeDepenses")
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label','categorie__label','sous_categorie__label','montant_ht','montant_ttc','tva','date_paiement','fournisseur__designation','etat').order_by('id')
+    liste = Depenses.objects.all().values('id','label','categorie__label','sous_categorie__label', 'category__name', 'category__parent__name', 'montant_ht','montant_ttc','tva','date_paiement','fournisseur__designation','etat').order_by('-id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -115,8 +115,6 @@ def ApiStoreDepense(request):
     if request.method == "POST":
         label = request.POST.get('label')
         fournisseur = request.POST.get('fournisseur')
-        categorie = request.POST.get('typeSelect')
-        sous_categorie = request.POST.get('typeSelectSousCategorie')
         date = request.POST.get('date_depense')
         montant_ht = request.POST.get('montant_ht')
         tva = request.POST.get('tva')
@@ -126,11 +124,16 @@ def ApiStoreDepense(request):
         mode_paiement = request.POST.get('mode_paiement')
         reference_paiement = request.POST.get('reference_paiement')
 
-        Depenses.objects.create(
+        categoryId = request.POST.get('category')
+        
+        # Handle '0' or empty string for category
+        if categoryId == '0' or categoryId == '':
+            categoryId = None
+
+        depense = Depenses.objects.create(
             label = label,
             fournisseur_id = fournisseur,
-            categorie_id = categorie,
-            sous_categorie_id = sous_categorie,
+            category_id = categoryId,
             date_paiement = date,
             montant_ht = montant_ht,
             tva = tva,
@@ -158,10 +161,9 @@ def ApiGetDepenseDetails(request):
             'fournisseur' : obj.fournisseur.id,
             'fournisseur_designation' : obj.fournisseur.designation,
             'date' : obj.date,
-            'categorie': obj.categorie.id,
-            'categorie_label': obj.categorie.label,
-            'sous_categorie' : obj.sous_categorie.id,
-            'sous_categorie_label' : obj.sous_categorie.label,
+            'category': obj.category.id if obj.category else None,
+            'category_name': obj.category.name if obj.category else None,
+            'category_parent_name': obj.category.parent.name if obj.category and obj.category.parent else None,
             'montant_ht': obj.montant_ht,
             'montant_ttc' : obj.montant_ttc,
             'piece' : obj.piece.url if obj.piece else None,
@@ -189,15 +191,17 @@ def ApiUpdateDepense(request):
         edit_piece = request.FILES.get('edit_piece')
         obj = Depenses.objects.get(id = id)
 
+        if request.POST.get('edit_category'):
+             obj.category_id = request.POST.get('edit_category')
+        
         obj.label = edit_label
-        obj.fournisseur.id = edit_fournisseur
-        obj.categorie.id = edit_categorie
-        obj.sous_categorie.id = edit_sous_categorie
-        obj.date = edit_date
+        obj.fournisseur_id = edit_fournisseur
+        obj.date_paiement = edit_date # Adjusted field name match model
         obj.montant_ht = edit_montant_ht
         obj.tva = edit_tva
         obj.montant_ttc = edit_montant_ttc
-        obj.piece = edit_piece
+        if edit_piece:
+            obj.piece = edit_piece
         obj.description = edit_description
 
         obj.save()

@@ -1,0 +1,414 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Tableau de Bord Directeur {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+        --danger-color: #ef233c;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.5rem;
+    }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); }
+    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: var(--success-color); }
+    .icon-box.warning { background: rgba(247, 37, 133, 0.1); color: var(--warning-color); }
+    .icon-box.info { background: rgba(72, 149, 239, 0.1); color: var(--accent-color); }
+    .icon-box.danger { background: rgba(239, 35, 60, 0.1); color: var(--danger-color); }
+
+    .table-modern {
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    
+    .table-modern tbody tr {
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: transform 0.2s;
+        border-radius: 8px;
+    }
+    
+    .table-modern tbody tr:hover {
+        transform: scale(1.002);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    
+    .table-modern td {
+        border: none;
+        padding: 16px 20px;
+        vertical-align: middle;
+    }
+    
+    .table-modern td:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+    
+    .table-modern td:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+    
+    /* Stats Tile Specific */
+    .stat-tile-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #878a99;
+        font-weight: 600;
+    }
+    .stat-tile-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #212529;
+        margin-top: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Page Title -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fs-24 fw-bold text-dark mb-1">Tableau de Bord Directeur</h4>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Tableau de bord</a></li>
+                                    <li class="breadcrumb-item active text-primary" aria-current="page">Vue d'ensemble</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <div class="d-flex gap-2">
+                             <span class="badge bg-light text-primary border border-primary fs-12 p-2">
+                                <i class="ri-calendar-line me-1"></i> {{ kpis.date|default:"Aujourd'hui" }}
+                             </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. TOP KPIs (Météo) -->
+            <div class="row g-4 mb-4">
+                <!-- CA Mois -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card modern-card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">CA Encaissé (Mois)</h5>
+                                <div class="icon-box success" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-money-dollar-circle-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value">{{ kpis.finance.revenue_month|floatformat:0 }} <small class="fs-14 text-muted fw-normal">DZD</small></h2>
+                            <div class="d-flex align-items-center mt-2">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">Solde : {{ kpis.finance.balance|floatformat:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prospects -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card modern-card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Nouveaux Prospects</h5>
+                                <div class="icon-box primary" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-user-add-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value">{{ kpis.commercial.new_prospects }}</h2>
+                            <div class="text-muted mt-2 fs-12">
+                                <i class="ri-check-double-line text-success me-1"></i> Taux Conversion: <strong>{{ kpis.commercial.conversion_rate }}%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Impayés Critiques (Alerte) -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card modern-card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Alertes Impayés</h5>
+                                <div class="icon-box danger" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-alarm-warning-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value text-danger">{{ kpis.finance.critical_dues }} <small class="fs-14 text-muted fw-normal">Dossiers</small></h2>
+                            <div class="text-muted mt-2 fs-12">
+                                Total dû : <strong>{{ kpis.finance.total_due|floatformat:0 }} DZD</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pédago / Exam -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card modern-card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Réussite Examens</h5>
+                                <div class="icon-box info" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-award-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value">{{ kpis.exam.success_rate }}%</h2>
+                            <div class="text-muted mt-2 fs-12">
+                                <i class="ri-file-list-3-line me-1"></i> PVs en attente : <strong>{{ kpis.exam.pending_pvs }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Detailed Sections -->
+            <div class="row g-4">
+                <!-- Section Gauche : Commercial & Opérationnel -->
+                <div class="col-xl-4">
+                    <!-- Activité Commerciale -->
+                    <div class="card modern-card mb-4">
+                        <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box primary me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-store-2-line"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">Activité Commerciale</h5>
+                                    <p class="text-muted small mb-0">Suivi quotidien</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4 pt-2">
+                            <ul class="list-group list-group-flush border-0">
+                                <li class="list-group-item px-0 py-3 border-bottom-dashed d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-xs me-3">
+                                            <div class="avatar-title bg-light text-primary rounded-circle">
+                                                <i class="ri-calendar-event-line"></i>
+                                            </div>
+                                        </div>
+                                        <span class="fw-medium">Rendez-vous Aujourd'hui</span>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ kpis.commercial.rdv_today }}</span>
+                                </li>
+                                <li class="list-group-item px-0 py-3 border-bottom-dashed d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-xs me-3">
+                                            <div class="avatar-title bg-light text-warning rounded-circle">
+                                                <i class="ri-file-user-line"></i>
+                                            </div>
+                                        </div>
+                                        <span class="fw-medium">Inscriptions en attente</span>
+                                    </div>
+                                    <span class="badge bg-warning text-dark rounded-pill">{{ kpis.commercial.pending_inscriptions }}</span>
+                                </li>
+                            </ul>
+                            
+                            <h6 class="text-muted text-uppercase fs-12 fw-bold mt-4 mb-3">Top Canaux d'acquisition</h6>
+                            <div class="d-flex flex-column gap-3">
+                                {% for channel in kpis.commercial.top_channels %}
+                                <div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fs-13 fw-medium">{{ channel.canal|title }}</span>
+                                        <span class="fs-13 text-muted">{{ channel.count }} leads</span>
+                                    </div>
+                                    <div class="progress rounded-pill" style="height: 6px;">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted fs-12">Aucune donnée disponible.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Occupation Ressources -->
+                    <div class="card modern-card">
+                         <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box warning me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-building-line"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">Ressources</h5>
+                                    <p class="text-muted small mb-0">Occupation & Groupes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="text-center py-2">
+                                <div class="avatar-md mx-auto mb-3">
+                                    <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-24">
+                                        <i class="ri-community-line"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold">{{ kpis.pedago.occupied_rooms }}</h3>
+                                <p class="text-muted mb-0">Salles occupées aujourd'hui</p>
+                            </div>
+                            <div class="d-grid gap-2 mt-4">
+                                <div class="d-flex justify-content-between p-3 bg-light rounded-3 bg-opacity-50 border border-light">
+                                    <span class="fw-medium">Groupes Actifs</span>
+                                    <span class="fw-bold text-dark">{{ kpis.pedago.active_groups }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Droite : Analyse Financière & Actions -->
+                <div class="col-xl-8">
+                    <div class="card modern-card mb-4">
+                         <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box success me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-funds-line"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">Santé Financière</h5>
+                                    <p class="text-muted small mb-0">Overview du mois en cours</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-6 border-end-md">
+                                    <div class="text-center mb-4 mb-md-0">
+                                        <p class="text-muted mb-1 text-uppercase fs-11 fw-bold tracking-wide">Recettes</p>
+                                        <h3 class="fw-bold text-success mb-4">{{ kpis.finance.revenue_month|floatformat:2 }} DZD</h3>
+                                        
+                                        <p class="text-muted mb-1 text-uppercase fs-11 fw-bold tracking-wide">Dépenses</p>
+                                        <h4 class="fw-semibold text-danger">{{ kpis.finance.expenses_month|floatformat:2 }} DZD</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="px-md-4">
+                                        <h5 class="mb-3 fs-14 fw-bold text-dark">Statut Trésorerie</h5>
+                                        {% if kpis.finance.balance >= 0 %}
+                                            <div class="alert alert-success d-flex align-items-center rounded-3 border-0 bg-success-subtle text-success" role="alert">
+                                                <i class="ri-checkbox-circle-line me-3 fs-24"></i>
+                                                <div>
+                                                    <strong>Positif</strong> <br>
+                                                    <span class="fs-13">La balance du mois est excédentaire de {{ kpis.finance.balance|floatformat:2 }} DZD.</span>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-danger d-flex align-items-center rounded-3 border-0 bg-danger-subtle text-danger" role="alert">
+                                                <i class="ri-error-warning-line me-3 fs-24"></i>
+                                                <div>
+                                                    <strong>Déficitaire</strong> <br>
+                                                    <span class="fs-13">Déficit de {{ kpis.finance.balance|floatformat:2 }} DZD ce mois-ci.</span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="mt-4">
+                                            <h6 class="fs-13 fw-bold mb-3 text-uppercase text-muted">Actions recommandées</h6>
+                                            <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                                                {% if kpis.finance.critical_dues > 0 %}
+                                                <li class="d-flex align-items-center text-dark fs-13">
+                                                    <i class="ri-arrow-right-s-fill text-danger me-2"></i>
+                                                    Relancer les <strong class="mx-1">{{ kpis.finance.critical_dues }}</strong> dossiers en impayé critique.
+                                                </li>
+                                                {% endif %}
+                                                <li class="d-flex align-items-center text-dark fs-13">
+                                                    <i class="ri-arrow-right-s-fill text-warning me-2"></i>
+                                                    Vérifier les <strong class="mx-1">{{ kpis.exam.pending_pvs }}</strong> PVs d'examen en attente.
+                                                </li>
+                                                {% if kpis.commercial.pending_inscriptions > 0 %}
+                                                <li class="d-flex align-items-center text-dark fs-13">
+                                                    <i class="ri-arrow-right-s-fill text-primary me-2"></i>
+                                                    Valider les <strong class="mx-1">{{ kpis.commercial.pending_inscriptions }}</strong> demandes d'inscription.
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Links / Shortcuts -->
+                    <div class="row g-4 mt-2">
+                        <div class="col-sm-4">
+                            <a href="#" class="card modern-card h-100 text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <div class="icon-box primary mx-auto mb-3" style="width: 50px; height: 50px;">
+                                        <i class="ri-team-line"></i>
+                                    </div>
+                                    <h5 class="fs-15 fw-bold text-dark mb-0">Gestion RH</h5>
+                                    <p class="text-muted small mb-0 mt-1">Gérer le personnel</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-sm-4">
+                            <a href="#" class="card modern-card h-100 text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <div class="icon-box warning mx-auto mb-3" style="width: 50px; height: 50px;">
+                                        <i class="ri-bank-card-line"></i>
+                                    </div>
+                                    <h5 class="fs-15 fw-bold text-dark mb-0">Trésorerie</h5>
+                                    <p class="text-muted small mb-0 mt-1">Suivi financier</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-sm-4">
+                            <a href="#" class="card modern-card h-100 text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <div class="icon-box info mx-auto mb-3" style="width: 50px; height: 50px;">
+                                        <i class="ri-book-open-line"></i>
+                                    </div>
+                                    <h5 class="fs-15 fw-bold text-dark mb-0">Pédagogie</h5>
+                                    <p class="text-muted small mb-0 mt-1">Programmes & Cours</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

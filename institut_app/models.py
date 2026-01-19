@@ -187,8 +187,6 @@ class Module(models.Model):
         ('scol',_('Scolarité')),
         ('rh',_('Ressources Humaines')),
         ('rem',_('Remise')),
-        
-        
     ]
 
     name = models.CharField(max_length=50, null=True, blank=True, choices=MODULES, unique=True, verbose_name=_("Module"))

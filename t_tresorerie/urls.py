@@ -15,6 +15,7 @@ from .f_views.produits import *
 from .f_views.imputation_comptable_specialite import *
 from .f_views.autre_paiement import *
 from .f_views.configure_penalite import *
+from .f_views.type_depense import *
 
 app_name="t_tresorerie"
 
@@ -159,6 +160,12 @@ urlpatterns = [
     path('ApiUpdateDepense', ApiUpdateDepense, name="ApiUpdateDepense"),
     path('ApiValidateDepense', ApiValidateDepense, name="ApiValidateDepense"),
     path('ApiDeleteDepense', ApiDeleteDepense, name="ApiDeleteDepense"),
+    
+    # Depenses Categories
+    path('ApiLoadDepensesCategories', ApiLoadDepensesCategories, name="ApiLoadDepensesCategories"),
+    path('ApiStoreDepenseCategory', ApiStoreDepenseCategory, name="ApiStoreDepenseCategory"),
+    path('ApiUpdateDepenseCategory', ApiUpdateDepenseCategory, name="ApiUpdateDepenseCategory"),
+    path('ApiDeleteDepenseCategory', ApiDeleteDepenseCategory, name="ApiDeleteDepenseCategory"),
 
     path('ApiLoadPaiements',ApiLoadPaiements , name="ApiLoadPaiements"),
 
@@ -166,6 +173,7 @@ urlpatterns = [
     path('caisse/brouilland/banque/',PageBrouillardBanque, name="PageBrouillardBanque"),
 
     path('brouillard_caisse_json', brouillard_caisse_json, name="brouillard_caisse_json"),
+    path('brouillard_banck_json', brouillard_banck_json, name="brouillard_banck_json"),
     path('brouillard_banque', brouillard_banque, name="brouillard_banque"),
     path('imputation-bancaire/', ImputationBancaire, name="ImputationBancaire"),
     path('ApiReturnUndonePaiament', ApiReturnUndonePaiament, name="ApiReturnUndonePaiament"),

@@ -972,9 +972,9 @@
                                                     <button ${editDeleteValidationButtonDisabled} class="btn btn-sm btn-outline-primary edit-btn" data-plan-id="${plan.id}" data-module="${plan.module_nom}" data-type="${plan.type_examen}" data-mode="${plan.mode_examen || 'exam'}" data-date="${plan.date}" data-heure-debut="${plan.heure_debut || ''}" data-heure-fin="${plan.heure_fin || ''}" data-salle="${plan.salle_nom}" data-surveillant="${plan.surveillant || ''}" data-observations="${plan.observations || ''}" title="Modification">
                                                         <i class="ri-edit-line"></i>
                                                     </button>
-                                                    <button ${dateExiste} class="btn btn-sm btn-outline-success ${textClass}" title="Impression">
-                                                        <i class="ri-printer-line"></i>
-                                                    </button>
+                                                    <button ${dateExiste} class="btn btn-sm btn-outline-success ${textClass} print-pv-btn" data-plan-id="${plan.id}" title="Impression">
+       <i class="ri-printer-line"></i>
+</button>
                                                     <button ${editDeleteValidationButtonDisabled} class="btn btn-sm btn-outline-danger delete-btn " data-plan-id="${plan.id}" data-module="${plan.module_nom}" title="Suppression">
                                                         <i class="ri-delete-bin-line"></i>
                                                     </button>
@@ -1920,5 +1920,183 @@
         </div>
     </div>
 </div>
+
+
+<!-- Styles specific for printing the results modal -->
+<style media="print">
+    @page {
+        size: landscape;
+    }
+
+    /* Hide everything by default */
+    body > * {
+        display: none !important;
+    }
+    
+    /* Only show the fillNotesModal and its children */
+    #fillNotesModal, #fillNotesModal * {
+        visibility: visible !important;
+    }
+
+    #fillNotesModal {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto !important;
+        margin: 0;
+        padding: 0;
+        overflow: visible !important;
+        background-color: white !important;
+        z-index: 20000 !important;
+    }
+
+    #fillNotesModal .modal-dialog {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        width: 100%;
+        transform: none !important;
+        height: auto !important;
+    }
+
+    #fillNotesModal .modal-content {
+        border: none;
+        box-shadow: none;
+        height: auto !important;
+    }
+
+    #fillNotesModal .modal-body {
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* Expand the table functionality for printing */
+    #fillNotesModal .table-responsive {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+        display: block !important;
+    }
+
+    /* Hide Controls in the modal during print */
+    #fillNotesModal .modal-header .btn-close,
+    #fillNotesModal .modal-footer,
+    #print-notes-btn-injected,
+    .no-print {
+        display: none !important;
+    }
+    
+    /* Ensure text is black for printing */
+    #fillNotesModal {
+        color: black !important;
+    }
+
+    /* Force Table Borders in Print */
+    #fillNotesModal .table,
+    #fillNotesModal .table th,
+    #fillNotesModal .table td {
+        border: 1px solid black !important;
+        border-collapse: collapse !important;
+    }
+    
+    #fillNotesModal .table thead th {
+        background-color: #f8f9fa !important; /* Keep a light grey background for header */
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Make inputs look cleaner */
+    #fillNotesModal input {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    
+    /* Ensure page breaks if needed */
+    tr {
+        page-break-inside: avoid;
+    }
+</style>
+
+<script>
+    // Injected script for Print Functionality in Results Modal
+    $(document).ready(function() {
+        // Use event delegation to handle the modal which is dynamically added to body
+        $(document).on('shown.bs.modal', '#fillNotesModal', function() {
+            const modal = $(this);
+            const headerActions = modal.find('.modal-header');
+            
+            // Generate print button if it doesn't exist
+            if (modal.find('#print-notes-btn-injected').length === 0) {
+                const printBtn = $('<button type="button" id="print-notes-btn-injected" class="btn btn-outline-dark btn-sm ms-auto me-2 no-print"><i class="ri-printer-line me-1"></i>Imprimer</button>');
+                
+                // Insert before the close button
+                const closeBtn = headerActions.find('.btn-close');
+                if (closeBtn.length > 0) {
+                    closeBtn.before(printBtn);
+                } else {
+                    headerActions.append(printBtn);
+                }
+                
+                // Attach click handler
+                printBtn.on('click', function(e) {
+                    e.preventDefault();
+                    window.print();
+                });
+            }
+        });
+
+        // Handler for the Print Button in the Table (Generates Empty PV for Formateurs)
+        $(document).on('click', '.print-pv-btn', function(e) {
+            e.preventDefault();
+            const examPlanId = $(this).data('plan-id');
+            
+            // Clean up old modals
+            $('#fillNotesModal, #confirmValidateModal, #confirmSaveInvalidModal, #confirmValidateInvalidModal').remove();
+            $('.modal-backdrop').remove();
+
+            // Fetch the modal content
+            $.get(
+                "{% url 't_exam:GeneratePvModal' pk=0 %}".replace('0', examPlanId),
+                function (data) {
+                    $('body').append(data);
+                    var $modal = $('#fillNotesModal');
+                    
+                    // Clear all existing values to make it "to be filled"
+                    $modal.find('input[type="number"], input[type="text"]').val(''); 
+                    
+                    // Hide the footer (Save/Validate buttons) to prevent accidental saving of empty data
+                    // and because they are not needed for a print-only view
+                    $modal.find('.modal-footer').hide();
+
+                    $modal.modal('show');
+                    
+                    // Trigger print once shown
+                    $modal.on('shown.bs.modal', function () {
+                        // Small delay to ensure styles render
+                        setTimeout(function(){
+                            window.print();
+                        }, 500);
+                    });
+                    
+                    // Cleanup on close
+                    $modal.on('hidden.bs.modal', function () {
+                        $(this).remove(); 
+                        $('#confirmValidateModal, #confirmSaveInvalidModal, #confirmValidateInvalidModal').remove();
+                        $('.modal-backdrop').remove();
+                    });
+                }
+            ).fail(function () {
+                // Check if alertify is available, otherwise use alert
+                if (typeof alertify !== 'undefined') {
+                    alertify.error("Erreur lors du chargement du PV.");
+                } else {
+                    alert("Erreur lors du chargement du PV.");
+                }
+            });
+        });
+    });
+</script>
 
 {% endblock content %}

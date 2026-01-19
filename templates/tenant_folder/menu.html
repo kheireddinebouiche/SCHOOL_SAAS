@@ -1,139 +1,283 @@
 {% load static %}
 {% load permissions_tags %}
 <style>
-    /* Réduction de la taille de la police des menus */
-    .app-menu .nav-link span,
-    .app-menu .submenu-header h6,
-    .app-menu .submenu-header small,
-    .app-menu .submenu-item a span {
-        font-size: 0.8rem !important;
+    /* Modern Menu Design Variables */
+    :root {
+        --menu-width: 280px;
+        --menu-bg: #ffffff;
+        --menu-item-color: #545a6d;
+        --menu-item-hover-color: #3b7ddd;
+        --menu-item-active-bg: rgba(59, 125, 221, 0.1);
+        --menu-item-active-color: #3b7ddd;
+        --submenu-bg: rgba(248, 249, 250, 0.5);
+        --border-color: #eff2f7;
     }
-    
-    /* Réduction de la taille des titres de section */
-    .app-menu .menu-title span {
-        font-size: 0.85rem !important;
+
+    /* General Menu Container */
+    .app-menu {
+        width: var(--menu-width) !important;
+        min-width: var(--menu-width) !important;
+        max-width: var(--menu-width) !important;
+        background: var(--menu-bg);
+        border-right: 1px solid var(--border-color);
+        font-family: 'Inter', sans-serif; /* Ensuring modern font if available */
     }
-    
-    /* Ajustement des paddings pour compenser la réduction de taille */
-    .app-menu .nav-link {
-        padding: 0.25rem 0.75rem !important;
+
+    .app-menu .container-fluid {
+        padding: 0 0.5rem !important;
     }
-    
-    .app-menu .submenu-header {
-        padding: 0.2rem 0.4rem !important;
-    }
-    
-    .app-menu .submenu-item a {
-        padding: 0.15rem 0.4rem !important;
-    }
-    
-    /* Styles spécifiques pour les sous-menus */
-    .app-menu .submenu-content .submenu-item a {
+
+    /* Menu Titles (Sections) */
+    .app-menu .menu-title {
+        padding: 1rem 0.5rem 0.4rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #919da9;
+        font-weight: 600;
         font-size: 0.75rem !important;
-        padding: 0.1rem 0.3rem !important;
+        opacity: 0.9;
+    }
+
+    /* Main Navigation Items */
+    .app-menu .nav-item {
+        margin-bottom: 0.2rem !important;
+        border-bottom: 1px solid transparent !important; /* Cleaner separation */
+    }
+
+    .app-menu .nav-link {
+        color: var(--menu-item-color) !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.9rem !important;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.25s ease-in-out;
+        display: flex;
+        align-items: center;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden; /* Flex container fix */
+    }
+
+    /* Handle text truncation inside nav link */
+    .app-menu .nav-link span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1; 
+        min-width: 0;
+    }
+
+    .app-menu .nav-link i {
+        font-size: 1.15rem !important;
+        min-width: 1.7rem; /* Fixed width for icon alignment */
+        transition: transform 0.2s ease;
+        opacity: 0.8;
+    }
+
+    /* Hover State - Modern Card Style */
+    .app-menu .nav-link:hover:not(.active) {
+        color: var(--menu-item-hover-color) !important;
+        background-color: var(--submenu-bg) !important;
+        transform: translateX(3px);
+    }
+
+    .app-menu .nav-link:hover i {
+        opacity: 1;
+        color: var(--menu-item-hover-color);
+        transform: scale(1.05); /* Subtle grow */
+    }
+
+    /* Active State - Highlighted */
+    .app-menu .nav-link.active {
+        color: var(--menu-item-active-color) !important;
+        background-color: var(--menu-item-active-bg) !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 4px rgba(59, 125, 221, 0.05);
+    }
+
+    .app-menu .nav-link.active i {
+        opacity: 1;
+        color: var(--menu-item-active-color);
+    }
+
+    /* Submenu Header (Group Parents) */
+    .app-menu .submenu-header {
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 8px;
+        margin-bottom: 0.3rem !important;
+        transition: background-color 0.2s;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    /* Wrap text content for proper truncation */
+    .app-menu .submenu-header > div {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .app-menu .submenu-header h6,
+    .app-menu .submenu-header small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .app-menu .submenu-header:hover {
+        background-color: var(--submenu-bg) !important;
+    }
+
+    .app-menu .submenu-header h6 {
+        font-size: 0.85rem !important;
+        color: #495057;
+        margin-left: 0.4rem;
+        font-weight: 600;
+        margin-bottom: 0px !important;
+    }
+    
+    .app-menu .submenu-header small {
+        font-size: 0.75rem !important;
+        color: #74788d;
+        margin-left: 0.4rem;
+        display: block;
+        opacity: 0.8;
+    }
+
+    /* Submenu Icons (Circle Backgrounds) */
+    .submenu-icon {
+        width: 34px; 
+        height: 34px;
+        min-width: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%; /* Perfect circle */
+        background-color: rgba(59, 125, 221, 0.08) !important;
+        transition: all 0.3s ease;
+    }
+
+    .app-menu .submenu-header:hover .submenu-icon {
+        background-color: rgba(59, 125, 221, 0.15) !important;
+        transform: scale(1.05);
+    }
+    
+    .app-menu .submenu-content .submenu-header .submenu-icon i {
+         font-size: 1rem !important; 
+    }
+
+    /* Submenu Content Tree */
+    .submenu-content {
+        padding-left: 0;
+        margin-left: 1.2rem; /* Align with icon center */
+        border-left: 2px solid var(--border-color);
+        margin-top: 0.4rem !important;
+        margin-bottom: 0.8rem !important;
+        padding-top: 0.2rem;
+    }
+
+    /* Submenu Items */
+    .app-menu .submenu-item a {
+        padding: 0.5rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        color: #6a7187 !important;
+        border-radius: 6px;
+        margin-bottom: 3px !important;
+        margin-left: 0.3rem; /* Spacing from border line */
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+        background: transparent !important;
     }
     
     .app-menu .submenu-content .submenu-item a i {
-        font-size: 0.7rem !important;
+        font-size: 0.9rem !important; /* Slightly smaller icons for children */
     }
-    
-    /* Ensure icons in nested submenu headers are visible */
-    .app-menu .submenu-content .submenu-header .submenu-icon i {
-        font-size: 0.8rem !important;
-        display: inline-block !important;
+
+    .app-menu .submenu-item.bg-light, 
+    .app-menu .submenu-item.bg-opacity-50 {
+        background-color: transparent !important; /* Override bootstrap utils */
     }
-    
-    .app-menu .submenu-content h6 {
-        font-size: 0.75rem !important;
+
+    .app-menu .submenu-item a:hover {
+        color: var(--menu-item-hover-color) !important;
+        background-color: rgba(59, 125, 221, 0.06) !important;
+        transform: translateX(4px);
     }
-    
-    .app-menu .submenu-content small {
-        font-size: 0.65rem !important;
-    }
-    
-    /* Réduction de l'espacement des sous-menus */
-    .submenu-container {
-        padding: 0.1rem 0.2rem !important;
-    }
-    
-    .submenu-section {
-        margin-bottom: 0.2rem !important;
-        padding: 0.1rem !important;
-    }
-    
-    .submenu-item {
-        margin-bottom: 0.1rem !important;
-    }
-    
-    /* Ajout d'espace entre les menus principaux et trait en dessous */
-    .nav-item {
-        margin-bottom: 0.5rem !important;
-        border-bottom: 1px solid #e9ecef !important;
-        padding-bottom: 0.5rem !important;
-    }
-    
-    /* Ajustement pour le dernier élément sans bordure */
-    .nav-item:last-child {
-        border-bottom: none !important;
-    }
-    
-    /* Style pour le menu principal actif avec opacité faible */
-    .nav-item.active > .nav-link {
-        background-color: rgba(59, 125, 221, 0.2) !important;
-        color: #3b7ddd !important;
-        font-weight: bold !important;
-    }
-    
-    /* Style pour les liens de sous-menu actifs avec opacité faible */
-    .nav-link.active {
-        background-color: rgba(59, 125, 221, 0.2) !important;
-        color: #3b7ddd !important;
-        font-weight: bold !important;
-    }
-    
-    /* Style pour les liens de sous-menu au survol avec opacité faible */
-    .nav-link:hover:not(.active) {
+
+    .app-menu .submenu-item a.active {
+        color: var(--menu-item-active-color) !important;
         background-color: rgba(59, 125, 221, 0.1) !important;
-        color: #3b7ddd !important;
+        font-weight: 600;
+    }
+
+    .app-menu .submenu-item a i {
+        margin-right: 8px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .app-menu .submenu-item a:hover i,
+    .app-menu .submenu-item a.active i {
+        opacity: 1;
+        color: var(--menu-item-active-color);
     }
     
-    /* Style pour les en-têtes de sous-menu au survol avec opacité faible */
-    .submenu-header:hover {
-        background-color: rgba(59, 125, 221, 0.1) !important;
-        color: #3b7ddd !important;
+    /* Chevron Arrow */
+    .submenu-arrow {
+        margin-left: auto;
+        font-size: 1rem;
+        transition: transform 0.3s;
+        opacity: 0.5;
     }
     
-    /* Style pour les éléments de sous-menu au survol avec opacité faible */
-    .submenu-item:hover {
-        background-color: rgba(59, 125, 221, 0.05) !important;
+    .submenu-header[aria-expanded="true"] .submenu-arrow {
+        transform: rotate(180deg);
+        opacity: 1;
+        color: var(--menu-item-active-color);
+    }
+
+    /* Scrollbar Styling */
+    #scrollbar {
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+        padding-bottom: 3rem;
     }
     
-    /* Assurer la visibilité du texte dans les badges */
-    .status-badge {
-        color: #fff !important;
-        font-weight: 500 !important;
+    #scrollbar::-webkit-scrollbar {
+        width: 5px;
     }
     
-    /* Style pour les badges d'information avec opacité faible */
-    .badge.bg-primary {
-        background-color: rgba(59, 125, 221, 0.8) !important;
+    #scrollbar::-webkit-scrollbar-thumb {
+        background-color: #dbe0e6;
+        border-radius: 10px;
     }
     
-    .badge.bg-success {
-        background-color: rgba(40, 167, 69, 0.8) !important;
+    #scrollbar::-webkit-scrollbar-track {
+        background: transparent;
     }
-    
-    .badge.bg-warning {
-        background-color: rgba(255, 193, 7, 0.8) !important;
-        color: #212529 !important;
+
+    /* Status Badges */
+    .badge {
+        padding: 0.4em 0.7em;
+        font-size: 0.7em;
+        font-weight: 600;
+        border-radius: 6px;
+        letter-spacing: 0.3px;
     }
-    
-    .badge.bg-danger {
-        background-color: rgba(220, 53, 69, 0.8) !important;
-    }
-    
-    .badge.bg-info {
-        background-color: rgba(23, 162, 184, 0.8) !important;
+    /* Layout Synchronization */
+    @media (min-width: 768px) {
+        .main-content, .footer {
+            margin-left: var(--menu-width) !important;
+        }
+        
+        #page-topbar {
+            left: var(--menu-width) !important;
+            width: calc(100% - var(--menu-width)) !important;
+        }
     }
 </style>
 
@@ -171,7 +315,11 @@
             </div>
             <ul class="navbar-nav" id="navbar-nav">
                 <li class="menu-title"><span data-key="t-menu">Menu Principal</span></li> 
-                
+                <li class="nav-item">
+                    <a href="{% url 'institut_app:directeur_dashboard' %}" class="nav-link menu-link rounded-2 mx-2 mb-1 {% if request.resolver_match.url_name in 'directeur_dashboard' %}active{% endif %}">
+                        <i class="bx bx-tachometer fs-5"></i> <span class="ms-1">Tableau de bord</span>
+                    </a>
+                </li>
                   <!-- Communication -->
                 <li class="nav-item {% if request.resolver_match.url_name in 'tenant_comm_hub tenant_comm_detail calendar messages conversation index' %}active{% endif %}">
                     <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarCommunication" data-bs-toggle="collapse" role="button"
@@ -182,19 +330,19 @@
                         <div class="submenu-container">
                             <div class="row g-1">
                                 <div class="col-12">
-                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                         <a href="{% url 't_communication:calendar' %}" class="nav-link {% if request.resolver_match.url_name in 'calendar index' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                             <i class="ri-calendar-line me-1"></i>
                                             <span>Mon Calendrier</span>
                                         </a>
                                     </div>
-                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                         <a href="{% url 't_communication:messages' %}" class="nav-link {% if request.resolver_match.url_name in 'messages conversation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                             <i class="ri-message-3-line me-1"></i>
                                             <span>Mes Messages</span>
                                         </a>
                                     </div>
-                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                         <a href="{% url 'tenant_comm_hub' %}" class="nav-link {% if request.resolver_match.url_name in 'tenant_comm_hub tenant_comm_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                             <i class="ri-git-repository-private-line me-1"></i>
                                             <span>Flux Inter-Etablissements</span>
@@ -219,7 +367,7 @@
                             <div class="submenu-container">
                                 <div class="row g-1">
                                     <div class="col-12">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 'institut_app:crm_dashboard' %}" class="nav-link {% if request.resolver_match.url_name in 'crm_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-tachometer me-1"></i>
                                                 <span>Tableau de bord</span>
@@ -239,19 +387,19 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesProspects inscription_particulier inscription_entreprise' %}show{% endif %}" id="sidebarProspects">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:inscription_particulier' %}" class="nav-link {% if request.resolver_match.url_name == 'inscription_particulier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user me-1"></i>
                                                     <span>Particulier</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:inscription_entreprise' %}" class="nav-link {% if request.resolver_match.url_name == 'inscription_entreprise' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-building me-1"></i>
                                                     <span>Entreprise</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:ListeDesProspects' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesProspects DetailsProspect' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des prospects</span>
@@ -274,13 +422,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'liste_derogations DetailsPrinscrit ListeDesPrinscrits prospects_incomplets_view' %}show{% endif %}" id="sidebarPrinscrit">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:ListeDesPrinscrits' %}" class="nav-link {% if request.resolver_match.url_name in 'DetailsPrinscrit ListeDesPrinscrits' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user me-1"></i>
                                                     <span>Liste des préinscrits</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:prospects_incomplets_view' %}" class="nav-link {% if request.resolver_match.url_name == 'prospects_incomplets_view' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-folder me-1"></i>
                                                     <span>Dossiers incomplets</span>
@@ -288,7 +436,7 @@
                                             </div>
                                             {% user_can_access 'crm' 'approuv' as cas_validate_crm %}
                                             {% if cas_validate_crm or request.user.is_superuser %}
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_crm:liste_derogations' %}" class="nav-link {% if request.resolver_match.url_name == 'liste_derogations' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-error me-1"></i>
                                                     <span>Dérogations d'inscription</span>
@@ -332,14 +480,14 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'detailsPartenaire listPartenaires addPartenaire' %}show{% endif %}" id="sidebarPartenaire">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:listPartenaires' %}" class="nav-link {% if request.resolver_match.url_name in 'detailsPartenaire listPartenaires' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des partenaires</span>
                                                 </a>
                                             </div>
                                             
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-2">
                                                 <a href="{% url 't_formations:addPartenaire' %}" class="nav-link {% if request.resolver_match.url_name == 'addPartenaire' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouveau partenaire</span>
@@ -363,13 +511,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'listPromos AddPromo' %}show{% endif %}" id="sidebarePromos">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:listPromos' %}" class="nav-link {% if request.resolver_match.url_name == 'listPromos' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des promotions</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:AddPromo' %}" class="nav-link {% if request.resolver_match.url_name == 'AddPromo' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouvelle promotion</span>
@@ -392,13 +540,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'listFormations addFormation detailFormation updateFormation' %}show{% endif %}" id="sidebarFormationList">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:listFormations' %}" class="nav-link {% if request.resolver_match.url_name in 'listFormations updateFormation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Catalogue</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:addFormation' %}" class="nav-link {% if request.resolver_match.url_name == 'addFormation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouvelle formation</span>
@@ -421,13 +569,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'detailSpecialite listSpecialites addSpecialite' %}show{% endif %}" id="sidebarSpecialite">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:listSpecialites' %}" class="nav-link {% if request.resolver_match.url_name == 'listSpecialites' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des spécialités</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:addSpecialite' %}" class="nav-link {% if request.resolver_match.url_name == 'addSpecialite' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouvelle spécialité</span>
@@ -450,7 +598,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarDoubleDiplomation">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:PageAssociation' %}" class="nav-link {% if request.resolver_match.url_name in 'PageAssociation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-link me-1"></i>
                                                     <span>Associations</span>
@@ -473,7 +621,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in ' PageListeModules ' %}show{% endif %}" id="sideBarModules">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:PageListeModules' %}" class="nav-link {% if request.resolver_match.url_name == 'PageListeModules' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des modules</span>
@@ -508,7 +656,7 @@
                                                     <span>Modules archivés</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_formations:archiveFormation' %}" class="nav-link {% if request.resolver_match.url_name == 'archiveFormation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-book me-1"></i>
                                                     <span>Formations archivées</span>
@@ -531,7 +679,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'import_data_view' %}show{% endif %}" id="sidebarConfigFormation">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_formations:import_data_view' %}" class="nav-link {% if request.resolver_match.url_name == 'import_data_view' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-import me-1"></i>
                                                     <span>Import des données</span>
@@ -571,13 +719,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'nouveau_employe liste_employes detailsEmploye' %}show{% endif %}" id="sidebareEmp">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_rh:liste_employes' %}" class="nav-link {% if request.resolver_match.url_name == 'liste_employes' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des employés</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_rh:nouveau_employe' %}" class="nav-link {% if request.resolver_match.url_name == 'nouveau_employe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user-plus me-1"></i>
                                                     <span>Nouvel employé</span>
@@ -600,13 +748,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarCtr">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des contrats</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouveau contrat</span>
@@ -629,19 +777,19 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'contrat_list contrat_create contrat_update fiche_paie_detail fiche_paie_list config_paie' %}show{% endif %}" id="sidebarPaieFormateur">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_ressource_humaine:contrat_list' %}" class="nav-link {% if request.resolver_match.url_name in 'contrat_list contrat_create contrat_update fiche_paie_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-money me-1"></i>
                                                     <span>Paie & Contrats</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_ressource_humaine:fiche_paie_list' %}" class="nav-link {% if request.resolver_match.url_name == 'fiche_paie_list' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-history me-1"></i>
                                                     <span>Historique des paies</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_ressource_humaine:config_paie' %}" class="nav-link {% if request.resolver_match.url_name == 'config_paie' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-cog me-1"></i>
                                                     <span>Configuration</span>
@@ -665,31 +813,31 @@
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesPostes updatePoste detailsCategorie ListeCategorieContrat ClausesTypeContrat listeTypeContrat liste_articles_contrat liste_services' %}show{% endif %}" id="sidebarConfRh">
                                             <div class="submenu-section rounded-2 p-2">
-                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                     <a href="{% url 't_rh:ListeDesPostes' %}" class="nav-link {% if request.resolver_match.url_name in 'updatePoste ListeDesPostes' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                         <i class="bx bx-briefcase me-1"></i>
                                                         <span>Postes</span>
                                                     </a>
                                                 </div>
-                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                     <a href="{% url 't_rh:liste_services' %}" class="nav-link {% if request.resolver_match.url_name == 'liste_services' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                         <i class="bx bx-buildings me-1"></i>
                                                         <span>Services</span>
                                                     </a>
                                                 </div>
-                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                     <a href="{% url 't_rh:ListeCategorieContrat' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeCategorieContrat detailsCategorie' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                         <i class="bx bx-category me-1"></i>
                                                         <span>Catégories de contrat</span>
                                                     </a>
                                                 </div>
-                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                     <a href="{% url 't_rh:liste_articles_contrat' %}" class="nav-link {% if request.resolver_match.url_name == 'liste_articles_contrat' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                         <i class="bx bx-file me-1"></i>
                                                         <span>Articles de contrat</span>
                                                     </a>
                                                 </div>
-                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                                <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                     <a href="{% url 't_rh:listeTypeContrat' %}" class="nav-link {% if request.resolver_match.url_name in 'listeTypeContrat ClausesTypeContrat' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                         <i class="bx bx-tag me-1"></i>
                                                         <span>Types de contrat</span>
@@ -730,13 +878,13 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'listegroupes nouveaugroupe detailsgroupe' %}show{% endif %}" id="sidbareGroupe">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_groupe:listegroupes' %}" class="nav-link {% if request.resolver_match.url_name in 'listegroupes detailsgroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des groupes</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_groupe:nouveaugroupe' %}" class="nav-link {% if request.resolver_match.url_name == 'nouveaugroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-plus-circle me-1"></i>
                                                 <span>Nouveau groupe</span>
@@ -759,7 +907,7 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1" id="sidebaraffectation">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_groupe:AffectationPage' %}" class="nav-link {% if request.resolver_match.url_name in 'AffectationPage AffectationAuGroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-time me-1"></i>
                                                 <span>En attente d'affectation</span>
@@ -784,7 +932,7 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeStudents' %}show{% endif %}" id="sidebarStudent">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeStudents StudentDetails' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des étudiants</span>
@@ -809,7 +957,7 @@
                         id="sidebarChargedeFormation">
                         <div class="submenu-container">
                             <div class="row g-1">
-                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                     <a href="{% url 'institut_app:pedago_dashboard' %}" class="nav-link {% if request.resolver_match.url_name in 'pedago_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                         <i class="bx bx-tachometer me-1"></i>
                                         <span>Tableau de bord</span>
@@ -835,13 +983,13 @@
                                             
                                             <div class="col-12">
                                                 <div class="submenu-section rounded-2 p-2 mb-2">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                         <a href="{% url 't_timetable:ListeDesEmploie' %}" class="nav-link {% if request.resolver_match.url_name in 'timetable_view ListeDesEmploie timetable_configure timetable_edit' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-list-ul me-1"></i>
                                                             <span>Emplois du temps</span>
                                                         </a>
                                                     </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                         <a href="{% url 't_timetable:CreateTimeTable' %}" class="nav-link {% if request.resolver_match.url_name == 'CreateTimeTable' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-plus-circle me-1"></i>
                                                             <span>Nouvel emploi du temps</span>
@@ -870,19 +1018,19 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1" id="sidebarFormateurs">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_formations:PageFormateurs' %}" class="nav-link {% if request.resolver_match.url_name in 'PageFormateurs' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des formateurs</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-plus-circle me-1"></i>
                                                 <span>Nouveau formateur</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_timetable:PageAffectation' %}" class="nav-link {% if request.resolver_match.url_name in 'PageAffectation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-transfer me-1"></i>
                                                 <span>Affectation module</span>
@@ -907,7 +1055,7 @@
                                     </a>
                                     <div class="collapse submenu-content mt-1" 
                                         id="sidebarAvancementCours">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_timetable:PageSuivieCours' %}" class="nav-link {% if request.resolver_match.url_name in 'PageSuivieCours' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Rapport d'avancement</span>
@@ -947,19 +1095,19 @@
                                                     <i class="bx bx-chevron-down submenu-arrow"></i>
                                                 </a>
                                                 <div class="collapse submenu-content mt-1" id="sidebarRegistrePresence">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                         <a href="{% url 't_etudiants:RegistrePage' %}" class="nav-link {% if request.resolver_match.url_name in 'RegistrePage DetailsRegistrePresence DetailsListePresence' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-list-ul me-1"></i>
                                                             <span>Liste des registres</span>
                                                         </a>
                                                     </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                         <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in '' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-user me-1"></i>
                                                             <span>Liste des étudiants</span>
                                                         </a>
                                                     </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                         <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-file me-1"></i>
                                                             <span>Rapport de présence</span>
@@ -1000,7 +1148,7 @@
                                                     <i class="bx bx-chevron-down submenu-arrow"></i>
                                                 </a>
                                                 <div class="collapse submenu-content mt-1" id="sidebarSalle">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                         <a href="{% url 't_timetable:ListeDesSalles' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesSalles' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-list-ul me-1"></i>
                                                             <span>Liste des salles</span>
@@ -1023,7 +1171,7 @@
                                                     <i class="bx bx-chevron-down submenu-arrow"></i>
                                                 </a>
                                                 <div class="collapse submenu-content mt-1" id="sidebarModeleCreneau">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                         <a href="{% url 't_timetable:ListeModelCrenau' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeModelCrenau model_creneau_edit model_creneau_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                             <i class="bx bx-list-ul me-1"></i>
                                                             <span>Modèles disponibles</span>
@@ -1063,25 +1211,25 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1" id="sidebarExamens">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_exam:ListeSession' %}" class="nav-link {% if request.resolver_match.url_name in 'PageDetailsSessionExamPlan ShowPv DetailsSession ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-history me-1"></i>
                                                 <span>Sessions d'examens</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_exam:exams_results' %}" class="nav-link {% if request.resolver_match.url_name in 'exams_results' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-line-chart me-1"></i>
                                                 <span>PV d'examens</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_exam:PagePvDeliberation' %}" class="nav-link {% if request.resolver_match.url_name in 'PagePvDeliberation PageDeliberationResult' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-line-chart me-1"></i>
                                                 <span>PV de délibération</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_exam:PageListeSessionExam' %}" class="nav-link {% if request.resolver_match.url_name in 'PageListeSessionExam liste_etudiants student_bulletin' and request.resolver_match.url_name != 'ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-line-chart me-1"></i>
                                                 <span>Bulletins de notes</span>
@@ -1104,7 +1252,7 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageCommission NouvelleCommission' %}show{% endif %}" id="sideBarCommission">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_exam:PageCommission' %}" class="nav-link {% if request.resolver_match.url_name in 'PageCommission UpdateCommission' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-file me-1"></i>
                                                 <span>Liste des commissions</span>
@@ -1131,7 +1279,7 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ModelBuilltinPage ' %}show{% endif %}" id="sideBarParamExam">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_exam:ModelBuilltinPage' %}" class="nav-link {% if request.resolver_match.url_name == 'ModelBuilltinPage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-file me-1"></i>
                                                 <span>Modèles de PV</span>
@@ -1158,7 +1306,7 @@
                             <div class="submenu-container">
                                 <div class="row g-1">
                                     <div class="col-12">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 'institut_app:FinanceDashboard' %}" class="nav-link {% if request.resolver_match.url_name in 'FinanceDashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-tachometer me-1"></i>
                                                 <span>Tableau de bord financier</span>
@@ -1177,37 +1325,37 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in ' ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements liste_des_remises SuivieEcheancier' %}show{% endif %}" id="sidebarTresorerie">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:attentes_de_paiements' %}" class="nav-link {% if request.resolver_match.url_name in ' PageDetailsDemandePaiement attentes_de_paiements' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-time me-1"></i>
                                                     <span>Inscription/Tranche</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:ListePenalite' %}" class="nav-link {% if request.resolver_match.url_name in ' ListePenalite' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-time me-1"></i>
                                                     <span>Autres paiements (Pénalité/rachat-autres-liste-des paiements)</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageRemboursement' %}" class="nav-link {% if request.resolver_match.url_name in 'PageRemboursement' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-undo me-1"></i>
                                                     <span>Remboursements</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:listeDesRembourssement' %}" class="nav-link {% if request.resolver_match.url_name in 'DetailsRembourssement listeDesRembourssement' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des remboursements</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:SuivieEcheancier' %}" class="nav-link {% if request.resolver_match.url_name in 'DetailsEcheancierClient DetailsEcheancierClientDouble SuivieEcheancier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-calendar-check me-1"></i>
                                                     <span>Suivi des échéanciers</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_tresorerie:ListeDesPaiements' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeDesPaiements' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Tous les paiements</span>
@@ -1231,7 +1379,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow me-2"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeRemiseApplique ListeRemise' %}show{% endif %}" id="sidebarRemises">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mx-2 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href='{% url "t_crm:ListeRemiseApplique" %}' class="nav-link {% if request.resolver_match.url_name == 'ListeRemiseApplique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-check me-1"></i>
                                                     <span>Remises appliquées</span>
@@ -1255,7 +1403,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarCaisse">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageBrouillardCaisse' %}" class="nav-link {% if request.resolver_match.url_name == 'PageBrouillardCaisse' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-notepad me-1"></i>
                                                     <span>Brouillard de caisse</span>
@@ -1279,14 +1427,14 @@
                                         </a>
                                         
                                         <div class="collapse submenu-content mt-1" id="sidebarBanque">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageBrouillardBanque' %}" class="nav-link {% if request.resolver_match.url_name == 'PageBrouillardBanque' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-notepad me-1"></i>
                                                     <span>Brouillard de banque</span>
                                                 </a>
                                             </div>
 
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:ImputationBancaire' %}" class="nav-link {% if request.resolver_match.url_name == 'ImputationBancaire' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-notepad me-1"></i>
                                                     <span>Imputation bancaire</span>
@@ -1310,25 +1458,25 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures' %}show{% endif %}" id="sidebarEcheanciers">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:ListeModelEcheancier' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeModelEcheancier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-file me-1"></i>
                                                     <span>Modèles</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:CreeEcheancier' %}" class="nav-link {% if request.resolver_match.url_name == 'CreeEcheancier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Créer un échéancier</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:ListeEcheancierSpecial' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeEcheancierSpecial' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-star me-1"></i>
                                                     <span>Échéancier spécial</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mx-2">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_tresorerie:ListeEcheanciersConfigures' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeEcheanciersConfigures' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-check me-1"></i>
                                                     <span>Échéanciers configurés</span>
@@ -1351,13 +1499,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarProduit">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:pageautrespaiement' %}" class="nav-link {% if request.resolver_match.url_name == 'pageautrespaiement' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des paiements</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_tresorerie:PageNouveauAutrePaiement' %}" class="nav-link {% if request.resolver_match.url_name == 'PageNouveauAutrePaiement' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouveau paiement</span>
@@ -1380,13 +1528,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarDepenses">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageDepenses' %}" class="nav-link {% if request.resolver_match.url_name == 'PageDepenses' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des dépenses</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_tresorerie:PageNouvelleDepense' %}" class="nav-link {% if request.resolver_match.url_name == 'PageNouvelleDepense' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouvelle dépense</span>
@@ -1409,13 +1557,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarFournisseurs">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageFournisseur' %}" class="nav-link {% if request.resolver_match.url_name in 'PageDetailsFournisseur PageFournisseur' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Liste des fournisseurs</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_tresorerie:PageNouveauFournisseur' %}" class="nav-link {% if request.resolver_match.url_name == 'PageNouveauFournisseur' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouveau fournisseur</span>
@@ -1438,7 +1586,7 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1" id="sidebarFactures">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageFacturation' %}" class="nav-link {% if request.resolver_match.url_name == 'PageFacturation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-envelope me-1"></i>
                                                     <span>Factures émises</span>
@@ -1461,38 +1609,38 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageConfigPaiementSeuil ListeRemise liste_types_depenses' %}show{% endif %}" id="sidbareParam">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageConfigPaiementSeuil' %}" class="nav-link {% if request.resolver_match.url_name == 'PageConfigPaiementSeuil' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-slider me-1"></i>
                                                     <span>Seuils de paiement</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_remise:ListeRemise' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeRemise' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="fas fa-percent me-1"></i>
                                                     <span>Gestion des remises</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageProduits' %}" class="nav-link {% if request.resolver_match.url_name == 'PageProduits' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="ri-wallet-2-line me-1"></i>
                                                     <span>Type de produits</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:liste_types_depenses' %}" class="nav-link {% if request.resolver_match.url_name == 'liste_types_depenses' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-wallet me-1"></i>
                                                     <span>Type de dépenses</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageImputationComptable' %}" class="nav-link {% if request.resolver_match.url_name == 'PageImputationComptable' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-wallet me-1"></i>
                                                     <span>Liaison spécialités - comptes</span>
                                                 </a>
                                             </div>
 
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:PageConfPenalite' %}" class="nav-link {% if request.resolver_match.url_name == 'PageConfPenalite' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-wallet me-1"></i>
                                                     <span>Pénalités de retard</span>
@@ -1533,13 +1681,13 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ArchiveThematique ListeThematique ' %}show{% endif %}" id="sidebarThematique">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_conseil:ListeThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des thématiques</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_conseil:ArchiveThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ArchiveThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-archive me-1"></i>
                                                 <span>Archives</span>
@@ -1562,13 +1710,13 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'prospectInstance' %}show{% endif %}" id="sidebarGestionClients">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_conseil:prospectInstance' %}" class="nav-link {% if request.resolver_match.url_name in 'prospectInstance' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-user-plus me-1"></i>
                                                 <span>Prospects</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-user-check me-1"></i>
                                                 <span>Clients</span>
@@ -1591,13 +1739,13 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'AddNewDevis   ' %}show{% endif %}" id="sidebarDevis">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="{% url 't_conseil:AddNewDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'AddNewDevis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-plus-circle me-1"></i>
                                                 <span>Nouveau devis</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="{% url 't_conseil:ListeDesDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesDevis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des devis</span>
@@ -1620,19 +1768,19 @@
                                         <i class="bx bx-chevron-down submenu-arrow"></i>
                                     </a>
                                     <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in '   ' %}show{% endif %}" id="sidebarFacture">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="" class="nav-link {% if request.resolver_match.url_name in ' ' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-plus-circle me-1"></i>
                                                 <span>Nouvelle facture</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                             <a href="" class="nav-link {% if request.resolver_match.url_name in '' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Liste des factures</span>
                                             </a>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                             <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
                                                 <i class="bx bx-list-ul me-1"></i>
                                                 <span>Tous les paiements</span>
@@ -1674,13 +1822,13 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'liste_entreprise new_entreprise details_entreprise' %}show{% endif %}" id="sidebarEntreprise">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 'institut_app:liste_entreprise' %}" class="nav-link {% if request.resolver_match.url_name in 'details_entreprise liste_entreprise' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-list-ul me-1"></i>
                                                     <span>Toutes les entités</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 'institut_app:new_entreprise' %}" class="nav-link {% if request.resolver_match.url_name == 'new_entreprise' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-plus-circle me-1"></i>
                                                     <span>Nouvelle entité</span>
@@ -1701,38 +1849,38 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'Role_Attribution ModulesPages PageUpdateUserDetails ListGroupePage UsersListePage user_action_log_list active_sessions' %}show{% endif %}" id="sidebarAdmin">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 'institut_app:UsersListePage' %}" class="nav-link {% if request.resolver_match.url_name in 'PageUpdateUserDetails UsersListePage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user me-1"></i>
                                                     <span>Gestion des utilisateurs</span>
                                                 </a>
                                             </div>
                                         
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 'institut_app:ModulesPages' %}" class="nav-link {% if request.resolver_match.url_name == 'ModulesPages' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-cube me-1"></i>
                                                     <span>Modules</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 'institut_app:roles_page' %}" class="nav-link {% if request.resolver_match.url_name == 'roles_page' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-cube me-1"></i>
                                                     <span>Rôles</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 'institut_app:Role_Attribution' %}" class="nav-link {% if request.resolver_match.url_name == 'Role_Attribution' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user-check me-1"></i>
                                                     <span>Attribution des rôles</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 't_crm:user_action_log_list' %}" class="nav-link {% if request.resolver_match.url_name == 'user_action_log_list' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-history me-1"></i>
                                                     <span>Journal d'actions</span>
                                                 </a>
                                             </div>
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="{% url 'institut_app:active_sessions' %}" class="nav-link {% if request.resolver_match.url_name == 'active_sessions' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="ri-shield-user-line me-1"></i>
                                                     <span>Sessions actives</span>
@@ -1753,14 +1901,14 @@
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
                                         <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'Role_Attribution ModulesPages PageUpdateUserDetails ListGroupePage UsersListePage' %}show{% endif %}" id="sidebarEditeur">
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1 mb-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 'pdf_editor:template-list' %}" target="_blank" class="nav-link {% if request.resolver_match.url_name in 'template_list edit_template' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-user me-1"></i>
                                                     <span>Templates</span>
                                                 </a>
                                             </div>
                                         
-                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 p-1">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
                                                 <a href="#" class="nav-link {% if request.resolver_match.url_name == 'create_template' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-cube me-1"></i>
                                                     <span>Nouveau template</span>
@@ -1832,5 +1980,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+});
+</script>
+
+<script>
+// Auto-add tooltip to truncated elements
+document.addEventListener('DOMContentLoaded', function() {
+    function addTooltips() {
+        const textElements = document.querySelectorAll('.app-menu .nav-link span, .app-menu .submenu-header h6, .app-menu .submenu-header small');
+        textElements.forEach(el => {
+            if (el.offsetWidth < el.scrollWidth) {
+                el.setAttribute('title', el.textContent.trim());
+            } else {
+                el.removeAttribute('title');
+            }
+        });
+    }
+    
+    // Run on load and resize
+    addTooltips();
+    window.addEventListener('resize', addTooltips);
+    
+    // Run when sidebar toggles (if applicable)
+    const toggles = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    toggles.forEach(t => t.addEventListener('shown.bs.collapse', addTooltips));
 });
 </script>

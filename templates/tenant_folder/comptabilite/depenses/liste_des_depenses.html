@@ -230,14 +230,9 @@
                                     </div>
                                     
                                     <div class="d-flex align-items-center">
-                                        <label for="expenseType" class="me-2 mb-0">Type:</label>
-                                        <select id="expenseType" class="form-select form-select-sm rounded-pill" style="width: 180px;">
-                                            <option value="">Tous les types</option>
-                                            <option value="fourniture">Fournitures</option>
-                                            <option value="service">Services</option>
-                                            <option value="locaux">Locaux</option>
-                                            <option value="salaire">Salaires</option>
-                                            <option value="autre">Autres</option>
+                                        <label for="categoryFilter" class="me-2 mb-0">Catégorie:</label>
+                                        <select id="categoryFilter" class="form-select form-select-sm rounded-pill" style="width: 180px;">
+                                            <option value="">Toutes</option>
                                         </select>
                                     </div>
                                     <div class="d-flex align-items-center">
@@ -269,7 +264,7 @@
                                             <th class="border-0">Fournisseur</th>
                                             <th class="border-0">Montant (TTC)</th>
                                             <th class="border-0">TVA</th>
-                                            <th class="border-0">Type</th>
+                                            <th class="border-0">Catégorie</th>
                                             <th class="border-0">Date</th>
                                             <th class="border-0">Etat</th>
                                             <th class="border-0 rounded-end text-center">Action</th>
@@ -462,20 +457,7 @@
                                     <span class="input-group-text border-0 bg-light">
                                         <i class="ri-folder-line text-muted"></i>
                                     </span>
-                                    <select class="form-select border-0 bg-light py-2" id="edit_categorie">
-                                      
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label fw-medium">Sous-catégorie</label>
-                                <div class="input-group">
-                                    <span class="input-group-text border-0 bg-light">
-                                        <i class="ri-folder-5-line text-muted"></i>
-                                    </span>
-                                    <select class="form-select border-0 bg-light py-2" id="edit_sous_categorie">
+                                    <select class="form-select border-0 bg-light py-2" id="edit_category">
                                       
                                     </select>
                                 </div>
@@ -590,10 +572,6 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-medium text-muted">Catégorie</label>
                                     <p class="mb-0 fw-semibold" id="detail_categorie">-</p>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-medium text-muted">Sous-catégorie</label>
-                                    <p class="mb-0 fw-semibold" id="detail_sous_categorie">-</p>
                                 </div>
                                 <div>
                                     <label class="form-label fw-medium text-muted">Description</label>
@@ -746,7 +724,8 @@
                             row += "<td>"+d.fournisseur__designation+"</td>";                         
                             row += "<td>"+d.montant_ttc+" DA</td>";                         
                             row += "<td>"+d.tva+" %</td>";                         
-                            row += "<td>"+d.categorie__label+'/'+d.sous_categorie__label+"</td>";                               
+                            var categoryDisplay = d.category_name ? ((d.category_parent_name ? d.category_parent_name + " > " : "") + d.category_name) : (d.categorie__label ? (d.categorie__label+'/'+d.sous_categorie__label) : '-');
+                            row += "<td>"+categoryDisplay+"</td>";                               
                             row += "<td>"+d.date_paiement+"</td>";
                             if(d.etat){
                                  row += "<td><span class='badge bg-success'>Valider</span></td>";
@@ -825,10 +804,12 @@
                             });
                         }
                         
-                        // Apply expense type filter
+                        // Apply expense category filter
                         if (expenseType) {
                             filteredData = filteredData.filter(function(item) {
-                                return item.type && item.type.toLowerCase().includes(expenseType.toLowerCase());
+                                // Check both new category and old type/category label
+                                var catName = item.category_name || item.categorie__label || item.type || "";
+                                return catName.toLowerCase().includes(expenseType.toLowerCase());
                             });
                         }
                         
@@ -859,7 +840,8 @@
                                 montant_ttc: item.montant_total,
                                 montant_ht: item.montant_ht || 0,
                                 tva: item.tva || 0,
-                                categorie__label: item.type,
+                                categorie__label: item.category_name || item.categorie__label || item.type,
+                                category_name: item.category_name,
                                 date: item.date_depense,
                                 etat: item.etat || false,
                                 fournisseur: item.fournisseur,
@@ -934,10 +916,13 @@
             filterItems();
         });
 
-        // Expense type filter change event
-        $('#expenseType').change(function() {
+        // Expense category filter change event
+        $('#categoryFilter').change(function() {
             filterItems();
         });
+
+        // Initialize categories
+        loadCategories();
 
         // Function to update statistics based on filtered data
         function updateStatistics(data) {
@@ -958,7 +943,7 @@
                 montantHTTotal += montantHT;
 
                 // Count categories
-                var categorieLabel = d.categorie__label || 'Autre';
+                var categorieLabel = d.category_name || d.categorie__label || 'Autre';
                 categorieCounts[categorieLabel] = (categorieCounts[categorieLabel] || 0) + 1;
 
                 // Count validated vs pending based on 'etat' field
@@ -1068,57 +1053,37 @@
             });
         }
 
-        function loadCategories(categorie){
+        function loadCategories(selectedId){
              $.ajax({
-                url : "{% url 't_tresorerie:ApiLoadCategories' %}",
+                url : "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
                 dataType : "JSON",
                 type : "GET",
                 success: function(data){
-                    var option = "<option value='0'>Veuillez sélectionner une catégorie</option>";
-                    $.each(data, function(index, p){
-                        option += "<option "+(p.id === categorie ? 'selected' : '')+" value="+p.id+">"+p.label+"</option>";
+                    // Populate Filter
+                    var filterOption = "<option value=''>Toutes</option>";
+                    // Populate Edit Select
+                    var editOption = "<option value=''>Veuillez sélectionner une catégorie</option>";
+                    
+                    // Simple recursive function or flat list processing if data is flat with parent_id
+                    // The API returns a flat list with parent_id and parent_name
+                    
+                    $.each(data, function(index, c){
+                        var displayName = (c.parent_name ? c.parent_name + " > " : "") + c.name;
+                        filterOption += "<option value='"+c.name+"'>"+displayName+"</option>"; // Filter by name
+                        
+                        var isSelected = (selectedId && c.id == selectedId) ? 'selected' : '';
+                        editOption += "<option value='"+c.id+"' "+isSelected+">"+displayName+"</option>";
                     });
-                    $('#edit_categorie').html(option);
+                    
+                    // Only update filter if it's empty (initial load)
+                    if ($('#categoryFilter option').length <= 1) {
+                         $('#categoryFilter').html(filterOption);
+                    }
+                    
+                    $('#edit_category').html(editOption);
                 }
             });
         }
-
-        function loadSousCategorie(categorie, sous_categorie){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiFilterSousCategrorie' %}",
-                dataType : "JSON",
-                type : "GET",
-                data : {
-                    'option' : categorie,
-                },
-                success : function(data){
-                    var option = "<option value='0'>Veuillez sélectionner une sous catégorie</option>";
-                    $.each(data, function(index, p){
-                        option += "<option "+(p.id === sous_categorie ? 'selected' : '')+" value="+p.id+">"+p.label+"</option>";
-                    });
-                    $('#edit_sous_categorie').html(option);
-                }
-            });
-        }
-
-        $(document).on('change','#edit_categorie',function(){
-            var categorie = $(this).val();
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiFilterSousCategrorie' %}",
-                dataType : "JSON",
-                type : "GET",
-                data : {
-                    'option' : categorie,
-                },
-                success : function(data){
-                    var option = "<option value='0'>Veuillez sélectionner une sous catégorie</option>";
-                    $.each(data, function(index, p){
-                        option += "<option value="+p.id+">"+p.label+"</option>";
-                    });
-                    $('#edit_sous_categorie').html(option);
-                }
-            });
-        });
 
         $(document).on('click','#updateBtn', function(){
             var id = $(this).data('id');
@@ -1145,8 +1110,8 @@
                     }
                     
                     loadFournisseurs(data.fournisseur);
-                    loadCategories(data.categorie);
-                    loadSousCategorie(data.categorie, data.sous_categorie);
+                    loadCategories(data.category);
+                    // loadSousCategorie(data.categorie, data.sous_categorie); // Removed
                 }
 
             });
@@ -1165,8 +1130,8 @@
             var edit_tva              = $('#edit_tva').val();
             var edit_montant_ttc      = $('#edit_montant_ttc').val();
             var edit_date             = $('#edit_date').val();
-            var edit_categorie        = $('#edit_categorie').val();
-            var edit_sous_categorie   = $('#edit_sous_categorie').val();
+            var edit_categorie        = $('#edit_category').val(); // Using edit_category now
+            // var edit_sous_categorie   = $('#edit_sous_categorie').val(); // Removed
             var edit_description      = $('#edit_description').val();
             var edit_piece            = $('#edit_piece')[0].files[0];
 
@@ -1227,8 +1192,9 @@
                     // Populate the detail fields
                     $('#detail_label').text(data.label || '-');
                     $('#detail_fournisseur').text(data.fournisseur_designation || '-');
-                    $('#detail_categorie').text(data.categorie_label || '-');
-                    $('#detail_sous_categorie').text(data.sous_categorie_label || '-');
+                    var catDisplay = data.category_name ? ((data.category_parent_name ? data.category_parent_name + " > " : "") + data.category_name) : (data.categorie_label || '-');
+                    $('#detail_categorie').text(catDisplay);
+                    // $('#detail_sous_categorie').text(data.sous_categorie_label || '-'); // Removed from UI
                     $('#detail_description').text(data.description || '-');
                     $('#detail_montant_ht').text((data.montant_ht ? data.montant_ht + ' DA' : '- DA'));
                     $('#detail_tva').text((data.tva ? data.tva + ' %' : '- %'));
