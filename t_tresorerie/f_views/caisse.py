@@ -40,19 +40,19 @@ def brouillard_caisse_json(request):
         entite = F('due_paiements__ref_echeancier__entite__designation')
     )
 
-    autres_produits = AutreProduit.objects.filter(mode_paiement='cach').values(
-        nom=F('label'),
-        date=F('date_paiement'),
-        montant=F('montant_paiement'),
-        type=Value('entree', output_field=models.CharField()), # C'est une entrée d'argent
-        descri=F('label'),
-        ref=F('num'),
-        order_to=Concat(
-            F('client__nom'), Value(' '), F('client__prenom'),
-            output_field=CharField()
-        ),
-        entite=F('entite__designation')
-    )
+    # autres_produits = AutreProduit.objects.filter(mode_paiement='cach').values(
+    #     nom=F('label'),
+    #     date=F('date_paiement'),
+    #     montant=F('montant_paiement'),
+    #     type=Value('entree', output_field=models.CharField()), # C'est une entrée d'argent
+    #     descri=F('label'),
+    #     ref=F('num'),
+    #     order_to=Concat(
+    #         F('client__nom'), Value(' '), F('client__prenom'),
+    #         output_field=CharField()
+    #     ),
+    #     entite=F('entite__designation')
+    # )
 
     # ---- 2. Dépenses (Sorties en espèce) ----
     depenses = Depenses.objects.filter(mode_paiement='esp').values(
@@ -220,6 +220,21 @@ def ApiReturnUndonePaiament(request):
     else:
         return JsonResponse({"status" : "error"})
     
+@login_required(login_url="institut_app:login")
+def ApiImputeBankPaiment(request):
+    if request.method == "POST":
+        operationId = request.POST.get('operationId')
+        compte = request.POST.get('compte')
+
+        if not operationId or not compte:
+            return JsonResponse({"status":"error","message":"Informations manquantes"})
+        
+        ## Imputation du paiement
+        
+
+
+    else:
+        return JsonResponse({"status":"error",'message' : 'methode non autorise'})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadEntrepises(request):

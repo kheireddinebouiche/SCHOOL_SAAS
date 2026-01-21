@@ -1745,29 +1745,57 @@
             var operationId = $('#rapprochementOperationId').val();
 
             if (!selectedAccount) {
-                alert('Veuillez sélectionner un compte bancaire');
+                alertify.error('Veuillez sélectionner un compte bancaire');
                 return;
             }
 
             if (!operationId) {
-                alert('ID de l\'opération manquant');
+                alertify.error('ID de l\'opération manquant');
                 return;
             }
 
-            // In a real application, you would send this data to the server for processing
-            console.log('Rapprochement:', {operationId: operationId, compte: selectedAccount});
+            var btn = $(this); // référence du bouton
+            btn.prop('disabled', true); // désactive le bouton
 
-            // Close modal and show success message
-            $('#reconciliationModal').modal('hide');
-            alert('Rapprochement bancaire enregistré avec succès');
+            // Optionnel : afficher un spinner pour indiquer le chargement
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
+            $.ajax({
+              url : "{% url 't_tresorerie:ApiImputeBankPaiment' %}",
+              dataType : "JSON",
+              type: "POST",
+              data : {
+                'operationId' : operationId,
+                'compte' : selectedAccount,
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+              },
+              success : function(response){
+                if (response.status === "success"){
+                  alertify.succes(response.message);
+                  // Close modal and show success message
+                  $('#reconciliationModal').modal('hide');
+                
+
+                  // Optionally reset the form
+                  $('#compteRapprochement')[0].selectedIndex = 0;
+                  $('#rapprochementOperationId').val('');
+
+                  // Refresh the payment list to reflect the reconciliation status
+                  // This will preserve the current filter state
+                  loadPaiementData();
+                }else{
+                  alertify.error(response.message);
+                }
+              }
+            });
 
             // Optionally reset the form
             $('#compteRapprochement')[0].selectedIndex = 0;
             $('#rapprochementOperationId').val('');
-
-            // Refresh the payment list to reflect the reconciliation status
-            // This will preserve the current filter state
-            loadPaiementData();
         });
 
 

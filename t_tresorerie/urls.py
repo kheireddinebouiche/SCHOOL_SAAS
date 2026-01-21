@@ -177,6 +177,7 @@ urlpatterns = [
     path('brouillard_banque', brouillard_banque, name="brouillard_banque"),
     path('imputation-bancaire/', ImputationBancaire, name="ImputationBancaire"),
     path('ApiReturnUndonePaiament', ApiReturnUndonePaiament, name="ApiReturnUndonePaiament"),
+    path('ApiImputeBankPaiment', ApiImputeBankPaiment, name="ApiImputeBankPaiment"),
 
     path('plan-comptable/',PagePlanComptable, name="PagePlanComptable"),
     path('plan-comptable/create-modal/', CreateCompteModal, name="CreateCompteModal"),

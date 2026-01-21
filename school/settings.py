@@ -130,12 +130,12 @@ WSGI_APPLICATION = 'school.wsgi.application'
 
 DATABASES = {
      'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': 'backup',
-        'USER': 'postgres',
-        'PASSWORD': '1230042690',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': env("DATABASE_ENGINE"),
+        'NAME': env("DATABASE_NAME"),
+        'USER': env("DATABASE_USER"),
+        'PASSWORD': env("DATABASE_PASSE"),
+        'HOST': env("DATABASE_SERVER"),
+        'PORT': env("DATABASE_PORT"),
     }
 }
 
