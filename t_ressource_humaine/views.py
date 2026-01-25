@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Contrat, FichePaie, ParametresPaie
+from .models import Contrat, FichePaie, ParametresPaie, TypeContrat
 from .logic import PaieEngine
 from django import forms
 from decimal import Decimal
@@ -119,13 +119,39 @@ class FichePaieGenerationForm(forms.Form):
     annee = forms.IntegerField(initial=2024, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     jours_travailles = forms.IntegerField(initial=22, min_value=0, max_value=31, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     heures_travailles = forms.DecimalField(initial=0, min_value=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    heures_absence = forms.DecimalField(initial=0, min_value=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     primes_exceptionnelles = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
-    retenues_absences = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     avance_sur_salaire = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
 
 def generer_paie(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
+    
+    # Get Contract Configuration (Defaults & exclusions)
+    contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
+    contract_defaults = {}
+    
+    # Filter rubrics: 
+    # 1. Must be globally active
+    # 2. Must match contract type (or no restriction)
+    # 3. MUST NOT be explicitly deactivated in RubriqueContrat
+    
+    all_rubriques = Rubrique.objects.filter(actif=True)
+    rubriques_actives = []
+    
+    for r in all_rubriques:
+        # Check type eligibility
+        if r.types_contrat and contrat.type_contrat not in r.types_contrat:
+            continue
+            
+        # Check contract specific config
+        rc = contract_rubrics_config.get(r.id)
+        if rc:
+            if not rc.actif:
+                continue # Skip if explicitly deactivated for this contract
+            contract_defaults[r.id] = rc.valeur
+            
+        rubriques_actives.append(r)
     
     if request.method == 'POST':
         form = FichePaieGenerationForm(request.POST)
@@ -134,8 +160,8 @@ def generer_paie(request, contrat_id):
             annee = form.cleaned_data['annee']
             jours = form.cleaned_data['jours_travailles']
             heures = form.cleaned_data['heures_travailles'] or 0
+            h_absence = form.cleaned_data.get('heures_absence') or 0
             primes_ex = form.cleaned_data.get('primes_exceptionnelles') or 0
-            retenues = form.cleaned_data.get('retenues_absences') or 0
             avance = form.cleaned_data.get('avance_sur_salaire') or 0
             
             if FichePaie.objects.filter(contrat=contrat, mois=mois, annee=annee).exists():
@@ -145,13 +171,20 @@ def generer_paie(request, contrat_id):
                 messages.error(request, message)
                 return redirect('t_ressource_humaine:contrat_list')
             
-            result = PaieEngine.calculer_paie(contrat, jours, heures)
+            # Extract Dynamic Rubrics
+            lignes_rubriques = []
+            for rubrique in rubriques_actives:
+                valeur_str = request.POST.get(f'rubrique_{rubrique.id}', '0')
+                try:
+                    valeur = Decimal(valeur_str)
+                    if valeur != 0:
+                        lignes_rubriques.append({'rubrique': rubrique, 'valeur': valeur})
+                except:
+                    pass
             
-            # Note: PaieEngine currently doesn't factor in primes_exceptionnelles etc. in its net calculation.
-            # I should either update PaieEngine or calculate the final net here.
-            # For simplicity, I will save them and use PaieEngine result as starting point.
+            result = PaieEngine.calculer_paie(contrat, jours, heures, heures_absence=h_absence, lignes_rubriques=lignes_rubriques)
             
-            final_net = result['net_a_payer'] + Decimal(primes_ex) - Decimal(retenues) - Decimal(avance)
+            final_net = result['net_a_payer'] + Decimal(primes_ex) - Decimal(avance)
 
             fiche = FichePaie(
                 contrat=contrat,
@@ -160,8 +193,9 @@ def generer_paie(request, contrat_id):
                 annee=annee,
                 jours_travailles=jours,
                 heures_travailles=heures,
+                heures_absence=h_absence,
                 primes_exceptionnelles=primes_ex,
-                retenues_absences=retenues,
+                retenues_absences=result['retenue_absences_montant'],
                 avance_sur_salaire=avance,
                 salaire_base_calcule=result['salaire_base_calcule'],
                 base_ss=result['base_ss'],
@@ -170,11 +204,21 @@ def generer_paie(request, contrat_id):
                 irg=result['irg'],
                 net_a_payer=final_net,
                 prime_panier=result['prime_panier'],
-                prime_transport=result['prime_transport']
+                prime_transport=result['prime_transport'],
+                is_validated=True 
             )
             if contrat.entreprise:
                 fiche.entreprise = contrat.entreprise
             fiche.save()
+            
+            # Save Lignes Paie
+            for ligne in result['detail_lignes']:
+                LignePaie.objects.create(
+                    fiche_paie=fiche,
+                    rubrique=ligne['rubrique'],
+                    valeur_saisie=ligne['valeur_saisie'],
+                    montant=ligne['montant']
+                )
             
             msg = f"Fiche de paie générée : Net {fiche.net_a_payer} DA"
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -190,7 +234,7 @@ def generer_paie(request, contrat_id):
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 html = render_to_string(
                     't_ressource_humaine/_generate_paie_form.html',
-                    {'form': form, 'contrat': contrat},
+                    {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'contract_defaults': contract_defaults},
                     request=request
                 )
                 return JsonResponse({'status': 'invalid', 'html': html})
@@ -203,9 +247,143 @@ def generer_paie(request, contrat_id):
         })
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return render(request, 't_ressource_humaine/_generate_paie_form.html', {'form': form, 'contrat': contrat})
+        return render(request, 't_ressource_humaine/_generate_paie_form.html', 
+                      {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'contract_defaults': contract_defaults})
         
-    return render(request, 't_ressource_humaine/generate_paie.html', {'form': form, 'contrat': contrat})
+    return render(request, 't_ressource_humaine/generate_paie.html', 
+                  {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'contract_defaults': contract_defaults})
+
+def modifier_paie(request, pk):
+    fiche = get_object_or_404(FichePaie, pk=pk)
+    contrat = fiche.contrat
+    rubriques_actives = Rubrique.objects.filter(actif=True)
+    
+    # Load existing values for rubrics
+    existing_lignes = {ligne.rubrique_id: ligne.valeur_saisie for ligne in fiche.lignes_paie.all()}
+    
+    if request.method == 'POST':
+        form = FichePaieGenerationForm(request.POST)
+        if form.is_valid():
+            # We don't change month/year usually, or maybe we do? 
+            # Ideally modification should just recalculate amounts based on new hours/variables
+            # But the form includes month/year. We should keep consistency.
+            
+            mois = int(form.cleaned_data['mois'])
+            annee = form.cleaned_data['annee']
+            jours = form.cleaned_data['jours_travailles']
+            heures = form.cleaned_data['heures_travailles'] or 0
+            h_absence = form.cleaned_data.get('heures_absence') or 0
+            primes_ex = form.cleaned_data.get('primes_exceptionnelles') or 0
+            avance = form.cleaned_data.get('avance_sur_salaire') or 0
+            
+            # Check for duplicates if month/year changed to something that exists (excluding self)
+            if (mois != fiche.mois or annee != fiche.annee) and FichePaie.objects.filter(contrat=contrat, mois=mois, annee=annee).exclude(pk=pk).exists():
+                message = f"Une autre fiche de paie existe déjà pour {mois}/{annee}"
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'error', 'message': message})
+                messages.error(request, message)
+                return redirect('t_ressource_humaine:fiche_paie_list')
+
+            # Extract Dynamic Rubrics
+            lignes_rubriques = []
+            for rubrique in rubriques_actives:
+                valeur_str = request.POST.get(f'rubrique_{rubrique.id}', '0')
+                try:
+                    valeur = Decimal(valeur_str)
+                    if valeur != 0:
+                        lignes_rubriques.append({'rubrique': rubrique, 'valeur': valeur})
+                except:
+                    pass
+
+            result = PaieEngine.calculer_paie(contrat, jours, heures, heures_absence=h_absence, lignes_rubriques=lignes_rubriques)
+            
+            final_net = result['net_a_payer'] + Decimal(primes_ex) - Decimal(avance)
+
+            # Update existing fiche
+            fiche.mois = mois
+            fiche.annee = annee
+            fiche.jours_travailles = jours
+            fiche.heures_travailles = heures
+            fiche.heures_absence = h_absence
+            fiche.primes_exceptionnelles = primes_ex
+            fiche.retenues_absences = result['retenue_absences_montant']
+            fiche.avance_sur_salaire = avance
+            fiche.salaire_base_calcule = result['salaire_base_calcule']
+            fiche.base_ss = result['base_ss']
+            fiche.montant_ss = result['montant_ss']
+            fiche.salaire_imposable = result['salaire_imposable']
+            fiche.irg = result['irg']
+            fiche.net_a_payer = final_net
+            fiche.prime_panier = result['prime_panier']
+            fiche.prime_transport = result['prime_transport']
+            
+            fiche.save()
+            
+            # Sync Lignes Paie (Delete all and recreate - simplest for now)
+            fiche.lignes_paie.all().delete()
+            for ligne in result['detail_lignes']:
+                LignePaie.objects.create(
+                    fiche_paie=fiche,
+                    rubrique=ligne['rubrique'],
+                    valeur_saisie=ligne['valeur_saisie'],
+                    montant=ligne['montant']
+                )
+            
+            msg = f"Fiche de paie modifiée : Net {fiche.net_a_payer} DA"
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': msg,
+                    'show_modal': True, # Re-open detail modal? or just close edit modal and refresh table?
+                    # Let's say we refresh table.
+                    'reload_table': True
+                })
+            messages.success(request, msg)
+            return redirect('t_ressource_humaine:fiche_paie_detail', pk=fiche.pk)
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                html = render_to_string(
+                    't_ressource_humaine/_generate_paie_form.html',
+                    {'form': form, 'contrat': contrat, 'modifying': True, 'fiche_id': fiche.pk, 'rubriques': rubriques_actives, 'existing_lignes': existing_lignes},
+                    request=request
+                )
+                return JsonResponse({'status': 'invalid', 'html': html})
+    else:
+        # Pre-fill form
+        form = FichePaieGenerationForm(initial={
+            'mois': fiche.mois,
+            'annee': fiche.annee,
+            'jours_travailles': fiche.jours_travailles,
+            'heures_travailles': fiche.heures_travailles,
+            'heures_absence': fiche.heures_absence,
+            'primes_exceptionnelles': fiche.primes_exceptionnelles,
+            'avance_sur_salaire': fiche.avance_sur_salaire
+        })
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 't_ressource_humaine/_generate_paie_form.html', 
+                      {'form': form, 'contrat': contrat, 'modifying': True, 'fiche_id': fiche.pk, 'rubriques': rubriques_actives, 'existing_lignes': existing_lignes})
+        
+    return render(request, 't_ressource_humaine/generate_paie.html', 
+                  {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'existing_lignes': existing_lignes})
+
+def supprimer_paie(request, pk):
+    fiche = get_object_or_404(FichePaie, pk=pk)
+    
+    if request.method == 'POST':
+        fiche.delete()
+        msg = "Fiche de paie supprimée avec succès."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': msg, 'reload_table': True})
+        messages.success(request, msg)
+        return redirect('t_ressource_humaine:fiche_paie_list')
+    
+    # Render confirmation template
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 't_ressource_humaine/_fiche_paie_delete.html', {'fiche': fiche})
+        
+    return redirect('t_ressource_humaine:fiche_paie_list') # Fallback if direct access GET
+
 
 class FichePaieDetailView(LoginRequiredMixin, DetailView):
     model = FichePaie
@@ -276,10 +454,11 @@ class FichePaieListView(LoginRequiredMixin, ListView):
 class ParametresPaieForm(forms.ModelForm):
     class Meta:
         model = ParametresPaie
-        fields = ['taux_ss', 'jours_travailles_standard', 'seuil_exoneration_irg']
+        fields = ['taux_ss', 'jours_travailles_standard', 'heures_mensuelles_standard', 'seuil_exoneration_irg']
         widgets = {
             'taux_ss': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'jours_travailles_standard': forms.NumberInput(attrs={'class': 'form-control'}),
+            'heures_mensuelles_standard': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'seuil_exoneration_irg': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
@@ -306,6 +485,160 @@ def config_paie(request):
     
     return render(request, 't_ressource_humaine/parametres_paie.html', {'form': form, 'config': config})
 
+# -- Rubriques --
+
+from .models import Rubrique, LignePaie, RubriqueContrat
+
+def manage_rubriques_contrat(request, contrat_id):
+    contrat = get_object_or_404(Contrat, pk=contrat_id)
+    
+    # Filter rubrics: Keep if types_contrat is empty or contains contrat.type_contrat
+    all_rubriques = Rubrique.objects.filter(actif=True)
+    rubriques_eligibles = []
+    for r in all_rubriques:
+        # Check if types_contrat is empty list or None
+        if not r.types_contrat:
+            rubriques_eligibles.append(r)
+        elif contrat.type_contrat in r.types_contrat:
+            rubriques_eligibles.append(r)
+            
+    existing_rc = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
+
+    if request.method == 'POST':
+        for rubrique in rubriques_eligibles:
+            valeur = request.POST.get(f'valeur_{rubrique.id}')
+            actif = request.POST.get(f'actif_{rubrique.id}') == 'on'
+            
+            # Update or create RubriqueContrat
+            if valeur is not None:
+                try:
+                    valeur_dec = Decimal(valeur) if valeur else Decimal(0)
+                    RubriqueContrat.objects.update_or_create(
+                        contrat=contrat,
+                        rubrique=rubrique,
+                        defaults={'valeur': valeur_dec, 'actif': actif}
+                    )
+                except ValueError:
+                    pass
+
+        msg = "Primes du contrat mises à jour."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': msg})
+        messages.success(request, msg)
+        return redirect('t_ressource_humaine:contrat_list')
+
+    # Prepare data for template
+    rubrique_data = []
+    for r in rubriques_eligibles:
+        rc = existing_rc.get(r.id)
+        rubrique_data.append({
+            'rubrique': r,
+            'valeur': rc.valeur if rc else 0,
+            'actif': rc.actif if rc else True
+        })
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 't_ressource_humaine/rubriques_contrat_form.html', 
+                      {'contrat': contrat, 'rubrique_data': rubrique_data})
+                      
+    return render(request, 't_ressource_humaine/rubriques_contrat_form.html', 
+                  {'contrat': contrat, 'rubrique_data': rubrique_data})
+
+
+
+class RubriqueForm(forms.ModelForm):
+    types_contrat = forms.MultipleChoiceField(
+        choices=TypeContrat.choices,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        help_text="Sélectionnez les types de contrats auxquels cette rubrique s'applique."
+    )
+
+    class Meta:
+        model = Rubrique
+        fields = ['libelle', 'type_rubrique', 'mode_calcul', 'types_contrat', 'est_cotisable', 'est_imposable', 'actif']
+        widgets = {
+            'libelle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: Prime de Panier'}),
+            'type_rubrique': forms.Select(attrs={'class': 'form-select'}),
+            'mode_calcul': forms.Select(attrs={'class': 'form-select'}),
+            'est_cotisable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'est_imposable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class RubriqueListView(LoginRequiredMixin, ListView):
+    model = Rubrique
+    template_name = 't_ressource_humaine/rubrique_list.html'
+    context_object_name = 'rubriques'
+
+class RubriqueCreateView(LoginRequiredMixin, CreateView):
+    model = Rubrique
+    form_class = RubriqueForm
+    template_name = 't_ressource_humaine/rubrique_form.html'
+    success_url = reverse_lazy('t_ressource_humaine:rubrique_list')
+
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['t_ressource_humaine/_rubrique_form.html']
+        return [self.template_name]
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Rubrique créée avec succès', 'reload_table': True})
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+             html = render_to_string(
+                't_ressource_humaine/_rubrique_form.html',
+                {'form': form},
+                request=self.request
+            )
+             return JsonResponse({'status': 'invalid', 'html': html})
+        return super().form_invalid(form)
+
+class RubriqueUpdateView(LoginRequiredMixin, UpdateView):
+    model = Rubrique
+    form_class = RubriqueForm
+    template_name = 't_ressource_humaine/rubrique_form.html'
+    success_url = reverse_lazy('t_ressource_humaine:rubrique_list')
+
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['t_ressource_humaine/_rubrique_form.html']
+        return [self.template_name]
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Rubrique modifiée avec succès', 'reload_table': True})
+        return super().form_valid(form)
+        
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+             html = render_to_string(
+                't_ressource_humaine/_rubrique_form.html',
+                {'form': form},
+                request=self.request
+            )
+             return JsonResponse({'status': 'invalid', 'html': html})
+        return super().form_invalid(form)
+
+class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
+    model = Rubrique
+    success_url = reverse_lazy('t_ressource_humaine:rubrique_list')
+    template_name = 't_ressource_humaine/_rubrique_delete.html'
+    
+    def form_valid(self, form):
+        success_url = self.get_success_url()
+        self.object.delete()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Rubrique supprimée avec succès', 'reload_table': True})
+        return redirect(success_url)
+
+# -- Config Paie (Existing) --
+
 def select_entreprise_paie(request):
     if request.method == 'POST':
         entreprise_id = request.POST.get('entreprise_id')
@@ -318,3 +651,4 @@ def select_entreprise_paie(request):
             messages.warning(request, "Aucune entreprise sélectionnée.")
         return redirect(request.META.get('HTTP_REFERER', 't_ressource_humaine:contrat_list'))
     return redirect('t_ressource_humaine:contrat_list')
+

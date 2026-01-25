@@ -305,7 +305,6 @@ class FicheDeVoeux(models.Model):
     def __str__(self):
         return f"Fiche de Voeux for {self.prospect.nom} {self.prospect.prenom}"
     
-
 class FicheVoeuxDouble(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True, related_name="prospect_fiche_voeux_double")
     specialite = models.ForeignKey(DoubleDiplomation, on_delete=models.DO_NOTHING, null=True, blank=True)
@@ -320,7 +319,6 @@ class FicheVoeuxDouble(models.Model):
     def __str__(self):
         return f"Fiche de voeux double diplômation : {self.prospect.nom} {self.prospect.prenom}"
 
-    
 class FicheDeVoeuxAddiotionnel(models.Model):
     order = models.CharField(max_length=10, null=True, blank=True)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)

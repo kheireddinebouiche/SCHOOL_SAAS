@@ -1,0 +1,66 @@
+{% load static %}
+
+<div class="modal-header">
+    <h5 class="modal-title" id="rubriqueContratModalLabel">Gérer les Primes & Retenues - {{ contrat }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" action="{% url 't_ressource_humaine:manage_rubriques_contrat' contrat.id %}" class="ajax-form" data-modal="#rubriqueContratModal">
+    {% csrf_token %}
+    <div class="modal-body">
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 40%;">Rubrique</th>
+                        <th style="width: 30%;">Valeur</th>
+                        <th style="width: 20%;">Actif</th>
+                        <th style="width: 10%;">Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in rubrique_data %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.rubrique.libelle }}</strong>
+                            {% if item.rubrique.est_cotisable %} <span class="badge bg-info text-dark" title="Cotisable">C</span>{% endif %}
+                            {% if item.rubrique.est_imposable %} <span class="badge bg-warning text-dark" title="Imposable">I</span>{% endif %}
+                            <div class="text-muted small">{{ item.rubrique.get_mode_calcul_display }}</div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.01" class="form-control" name="valeur_{{ item.rubrique.id }}" value="{{ item.valeur|stringformat:'f' }}">
+                                <span class="input-group-text bg-light">
+                                    {% if item.rubrique.mode_calcul == 'PERCENT' %}%
+                                    {% elif item.rubrique.mode_calcul == 'HOURS' %}h
+                                    {% else %}DA{% endif %}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input" type="checkbox" name="actif_{{ item.rubrique.id }}" {% if item.actif %}checked{% endif %}>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {% if item.rubrique.type_rubrique == 'GAIN' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ item.rubrique.get_type_rubrique_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">Aucune rubrique éligible pour ce type de contrat.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </div>
+</form>

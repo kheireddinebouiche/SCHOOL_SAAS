@@ -1,0 +1,189 @@
+{% extends 'tenant_folder/base.html' %}
+{% load humanize %}
+{% block title %}Configuration des Rubriques de Paie{% endblock %}
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Rubriques de Paie</h4>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="{% url 't_ressource_humaine:contrat_list' %}">RH</a></li>
+                                <li class="breadcrumb-item active">Rubriques</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12 text-end">
+                    <a href="{% url 't_ressource_humaine:rubrique_create' %}" class="btn btn-primary open-modal-url" data-modal-title="Ajouter une Rubrique" data-modal-size="modal-lg">
+                        <i class="ri-add-line align-bottom me-1"></i> Nouvelle Rubrique
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="table-responsive table-card">
+                                <table class="table table-nowrap align-middle table-hover mb-0">
+                                    <thead class="table-light text-muted">
+                                        <tr>
+                                            <th scope="col">Libellé</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Caractéristiques</th>
+                                            <th scope="col">Statut</th>
+                                            <th scope="col" class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rubrique in rubriques %}
+                                        <tr>
+                                            <td class="fw-medium">{{ rubrique.libelle }}</td>
+                                            <td>
+                                                {% if rubrique.type_rubrique == 'GAIN' %}
+                                                    <span class="badge bg-success-subtle text-success">Gain (+)</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger">Retenue (-)</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    {% if rubrique.est_cotisable %}
+                                                        <span class="badge bg-info-subtle text-info">Cotisable</span>
+                                                    {% endif %}
+                                                    {% if rubrique.est_imposable %}
+                                                        <span class="badge bg-warning-subtle text-warning">Imposable</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if rubrique.actif %}
+                                                    <span class="badge badge-soft-success">Actif</span>
+                                                {% else %}
+                                                    <span class="badge badge-soft-light text-muted">Inactif</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="dropdown d-inline-block">
+                                                    <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="ri-more-fill align-middle"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <a href="{% url 't_ressource_humaine:rubrique_update' rubrique.id %}" class="dropdown-item open-modal-url" data-modal-title="Modifier Rubrique" data-modal-size="modal-lg">
+                                                                <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Modifier
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="{% url 't_ressource_humaine:rubrique_delete' rubrique.id %}" class="dropdown-item open-modal-url text-danger" data-modal-title="Supprimer Rubrique">
+                                                                <i class="ri-delete-bin-line align-bottom me-2 text-danger"></i> Supprimer
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-5">
+                                                <h5 class="text-muted">Aucune rubrique configurée</h5>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Modal -->
+<div class="modal fade" id="genericModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+         // Generic Modal Handler (Same as payslip list)
+         $(document).on('click', '.open-modal-url', function(e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            var title = $(this).data('modal-title') || 'Action';
+            
+            var size = $(this).data('modal-size') || '';
+            
+            $('#genericModal .modal-title').text(title);
+            $('#genericModal .modal-dialog').removeClass('modal-sm modal-lg modal-xl').addClass(size);
+            $('#genericModal .modal-body').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>');
+            var modal = new bootstrap.Modal(document.getElementById('genericModal'));
+            modal.show();
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    $('#genericModal .modal-body').html(response);
+                },
+                error: function() {
+                    $('#genericModal .modal-body').html('<div class="alert alert-danger">Une erreur est survenue.</div>');
+                }
+            });
+        });
+
+        // Handle Forms in Modal (AJAX Submit) - Basic version, for full table reload we might need to just reload page or use same pattern as before
+        $(document).on('submit', '.ajax-form', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var container = form.closest('.modal-body');
+            var btn = form.find('button[type="submit"]');
+            var originalBtnCtx = btn.html();
+            btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin align-bottom me-1"></i> Traitement...');
+
+            $.ajax({
+                url: form.attr('action'),
+                type: form.attr('method'),
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#genericModal').modal('hide');
+                        if (response.reload_table) {
+                            window.location.reload(); // Simple reload for this page
+                        }
+                    } else if (response.status === 'invalid') {
+                        container.html(response.html);
+                    } else {
+                         alert('Erreur: ' + response.message);
+                         btn.prop('disabled', false).html(originalBtnCtx);
+                    }
+                },
+                error: function() {
+                    alert('Erreur technique');
+                    btn.prop('disabled', false).html(originalBtnCtx);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

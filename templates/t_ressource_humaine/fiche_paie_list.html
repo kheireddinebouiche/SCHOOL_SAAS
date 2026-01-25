@@ -158,9 +158,89 @@
     </div>
 </div>
 
-<script>
-    $(document).ready(function() {
-        // Fix dropdown clipping in responsive tables
+
+    <!-- Generic Modal -->
+    <div class="modal fade" id="genericModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Content loaded via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // ... (Existing Dropdown Fix) ...
+
+            // Generic Modal Handler
+            $(document).on('click', '.open-modal-url', function(e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                var title = $(this).data('modal-title') || 'Action';
+                
+                $('#genericModal .modal-title').text(title);
+                $('#genericModal .modal-body').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>');
+                var modal = new bootstrap.Modal(document.getElementById('genericModal'));
+                modal.show();
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function(response) {
+                        $('#genericModal .modal-body').html(response);
+                    },
+                    error: function() {
+                        $('#genericModal .modal-body').html('<div class="alert alert-danger">Une erreur est survenue.</div>');
+                    }
+                });
+            });
+
+            // Handle Forms in Modal (AJAX Submit)
+            $(document).on('submit', '.ajax-form', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var container = form.closest('.modal-body');
+                
+                // Show loading
+                var btn = form.find('button[type="submit"]');
+                var originalBtnCtx = btn.html();
+                btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin align-bottom me-1"></i> Traitement...');
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: form.attr('method'),
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            $('#genericModal').modal('hide');
+                            if (response.reload_table) {
+                                // Trigger filter form submit to reload table
+                                $('#paie-filter-form').submit();
+                            }
+                        } else if (response.status === 'invalid') {
+                            // Re-render form with errors
+                            container.html(response.html);
+                        } else {
+                            alertify.error(response.message || 'Erreur inconnue');
+                            btn.prop('disabled', false).html(originalBtnCtx);
+                        }
+                    },
+                    error: function() {
+                        alertify.error('Erreur lors de la soumission du formulaire.');
+                        btn.prop('disabled', false).html(originalBtnCtx);
+                    }
+                });
+            });
+
+            // ... (Existing Filter Logic) ...
+
         $(document).on('show.bs.dropdown', function(e) {
             var dropdownMenu = $(e.target).find('.dropdown-menu');
             if (dropdownMenu.length) {

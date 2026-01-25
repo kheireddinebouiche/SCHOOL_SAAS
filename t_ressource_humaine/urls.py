@@ -15,10 +15,19 @@ urlpatterns = [
     path('contrats/create/', views.ContratCreateView.as_view(), name='contrat_create'),
     path('contrats/<int:pk>/update/', views.ContratUpdateView.as_view(), name='contrat_update'),
     path('contrats/<int:pk>/print/', views.ContratDetailView.as_view(), name='contrat_print'),
+    path('contrats/<int:contrat_id>/rubriques/', views.manage_rubriques_contrat, name='manage_rubriques_contrat'),
     
     path('contrats/<int:contrat_id>/generer-paie/', views.generer_paie, name='generer_paie'),
     path('fiches/', views.FichePaieListView.as_view(), name='fiche_paie_list'),
     path('fiches/<int:pk>/', views.FichePaieDetailView.as_view(), name='fiche_paie_detail'),
+    path('fiches/<int:pk>/modifier/', views.modifier_paie, name='modifier_paie'),
+    path('fiches/<int:pk>/supprimer/', views.supprimer_paie, name='supprimer_paie'),
+    
+    path('rubriques/', views.RubriqueListView.as_view(), name='rubrique_list'),
+    path('rubriques/ajouter/', views.RubriqueCreateView.as_view(), name='rubrique_create'),
+    path('rubriques/<int:pk>/modifier/', views.RubriqueUpdateView.as_view(), name='rubrique_update'),
+    path('rubriques/<int:pk>/supprimer/', views.RubriqueDeleteView.as_view(), name='rubrique_delete'),
+
     path('config/', views.config_paie, name='config_paie'),
     path('select-entreprise/', views.select_entreprise_paie, name='select_entreprise_paie'),
 ]

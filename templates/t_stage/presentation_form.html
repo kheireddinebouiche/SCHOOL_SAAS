@@ -1,0 +1,287 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Validation de Présentation {% endblock title %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- Page Header -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Gestion des Validations</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Validation Form -->
+                <div class="col-lg-8">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info border-0 rounded-top-0 mb-4 d-flex align-items-center" role="alert">
+                        <i class="ri-information-line me-2 fs-20"></i>
+                        <div>
+                            <strong>Cycle de Validation :</strong> P1 (Lancement) &rarr; P2 (Mi-parcours) &rarr; P3 (Finale).
+                        </div>
+                    </div>
+
+                    <div class="card" id="validationFormCard">
+                        <div class="card-header border-0">
+                            <div class="d-flex align-items-center">
+                                <h5 class="card-title mb-0 flex-grow-1">Nouvelle Validation</h5>
+                                <span class="badge bg-secondary-subtle text-secondary">{{ stage.sujet|truncatechars:30 }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="presentationForm">
+                                {% csrf_token %}
+                                
+                                <!-- Step Selection with Visual Cards -->
+                                <div class="mb-4">
+                                    <label class="form-label text-muted text-uppercase fw-semibold mb-3">1. Choisir l'étape</label>
+                                    <div class="row g-3">
+                                        <!-- P1 -->
+                                        <div class="col-md-4 {% if 1 in completed_steps %}d-none{% endif %}" id="stepCard1">
+                                            <input type="radio" class="btn-check" name="etape" id="etape1" value="1" checked onchange="updateStepInfo(1)">
+                                            <label class="card h-100 card-animate border border-dashed shadow-none btn-outline-primary cursor-pointer mb-0" for="etape1">
+                                                <div class="card-body text-center p-4">
+                                                    <div class="avatar-md mx-auto mb-3">
+                                                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-2">
+                                                            P1
+                                                        </div>
+                                                    </div>
+                                                    <h5 class="fs-14 mb-1">Lancement</h5>
+                                                    <p class="text-muted fs-12 mb-0">Problématique & Plan</p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <!-- P2 -->
+                                        <div class="col-md-4 {% if 2 in completed_steps %}d-none{% endif %}" id="stepCard2">
+                                            <input type="radio" class="btn-check" name="etape" id="etape2" value="2" onchange="updateStepInfo(2)">
+                                            <label class="card h-100 card-animate border border-dashed shadow-none btn-outline-warning cursor-pointer mb-0" for="etape2">
+                                                <div class="card-body text-center p-4">
+                                                    <div class="avatar-md mx-auto mb-3">
+                                                        <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-2">
+                                                            P2
+                                                        </div>
+                                                    </div>
+                                                    <h5 class="fs-14 mb-1">Mi-Parcours</h5>
+                                                    <p class="text-muted fs-12 mb-0">Avancement Technique</p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <!-- P3 -->
+                                        <div class="col-md-4 {% if 3 in completed_steps %}d-none{% endif %}" id="stepCard3">
+                                            <input type="radio" class="btn-check" name="etape" id="etape3" value="3" onchange="updateStepInfo(3)">
+                                            <label class="card h-100 card-animate border border-dashed shadow-none btn-outline-success cursor-pointer mb-0" for="etape3">
+                                                <div class="card-body text-center p-4">
+                                                    <div class="avatar-md mx-auto mb-3">
+                                                        <div class="avatar-title bg-success-subtle text-success rounded-circle fs-2">
+                                                            P3
+                                                        </div>
+                                                    </div>
+                                                    <h5 class="fs-14 mb-1">Finale</h5>
+                                                    <p class="text-muted fs-12 mb-0">Soutenance à blanc</p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Slider -->
+                                <div class="mb-4">
+                                    <label class="form-label text-muted text-uppercase fw-semibold mb-3">2. Évaluer l'avancement</label>
+                                    <div class="card bg-light border-0">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="flex-grow-1">
+                                                    <h5 class="fs-13 mb-0">Taux global estimé (min-max suggéré : <span id="rangeSuggestion" class="text-primary">25-35%</span>)</h5>
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <div class="input-group input-group-sm" style="width: 100px;">
+                                                        <input type="number" class="form-control fw-bold text-center" id="tauxInput" name="taux_avancement_declare" value="30" min="0" max="100" required>
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="range" class="form-range" id="tauxSlider" min="0" max="100" value="30">
+                                            <div class="d-flex justify-content-between fs-10 text-muted mt-1">
+                                                <span>0%</span>
+                                                <span>25%</span>
+                                                <span>50%</span>
+                                                <span>75%</span>
+                                                <span>100%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Observations -->
+                                <div class="mb-4">
+                                    <label class="form-label text-muted text-uppercase fw-semibold">3. Observations</label>
+                                    <textarea class="form-control" id="obs" name="observations" rows="4" placeholder="Points forts, corrections demandées, objectifs pour la prochaine étape..."></textarea>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="hstack gap-2 justify-content-end mt-4">
+                                    <a href="{% url 't_stage:stage_dashboard' %}" class="btn btn-light custom-toggle">Annuler</a>
+                                    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                                        <i class="ri-save-line align-bottom me-1"></i> Enregistrer
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Timeline History -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Historique</h4>
+                        </div>
+                        <div class="card-body">
+                            {% if presentations %}
+                                <div class="acitivity-timeline acitivity-main">
+                                    {% for pres in presentations %}
+                                    <div class="acitivity-item d-flex mb-3">
+                                        <div class="flex-shrink-0 avatar-xs acitivity-avatar">
+                                            <div class="avatar-title rounded-circle 
+                                                {% if pres.etape == 1 %}bg-primary-subtle text-primary
+                                                {% elif pres.etape == 2 %}bg-warning-subtle text-warning
+                                                {% else %}bg-success-subtle text-success{% endif %}">
+                                                {% if pres.etape == 1 %}<i class="ri-flag-2-line"></i>
+                                                {% elif pres.etape == 2 %}<i class="ri-loader-4-line"></i>
+                                                {% else %}<i class="ri-checkbox-circle-line"></i>{% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1 lh-base">
+                                                {% if pres.etape == 1 %}Lancement (P1)
+                                                {% elif pres.etape == 2 %}Mi-Parcours (P2)
+                                                {% else %}Finale (P3){% endif %}
+                                                <span class="badge bg-light text-secondary ms-1">{{ pres.taux_avancement_declare }}%</span>
+                                            </h6>
+                                            <p class="text-muted mb-2">{{ pres.observations|default:"Aucune observation"|truncatechars:100 }}</p>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <small class="mb-0 text-muted">{{ pres.date_presentation|date:"d M Y" }}</small>
+                                                <div class="vr"></div>
+                                                <button type="button" class="btn btn-ghost-info btn-sm p-0 px-1" onclick="editPresentation('{{ pres.etape }}', '{{ pres.taux_avancement_declare }}', `{{ pres.observations|escapejs }}`)" data-bs-toggle="tooltip" title="Modifier">
+                                                    <i class="ri-pencil-fill"></i>
+                                                </button>
+                                                <a href="{% url 't_stage:delete_presentation' pres.id %}" class="btn btn-ghost-danger btn-sm p-0 px-1" onclick="return confirm('Supprimer cette validation ?')" data-bs-toggle="tooltip" title="Supprimer">
+                                                    <i class="ri-delete-bin-fill"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <div class="avatar-lg mx-auto mb-3">
+                                        <div class="avatar-title bg-light rounded-circle text-primary fs-24">
+                                            <i class="ri-history-line"></i>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted">Aucun historique disponible.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Card -->
+                     <div class="card bg-primary">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="text-white-50 mx-2 mb-0">Avancement Global</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h2 class="text-white mb-0 fw-bold">{{ stage.taux_avancement }}%</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Elements
+    const slider = document.getElementById('tauxSlider');
+    const input = document.getElementById('tauxInput');
+    const rangeSuggestion = document.getElementById('rangeSuggestion');
+
+    // Sync Slider and Input
+    slider.addEventListener('input', function() {
+        input.value = this.value;
+    });
+
+    input.addEventListener('input', function() {
+        if(this.value > 100) this.value = 100;
+        if(this.value < 0) this.value = 0;
+        slider.value = this.value;
+    });
+
+    // Update suggestions based on Step
+    function updateStepInfo(step) {
+        let suggestion = "";
+        let val = 0;
+        if(step == 1) {
+            suggestion = "25-35%";
+            val = 30;
+        } else if (step == 2) {
+            suggestion = "65-75%";
+            val = 70;
+        } else {
+            suggestion = "~90-100%";
+            val = 90;
+        }
+        rangeSuggestion.innerText = suggestion;
+        
+        // Only auto-update values if it's a fresh click (optional UX choice, sticking to just updating suggestion text for now 
+        // to avoid overwriting user input if they just misclicked, but we can set default valid values)
+        // slider.value = val;
+        // input.value = val;
+    }
+
+    // Edit Function
+    function editPresentation(etape, taux, obs) {
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Show the card if hidden
+        const card = document.getElementById('stepCard' + etape);
+        if (card) {
+            card.classList.remove('d-none');
+        }
+
+        // Select Radio
+        const radio = document.getElementById('etape' + etape);
+        if (radio) radio.checked = true;
+        
+        updateStepInfo(etape); // Update UI text
+
+        // Set Values
+        document.getElementById('tauxInput').value = taux;
+        document.getElementById('tauxSlider').value = taux;
+        document.getElementById('obs').value = obs;
+
+        // Visual Feedback on Form
+        const formCard = document.getElementById('validationFormCard');
+        formCard.classList.add('border-primary', 'border-2');
+        setTimeout(() => {
+            formCard.classList.remove('border-primary', 'border-2');
+        }, 2000);
+    }
+</script>
+
+{% endblock content %}

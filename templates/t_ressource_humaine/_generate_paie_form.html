@@ -1,4 +1,5 @@
 <form method="post" id="paieForm" action="{% url 't_ressource_humaine:generer_paie' contrat_id=contrat.id %}">
+    {% load paie_tags %}
     {% csrf_token %}
     <div class="modal-body p-4">
         <div class="alert alert-soft-info border-0 d-flex align-items-center mb-4" role="alert">
@@ -42,6 +43,30 @@
                 {% endif %}
             </div>
             {% endfor %}
+            
+            {% if rubriques %}
+            <div class="col-12">
+                <hr class="my-3 border-dashed">
+                <h6 class="fs-13 text-muted text-uppercase fw-semibold mb-3">Rubriques Variables</h6>
+            </div>
+            {% for rubrique in rubriques %}
+            <div class="col-md-6">
+                <label class="form-label fw-medium mb-1">{{ rubrique.libelle }}</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-{% if rubrique.type_rubrique == 'GAIN' %}success{% else %}danger{% endif %}-subtle text-{% if rubrique.type_rubrique == 'GAIN' %}success{% else %}danger{% endif %} border-light">
+                        {% if rubrique.type_rubrique == 'GAIN' %}+{% else %}-{% endif %}
+                    </span>
+                    <input type="number" step="0.01" class="form-control" name="rubrique_{{ rubrique.id }}" 
+                           value="{% if existing_lignes %}{{ existing_lignes|get_item:rubrique.id|default:'0' }}{% else %}{{ contract_defaults|get_item:rubrique.id|default:'0' }}{% endif %}">
+                    <span class="input-group-text bg-light border-light text-muted">
+                        {% if rubrique.mode_calcul == 'PERCENT' %}%
+                        {% elif rubrique.mode_calcul == 'HOURS' %}h
+                        {% else %}DA{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
         </div>
     </div>
     <div class="modal-footer bg-light p-3">

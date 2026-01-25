@@ -1,0 +1,208 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Tableau de Bord des Stages {% endblock title %}
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- start page title -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Gestion des Stages</h4>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Stages</a></li>
+                                <li class="breadcrumb-item active">Tableau de Bord</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Stats Row -->
+            <div class="row">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Stages en cours</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-success fs-14 mb-0">
+                                        <i class="ri-arrow-right-up-line fs-13 align-middle"></i> Actifs
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4">{{ stages.count }}</h4>
+                                    <a href="{% url 't_stage:list_stages' %}" class="text-decoration-underline text-muted">Voir la liste</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-info-subtle rounded fs-3">
+                                        <i class="bx bxs-graduation text-info"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end col -->
+
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-animate">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Focus Groups</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h5 class="text-warning fs-14 mb-0">
+                                        <i class="ri-arrow-right-up-line fs-13 align-middle"></i> Total
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-end justify-content-between mt-4">
+                                <div>
+                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4">{{ focus_groups.count }}</h4>
+                                    <a href="{% url 't_stage:list_focus_groups' %}" class="text-decoration-underline text-muted">Gérer les groupes</a>
+                                </div>
+                                <div class="avatar-sm flex-shrink-0">
+                                    <span class="avatar-title bg-warning-subtle rounded fs-3">
+                                        <i class="bx bx-group text-warning"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end col -->
+            </div>
+
+            <!-- Main Content Row -->
+            <div class="row">
+                <div class="col-xl-8">
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex border-0">
+                            <h4 class="card-title mb-0 flex-grow-1">Stages Récents</h4>
+                            <div class="flex-shrink-0">
+                                <a href="{% url 't_stage:launch_stage' %}" class="btn btn-soft-info btn-sm">
+                                    <i class="ri-add-line align-middle me-1"></i> Créer un Stage
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="table-responsive table-card">
+                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
+                                    <thead class="text-muted table-light">
+                                        <tr>
+                                            <th scope="col">Étudiant(s)</th>
+                                            <th scope="col">Sujet</th>
+                                            <th scope="col" style="width: 20%;">Avancement</th>
+                                            <th scope="col">Statut</th>
+                                            <th scope="col">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stage in stages|slice:":10" %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <div class="avatar-xs">
+                                                            <span class="avatar-title rounded-circle bg-primary-subtle text-primary">
+                                                                {{ stage.etudiants.first.nom|slice:":1" }}{{ stage.etudiants.first.prenom|slice:":1" }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-0 fs-13">
+                                                            {% for etudiant in stage.etudiants.all %}
+                                                                {{ etudiant }}{% if not forloop.last %}, {% endif %}
+                                                            {% empty %}
+                                                                <span class="text-muted">Non assigné</span>
+                                                            {% endfor %}
+                                                        </h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="text-truncate d-block" style="max-width: 250px;">{{ stage.sujet }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="progress progress-sm animated-progress">
+                                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ stage.taux_avancement }}%" aria-valuenow="{{ stage.taux_avancement }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                                <div class="mt-1">
+                                                    <span class="text-muted fs-11">{{ stage.taux_avancement }}% complété</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info-subtle text-info">{{ stage.get_statut_display }}</span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 't_stage:presentation_form' stage.id %}" class="btn btn-subtle-primary btn-icon btn-sm" title="Évaluer">
+                                                    <i class="ri-slideshow-line"></i>
+                                                </a>
+                                                <a href="{% url 't_stage:edit_stage' stage.id %}" class="btn btn-subtle-secondary btn-icon btn-sm" title="Modifier">
+                                                    <i class="ri-pencil-line"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">
+                                                <i class="ri-inbox-line display-4 text-light d-block mb-2"></i>
+                                                Aucun stage enregistré pour le moment.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end col -->
+
+                <div class="col-xl-4">
+                    <div class="card">
+                        <div class="card-header border-0">
+                            <h4 class="card-title mb-0">Focus Groups</h4>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="vstack gap-3">
+                                {% for fg in focus_groups|slice:":5" %}
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm flex-shrink-0 me-3">
+                                        <div class="avatar-title bg-warning-subtle text-warning rounded-circle font-size-16">
+                                            <i class="ri-group-line"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="fs-14 mb-1"><a href="{% url 't_stage:focus_group_detail' fg.id %}" class="text-dark">{{ fg.nom }}</a></h5>
+                                        <p class="text-muted mb-0">{{ fg.thematique }}</p>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="badge bg-light text-secondary">{{ fg.stages.count }} Stages</span>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="text-center text-muted mt-3">
+                                    Aucun Focus Group.
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-3 pt-3 border-top border-dashed text-center">
+                                <a href="{% url 't_stage:list_focus_groups' %}" class="link-primary text-decoration-underline">Voir tous les groupes</a>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- end col -->
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -90,13 +90,14 @@ class PaieEngine:
         return irg_brut.quantize(Decimal('0.01'))
 
     @staticmethod
-    def calculer_paie(contrat, jours_travailles=None, heures_travailles=0, primes_fixe=True):
+    def calculer_paie(contrat, jours_travailles=None, heures_travailles=0, primes_fixe=True, heures_absence=0, lignes_rubriques=None):
         """
         Calcule la fiche de paie complète.
         """
         config = ParametresPaie.get_config(entreprise=getattr(contrat, 'entreprise', None))
         taux_ss = config.taux_ss
         jours_std = config.jours_travailles_standard
+        heures_std = config.heures_mensuelles_standard
         
         # 1. Salaire de base
         # Fallback to hourly if mensalized base is 0 but hourly rate is present
@@ -110,32 +111,92 @@ class PaieEngine:
                  # Prorata temporis (Base * Jours / Standard)
                  salaire_base = (salaire_base * Decimal(jours_travailles)) / Decimal(jours_std)
 
+
         # 2. Primes
         p_panier = contrat.prime_panier if primes_fixe else 0
         p_transport = contrat.prime_transport if primes_fixe else 0
+
+        # Calculate retenue amount for absences based on hourly rate
+        if heures_absence > 0:
+            if contrat.type_contrat == 'VACATION' or (not (contrat.salaire_base or 0) and (contrat.salaire_horaire or 0) > 0):
+                taux_horaire = contrat.salaire_horaire or 0
+            else:
+                # For monthly base, calculate hourly rate: Base / Standard Hours
+                taux_horaire = (contrat.salaire_base or 0) / Decimal(heures_std)
+            
+            retenue_absences_montant = Decimal(heures_absence) * taux_horaire
+        else:
+            retenue_absences_montant = Decimal('0.00')
         
-        # 3. Base SS
-        base_ss = salaire_base 
+        
+        # Process Dynamic Rubrics
+        # lignes_rubriques = [{'rubrique': RubriqueObj, 'valeur': Decimal}, ...]
+        total_gains_cotisables = Decimal('0.00')
+        total_gains_imposables_non_cotisables = Decimal('0.00')
+        total_gains_non_imposables = Decimal('0.00')
+        total_retenues = Decimal('0.00')
+        
+        detail_lignes = []
+        
+        if lignes_rubriques:
+            for ligne in lignes_rubriques:
+                rubrique = ligne['rubrique']
+                valeur = Decimal(ligne['valeur'])
+                
+                # Calculate Montant based on Mode
+                if rubrique.mode_calcul == 'PERCENT':
+                    montant = (valeur * salaire_base) / Decimal('100')
+                elif rubrique.mode_calcul == 'HOURS':
+                    # Use hourly rate
+                    if contrat.type_contrat == 'VACATION' or (not (contrat.salaire_base or 0) and (contrat.salaire_horaire or 0) > 0):
+                        th = contrat.salaire_horaire or 0
+                    else:
+                        th = (contrat.salaire_base or 0) / Decimal(heures_std)
+                    montant = valeur * th
+                else: # FIXE
+                    montant = valeur
+                
+                montant = montant.quantize(Decimal('0.01'))
+                detail_lignes.append({'rubrique': rubrique, 'valeur_saisie': valeur, 'montant': montant})
+                
+                if rubrique.type_rubrique == 'GAIN':
+                    if rubrique.est_cotisable:
+                        total_gains_cotisables += montant
+                    elif rubrique.est_imposable: 
+                        total_gains_imposables_non_cotisables += montant
+                    else:
+                        total_gains_non_imposables += montant
+                elif rubrique.type_rubrique == 'RETENUE':
+                    total_retenues += montant
+
+        # 3. Base SS (Salaire de base - Absences + Gains Cotisables)
+        base_ss = max(Decimal('0.00'), salaire_base - retenue_absences_montant + total_gains_cotisables)
         
         # 4. Montant SS
         montant_ss = base_ss * taux_ss
         
-        # 5. Imposable
-        salaire_imposable = base_ss - montant_ss
+        # 5. Imposable (Base SS - SS + Primes Imposables Non Cotisables)
+        salaire_imposable = (base_ss - montant_ss) + total_gains_imposables_non_cotisables
         
         # 6. IRG
         irg = PaieEngine.calculer_irg(salaire_imposable, config=config)
         
         # 7. Net
-        net_a_payer = (salaire_imposable - irg) + p_panier + p_transport
+        net_a_payer = (salaire_imposable - irg) + total_gains_non_imposables + p_panier + p_transport - total_retenues
         
         return {
             'salaire_base_calcule': salaire_base,
+            'retenue_absences_montant': retenue_absences_montant,
             'base_ss': base_ss,
             'montant_ss': montant_ss,
             'salaire_imposable': salaire_imposable,
             'irg': irg,
             'net_a_payer': net_a_payer,
             'prime_panier': p_panier,
-            'prime_transport': p_transport
+            'prime_transport': p_transport,
+            'total_gains_cotisables': total_gains_cotisables,
+            'total_gains_imposables_non_cotisables': total_gains_imposables_non_cotisables,
+            'total_gains_non_imposables': total_gains_non_imposables,
+            'total_retenues': total_retenues,
+            'detail_lignes': detail_lignes
         }

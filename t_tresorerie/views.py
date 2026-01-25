@@ -826,3 +826,12 @@ def liste_types_depenses(request):
     return render(request, 'tenant_folder/comptabilite/depenses/type_depense.html')
 
 
+@login_required(login_url="institut_app:login")
+def ApiGetEntite(request):
+    if request.method == "POST":
+        entite = Entreprise.objects.all().values("id","label")
+        return JsonResponse(list(entite), safe=False)
+
+    else:
+        return JsonResponse({"status":"error","message":"methode non autoriser"})
+

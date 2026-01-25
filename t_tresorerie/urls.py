@@ -238,7 +238,7 @@ urlpatterns = [
     path('api/pay-due-paiement/', ApiPayDuePenalite, name='ApiPayDuePenalite'),
     path('penalite/print-receipt/<int:paiement_id>/', PrintReceipt, name='PrintReceipt'),
 
-
+    path('ApiGetEntite',ApiGetEntite, name="ApiGetEntite"),
 
 
 ]

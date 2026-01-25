@@ -128,6 +128,28 @@ def crm_dashboard(request):
     prospects_by_speciality = FicheDeVoeux.objects.values('specialite__label').annotate(
         count=Count('prospect', distinct=True)
     ).order_by('-count')
+    
+    # --- Statistiques Fiche de Voeux & Double Diplomation ---
+    
+    # 1. Fiche de Voeux Simple
+    # Group by Specialite, Promo, and Status
+    fiche_voeux_stats = FicheDeVoeux.objects.values(
+        'specialite__label', 
+        'promo__label', 
+        'is_confirmed'
+    ).annotate(
+        count=Count('id')
+    ).order_by('specialite__label', 'promo__label')
+    
+    # 2. Fiche de Voeux Double
+    # Group by Specialite (Double Diplomation), Promo, and Status
+    fiche_voeux_double_stats = FicheVoeuxDouble.objects.values(
+        'specialite__label', 
+        'promo__label', 
+        'is_confirmed'
+    ).annotate(
+        count=Count('id')
+    ).order_by('specialite__label', 'promo__label')
 
     # Données pour le graphique des prospects par période (derniers 7 jours)
     from django.db.models.functions import TruncDate
@@ -194,7 +216,10 @@ def crm_dashboard(request):
         'prospects_by_speciality': prospects_by_speciality,
         'chart_dates': chart_dates,
         'chart_counts': chart_counts,
+        'chart_counts': chart_counts,
         'reminder_counts': reminder_counts,
+        'fiche_voeux_stats': fiche_voeux_stats,
+        'fiche_voeux_double_stats': fiche_voeux_double_stats,
     }
     
     return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)
@@ -956,6 +981,42 @@ def directeur_dashboard(request):
     # PVs en attente
     pending_pvs = PvExamen.objects.filter(est_valide=False).count()
 
+    # --- 5. CRM Advanced Stats (Copied from CRM Dashboard) ---
+    # Répartition des prospects par statut
+    prospects_by_status = Prospets.objects.values('statut').annotate(count=Count('statut')).order_by('-count')
+    status_labels = {'visiteur': 'Visiteur', 'prinscrit': 'Pré-inscrit', 'instance': 'Instance', 'convertit': 'Converti'}
+    prospects_by_status_with_labels = []
+    for status in prospects_by_status:
+        prospects_by_status_with_labels.append({
+            'status': status['statut'],
+            'label': status_labels.get(status['statut'], status['statut']),
+            'count': status['count']
+        })
+
+    # Statistiques Fiche de Voeux & Double Diplomation
+    fiche_voeux_stats = FicheDeVoeux.objects.values('specialite__label', 'promo__label', 'is_confirmed').annotate(count=Count('id')).order_by('specialite__label', 'promo__label')
+    fiche_voeux_double_stats = FicheVoeuxDouble.objects.values('specialite__label', 'promo__label', 'is_confirmed').annotate(count=Count('id')).order_by('specialite__label', 'promo__label')
+
+    # Chart Evolution (7 derniers jours)
+    from django.db.models.functions import TruncDate
+    seven_days_ago = datetime.now() - timedelta(days=6)
+    prospects_by_date = Prospets.objects.filter(created_at__gte=seven_days_ago).annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id')).order_by('date')
+    
+    chart_dates = []
+    chart_counts = []
+    for i in range(7):
+        date = (datetime.now() - timedelta(days=6-i)).date()
+        chart_dates.append(date.strftime('%b %d'))
+        count = 0
+        for item in prospects_by_date:
+            if item['date'] == date:
+                count = item['count']
+                break
+        chart_counts.append(count)
+
+    # Derniers rappels
+    recent_reminders = RendezVous.objects.filter(archived=False).select_related('prospect').order_by('-created_at')[:5]
+
     context = {
         'tenant': request.tenant,
         'kpis': {
@@ -981,6 +1042,13 @@ def directeur_dashboard(request):
                 'success_rate': round(success_rate, 1),
                 'pending_pvs': pending_pvs
             }
-        }
+        },
+        # CRM Data Injection
+        'prospects_by_status': prospects_by_status_with_labels,
+        'fiche_voeux_stats': fiche_voeux_stats,
+        'fiche_voeux_double_stats': fiche_voeux_double_stats,
+        'chart_dates': chart_dates,
+        'chart_counts': chart_counts,
+        'recent_reminders': recent_reminders
     }
     return render(request, 'tenant_folder/directeur/directeur.html', context)

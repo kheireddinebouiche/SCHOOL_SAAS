@@ -26,8 +26,9 @@ class Contrat(models.Model):
     
     actif = models.BooleanField(default=True)
     
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
 
     def __str__(self):
         return f"Contrat {self.get_type_contrat_display()} - {self.formateur}"
@@ -47,6 +48,7 @@ class FichePaie(models.Model):
     # Variables du mois
     jours_travailles = models.IntegerField(default=22) # Standard 22 working days
     heures_travailles = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Pour les vacataires")
+    heures_absence = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Nombre d'heures d'absence")
     
     # Primes variables / Retenues
     primes_exceptionnelles = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -78,6 +80,7 @@ class ParametresPaie(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='parametres_paie')
     taux_ss = models.DecimalField(max_digits=5, decimal_places=4, default=0.09, help_text="Taux de sécurité sociale (ex: 0.09 pour 9%)")
     jours_travailles_standard = models.IntegerField(default=22, help_text="Nombre de jours travaillés standard par mois")
+    heures_mensuelles_standard = models.DecimalField(max_digits=6, decimal_places=2, default=173.33, help_text="Nombre d'heures travaillés standard par mois (ex: 173.33)")
     seuil_exoneration_irg = models.DecimalField(max_digits=12, decimal_places=2, default=30000, help_text="Seuil d'exonération IRG")
     
     updated_at = models.DateTimeField(auto_now=True)
@@ -93,3 +96,56 @@ class ParametresPaie(models.Model):
     def get_config(cls, entreprise=None):
         config, created = cls.objects.get_or_create(entreprise=entreprise)
         return config
+
+class Rubrique(models.Model):
+    TYPE_CHOICES = [
+        ('GAIN', 'Gain (+)'),
+        ('RETENUE', 'Retenue (-)'),
+    ]
+    
+    MODE_CALCUL_CHOICES = [
+        ('FIXE', 'Montant Fixe (DA)'),
+        ('PERCENT', 'Pourcentage du Salaire de Base (%)'),
+        ('HOURS', 'Nombre d\'heures (h)'),
+    ]
+    
+    libelle = models.CharField(max_length=100)
+    type_rubrique = models.CharField(max_length=10, choices=TYPE_CHOICES, default='GAIN')
+    mode_calcul = models.CharField(max_length=10, choices=MODE_CALCUL_CHOICES, default='FIXE')
+    est_cotisable = models.BooleanField(default=False, help_text="Soumis à la cotisation SS (9%) ?")
+    est_imposable = models.BooleanField(default=False, help_text="Soumis à l'impôt IRG ?")
+    actif = models.BooleanField(default=True)
+    
+    # Configuration des contrats éligibles (Stocké en JSON: ["CDI", "CDD"])
+    types_contrat = models.JSONField(default=list, blank=True, help_text="Types de contrats éligibles (ex: ['CDI', 'CDD'])")
+    
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    
+    def __str__(self):
+        return f"{self.libelle} ({self.get_type_rubrique_display()})"
+    
+    class Meta:
+        ordering = ['type_rubrique', 'libelle']
+
+class RubriqueContrat(models.Model):
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='rubriques_contrat')
+    rubrique = models.ForeignKey(Rubrique, on_delete=models.CASCADE, related_name='contrats_lies')
+    valeur = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Valeur par défaut (Montant, % ou Heures)")
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ['contrat', 'rubrique']
+        verbose_name = "Rubrique par Contrat"
+        verbose_name_plural = "Rubriques par Contrat"
+        
+    def __str__(self):
+        return f"{self.rubrique.libelle} pour {self.contrat} : {self.montant}"
+
+class LignePaie(models.Model):
+    fiche_paie = models.ForeignKey(FichePaie, on_delete=models.CASCADE, related_name='lignes_paie')
+    rubrique = models.ForeignKey(Rubrique, on_delete=models.PROTECT)
+    valeur_saisie = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="La valeur saisie (%, heures, ou montant)")
+    montant = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Le montant calculé final")
+    
+    def __str__(self):
+        return f"{self.rubrique.libelle}: {self.montant}"
