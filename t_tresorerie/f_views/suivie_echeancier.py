@@ -32,7 +32,11 @@ def ApiLoadConvertedProspects(request):
         total_paye = Paiements.objects.filter(promo_id=promo['id'],context="frais_f").filter(Q(prospect__statut="convertit") | Q(prospect__statut="annuler")).aggregate(total=Sum('montant_paye'))['total'] or 0
 
         # Total remboursé pour cette promo
-        total_rembourse = Paiements.objects.filter(promo_id=promo['id'],is_refund=True).aggregate(total=Sum('montant_paye'))['total'] or 0
+        try:
+            val = PromoRembourssement.objects.get(promo_id=promo['id'])
+            total_rembourse = val.montant
+        except:
+            total_rembourse = 0
 
         # Montant payé effectif après remboursement
         promo['montant_paye'] = total_paye - total_rembourse
