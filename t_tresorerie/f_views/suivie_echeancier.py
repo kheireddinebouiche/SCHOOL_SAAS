@@ -576,22 +576,48 @@ def ApiSaveRefundOperation(request):
         amount = request.POST.get('refund_amount')
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
+        entite_select = request.POST.get('entite_select')
+
+        if not entite_select:
+            return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
 
         promo = FicheDeVoeux.objects.filter(prospect__id = id_client, is_confirmed=True).last()
 
         obj_refund = Rembourssements.objects.get(id = id_refund)
-        refund_paiement = Paiements(
-            prospect = Prospets.objects.get(id = id_client),
-            paiement_label = "Rembourssement",
-            montant_paye = amount,
-            date_paiement = datetime.now(),
+        obj_refund.entite = Entreprise.objects.get(id = entite_select)
+        obj_refund.save()
+
+        # refund_paiement = Paiements(
+        #     prospect = Prospets.objects.get(id = id_client),
+        #     paiement_label = "Rembourssement",
+        #     montant_paye = amount,
+        #     date_paiement = datetime.now(),
+        #     mode_paiement = mode_rembourssement,
+        #     is_refund = True,
+        #     promo_id = promo.promo.id,
+        #     refund_id = obj_refund,
+           
+        # )
+
+        # refund_paiement.save()
+
+        depense = Depenses(
+            client_id=id_client,
+            label = "Remboursement",
+            montant_ht = amount,
             mode_paiement = mode_rembourssement,
-            is_refund = True,
-            promo_id = promo.promo.id,
-            refund_id = obj_refund,
+            entite_id = entite_select,
         )
 
-        refund_paiement.save()
+        PromoRembourssement.objects.update_or_create(
+            promo_id = promo.id,
+            defaults={
+                "montant" : amount
+            }
+        )
+
+        depense.save()
+
         obj_refund.is_appliced = True
         obj_refund.save()
 

@@ -828,8 +828,8 @@ def liste_types_depenses(request):
 
 @login_required(login_url="institut_app:login")
 def ApiGetEntite(request):
-    if request.method == "POST":
-        entite = Entreprise.objects.all().values("id","label")
+    if request.method == "GET":
+        entite = Entreprise.objects.all().values("id","designation")
         return JsonResponse(list(entite), safe=False)
 
     else:

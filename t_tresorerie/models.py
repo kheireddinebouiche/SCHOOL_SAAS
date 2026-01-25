@@ -115,6 +115,8 @@ class Paiements(models.Model):
             
             if not entite_obj:
                 entite_obj = self.due_paiements.ref_echeancier.entite
+            else:
+                entite_obj = self.refund_id.entite
 
             # 2. Lecture des champs Entreprise
             entite = entite_obj.designation or "ENTITE"
@@ -159,6 +161,7 @@ class Rembourssements(models.Model):
     observation = models.CharField(max_length=1000, null=True, blank=True)
 
     mode_rembourssement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
+    entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
     
     is_appliced = models.BooleanField(default=False)
     
@@ -166,7 +169,7 @@ class Rembourssements(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.paiements
+        return self.client
     
 ## ne pas utiliser cette classe
 class PaiementRemboursement(models.Model):
@@ -282,6 +285,7 @@ class Caisse(models.Model):
 class Depenses(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     fournisseur = models.ForeignKey(Fournisseur, null=True, blank=True, on_delete=models.CASCADE)
+    client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     category = models.ForeignKey("DepensesCategory", null=True, blank=True, on_delete=models.SET_NULL)
     date_paiement = models.DateField(null=True, blank=True)
     montant_ht = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
@@ -290,7 +294,7 @@ class Depenses(models.Model):
     piece = models.FileField(upload_to=tenant_directory_path_for_piece_depanse, null=True, blank=True)
     etat = models.BooleanField(default=False)
     description = models.TextField(max_length=1000, null=True, blank=True)
-
+    entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
     mode_paiement = models.CharField(max_length=100, null=True, blank=True,choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
 
     reference = models.CharField(max_length=100, null=True, blank=True)
@@ -300,6 +304,17 @@ class Depenses(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class PromoRembourssement(models.Model):
+    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, unique=True)
+    montant = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
+
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.montant
 
 ####################### GESTION DES CATEGORIES DE DEPENSES #############################################
  

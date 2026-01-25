@@ -1904,6 +1904,10 @@
                         </div>
                     </div>
                 </div>
+                <label for="entite_select">Entité :</label>
+                <select id="entite_select" class="form-control">
+                    
+                </select>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
@@ -3222,6 +3226,7 @@
         }
 
         $(document).on("click", '#btnShowRefundResult', function(){
+            loadEntites();
             if(RefundState === "acp"){
                 $('#remboursementTraiteDetailsModal').modal('show');
             }else{
@@ -3229,11 +3234,27 @@
             }            
         });
 
+        function loadEntites(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiGetEntite' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner une entité</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.designation+"</option>";
+                    });
+
+                    $('#entite_select').html(option);
+                }
+            });
+        }
+
         $(document).on('click', '#confirmerRemboursementBtn', function(){
             var amount = $('#confirmationRemboursementModal').data('amount');
             var mode_rembourssement = $('#confirmationRemboursementModal').data('mode_paiement');
             var id_refund = $('#confirmationRemboursementModal').data('id_refund');
-
+            var entite_select = $('#entite_select').val();
             $.ajax({
                 url : "{% url 't_tresorerie:ApiSaveRefundOperation' %}",
                 dataType : 'JSON',
@@ -3243,6 +3264,7 @@
                     'refund_amount' : amount,
                     'mode_rembourssement' : mode_rembourssement,
                     'id_refund' : id_refund,
+                    'entite_select' : entite_select,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){

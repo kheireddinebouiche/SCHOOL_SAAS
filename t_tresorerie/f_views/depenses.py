@@ -12,7 +12,7 @@ def PageDepenses(request):
 
 @login_required(login_url="institut_app:ApiListeDepenses")
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label','categorie__label','sous_categorie__label', 'category__name', 'category__parent__name', 'montant_ht','montant_ttc','tva','date_paiement','fournisseur__designation','etat').order_by('-id')
+    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at').order_by('-id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
