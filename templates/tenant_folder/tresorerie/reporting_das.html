@@ -80,85 +80,164 @@
       </div>
 
       <!-- Main Content Table -->
+      <!-- Main Content Table -->
       {% if report_data_by_entity %}
-      {% for entity_block in report_data_by_entity %}
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card overflow-hidden">
-            <div class="card-header bg-white border-bottom p-3">
-              <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <h5 class="card-title mb-0 fw-bold">{{ entity_block.entity.designation }}</h5>
-                    <small class="text-muted">{{ entity_block.entity.ville|default:"" }}</small>
-                </div>
-                <div class="flex-shrink-0 text-end">
-                     <span class="badge bg-soft-primary text-primary fs-14">
-                        Total: {{ entity_block.total|floatformat:2 }} DA
-                     </span>
-                </div>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th class="ps-4">Catégorie</th>
-                      <th class="text-center">Formations (Étudiants)</th>
-                      <th class="text-center">Conseil / Education</th>
-                      <th class="text-center">Autres Produits</th>
-                      <th class="text-end pe-4">Total Général</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for item in entity_block.data %}
-                    <tr>
-                      <td class="ps-4">
-                        <div class="d-flex align-items-center">
-                           <div class="avatar-xs me-2">
-                              <span class="avatar-title bg-light text-primary rounded-circle">
-                                 <i class="ri-bookmark-3-line"></i>
-                              </span>
-                           </div>
-                           <span class="fw-bold">{{ item.category.name }}</span>
+      
+      <!-- Nav Tabs -->
+      <ul class="nav nav-tabs nav-tabs-custom card-header-tabs border-bottom-0 mb-3" id="entityTabs" role="tablist">
+        {% for entity_block in report_data_by_entity %}
+        <li class="nav-item">
+            <a class="nav-link {% if forloop.first %}active{% endif %}" 
+               id="tab-entity-{{ forloop.counter }}" 
+               data-bs-toggle="tab" 
+               href="#entity-{{ forloop.counter }}" 
+               role="tab" 
+               aria-controls="entity-{{ forloop.counter }}" 
+               aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+               <span class="d-none d-md-block">{{ entity_block.entity.designation }}</span>
+               <span class="d-md-none">{{ entity_block.entity.designation|truncatechars:10 }}</span>
+               <span class="badge bg-soft-secondary text-primary ms-2 rounded-pill">{{ entity_block.total|floatformat:0 }} DA</span>
+            </a>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content text-muted">
+        {% for entity_block in report_data_by_entity %}
+        <div class="tab-pane {% if forloop.first %}active{% endif %}" 
+             id="entity-{{ forloop.counter }}" 
+             role="tabpanel" 
+             aria-labelledby="tab-entity-{{ forloop.counter }}">
+             
+              <div class="row">
+                <div class="col-12">
+                  <div class="card overflow-hidden">
+                    <div class="card-header bg-white border-bottom p-3">
+                      <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-0 fw-bold">{{ entity_block.entity.designation }}</h5>
+                            <small class="text-muted">{{ entity_block.entity.ville|default:"" }}</small>
                         </div>
-                      </td>
-                      <td class="text-center">
-                        {% if item.student_total > 0 %}
-                          <span class="text-primary fw-medium">{{ item.student_total|floatformat:2 }} DA</span>
-                        {% else %}
-                          <span class="text-muted opacity-50">-</span>
-                        {% endif %}
-                      </td>
-                      <td class="text-center">
-                        {% if item.consulting_total > 0 %}
-                          <span class="text-success fw-medium">{{ item.consulting_total|floatformat:2 }} DA</span>
-                        {% else %}
-                          <span class="text-muted opacity-50">-</span>
-                        {% endif %}
-                      </td>
-                      <td class="text-center">
-                        {% if item.other_total > 0 %}
-                          <span class="text-info fw-medium">{{ item.other_total|floatformat:2 }} DA</span>
-                        {% else %}
-                          <span class="text-muted opacity-50">-</span>
-                        {% endif %}
-                      </td>
-                      <td class="text-end pe-4">
-                        <span class="badge bg-soft-primary text-primary fs-14 px-3 py-2 fw-bold">
-                          {{ item.grand_total|floatformat:2 }} DA
-                        </span>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
+                        <div class="flex-shrink-0 text-end">
+                             <span class="badge bg-soft-primary text-primary fs-14">
+                                Total: {{ entity_block.total|floatformat:2 }} DA
+                             </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-body p-0">
+                      <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                          <thead>
+                            <tr>
+                              <th class="ps-4">Catégorie</th>
+                              <th class="text-center">Formations (Étudiants)</th>
+                              <th class="text-center">Conseil / Education</th>
+                              <th class="text-center">Autres Produits</th>
+                              <th class="text-end pe-4">Total Général</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for item in entity_block.data %}
+                            <!-- Category Row -->
+                            <tr class="{% if item.is_root %}table-light fw-bold{% endif %}">
+                              <td class="ps-4">
+                                <div class="d-flex align-items-center" style="margin-left: {{ item.level|add:item.level }}rem;">
+                                   {% if item.is_root %}
+                                   <div class="avatar-xs me-2">
+                                      <span class="avatar-title bg-soft-primary text-primary rounded-circle">
+                                         <i class="ri-folder-3-line"></i>
+                                      </span>
+                                   </div>
+                                   <span class="text-uppercase">{{ item.category.name }}</span>
+                                   {% else %}
+                                   <i class="ri-corner-down-right-line text-muted me-2"></i>
+                                   <span class="text-muted">{{ item.category.name }}</span>
+                                   {% endif %}
+                                   {% if not item.is_parent %}
+                                   <button class="btn btn-sm btn-ghost-primary p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target=".details-{{ item.category.id }}" aria-expanded="false">
+                                      <i class="ri-eye-line"></i>
+                                   </button>
+                                   {% endif %}
+                                 </div>
+                              </td>
+                              <td class="text-center">
+                                {% if item.stats.student_total > 0 %}
+                                  <span class="{% if item.is_root or item.is_parent %}fw-bold text-dark{% else %}text-primary{% endif %}">{{ item.stats.student_total|floatformat:2 }} DA</span>
+                                {% else %}
+                                  <span class="text-muted opacity-25">-</span>
+                                {% endif %}
+                              </td>
+                              <td class="text-center">
+                                {% if item.stats.consulting_total > 0 %}
+                                  <span class="{% if item.is_root or item.is_parent %}fw-bold text-dark{% else %}text-success{% endif %}">{{ item.stats.consulting_total|floatformat:2 }} DA</span>
+                                {% else %}
+                                  <span class="text-muted opacity-25">-</span>
+                                {% endif %}
+                              </td>
+                              <td class="text-center">
+                                {% if item.stats.other_total > 0 %}
+                                  <span class="{% if item.is_root or item.is_parent %}fw-bold text-dark{% else %}text-info{% endif %}">{{ item.stats.other_total|floatformat:2 }} DA</span>
+                                {% else %}
+                                  <span class="text-muted opacity-25">-</span>
+                                {% endif %}
+                              </td>
+                              <td class="text-end pe-4">
+                                {% if item.is_root or item.is_parent %}
+                                <span class="badge bg-soft-secondary text-dark fs-14 px-3 py-2 fw-bold">
+                                  {{ item.stats.grand_total|floatformat:2 }} DA
+                                </span>
+                                {% else %}
+                                <span class="text-dark fw-medium">
+                                  {{ item.stats.grand_total|floatformat:2 }} DA
+                                </span>
+                                {% endif %}
+                              </td>
+                            </tr>
+
+                            <!-- Details Breakdown (Same for Root and Children) -->
+                            {% if item.details %}
+                                {% for det in item.details %}
+                                <tr class="{% if not item.is_parent %}collapse details-{{ item.category.id }}{% endif %}" style="font-size: 0.85em;">
+                                   <td class="bg-white">
+                                      <div class="d-flex align-items-center" style="margin-left: {{ item.level|add:item.level|add:2 }}rem;">
+                                        <i class="ri-arrow-right-s-fill text-black-50 me-2"></i>
+                                        <span class="text-muted small fst-italic">{{ det.label }}</span>
+                                      </div>
+                                   </td>
+                                   
+                                   {% if det.type == 'Etudiant' %}
+                                     <td class="text-center text-muted small">{{ det.total|floatformat:2 }} DA</td>
+                                     <td class="text-center opacity-10 small">-</td>
+                                     <td class="text-center opacity-10 small">-</td>
+                                   {% elif det.type == 'Conseil' %}
+                                     <td class="text-center opacity-10 small">-</td>
+                                     <td class="text-center text-muted small">{{ det.total|floatformat:2 }} DA</td>
+                                     <td class="text-center opacity-10 small">-</td>
+                                   {% else %}
+                                     <td class="text-center opacity-10 small">-</td>
+                                     <td class="text-center opacity-10 small">-</td>
+                                     <td class="text-center text-muted small">{{ det.total|floatformat:2 }} DA</td>
+                                   {% endif %}
+                                   
+                                   <td class="text-end pe-5 text-muted small">{{ det.total|floatformat:2 }} DA</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
       {% else %}
       <div class="row">
         <div class="col-12">
