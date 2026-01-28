@@ -1,0 +1,1023 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Pipeline Conseil | {{ tenant.name }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --kanban-bg: #f0f2f5;
+        --column-width: 320px;
+        --column-gap: 1.25rem;
+        --primary-blue: #0088cc;
+    }
+
+    .main-content {
+        background-color: var(--kanban-bg);
+        min-height: 100vh;
+    }
+
+    /* Toolbar Redesign */
+    .pipeline-toolbar {
+        background: #fff;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid #e1e4e8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        position: sticky;
+        top: 70px; /* Adjust based on header height */
+        z-index: 100;
+    }
+
+    .pipeline-tabs {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .pipeline-tab {
+        padding: 0.5rem 1.25rem;
+        border-radius: 25px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        border: 1px solid #e1e4e8;
+        background: #fff;
+        color: #555;
+        transition: all 0.2s ease;
+        text-decoration: none !important;
+    }
+
+    .pipeline-tab.active {
+        background: #ebf5ff;
+        border-color: var(--primary-blue);
+        color: var(--primary-blue);
+        box-shadow: 0 2px 4px rgba(0, 136, 204, 0.1);
+    }
+
+    /* Filter Bar Area */
+    .filter-bar {
+        background: #fff;
+        padding: 0.5rem 1.5rem;
+        border-bottom: 1px solid #e1e4e8;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .search-input-group {
+        position: relative;
+        min-width: 250px;
+    }
+
+    .search-input-group i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
+    }
+
+    .search-input-group input {
+        padding-left: 35px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        border: 1px solid #e1e4e8;
+    }
+
+    .filter-select {
+        min-width: 150px;
+        border-radius: 8px;
+        border: 1px solid #e1e4e8;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    /* Kanban Container */
+    .kanban-wrapper {
+        padding: 1.5rem;
+        overflow-x: auto;
+        height: calc(100vh - 180px);
+    }
+
+    .kanban-container {
+        display: flex;
+        gap: var(--column-gap);
+        height: 100%;
+        min-width: max-content;
+    }
+
+    .kanban-column {
+        width: var(--column-width);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .column-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 4px solid #dee2e6;
+    }
+
+    /* Column Header Logic Classes */
+    .col-stage-entrant { border-color: #3498db !important; }
+    .col-stage-contacte { border-color: #1abc9c !important; }
+    .col-stage-negociation { border-color: #2ecc71 !important; }
+    .col-stage-devis_envoye { border-color: #9b59b6 !important; }
+    .col-stage-en_negociation { border-color: #f1c40f !important; }
+    .col-stage-facture { border-color: #e67e22 !important; }
+    .col-stage-recouvrement { border-color: #e74c3c !important; }
+    .col-closing { border-color: #405189 !important; }
+
+    .column-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.25rem;
+    }
+
+    .column-title {
+        font-weight: 700;
+        color: #2d3436;
+        font-size: 1rem;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .column-total {
+        font-weight: 700;
+        color: #4a5568;
+        font-size: 0.95rem;
+    }
+
+    .column-info {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        font-weight: 500;
+    }
+
+    .kanban-body {
+        flex-grow: 1;
+        overflow-y: auto;
+        min-height: 100px;
+    }
+
+    /* Card Design */
+    .pipeline-card {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        cursor: grab;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pipeline-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border-color: var(--primary-blue);
+    }
+
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-avatar {
+        width: 28px;
+        height: 28px;
+        background: #edf2f7;
+        color: #4a5568;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border: 1px solid #e2e8f0;
+    }
+
+    .card-star {
+        font-size: 1rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .card-star.active { color: #f6ad55; }
+    .card-star.inactive { color: #e2e8f0; }
+    .card-star:hover { color: #f6ad55; }
+
+    .card-main-title {
+        font-weight: 600;
+        color: #1a202c;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+        display: block;
+        line-height: 1.4;
+    }
+
+    .card-meta {
+        font-size: 0.75rem;
+        color: #718096;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .card-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #edf2f7;
+    }
+
+    .budget-amount {
+        font-weight: 700;
+        color: #2d3748;
+        font-size: 0.9rem;
+    }
+
+    .prob-badge {
+        font-size: 0.7rem;
+        color: #4a5568;
+        background: #f7fafc;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .status-pill {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .status-urgent { background: #fee2e2; color: #dc2626; }
+    .status-planned { background: #e0f2fe; color: #0284c7; }
+
+    /* Drag states */
+    .dragging { opacity: 0.5; cursor: grabbing; scale: 0.98; }
+    .drag-over { background: rgba(0, 136, 204, 0.04); border-radius: 12px; }
+</style>
+
+<div class="main-content">
+    <!-- Toolbar -->
+    <div class="pipeline-toolbar">
+        <div class="d-flex align-items-center gap-3">
+            <div class="pipeline-tabs">
+                <a href="?view=stage" class="pipeline-tab {% if view_type == 'stage' %}active{% endif %}">Pipeline par étape</a>
+                <a href="?view=closing" class="pipeline-tab {% if view_type == 'closing' %}active{% endif %}">Pipeline par dates de closing</a>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openCreateOppModal()">
+                <i class="ri-add-line me-1"></i> Nouvelle Opportunité
+            </button>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 't_conseil:ExportPipelineCsv' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="ri-download-line me-1"></i> Exporter
+            </a>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary active"><i class="ri-kanban-view"></i></button>
+                <button class="btn btn-outline-secondary"><i class="ri-list-check"></i></button>
+            </div>
+            <button class="btn btn-sm btn-primary">Action suivante <i class="ri-arrow-down-s-line"></i></button>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="GET" class="d-flex align-items-center gap-2 w-100">
+            <input type="hidden" name="view" value="{{ view_type }}">
+            
+            <div class="search-input-group">
+                <i class="ri-search-line"></i>
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Nom, entreprise..." value="{{ current_filters.search }}">
+            </div>
+
+            <select name="commercial" class="form-select filter-select" onchange="this.form.submit()">
+                <option value="">Tous les commerciaux</option>
+                {% for c in commercials %}
+                <option value="{{ c.id }}" {% if current_filters.commercial == c.id|stringformat:"s" %}selected{% endif %}>{{ c.username }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="state" class="form-select filter-select" onchange="this.form.submit()">
+                <option value="active" {% if current_filters.state == 'active' %}selected{% endif %}>Actif</option>
+                <option value="inactive" {% if current_filters.state == 'inactive' %}selected{% endif %}>Inactif</option>
+                <option value="all" {% if current_filters.state == 'all' %}selected{% endif %}>Tous</option>
+            </select>
+
+            <button type="submit" class="btn btn-sm btn-soft-primary"><i class="ri-filter-3-line"></i> Filtrer</button>
+            
+            {% if current_filters.search or current_filters.commercial or current_filters.state != 'active' %}
+            <a href="?view={{ view_type }}" class="btn btn-sm btn-soft-danger"><i class="ri-refresh-line"></i></a>
+            {% endif %}
+
+            <div class="ms-auto">
+                <span class="badge bg-soft-primary text-primary px-3 py-2 border">
+                    <i class="ri-filter-fill me-1"></i> {{ current_filters.state|capfirst }}
+                </span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Kanban -->
+    <div class="kanban-wrapper">
+        <div class="kanban-container">
+            {% for stage in pipeline_stages %}
+            <div class="kanban-column" data-stage="{{ stage.code }}">
+                <div class="column-header {% if view_type == 'stage' %}col-stage-{{ stage.code }}{% else %}col-closing{% endif %}">
+                    <div class="column-title-row">
+                        <h6 class="column-title">{{ stage.label }}</h6>
+                        <span class="column-total">{{ stage.total_budget|floatformat:0|intcomma }} DZA</span>
+                    </div>
+                    <div class="column-info">
+                        {{ stage.count }} Opportunité{{ stage.count|pluralize }}
+                    </div>
+                </div>
+
+                <div class="kanban-body" 
+                     {% if view_type == 'stage' %}ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '{{ stage.code }}')"{% endif %}>
+                    
+                    {% for item in stage.items %}
+                    <div class="pipeline-card" draggable="true" ondragstart="handleDragStart(event)" id="card-{{ item.id }}" data-id="{{ item.id }}">
+                        <div class="card-header-row">
+                            <div class="card-avatar">
+                                {{ item.prospect.nom|slice:":1"|upper }}{{ item.prospect.prenom|slice:":1"|upper }}
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <i class="ri-pencil-line text-muted" title="Modifier" onclick="editOpportunity(event, '{{ item.id }}')" style="cursor: pointer;"></i>
+                                <i class="ri-file-add-line text-muted" title="Convertir en devis" onclick="convertToQuote(event, '{{ item.id }}')" style="cursor: pointer;"></i>
+                                <i class="ri-star-fill card-star {% if item.is_favorite %}active{% else %}inactive{% endif %}" 
+                                   onclick="toggleFavorite(event, '{{ item.id }}')"></i>
+                            </div>
+                        </div>
+
+                        <a href="{% url 't_crm:DetailsProspect' item.prospect.slug %}" class="card-main-title">
+                            {% if item.prospect.entreprise %}{{ item.prospect.entreprise }}{% else %}{{ item.nom }}{% endif %}
+                        </a>
+                        <div class="small text-muted mb-2">{{ item.prospect.nom }} {{ item.prospect.prenom }}</div>
+
+                        <div class="card-meta">
+                            <i class="ri-calendar-line"></i>
+                            <span>{{ item.created_at|date:"d/m/Y H:i" }}</span>
+                            <i class="ri-message-3-line ms-auto"></i> 0
+                        </div>
+                        
+                        {% if item.closing_date %}
+                        <div class="card-meta">
+                            <i class="ri-flag-2-line text-info"></i>
+                            <span class="text-info">Closing: {{ item.closing_date|date:"d/m" }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="card-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="budget-amount">{{ item.budget|floatformat:0|intcomma }} DZA</span>
+                                {% if item.probability %}
+                                <span class="prob-badge">{{ item.probability }}%</span>
+                                {% endif %}
+                            </div>
+
+                            {% if item.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}
+                            <div class="status-pill status-urgent">
+                                <i class="ri-flashlight-fill"></i> Aujourd'hui
+                            </div>
+                            {% else %}
+                            <div class="status-pill status-planned">
+                                <i class="ri-time-line"></i> Dans 1j
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not stage.items %}
+                    <div class="text-center py-5 border border-dashed rounded bg-light bg-opacity-50 opacity-50">
+                        <i class="ri-add-line fs-1 d-block mb-1"></i>
+                        <span class="small">Déposer ici</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<!-- Create Opportunity Modal -->
+<div class="modal fade" id="createOppModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom">
+                <h5 class="modal-title font-weight-bold">Nouvelle Opportunité</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createOppForm">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Prospect / Client</label>
+                        <select class="form-select" id="newOppProspect" required>
+                            <option value="">Sélectionner un prospect...</option>
+                            {% for p in all_prospects %}
+                            <option value="{{ p.id }}">{{ p.nom }} {{ p.prenom }} {% if p.entreprise %}({{ p.entreprise }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text"><a href="#" onclick="openProspectModal()" class="text-primary text-decoration-none small"> <i class="ri-add-circle-line"></i> Créer un nouveau prospect</a></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Nom de l'opportunité</label>
+                        <input type="text" class="form-control" id="newOppName" placeholder="Ex: Contrat annuel 2026" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Budget Estimé (DZA)</label>
+                        <input type="number" class="form-control" id="newOppBudget" placeholder="0.00">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitCreateOpp()">Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "tenant_folder/conseil/modal_prospect.html" %}
+
+<!-- Edit Opportunity Modal -->
+<div class="modal fade" id="editOppModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-white border-bottom">
+                <h5 class="modal-title font-weight-bold">Modifier l'Opportunité</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editOppForm">
+                    <input type="hidden" id="editOppId">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Nom de l'opportunité</label>
+                        <input type="text" class="form-control" id="editOppName" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Budget (DZA)</label>
+                            <input type="number" class="form-control" id="editOppBudget">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Probabilité (%)</label>
+                            <input type="number" class="form-control" id="editOppProb" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                         <label class="form-label small text-muted">Date de Closing Prévue</label>
+                         <input type="date" class="form-control" id="editOppDate">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditOpp()">Enregistrer</button>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteOpportunity()">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="avatar-md mx-auto bg-soft-danger rounded-circle p-3 mb-3">
+                        <i class="ri-delete-bin-line text-danger fs-1"></i>
+                    </div>
+                </div>
+                <h5 class="mb-2 fw-bold">Supprimer l'opportunité ?</h5>
+                <p class="text-muted small mb-4">Cette action est irréversible. Voulez-vous vraiment continuer ?</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger px-4" id="confirmDeleteBtn" onclick="confirmDeleteOpportunity()">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversion Modal -->
+<div class="modal fade" id="conversionModal" tabindex="-1" aria-labelledby="conversionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title font-weight-bold" id="conversionModalLabel">
+                    <i class="ri-file-add-line me-2"></i> Convertir en Devis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-4">
+                    <i class="ri-question-line text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="mb-3 fw-bold">Voulez-vous transformer ce prospect en devis ?</h6>
+                <p class="text-muted small">Cette action créera un nouveau devis en mode brouillon et déplacera le prospect vers l'étape "Devis envoyé".</p>
+                <input type="hidden" id="prospectToConvert" value="">
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4" id="confirmConversionBtn" onclick="executeConversion()">
+                    <i class="ri-check-line me-1"></i> Confirmer la conversion
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let draggedElement = null;
+
+    function handleDragStart(e) {
+        draggedElement = e.target.closest('.pipeline-card');
+        e.dataTransfer.setData('text/plain', draggedElement.dataset.id);
+        draggedElement.classList.add('dragging');
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        const body = e.target.closest('.kanban-body');
+        if (body) body.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        const body = e.target.closest('.kanban-body');
+        if (body) body.classList.remove('drag-over');
+    }
+
+    function handleDrop(e, stageCode) {
+        e.preventDefault();
+        const body = e.target.closest('.kanban-body');
+        if (body) body.classList.remove('drag-over');
+        
+        const cardId = e.dataTransfer.getData('text/plain');
+        if (cardId && draggedElement) {
+            const oldBody = draggedElement.parentElement;
+            if (oldBody !== body) {
+                body.prepend(draggedElement);
+                updateStageOnServer(cardId, stageCode);
+            }
+        }
+    }
+
+    function updateStageOnServer(prospectId, newStage) {
+        const formData = new FormData();
+        formData.append('prospect_id', prospectId);
+        formData.append('new_stage', newStage);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiUpdatePipelineStage" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                alertify.error(data.message);
+                window.location.reload();
+            }
+        });
+    }
+
+    function toggleFavorite(e, prospectId) {
+        e.stopPropagation();
+        const icon = e.target;
+        const formData = new FormData();
+        formData.append('prospect_id', prospectId);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiToggleFavorite" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                icon.classList.toggle('active', data.is_favorite);
+                icon.classList.toggle('inactive', !data.is_favorite);
+                alertify.success(data.is_favorite ? "Ajouté aux favoris" : "Retiré des favoris");
+            }
+        });
+    }
+
+    function convertToQuote(e, prospectId) {
+        e.stopPropagation();
+        const modal = new bootstrap.Modal(document.getElementById('conversionModal'));
+        document.getElementById('prospectToConvert').value = prospectId;
+        modal.show();
+    }
+
+    function executeConversion() {
+        const prospectId = document.getElementById('prospectToConvert').value;
+        const btn = document.getElementById('confirmConversionBtn');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Conversion...';
+
+        const formData = new FormData();
+        formData.append('prospect_id', prospectId);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiConvertProspectToDevis" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                setTimeout(() => { window.location.href = data.redirect_url; }, 800);
+            } else {
+                alertify.error(data.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-check-line me-1"></i> Confirmer la conversion';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alertify.error('Une erreur est survenue.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-check-line me-1"></i> Confirmer la conversion';
+        });
+    }
+
+    function openCreateOppModal() {
+        const modal = new bootstrap.Modal(document.getElementById('createOppModal'));
+        modal.show();
+    }
+
+    let deleteTargetId = null;
+
+    function deleteOpportunity() {
+        deleteTargetId = document.getElementById('editOppId').value;
+        // Open confirmation modal on top of edit modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    function confirmDeleteOpportunity() {
+        if (!deleteTargetId) return;
+        
+        const btn = document.getElementById('confirmDeleteBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('id', deleteTargetId);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiDeleteOpportunite" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                
+                // Remove card from DOM
+                const card = document.getElementById(`card-${deleteTargetId}`);
+                if (card) card.remove();
+                
+                // Close Delete Modal
+                const deleteModalEl = document.getElementById('deleteConfirmModal');
+                const deleteModal = bootstrap.Modal.getInstance(deleteModalEl);
+                if (deleteModal) deleteModal.hide();
+                
+                // Close Edit Modal (parent)
+                const editModalEl = document.getElementById('editOppModal');
+                const editModal = bootstrap.Modal.getInstance(editModalEl);
+                if (editModal) editModal.hide();
+                
+            } else {
+                alertify.error(data.message);
+            }
+        })
+        .finally(() => {
+             btn.innerHTML = originalText;
+             btn.disabled = false;
+        });
+    }
+
+    function openProspectModal() {
+        // Close Opp modal first (optional, or stack them)
+        // Bootstrap modals don't stack well by default without specific config, but let's try overlay.
+        // Or hide previous one.
+        const oppModalEl = document.getElementById('createOppModal');
+        const oppModal = bootstrap.Modal.getInstance(oppModalEl);
+        if (oppModal) oppModal.hide();
+
+        const modal = new bootstrap.Modal(document.getElementById('newProspectModal'));
+        modal.show();
+    }
+
+    function toggleProspectType(type) {
+        const entrepriseFields = document.getElementById('entrepriseFields');
+        const labels = {
+            nom: document.querySelector('label[for="prospectNom"]'),
+            prenom: document.querySelector('label[for="prospectPrenom"]')
+        };
+        
+        if (type === 'particulier') {
+            entrepriseFields.classList.add('d-none');
+            // document.getElementById('prospectNom').placeholder = "Nom";
+        } else {
+            entrepriseFields.classList.remove('d-none');
+            // document.getElementById('prospectNom').placeholder = "Nom du contact";
+        }
+    }
+
+    function submitNewProspect() {
+        const form = document.getElementById('quickProspectForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const formData = new FormData(form);
+        const btn = document.getElementById('saveProspectBtn');
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        // Add CSRF
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 't_conseil:ApiQuickCreateProspect' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                
+                // Add new option to dropdown
+                const select = document.getElementById('newOppProspect');
+                const option = new Option(data.prospect.nom, data.prospect.id, true, true);
+                select.add(option);
+                
+                // Close Prospect Modal
+                const prospectModalEl = document.getElementById('newProspectModal');
+                const prospectModal = bootstrap.Modal.getInstance(prospectModalEl);
+                if (prospectModal) prospectModal.hide();
+                
+                // Show Opp Modal again
+                const oppModalEl = document.getElementById('createOppModal');
+                // Check if already open or needs showing
+                const oppModal = new bootstrap.Modal(oppModalEl);
+                oppModal.show();
+                
+            } else {
+                document.getElementById('prospectError').classList.remove('d-none');
+                document.getElementById('errorText').textContent = data.message;
+            }
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    function editOpportunity(e, oppId) {
+        e.stopPropagation();
+        
+        // Reset form
+        document.getElementById('editOppForm').reset();
+        document.getElementById('editOppId').value = oppId;
+        
+        fetch(`{% url "t_conseil:ApiGetOpportunite" %}?id=${oppId}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('editOppName').value = data.data.nom;
+                document.getElementById('editOppBudget').value = data.data.budget;
+                document.getElementById('editOppProb').value = data.data.probability;
+                document.getElementById('editOppDate').value = data.data.closing_date;
+                
+                const modal = new bootstrap.Modal(document.getElementById('editOppModal'));
+                modal.show();
+            } else {
+                alertify.error(data.message);
+            }
+        });
+    }
+
+    function submitEditOpp() {
+        const id = document.getElementById('editOppId').value;
+        const nom = document.getElementById('editOppName').value;
+        const budget = document.getElementById('editOppBudget').value;
+        const prob = document.getElementById('editOppProb').value;
+        const date = document.getElementById('editOppDate').value;
+
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('nom', nom);
+        formData.append('budget', budget);
+        formData.append('probability', prob);
+        formData.append('closing_date', date);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiUpdateOpportunite" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                
+                // Update DOM Card
+                const card = document.getElementById(`card-${id}`);
+                if (card) {
+                    card.querySelector('.card-main-title').textContent = nom;
+                    card.querySelector('.budget-amount').textContent = parseFloat(budget).toLocaleString() + " DZA";
+                    
+                    if (prob) {
+                         const probBadge = card.querySelector('.prob-badge');
+                         if (probBadge) {
+                             probBadge.textContent = prob + '%';
+                         } else {
+                             // If badge didn't exist, create it (simplified: just append to card-bottom div)
+                              const bottomDiv = card.querySelector('.card-bottom > div');
+                              const badge = document.createElement('span');
+                              badge.className = 'prob-badge';
+                              badge.textContent = prob + '%';
+                              bottomDiv.appendChild(badge);
+                         }
+                    }
+                }
+
+                const modalEl = document.getElementById('editOppModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+            } else {
+                alertify.error(data.message);
+            }
+        });
+    }
+
+    function submitCreateOpp() {
+        const prospectSelect = document.getElementById('newOppProspect');
+        const prospectId = prospectSelect.value;
+        const prospectNameFull = prospectSelect.options[prospectSelect.selectedIndex].text;
+        // Parse prospect name (Simple logic for demo)
+        const pName = prospectNameFull.split('(')[0].trim();
+        const pEnt = prospectNameFull.includes('(') ? prospectNameFull.split('(')[1].replace(')', '').trim() : '';
+        
+        const nom = document.getElementById('newOppName').value;
+        const budget = document.getElementById('newOppBudget').value;
+
+        if (!prospectId || !nom) {
+            alertify.error("Veuillez remplir le prospect et le nom.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('prospect_id', prospectId);
+        formData.append('nom', nom);
+        formData.append('budget', budget);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "t_conseil:ApiCreateOpportunite" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                
+                // Dynamic Card Creation
+                const newCardHtml = `
+                    <div class="pipeline-card" draggable="true" ondragstart="handleDragStart(event)" id="card-${data.id}" data-id="${data.id}">
+                        <div class="card-header-row">
+                            <div class="card-avatar">
+                                ${pName.substring(0,2).toUpperCase()}
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <i class="ri-pencil-line text-muted" title="Modifier" onclick="editOpportunity(event, '${data.id}')" style="cursor: pointer;"></i>
+                                <i class="ri-file-add-line text-muted" title="Convertir en devis" onclick="convertToQuote(event, '${data.id}')" style="cursor: pointer;"></i>
+                                <i class="ri-star-fill card-star inactive" onclick="toggleFavorite(event, '${data.id}')"></i>
+                            </div>
+                        </div>
+
+                        <a href="#" class="card-main-title">${nom}</a>
+                        <div class="small text-muted mb-2">${pName}</div>
+
+                        <div class="card-meta">
+                            <i class="ri-calendar-line"></i>
+                            <span>Aujourd'hui</span>
+                            <i class="ri-message-3-line ms-auto"></i> 0
+                        </div>
+                        
+                        <div class="card-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="budget-amount">${parseFloat(budget || 0).toLocaleString()} DZA</span>
+                            </div>
+
+                            <div class="status-pill status-urgent">
+                                <i class="ri-flashlight-fill"></i> Aujourd'hui
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Append to first column (Entrant)
+                const entrantColumn = document.querySelector('.kanban-column[data-stage="entrant"] .kanban-body');
+                if (entrantColumn) {
+                    entrantColumn.insertAdjacentHTML('afterbegin', newCardHtml);
+                }
+
+                // Close modal
+                const modalEl = document.getElementById('createOppModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                
+                // Reset form
+                document.getElementById('createOppForm').reset();
+                
+            } else {
+                alertify.error(data.message);
+            }
+        });
+    }
+
+    document.addEventListener('dragend', () => {
+        if (draggedElement) draggedElement.classList.remove('dragging');
+        draggedElement = null;
+    });
+</script>
+{% endblock %}

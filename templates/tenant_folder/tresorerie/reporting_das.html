@@ -1,0 +1,183 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Trésorerie - Rapport par Catégorie DAS {% endblock title %}
+
+{% block content %}
+<style>
+  .main-content, .main-content * {
+    color: #2c3e50 !important;
+  }
+  
+  .card {
+    background-color: #ffffff !important;
+    border: 1px solid #eef0f2 !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .reporting-header {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+  }
+
+  .reporting-header h2, .reporting-header p, .reporting-header i {
+    color: #ffffff !important;
+  }
+
+  .stat-card {
+    transition: transform 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .bg-soft-primary { background-color: rgba(99, 102, 241, 0.1) !important; }
+  .bg-soft-success { background-color: rgba(25, 135, 84, 0.1) !important; }
+  .bg-soft-info { background-color: rgba(13, 202, 240, 0.1) !important; }
+
+  .text-primary { color: #6366f1 !important; }
+  .text-success { color: #198754 !important; }
+  .text-info { color: #0dcaf0 !important; }
+
+  thead th {
+    background-color: #f8f9fa !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      
+      <!-- Header -->
+      <div class="reporting-header shadow-sm">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0 me-3">
+            <div class="avatar-md">
+              <span class="avatar-title bg-white bg-opacity-20 rounded-circle fs-24">
+                <i class="ri-pie-chart-2-line"></i>
+              </span>
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <h2 class="mb-1">Rapport Financier par Catégorie (DAS)</h2>
+            <p class="mb-0 opacity-75">Vue d'ensemble consolidée des revenus par domaine d'activité stratégique.</p>
+          </div>
+          <div class="flex-shrink-0">
+             <div class="text-end">
+                <h3 class="text-white mb-0 fw-bold">{{ total_all|floatformat:2 }} DA</h3>
+                <small class="text-white opacity-75">Revenu Total Consolidé</small>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content Table -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card overflow-hidden">
+            <div class="card-header bg-white border-bottom p-3">
+              <div class="d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1 fw-bold">Détails par Catégorie de Paiement</h5>
+                <div class="flex-shrink-0">
+                  <button class="btn btn-soft-primary btn-sm" onclick="window.print()">
+                    <i class="ri-printer-line me-1"></i> Imprimer le rapport
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="ps-4">Catégorie</th>
+                      <th class="text-center">Formations (Étudiants)</th>
+                      <th class="text-center">Conseil / Education</th>
+                      <th class="text-center">Autres Produits</th>
+                      <th class="text-end pe-4">Total Général</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                      <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                           <div class="avatar-xs me-2">
+                              <span class="avatar-title bg-light text-primary rounded-circle">
+                                 <i class="ri-bookmark-3-line"></i>
+                              </span>
+                           </div>
+                           <span class="fw-bold">{{ item.category.name }}</span>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        {% if item.student_total > 0 %}
+                          <span class="text-primary fw-medium">{{ item.student_total|floatformat:2 }} DA</span>
+                        {% else %}
+                          <span class="text-muted opacity-50">-</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        {% if item.consulting_total > 0 %}
+                          <span class="text-success fw-medium">{{ item.consulting_total|floatformat:2 }} DA</span>
+                        {% else %}
+                          <span class="text-muted opacity-50">-</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        {% if item.other_total > 0 %}
+                          <span class="text-info fw-medium">{{ item.other_total|floatformat:2 }} DA</span>
+                        {% else %}
+                          <span class="text-muted opacity-50">-</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-end pe-4">
+                        <span class="badge bg-soft-primary text-primary fs-14 px-3 py-2 fw-bold">
+                          {{ item.grand_total|floatformat:2 }} DA
+                        </span>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center py-5">
+                        <div class="avatar-lg bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center">
+                          <i class="ri-inbox-line fs-2 text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">Aucune donnée financière trouvée pour les catégories DAS.</h5>
+                        <p class="text-muted small">Assurez-vous que vos produits et spécialités sont correctement mappés.</p>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                  {% if report_data %}
+                  <tfoot class="bg-light bg-opacity-50">
+                    <tr class="fw-bold fs-15">
+                      <td class="ps-4">TOTAL GENERAL</td>
+                      <td class="text-center text-primary"></td>
+                      <td class="text-center text-success"></td>
+                      <td class="text-center text-info"></td>
+                      <td class="text-end pe-4">
+                        <span class="text-dark">{{ total_all|floatformat:2 }} DA</span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                  {% endif %}
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock content %}

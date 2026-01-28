@@ -1,4 +1,4 @@
-from django.urls import path
+﻿from django.urls import path
 from .views import *
 from .f_views.echeancier import *
 from .f_views.preinscrit_paiements import *
@@ -15,6 +15,7 @@ from .f_views.produits import *
 from .f_views.imputation_comptable_specialite import *
 from .f_views.autre_paiement import *
 from .f_views.configure_penalite import *
+from .f_views.reporting_das import *
 from .f_views.type_depense import *
 
 app_name="t_tresorerie"
@@ -147,7 +148,7 @@ urlpatterns = [
     path('UpdateFournisseur', UpdateFournisseur, name="UpdateFournisseur"),
     path('ApiLoadFournisseur', ApiLoadFournisseur, name="ApiLoadFournisseur"),
 
-    #### Gestion des dépenses
+    #### Gestion des dÃ©penses
     path('parametres/type-depense/', liste_types_depenses, name="liste_types_depenses"),
     path('ApiLoadTypeDepense', ApiLoadTypeDepense, name="ApiLoadTypeDepense"),
     path('ApiStoreNewType', ApiStoreNewType, name="ApiStoreNewType"),
@@ -241,4 +242,5 @@ urlpatterns = [
     path('ApiGetEntite',ApiGetEntite, name="ApiGetEntite"),
 
 
+    path('reporting-das/', ReportingDAS, name='ReportingDAS'),
 ]

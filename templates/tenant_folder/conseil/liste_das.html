@@ -1,0 +1,329 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Conseil - Mapping des Domaines d'Activité (DAS) {% endblock title %}
+
+{% block content %}
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  }
+
+  /* Force visibility for ALL text elements within the main-content area */
+  .main-content,
+  .main-content .page-title-box h4,
+  .main-content .breadcrumb-item,
+  .main-content .breadcrumb-item a,
+  .main-content .card-title,
+  .main-content table,
+  .main-content table thead th,
+  .main-content table tbody td,
+  .main-content table tbody td h5,
+  .main-content table tbody td span,
+  .main-content table tbody td i,
+  .main-content .modal-title,
+  .main-content label {
+    color: #2c3e50 !important; /* Very dark blue/gray for better readability */
+  }
+
+  /* Specific color overrides for status badges to keep them distinguishable but visible */
+  .main-content .badge-soft-primary, 
+  .main-content .badge-soft-primary i {
+    color: #0d6efd !important; /* Force primary blue */
+    background-color: rgba(13, 110, 253, 0.1) !important;
+  }
+
+  .main-content .badge-soft-success,
+  .main-content .badge-soft-success i {
+    color: #198754 !important; /* Force success green */
+    background-color: rgba(25, 135, 84, 0.1) !important;
+  }
+
+  .main-content .badge-soft-info,
+  .main-content .badge-soft-info i {
+    color: #0dcaf0 !important; /* Force info cyan */
+    background-color: rgba(13, 202, 240, 0.1) !important;
+  }
+
+  .main-content .text-muted {
+    color: #6c757d !important;
+  }
+
+  /* Force white background for the main card and modal to ensure the dark text is visible */
+  .main-content .card,
+  .main-content .modal-content {
+    background-color: #ffffff !important;
+    border: 1px solid #eef0f2 !important;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                <i class="ri-node-tree text-primary fs-20"></i>
+              </div>
+              <h4 class="mb-0 text-primary">Mapping des Domaines d'Activité (DAS)</h4>
+            </div>
+            <div class="page-title-right">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 bg-transparent">
+                  <li class="breadcrumb-item">
+                    <a href="javascript: void(0);" class="text-muted">
+                      <i class="ri-home-line me-1"></i>Executive Education
+                    </a>
+                  </li>
+                  <li class="breadcrumb-item active text-primary">Gestion DAS</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- end page title -->
+
+      <!-- Action Bar -->
+      <div class="row mb-4 align-items-center">
+        <div class="col-sm-auto ms-auto">
+          <button class="btn btn-primary bg-gradient shadow-sm d-flex align-items-center" onclick="openDASModal()">
+            <i class="ri-add-line me-1 fs-18"></i> Nouveau Mapping DAS
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Table Card -->
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="card das-card shadow-sm border-0">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle table-nowrap mb-0 text-dark">
+                  <thead class="bg-light text-dark">
+                    <tr>
+                      <th scope="col" class="ps-4">Désignation DAS</th>
+                      <th scope="col">Produit / Service (Thématique)</th>
+                      <th scope="col">Catégorie de Paiement</th>
+                      <th scope="col">Date de Création</th>
+                      <th scope="col" class="text-end pe-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for mapping in mappings %}
+                    <tr>
+                      <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0 me-2">
+                             <div class="avatar-xs">
+                                <span class="avatar-title bg-soft-info text-info rounded-circle fs-16">
+                                    {{ mapping.designation|slice:":1"|upper }}
+                                </span>
+                             </div>
+                          </div>
+                          <div class="flex-grow-1">
+                            <h5 class="fs-14 mb-0 fw-bold text-dark">{{ mapping.designation }}</h5>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge badge-soft-primary fs-12 px-2 py-1">
+                          <i class="ri-book-3-line me-1"></i> {{ mapping.thematique.label }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge badge-soft-success fs-12 px-2 py-1">
+                          <i class="ri-wallet-3-line me-1"></i> {{ mapping.payment_category.name }}
+                        </span>
+                      </td>
+                      <td class="text-dark">{{ mapping.created_at|date:"d M Y, H:i" }}</td>
+                      <td class="text-end pe-4">
+                        <div class="hstack gap-2 justify-content-end">
+                            <button class="btn btn-soft-info btn-sm icon-btn rounded-pill" 
+                                    onclick="openDASModal('{{ mapping.id }}', '{{ mapping.designation|escapejs }}', '{{ mapping.thematique.id }}', '{{ mapping.payment_category.id }}')"
+                                    title="Modifier">
+                                <i class="ri-pencil-fill"></i>
+                            </button>
+                            <button class="btn btn-soft-danger btn-sm icon-btn rounded-pill" 
+                                    onclick="deleteDAS('{{ mapping.id }}')"
+                                    title="Supprimer">
+                                <i class="ri-delete-bin-fill"></i>
+                            </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center py-5">
+                        <div class="avatar-lg bg-light rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                          <i class="ri-node-tree fs-1 text-muted"></i>
+                        </div>
+                        <h5 class="fw-bold">Aucun mapping DAS trouvé</h5>
+                        <p class="text-muted mb-4">Associez vos thématiques à des catégories de paiement pour une meilleure gestion financière.</p>
+                        <button class="btn btn-primary" onclick="openDASModal()">
+                          <i class="ri-add-line me-1"></i> Créer votre premier mapping
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DAS Modal -->
+<div class="modal fade" id="dasModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header-custom d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary bg-opacity-10 p-3 rounded-pill me-3">
+            <i class="ri-add-circle-line fs-2 text-primary" id="modalIcon"></i>
+          </div>
+          <div>
+            <h4 class="modal-title mb-0 text-dark fw-bold" id="dasModalLabel">Nouveau Mapping DAS</h4>
+            <p class="mb-0 text-muted small">Configurez l'association produit/catégorie</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="dasForm">
+          <input type="hidden" id="dasId">
+          <div class="mb-4">
+            <label class="form-label fw-bold">Désignation du DAS</label>
+            <input type="text" class="form-control form-control-custom" id="dasDesignation" placeholder="Ex: Formation Executive Management">
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-bold">Thématique (Produit / Service)</label>
+            <select class="form-select form-control-custom" id="dasThematique">
+              <option value="">Sélectionner une thématique...</option>
+              {% for t in thematiques %}
+                <option value="{{ t.id }}">{{ t.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Catégorie de Paiement</label>
+            <select class="form-select form-control-custom" id="dasCategory">
+              <option value="">Sélectionner une catégorie...</option>
+              {% for pc in payment_categories %}
+                <option value="{{ pc.id }}">{{ pc.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light p-3 border-top-0">
+        <button type="button" class="btn btn-link text-muted fw-semibold" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary px-4 shadow-sm fw-bold" onclick="saveDAS()">Enregistrer le mapping</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    const dasModalEl = document.getElementById('dasModal');
+    const dasModal = new bootstrap.Modal(dasModalEl);
+
+    function openDASModal(id = '', designation = '', thematiqueId = '', categoryId = '') {
+        document.getElementById('dasId').value = id;
+        document.getElementById('dasDesignation').value = designation;
+        document.getElementById('dasThematique').value = thematiqueId;
+        document.getElementById('dasCategory').value = categoryId;
+        
+        const label = document.getElementById('dasModalLabel');
+        const icon = document.getElementById('modalIcon');
+        
+        if (id) {
+            label.textContent = 'Modifier le Mapping DAS';
+            icon.className = 'ri-edit-line fs-2 text-info';
+            icon.parentElement.className = 'bg-info bg-opacity-10 p-3 rounded-pill me-3';
+        } else {
+            label.textContent = 'Nouveau Mapping DAS';
+            icon.className = 'ri-add-circle-line fs-2 text-primary';
+            icon.parentElement.className = 'bg-primary bg-opacity-10 p-3 rounded-pill me-3';
+        }
+        
+        dasModal.show();
+    }
+
+    function saveDAS() {
+        const id = document.getElementById('dasId').value;
+        const designation = document.getElementById('dasDesignation').value;
+        const thematiqueId = document.getElementById('dasThematique').value;
+        const categoryId = document.getElementById('dasCategory').value;
+
+        if (!designation || !thematiqueId || !categoryId) {
+            alertify.error("Veuillez remplir tous les champs.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('das_id', id);
+        formData.append('designation', designation);
+        formData.append('thematique_id', thematiqueId);
+        formData.append('category_id', categoryId);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 't_conseil:ApiSaveDAS' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alertify.error(data.message);
+            }
+        });
+    }
+
+    function deleteDAS(id) {
+        alertify.confirm("Supprimer ce mapping ?", "Voulez-vous vraiment supprimer cet association DAS ? Cette action est irréversible.",
+            function () {
+                const formData = new FormData();
+                formData.append('das_id', id);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch("{% url 't_conseil:ApiDeleteDAS' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alertify.success(data.message);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        alertify.error(data.message);
+                    }
+                });
+            },
+            function () { }
+        );
+    }
+</script>
+{% endblock extra_js %}

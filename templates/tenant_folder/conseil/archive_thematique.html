@@ -3,211 +3,153 @@
 {% block title %} Conseil - Liste des thématiques {% endblock title %}
 
 {% block content %}
-        <!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+  .folder-card {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 
-            <div class="page-content">
-                <div class="container-fluid">
+  .folder-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    border-color: #cbd5e1;
+  }
 
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Archive thématiques</h4>
+  .folder-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: #94a3b8; /* Archived color */
+  }
 
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Conseil</a></li>
-                                        <li class="breadcrumb-item active">Archive thématiques</li>
-                                    </ol>
-                                </div>
+  /* Status Colors for categories in archive */
+  .folder-card.category-service::before { background: #94a3b8; }
+  .folder-card.category-produit::before { background: #94a3b8; }
 
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- end page title -->
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                 <div class="card-header">
-                                    
-                                    <h5 class="card-title mb-0"> Archives </h5>
-                                       
-                                </div>
-                                <div class="card-body">
-                                    <table id="example" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
-                                        <thead>
-                                            <tr>
-                                                
-                                                <th>Label</th>
-                                                <th>Durée</th>
-                                                <th>Prix U (HT)</th>
-                                                <th>Crée le</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="listItem">
+  .card-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+  }
 
-                                            
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  .card-action-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
 
-                </div>
-                <!-- container-fluid -->
-            </div>
-            <!-- End Page-content -->
+  .header-actions {
+    background: #fff;
+    padding: 1.25rem 2rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content">
+    <div class="container-fluid">
+      
+      <!-- Modern Header -->
+      <div class="header-actions d-flex align-items-center justify-content-between mb-4 shadow-sm border-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-secondary bg-opacity-10 p-3 rounded-pill me-3">
+            <i class="ri-archive-line fs-3 text-secondary"></i>
+          </div>
+          <div>
+            <h4 class="mb-0 fw-bold">Archive des thématiques</h4>
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{% url 't_conseil:ListeThematique' %}" class="text-primary">Thématiques</a></li>
+                <li class="breadcrumb-item active">Archives</li>
+              </ol>
+            </nav>
+          </div>
         </div>
-
-<div id="newThematique" class="modal fade" tabindex="-1" aria-labelledby="newThematiqueLabel" aria-hidden="true" style="display: none;">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="newThematiqueLabel">Ajout d'une nouvelle thématique</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="d-flex gap-2">
+            <div class="input-group" style="width: 250px;">
+                <span class="input-group-text bg-light border-0"><i class="ri-search-line"></i></span>
+                <input type="text" id="searchArchive" class="form-control bg-light border-0" placeholder="Rechercher...">
             </div>
-            <div class="modal-body">
-               <div class="row">
+            <a href="{% url 't_conseil:ListeThematique' %}" class="btn btn-primary d-flex align-items-center">
+                <i class="ri-arrow-left-line me-2"></i> Retour à la liste
+            </a>
+        </div>
+      </div>
 
-                <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Désignation de la thématique :</label>
-                        <input type="text" class="form-control" id="labelThematique" placeholder="Désignation de la thématique">
-                    </div>
-                 </div>
+      <!-- Card Grid Container -->
+      <div class="row" id="listItem">
+        <!-- Rendered via AJAX -->
+      </div>
 
-                 <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Durée :</label>
-                        <input type="text" class="form-control" id="dureeThematique" placeholder="Durée de la thématique en heures">
-                    </div>
-                 </div>
+      <!-- Empty State -->
+      <div id="emptyState" class="text-center py-5 d-none">
+        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+          <i class="ri-archive-2-line fs-1 text-muted"></i>
+        </div>
+        <h5 class="fw-bold">Aucune thématique archivée</h5>
+        <p class="text-muted">Vos thématiques archivées apparaîtront ici.</p>
+      </div>
 
-                 <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Prix (Prix de la formation par Jours/Heures) :</label>
-                        <input type="number" step="0.1" class="form-control" id="prixThematique" placeholder="Prix de la thématique">
-                    </div>
-                 </div>
+    </div>
+  </div>
+</div>
 
-                 <div class="col-lg-12 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Description :</label>
-                        <textarea class="form-control" id="descriptionThematique" placeholder="Description de la thématique"></textarea>
-                    </div>
-                 </div>
-
-                
-               </div>
-            </div>
-            <div class="modal-footer">
-                    <input type="button" class="btn btn-danger mt-4" data-bs-dismiss="modal" value="Fermer">
-                    <input type="button" class="btn btn-primary mt-4" id="saveThematique" value="Enregistrer la thématique">
-            </div>
-
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
-
-<div id="updateThematique" class="modal fade" tabindex="-1" aria-labelledby="updateThematiqueLabel" aria-hidden="true" style="display: none;">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="updateThematiqueLabel">Mise à jour des informations de la thématique</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="row">
-
-                <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Désignation de la thématique</label>
-                        <input type="text" class="form-control" id="updatelabelThematique" placeholder="Désignation de la thématique">
-                    </div>
-                 </div>
-
-                 <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Durée</label>
-                        <input type="text" class="form-control" id="updatedureeThematique" placeholder="Durée de la thématique en heures">
-                    </div>
-                 </div>
-
-                 <div class="col-lg-4 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Prix (Prix de la formation par Jours/Heures) :</label>
-                        <input type="number" step="0.1" class="form-control" id="updateprixThematique" placeholder="Prix de la thématique">
-                    </div>
-                 </div>
-
-                  <div class="col-lg-12 mt-3">
-                    <div class="form-group">
-                        <label class="form-label">Description :</label>
-                        <textarea class="form-control" id="updatedescriptionThematique" placeholder="Description de la thématique"></textarea>
-                    </div>
-                 </div>
-               </div>
-            </div>
-            <div class="modal-footer">
-                    <input type="button" class="btn btn-danger mt-4" data-bs-dismiss="modal" value="Fermer">
-                    <input type="button" class="btn btn-warning mt-4" id="saveUpdateThematique" value="Enregistrer les modifications">
-            </div>
-
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
-
-<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+<!-- Simple Confirmation Modals -->
+<div class="modal fade activeModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg border-0">
             <div class="modal-body text-center p-5">
-                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
-                </lord-icon>
-                <div class="mt-4">
-                    <h4 class="mb-3">Vous êtes sur le point de supprimer le groupe</h4>
-                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                    <div class="hstack gap-2 justify-content-center">
-                        
-                    </div>
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle d-inline-flex mb-4">
+                  <i class="ri-refresh-line fs-1"></i>
+                </div>
+                <h4 class="mb-3">Réactiver la thématique ?</h4>
+                <p class="text-muted mb-4">Cette thématique sera de nouveau disponible pour vos devis et factures.</p>
+                <div class="hstack gap-2 justify-content-center mt-2" id="activeModalFooter">
+                    <!-- Buttons injected via JS -->
                 </div>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+        </div>
+    </div>
+</div>
 
-<div class="modal fade activeModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+<div class="modal fade deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg border-0">
             <div class="modal-body text-center p-5">
-                <script src="https://cdn.lordicon.com/lordicon.js"></script>
-                <lord-icon
-                    src="https://cdn.lordicon.com/hmpomorl.json"
-                    trigger="loop"
-                    delay="2000"
-                    style="width:120px;height:120px">
-                </lord-icon>
-                <div class="mt-4">
-                    <h4 class="mb-3">Vous êtes sur le point de réactiver la formation</h4>
-                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                    <div class="hstack gap-2 justify-content-center">
-                        
-                    </div>
+                <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle d-inline-flex mb-4">
+                  <i class="ri-delete-bin-line fs-1"></i>
+                </div>
+                <h4 class="mb-3">Suppression définitive ?</h4>
+                <p class="text-muted mb-4">Cette action est irréversible. Les données seront définitivement effacées.</p>
+                <div class="hstack gap-2 justify-content-center mt-2" id="deleteModalFooter">
+                    <!-- Buttons injected via JS -->
                 </div>
             </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
+        </div>
+    </div>
+</div>
 
 <script>
   $(document).ready(function(){
-
-    function loadThematique(){
+    function loadArchivedThematique(){
         $.ajax({
             url : "{% url 't_conseil:ApiLoadArchivedThematique' %}",
             type : "GET",
@@ -215,49 +157,66 @@
             success : function(data){
                 var row = "";
                 if (data.length > 0){
+                    $('#emptyState').addClass('d-none');
                     $.each(data, function(index, p){
-                        row += "<tr>";
-                        row += "<td><strong>"+p.label+"</strong></td>";
-                        row += "<td>"+p.duree+"</td>";
-                        row += "<td>"+p.prix+"</td>";
-                        row += "<td>"+p.created_at+"</td>";
+                        let catLabel = p.categorie ? p.categorie.toUpperCase() : 'SERVICE';
+                        let catBadge = p.categorie === 'produit' ? 'badge-soft-warning' : 'badge-soft-success';
 
-                        row += '<td>';
-                            row += '<div class="dropdown d-inline-block">';
-                                row += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-                                    row += '<i class="ri-more-fill align-middle"></i>';
-                                row += '</button>';
-                                row += '<ul class="dropdown-menu dropdown-menu-end">';
-                                    row += '<li><button id="detailsBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-eye-line align-bottom me-2 text-muted"></i>Détails</button></li>';
-                                    row += '<li><button id="activateBtn" data-id="'+p.id+'" class="dropdown-item"><i class="ri-play-circle-line me-2 text-muted"></i>Active</button></li>';
-                                    row += '<li><button data-id="'+p.id+'" id="btnUpdate" class="dropdown-item edit-item-btn"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</button></li>';
-                                    row += '<li>';
-                                        row += '<button id="deleteBtn" data-id='+p.id+' class="dropdown-item remove-item-btn">';
-                                            row += '<i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer';
-                                        row += '</button>';
-                                    row += '</li>';
-                                row += '</ul>';
-                           row += ' </div>';
-                        row += '</td>';
-                        row += "</tr>";
+                        row += '<div class="col-xl-3 col-md-6 mb-4 card-item">';
+                        row += '  <div class="folder-card category-'+(p.categorie || 'service')+' p-4 shadow-sm">';
+                        
+                        row += '    <div class="d-flex justify-content-between align-items-start mb-3">';
+                        row += '      <span class="badge '+catBadge+' fs-10 fw-bold">'+catLabel+'</span>';
+                        row += '      <div class="dropdown">';
+                        row += '        <button class="card-action-btn" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>';
+                        row += '        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">';
+                        row += '          <li><button class="dropdown-item d-flex align-items-center activateBtn" data-id="'+p.id+'"><i class="ri-refresh-line me-2 text-success"></i>Réactiver</button></li>';
+                        row += '          <li><hr class="dropdown-divider"></li>';
+                        row += '          <li><button class="dropdown-item d-flex align-items-center deleteBtn" data-id="'+p.id+'"><i class="ri-delete-bin-line me-2 text-danger"></i>Supprimer définitivement</button></li>';
+                        row += '        </ul>';
+                        row += '      </div>';
+                        row += '    </div>';
+
+                        row += '    <h5 class="fs-16 fw-bold mb-2 text-dark text-truncate">'+p.label+'</h5>';
+                        row += '    <p class="text-muted fs-13 mb-4 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">';
+                        row += '    Archives du ' + new Date(p.created_at).toLocaleDateString();
+                        row += '    </p>';
+
+                        row += '    <div class="d-flex align-items-center justify-content-between border-top border-light pt-3 mt-auto">';
+                        row += '      <div>';
+                        row += '        <h5 class="fs-14 mb-0 text-primary fw-bold">'+parseFloat(p.prix).toLocaleString('fr-DZ', { minimumFractionDigits: 2 })+' DZD</h5>';
+                        row += '      </div>';
+                        row += '      <span class="badge badge-soft-secondary fs-11">';
+                        row += '        <i class="ri-lock-2-line me-1"></i> Archivé';
+                        row += '      </span>';
+                        row += '    </div>';
+
+                        row += '  </div>';
+                        row += '</div>';
                     });
                 }else{
-                    var row = "<tr><td colspan='5' class='text-muted text-center'>Aucune donnée disponible ! </td></tr>";
+                    $('#emptyState').removeClass('d-none');
                 }
                 $('#listItem').html(row);
             }
-            
-        })
+        });
     }
 
-    loadThematique();
-   
-    $(document).on('click', '#activateBtn', function(){
-        var id_thematique = $(this).data('id');
-        var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmActivateBtn" data-id='+id_thematique+' class="btn btn-danger">Confirmer</a>';
+    loadArchivedThematique();
 
-        $('.hstack').html(row);
+    // Search functionality
+    $('#searchArchive').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $(".card-item").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+
+    // Reactivation
+    $(document).on('click', '.activateBtn', function(){
+        var id = $(this).data('id');
+        $('#activeModalFooter').html('<button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>' +
+                                   '<button id="confirmActivateBtn" data-id="'+id+'" class="btn btn-success px-4 shadow-sm">Réactiver la thématique</button>');
         $('.activeModal').modal('show');
     });
 
@@ -266,21 +225,40 @@
         $.ajax({
             url : "{% url 't_conseil:ApiActivateThematique' %}",
             type : "POST",
-            data : {
-                'id_thematique' : id_thematique,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            dataType : 'JSON',
+            data : { 'id_thematique' : id_thematique, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
             success : function(data){
                 if (data.status == 'success'){
                     alertify.success(data.message);
                     $('.activeModal').modal('hide');
-                    loadThematique();
-                    
-                }else{
-                    $('.activeModal').modal('hide');
-                    alertify.error("Une erreur s'est produite lors de l'activation de la thématique. Veuillez réessayer.");
-                    
+                    loadArchivedThematique();
+                } else {
+                    alertify.error(data.message || "Erreur lors de la réactivation.");
+                }
+            }
+        });
+    });
+
+    // Definitive Deletion
+    $(document).on('click', '.deleteBtn', function(){
+        var id = $(this).data('id');
+        $('#deleteModalFooter').html('<button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>' +
+                                   '<button id="confirmDeleteBtn" data-id="'+id+'" class="btn btn-danger px-4 shadow-sm">Supprimer définitivement</button>');
+        $('.deleteModal').modal('show');
+    });
+
+    $(document).on('click', '#confirmDeleteBtn', function(){
+        var id_thematique = $(this).data('id');
+        $.ajax({
+            url : "{% url 't_conseil:ApiDeleteFinalThematique' %}", // Assumed endpoint for final deletion
+            type : "POST",
+            data : { 'id_thematique' : id_thematique, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+            success : function(data){
+                if (data.status == 'success'){
+                    alertify.success(data.message);
+                    $('.deleteModal').modal('hide');
+                    loadArchivedThematique();
+                } else {
+                    alertify.error(data.message || "Erreur lors de la suppression.");
                 }
             }
         });

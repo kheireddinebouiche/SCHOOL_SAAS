@@ -144,6 +144,14 @@ def ApiStoreDepense(request):
             reference = reference_paiement
         )
 
+        if mode_paiement == "che" or mode_paiement == "vir":
+            OperationsBancaire.objects.create(
+                operation_type = "sortie",
+                depense = depense,
+                montant = montant_ttc,
+                reference_bancaire = reference_paiement,
+            )
+
         messages.success(request, 'Les informations ont été enregistrer avec succès')
         return JsonResponse({"status":"success"})
 

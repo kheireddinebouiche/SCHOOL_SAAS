@@ -1324,7 +1324,7 @@
         // Event listeners for Décaissement filters
         $('#decaissement-date-start, #decaissement-date-end, #decaissement-month, #decaissement-year').on('change', function() {
              if (allPaiementsData.length > 0 || allDecaissementsData.length > 0) {
-                  applyDecaissementFilters();
+                  applyEncaissementFilters();
              } else {
                   // loadPaiementData loads both
                   loadPaiementData();
@@ -1337,7 +1337,7 @@
             $('#decaissement-month').val('');
             $('#decaissement-year').val('');
              if (allPaiementsData.length > 0 || allDecaissementsData.length > 0) {
-                  applyDecaissementFilters();
+                  applyEncaissementFilters();
              } else {
                   loadPaiementData();
              }
@@ -1478,7 +1478,7 @@
             $('#totalEncaissements').text(formatCurrency(totalEncaissements));
 
             // Refresh decaissements too to update totals
-            applyDecaissementFilters();
+            applyDecaissementFilters(totalEncaissements, matchCount);
         }
 
         // Fonction pour filtrer les paiements par entité juridique (CLIENT SIDE)
@@ -1488,7 +1488,7 @@
             applyEncaissementFilters();
         }
 
-        function applyDecaissementFilters() {
+        function applyDecaissementFilters(totalEncaissements = 0, paiementsCount = 0) {
              var row = "";
              var totalDecaissements = 0;
              var matchCount = 0;
@@ -1578,21 +1578,20 @@
             $('#totalDecaissements').text(formatCurrency(totalDecaissements));
 
             // Stats update
-            var totalEnc = parseFloat($('#totalEncaissements').text().replace(/[^0-9,.\s]/g, '').replace(/\s/g, '').replace(',', '.')) || 0;
-            var solde = totalEnc - totalDecaissements;
+            var solde = totalEncaissements - totalDecaissements;
             var soldeElement = $('#soldeDisponible');
             soldeElement.text(formatCurrency(Math.abs(solde)));
             soldeElement.removeClass('text-success text-danger');
             if (solde >= 0) soldeElement.addClass('text-success'); else soldeElement.addClass('text-danger');
 
-            $('#transactionsCount').text((matchCount + $('#listePaiements tr').length));
+            $('#transactionsCount').text(matchCount + paiementsCount);
         }
 
         // Fonction pour filtrer les dépenses par entité juridique (CLIENT SIDE)
         function filterDepensesByEntite(entiteId) {
             // Set the current filter
             currentDecaissementFilter = entiteId;
-            applyDecaissementFilters();
+            applyEncaissementFilters();
         }
 
         // Function to format currency values
@@ -1637,9 +1636,7 @@
         
         // Removed separate loadDecaissementData function as it's merged into the main load
         function loadDecaissementData(totalEncaissements){
-             // Deprecated, but keeping empty or redirecting to ensure no breakage if called from elsewhere
-             // Actually, the reset buttons called this with argument.
-             applyDecaissementFilters();
+             applyEncaissementFilters();
         }
 
         // Function to update all statistics

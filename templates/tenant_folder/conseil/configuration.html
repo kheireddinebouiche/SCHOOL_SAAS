@@ -1,0 +1,541 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Conseil - Configuration {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #3b7ddd;
+        --secondary-color: #405189;
+        --text-muted: #878a99;
+        --card-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .page-content {
+        background-color: #f3f6f9;
+        min-height: 100vh;
+    }
+
+    .card-premium {
+        border: none;
+        box-shadow: var(--card-shadow);
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .card-header-premium {
+        background: linear-gradient(135deg, #3b7ddd 0%, #326bc9 100%);
+        padding: 24px 32px;
+        border-bottom: none;
+    }
+
+    .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 24px;
+        position: relative;
+        padding-left: 15px;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+        cursor: pointer;
+    }
+    
+    .form-switch .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .config-item {
+        padding: 20px;
+        border: 1px solid #e9ebec;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        transition: all 0.2s;
+        background: #fff;
+    }
+
+    .config-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .config-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-right: 15px;
+        background-color: #f3f6f9;
+        color: var(--text-muted);
+    }
+    
+    .config-item:hover .config-icon {
+        background-color: rgba(59, 125, 221, 0.1);
+        color: var(--primary-color);
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- Breadcrumb -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="mb-0 fw-bold text-dark">Configuration Conseil</h4>
+                            <p class="text-muted mb-0 fs-13 mt-1">Paramètres globaux du module</p>
+                        </div>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Conseil</a></li>
+                                <li class="breadcrumb-item active">Configuration</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-xl-8 col-lg-10">
+                    <!-- Enterprise Selector -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);">
+                        <div class="card-body p-3">
+                            <form method="GET" id="enterpriseSelectorForm" class="m-0">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-xs bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="ri-building-line"></i>
+                                    </div>
+                                    <script>
+                                        if(tvaLabel) tvaLabel.textContent = `TVA (${parseFloat(rate)}%)`;
+                                        if(tvaValue) tvaValue.textContent = `${parseFloat(amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DZA`;
+                                    </script>
+                                    <label class="form-label mb-0 fw-bold text-muted small">Configuration pour :</label>
+                                    <select name="enterprise_id" class="form-select form-select-sm border-0 bg-white shadow-none fw-semibold" style="width: auto; min-width: 200px;" onchange="this.form.submit()">
+                                        <option value="" {% if not current_enterprise %}selected{% endif %}>--- Sélectionner une Entreprise ---</option>
+                                        {% for ent in enterprises %}
+                                            <option value="{{ ent.id }}" {% if current_enterprise.id == ent.id %}selected{% endif %}>{{ ent.designation }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if current_enterprise %}
+                                    <span class="badge bg-soft-success text-success rounded-pill px-3">Config. Spécifique</span>
+                                    {% else %}
+                                    <span class="badge bg-soft-secondary text-secondary rounded-pill px-3">Mode Global</span>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_config">
+                        <input type="hidden" name="enterprise_id" value="{{ current_enterprise.id|default:'' }}">
+                        <div class="card card-premium">
+                            <div class="card-header-premium">
+                                <div class="d-flex align-items-center text-white">
+                                    <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        <i class="ri-settings-4-line text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1 text-white opacity-100 fs-16">Préférences & Règles</h5>
+                                        <p class="mb-0 opacity-75 fs-12">Gérez la TVA, les remises et l'affichage</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-4 p-md-5">
+                                
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                                            {{ message }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <!-- TVA Settings -->
+                                <h6 class="section-title">Taxe sur la Valeur Ajoutée (TVA)</h6>
+                                
+                                <div class="config-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="config-icon">
+                                            <i class="ri-percent-line"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold">Taux par défaut</h6>
+                                            <p class="text-muted mb-0 fs-13">Ce taux sera appliqué automatiquement aux nouveaux devis.</p>
+                                        </div>
+                                        <div style="width: 120px;">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control fw-bold text-center" name="default_tva_percent" value="{{ config.default_tva_percent|stringformat:'f' }}" step="0.01" min="0">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- TVA Management -->
+                                <h6 class="section-title mt-4">Gestion des taux de TVA</h6>
+                                <div class="config-item">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Libellé</th>
+                                                    <th>Valeur (%)</th>
+                                                    <th class="text-end">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for tva in tvas %}
+                                                <tr>
+                                                    <td class="fw-medium text-dark">{{ tva.label }}</td>
+                                                    <td>{{ tva.valeur }}%</td>
+                                                    <td class="text-end">
+                                                        <button type="button" class="btn btn-soft-danger btn-sm rounded-pill" onclick="deleteTva({{ tva.id }})">
+                                                            <i class="ri-delete-bin-line"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-3">Aucun taux de TVA supplémentaire configuré.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <hr class="my-3 opacity-25">
+                                    
+                                    <div class="row g-2 align-items-end" id="addTvaForm">
+                                        <div class="col-sm-6">
+                                            <label class="form-label small text-muted mb-1">Nouveau libellé</label>
+                                            <input type="text" class="form-control form-control-sm" id="new_tva_label" placeholder="Ex: TVA Réduite">
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <label class="form-label small text-muted mb-1">Valeur (%)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="new_tva_valeur" step="0.01" min="0">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <button type="button" class="btn btn-soft-primary btn-sm w-100" onclick="addTva()">
+                                                <i class="ri-add-line"></i> Ajouter
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="config-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="config-icon">
+                                                <i class="ri-eye-line"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">Afficher sur les Devis</h6>
+                                                <p class="text-muted mb-0 fs-13">La colonne TVA et le détail seront visibles sur les devis.</p>
+                                            </div>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="show_tva_on_devis" {% if config.show_tva_on_devis %}checked{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="config-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="config-icon">
+                                                <i class="ri-file-list-3-line"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">Afficher sur les Factures</h6>
+                                                <p class="text-muted mb-0 fs-13">La colonne TVA et le détail seront visibles sur les factures.</p>
+                                            </div>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="show_tva_on_facture" {% if config.show_tva_on_facture %}checked{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="border-dashed my-5">
+
+                                <!-- Remise Settings -->
+                                <h6 class="section-title">Bons de Réduction & Remises</h6>
+                                
+                                <div class="config-item bg-light border-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="config-icon bg-white">
+                                                <i class="ri-coupon-3-line"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-bold text-dark">Activer la gestion des remises</h6>
+                                                <p class="text-muted mb-0 fs-13">Autoriser l'application de remises globales ou par ligne.</p>
+                                            </div>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="enable_remise_global" id="enableRemiseGlobal" {% if config.enable_remise_global %}checked{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="remiseSettings" class="{% if not config.enable_remise_global %}d-none{% endif %}">
+                                    <div class="config-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="config-icon">
+                                                <i class="ri-price-tag-3-line"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 fw-bold">Remise par défaut</h6>
+                                                <p class="text-muted mb-0 fs-13">Pourcentage de remise présélectionné.</p>
+                                            </div>
+                                            <div style="width: 120px;">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control fw-bold text-center" name="default_remise_percent" value="{{ config.default_remise_percent|stringformat:'f' }}" step="0.01" min="0">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="config-item h-100">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="show_remise_on_devis" id="showRemiseDevis" {% if config.show_remise_on_devis %}checked{% endif %}>
+                                                    <label class="form-check-label fw-bold" for="showRemiseDevis">
+                                                        Afficher sur Devis
+                                                    </label>
+                                                    <p class="text-muted fs-12 mt-1 mb-0">Colonne "Remise" visible.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="config-item h-100">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="show_remise_on_facture" id="showRemiseFacture" {% if config.show_remise_on_facture %}checked{% endif %}>
+                                                    <label class="form-check-label fw-bold" for="showRemiseFacture">
+                                                        Afficher sur Factures
+                                                    </label>
+                                                    <p class="text-muted fs-12 mt-1 mb-0">Colonne "Remise" visible.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="border-dashed my-5">
+
+                                <!-- Numbering Settings -->
+                                <h6 class="section-title">Numérotation des Documents</h6>
+                                
+                                <div class="row">
+                                    <!-- Devis Numbering -->
+                                    <div class="col-md-6">
+                                        <div class="config-item">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="config-icon">
+                                                    <i class="ri-hashtag"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0 fw-bold">Devis</h6>
+                                                    <p class="text-muted mb-0 fs-12">Format du numéro</p>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-7">
+                                                    <label class="form-label small text-muted mb-1">Préfixe</label>
+                                                    <input type="text" class="form-control form-control-sm" name="devis_prefix" value="{{ config.devis_prefix|default:'DEV' }}" placeholder="Ex: DEV">
+                                                </div>
+                                                <div class="col-5">
+                                                    <label class="form-label small text-muted mb-1">Largeur</label>
+                                                    <input type="number" class="form-control form-control-sm" name="devis_counter_width" value="{{ config.devis_counter_width|default:4 }}" min="1" max="10">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 text-muted fs-11">
+                                                Exemple: <span class="badge bg-light text-dark fw-medium">{{ config.devis_prefix|default:'DEV' }}-0001</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Facture Numbering -->
+                                    <div class="col-md-6">
+                                        <div class="config-item">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="config-icon">
+                                                    <i class="ri-hashtag"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0 fw-bold">Facture</h6>
+                                                    <p class="text-muted mb-0 fs-12">Format du numéro</p>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-7">
+                                                    <label class="form-label small text-muted mb-1">Préfixe</label>
+                                                    <input type="text" class="form-control form-control-sm" name="facture_prefix" value="{{ config.facture_prefix|default:'FAC' }}" placeholder="Ex: FAC">
+                                                </div>
+                                                <div class="col-5">
+                                                    <label class="form-label small text-muted mb-1">Largeur</label>
+                                                    <input type="number" class="form-control form-control-sm" name="facture_counter_width" value="{{ config.facture_counter_width|default:4 }}" min="1" max="10">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 text-muted fs-11">
+                                                Exemple: <span class="badge bg-light text-dark fw-medium">{{ config.facture_prefix|default:'FAC' }}-0001</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                </div>
+
+                                <hr class="border-dashed my-5">
+
+                                <!-- Commercial Conditions -->
+                                <h6 class="section-title">Conditions Commerciales par Défaut</h6>
+                                <div class="config-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="config-icon">
+                                            <i class="ri-file-text-line"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold">Texte des conditions</h6>
+                                            <p class="text-muted mb-0 fs-13">Ces conditions seront automatiquement ajoutées à chaque nouveau devis.</p>
+                                        </div>
+                                    </div>
+                                    <textarea class="form-control" name="default_conditions_commerciales" rows="5" placeholder="Ex: - Validité du devis : 30 jours&#10;- Acompte : 30% à la commande&#10;- Règlement : par virement banquaire">{{ config.default_conditions_commerciales|default:'' }}</textarea>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="d-flex justify-content-end gap-2 mt-5">
+                                    <button type="button" class="btn btn-light btn-action" onclick="window.history.back()">
+                                        Annuler
+                                    </button>
+                                    <button type="submit" class="btn btn-primary btn-action shadow-lg px-4">
+                                        <i class="ri-save-line me-1 align-middle"></i> Enregistrer les modifications
+                                    </button>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <label class="form-label fw-bold h6 mb-2">Méthodes de Paiement (RIB, CCP, etc.)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="ri-bank-card-line"></i></span>
+                                        <textarea name="payment_methods" class="form-control" rows="4" placeholder="Ex: RIB: 00799999...&#10;CCP: 123456 Cle 88...">{{ config.payment_methods }}</textarea>
+                                    </div>
+                                    <small class="text-muted mt-1 d-block"><i class="ri-information-line"></i> Ces informations seront affichées en bas de chaque nouvelle facture.</small>
+                                </div>
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleRemise = document.getElementById('enableRemiseGlobal');
+        const settingsContainer = document.getElementById('remiseSettings');
+        
+        toggleRemise.addEventListener('change', function() {
+            if (this.checked) {
+                settingsContainer.classList.remove('d-none');
+            } else {
+                settingsContainer.classList.add('d-none');
+            }
+        });
+    });
+
+    function addTva() {
+        const label = document.getElementById('new_tva_label').value;
+        const valeur = document.getElementById('new_tva_valeur').value;
+        
+        if (!label || !valeur) {
+            alertify.error('Veuillez remplir le libellé et la valeur.');
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const csrf = document.createElement('input');
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        
+        const action = document.createElement('input');
+        action.name = 'action';
+        action.value = 'add_tva';
+        form.appendChild(action);
+        
+        const l = document.createElement('input');
+        l.name = 'tva_label';
+        l.value = label;
+        form.appendChild(l);
+        
+        const v = document.createElement('input');
+        v.name = 'tva_valeur';
+        v.value = valeur;
+        form.appendChild(v);
+
+        const ent = document.createElement('input');
+        ent.name = 'enterprise_id';
+        ent.value = '{{ current_enterprise.id|default:"" }}';
+        form.appendChild(ent);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function deleteTva(id) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const csrf = document.createElement('input');
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        
+        const action = document.createElement('input');
+        action.name = 'action';
+        action.value = 'delete_tva';
+        form.appendChild(action);
+        
+        const tid = document.createElement('input');
+        tid.name = 'tva_id';
+        tid.value = id;
+        form.appendChild(tid);
+
+        const ent = document.createElement('input');
+        ent.name = 'enterprise_id';
+        ent.value = '{{ current_enterprise.id|default:"" }}';
+        form.appendChild(ent);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endblock content %}

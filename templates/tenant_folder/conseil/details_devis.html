@@ -1,0 +1,339 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Devis #{{ devis.num_devis }} {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #3b7ddd;
+        --secondary-color: #405189;
+        --text-muted: #878a99;
+        --border-color: #e9ebec;
+        --premium-bg: #f3f6f9;
+    }
+
+    .main-content {
+        background-color: var(--premium-bg);
+        min-height: 100vh;
+    }
+
+    .invoice-card-premium {
+        border: none;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .invoice-header-premium {
+        background: linear-gradient(135deg, #3b7ddd 0%, #326bc9 100%);
+        padding: 3rem;
+        color: white;
+    }
+
+    .premium-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        padding: 6px 16px;
+        border-radius: 30px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .invoice-body-premium {
+        padding: 3rem;
+    }
+
+    .premium-info-label {
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .premium-info-value {
+        font-weight: 700;
+        color: #495057;
+        font-size: 16px;
+        margin-bottom: 0;
+    }
+
+    .table-premium-details {
+        width: 100%;
+        margin: 2.5rem 0;
+    }
+
+    .table-premium-details th {
+        background: #f8fafb;
+        color: #495057;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 15px;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #eff2f7;
+    }
+
+    .table-premium-details td {
+        padding: 20px 15px;
+        border-bottom: 1px solid #eff2f7;
+        vertical-align: top;
+    }
+
+    .summary-box-premium {
+        background: #f8fafb;
+        border-radius: 12px;
+        padding: 2rem;
+    }
+
+    .summary-row-premium {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #495057;
+    }
+
+    .total-main-bold {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px dashed #e9ebec;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .total-amount-display {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--primary-color);
+    }
+
+    @media print {
+        .no-print { display: none !important; }
+        .main-content { padding: 0 !important; background: white !important; }
+        .invoice-card-premium { box-shadow: none !important; border: 1px solid #eee !important; }
+        .invoice-header-premium { background: #3b7ddd !important; -webkit-print-color-adjust: exact; }
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Top Actions -->
+            <div class="row mb-4 no-print align-items-center">
+                <div class="col">
+                    <h5 class="mb-0 fw-bold text-dark">Détails de la Proposition</h5>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <button class="btn btn-primary px-4 shadow" onclick="window.print()">
+                        <i class="ri-printer-line me-2"></i> Imprimer / PDF
+                    </button>
+                    {% if devis.etat == 'envoye' and not has_facture %}
+                    <button class="btn btn-warning px-4" id="btnRevertToDraft">
+                        <i class="ri-refresh-line me-2"></i> Rendre en brouillon
+                    </button>
+                    {% endif %}
+                    
+                    {% if devis.etat == 'brouillon' %}
+                    <a href="{% url 't_conseil:configure-devis' devis.num_devis %}" class="btn btn-outline-secondary px-4">
+                        <i class="ri-edit-line me-2"></i> Modifier
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-xl-10">
+                    <div class="invoice-card-premium">
+                        <!-- Header Section -->
+                        <div class="invoice-header-premium d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="premium-badge mb-3 d-inline-block">Proposition Commerciale</span>
+                                <h1 class="text-white fw-bold mb-1 display-5">DEVIS #{{ devis.num_devis }}</h1>
+                                <p class="mb-0 opacity-75 fw-medium">Créé le {{ devis.date_emission|date:"d F Y" }}</p>
+                            </div>
+                            <div class="text-end">
+                                {% if tenant.logo %}
+                                    <img src="{{ tenant.logo.url }}" alt="Logo" height="50" class="mb-3" style="filter: brightness(0) invert(1);">
+                                {% else %}
+                                    <h2 class="text-white fw-bold mb-3">{{ tenant.nom|default:"SALDAE" }}</h2>
+                                {% endif %}
+                                <div class="badge bg-white text-primary px-3 py-2 rounded-pill fw-bold">
+                                    {{ devis.get_etat_display|upper }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="invoice-body-premium">
+                            <!-- Info Grid -->
+                            <div class="row g-5 mb-4">
+                                <div class="col-md-4">
+                                    <span class="premium-info-label">ÉMETTEUR</span>
+                                    <p class="premium-info-value mb-1">{{ devis.entreprise.designation|default:tenant.nom }}</p>
+                                    <div class="text-muted small">
+                                        {{ devis.entreprise.adresse|default:tenant.adresse }}<br>
+                                        {{ devis.entreprise.telephone|default:tenant.telephone }}<br>
+                                        {{ devis.entreprise.email|default:"" }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="premium-info-label">CLIENT</span>
+                                    <p class="premium-info-value mb-1">{{ devis.client.nom }} {{ devis.client.prenom }}</p>
+                                    <div class="text-muted small">
+                                        {% if devis.client.entreprise %}<strong>{{ devis.client.entreprise }}</strong><br>{% endif %}
+                                        {{ devis.client.adresse|default:"" }}<br>
+                                        {{ devis.client.telephone|default:"-" }}
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <div class="mb-4">
+                                        <span class="premium-info-label">DATE ÉCHÉANCE</span>
+                                        <p class="fw-bold text-danger fs-5">{{ devis.date_echeance|date:"d F Y" }}</p>
+                                    </div>
+                                    <div>
+                                        <span class="premium-info-label">MODE DE PAIEMENT</span>
+                                        <p class="fw-bold text-dark">Virement / Chèque</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Table -->
+                            <div class="table-responsive">
+                                <table class="table-premium-details">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50%">Désignation des prestations</th>
+                                            <th class="text-center">Qté</th>
+                                            <th class="text-end">Prix Unit. HT</th>
+                                            {% if devis.show_remise %}
+                                            <th class="text-center">Remise</th>
+                                            {% endif %}
+                                            {% if devis.show_tva %}
+                                            <th class="text-center">TVA</th>
+                                            {% endif %}
+                                            <th class="text-end">Total HT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in lignes_devis %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold text-dark fs-15">{{ item.thematique.label|default:"Service" }}</div>
+                                                <div class="text-muted small mt-1">{{ item.description }}</div>
+                                                {% if item.long_description %}
+                                                <div class="text-muted small mt-1" style="white-space: pre-wrap;">{{ item.long_description }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center fw-bold text-dark">{{ item.quantite|floatformat:0 }}</td>
+                                            <td class="text-end text-muted">{{ item.prix_unitaire|floatformat:2 }}</td>
+                                            {% if devis.show_remise %}
+                                            <td class="text-center text-danger fw-medium">{{ item.remise_percent|floatformat:0 }}%</td>
+                                            {% endif %}
+                                            {% if devis.show_tva %}
+                                            <td class="text-center"><span class="badge bg-light text-dark">{{ item.tva_percent|floatformat:0 }}%</span></td>
+                                            {% endif %}
+                                            <td class="text-end fw-bold text-dark">{{ item.montant|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Summary -->
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <h6 class="premium-info-label">CONDITIONS COMMERCIALES</h6>
+                                    <p class="text-muted small">
+                                        {{ devis.conditions_commerciales|linebreaksbr|default:"Aucune condition spécifique." }}
+                                    </p>
+                                </div>
+                                <div class="col-md-5 ms-auto">
+                                    <div class="summary-box-premium">
+                                        <div class="summary-row-premium">
+                                            <span class="text-muted fw-medium">Sous-total Hors Taxes</span>
+                                            <span class="fw-bold text-dark">{{ total_ht|floatformat:2 }} DZA</span>
+                                        </div>
+                                        
+                                        {% if devis.show_remise %}
+                                        <div class="summary-row-premium">
+                                            <span class="text-muted fw-medium">Remise Globale</span>
+                                            <span class="fw-bold text-danger">- {{ devis.montant_remise_globale|floatformat:2 }} DZA</span>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if devis.show_tva %}
+                                            {% for tva in tva_breakdown %}
+                                            <div class="summary-row-premium">
+                                                <span class="text-muted fw-medium">TVA ({{ tva.rate|floatformat:0 }}%)</span>
+                                                <span class="fw-bold text-muted">{{ tva.amount|floatformat:2 }} DZA</span>
+                                            </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                        
+                                        <div class="total-main-bold">
+                                            <div>
+                                                <span class="premium-info-label mb-1">NET À PAYER</span>
+                                                <p class="text-muted small mb-0">Montant total TTC</p>
+                                            </div>
+                                            <div class="total-amount-display">{{ total_ttc|floatformat:2 }} DZA</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="mt-5 pt-5 text-center border-top border-light">
+                                <p class="mb-1 fw-bold text-dark">{{ tenant.nom|default:"Saldae Consulting" }}</p>
+                                <p class="small text-muted mb-0">Document numérique généré via SALDAE ERP</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% static 'assets/libs/alertifyjs/build/alertify.min.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const revertBtn = document.getElementById('btnRevertToDraft');
+        if(revertBtn) {
+            revertBtn.addEventListener('click', function() {
+                alertify.confirm("Retour en brouillon", "Voulez-vous vraiment remettre ce devis en état brouillon ? Cela permettra de le modifier à nouveau.", 
+                function() {
+                    const formData = new FormData();
+                    formData.append('devis_id', '{{ devis.num_devis }}');
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch("{% url 't_conseil:ApiRevertDevisToDraft' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    }).then(r => r.json()).then(d => {
+                        if(d.status === 'success') {
+                            alertify.success(d.message);
+                            setTimeout(() => {
+                                window.location.href = "{% url 't_conseil:configure-devis' devis.num_devis %}";
+                            }, 800);
+                        } else {
+                            alertify.error(d.message);
+                        }
+                    });
+                }, null).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+            });
+        }
+    });
+</script>
+{% endblock extra_js %}

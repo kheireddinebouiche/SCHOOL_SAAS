@@ -468,8 +468,9 @@ class OperationsBancaire(models.Model):
     operation_type = models.CharField(max_length=10,choices=[('entree', 'Encaissement'), ('sortie', 'Décaissement')])
 
     paiement = models.ForeignKey(Paiements,null=True, blank=True,on_delete=models.SET_NULL,related_name='lettrages')
-
     depense = models.ForeignKey(Depenses,null=True, blank=True,on_delete=models.SET_NULL,related_name='lettrages')
+    autre_produit = models.ForeignKey('AutreProduit', null=True, blank=True, on_delete=models.SET_NULL, related_name='lettrages')
+    conseil_paiement = models.ForeignKey('t_conseil.Paiement', null=True, blank=True, on_delete=models.SET_NULL, related_name='lettrages')
 
     montant = models.DecimalField(max_digits=20, decimal_places=2)
 

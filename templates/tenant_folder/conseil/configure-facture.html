@@ -1,0 +1,709 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Conseil - Configurer facture {% endblock title %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6571ff;
+        --primary-soft: #f0f2ff;
+        --secondary-color: #405189;
+        --text-muted: #878a99;
+        --border-color: #e9ebec;
+        --card-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .main-content {
+        background-color: #f3f6f9;
+        min-height: 100vh;
+    }
+
+    .card-premium {
+        border: none;
+        box-shadow: var(--card-shadow);
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header-premium {
+        background: linear-gradient(135deg, #6571ff 0%, #5a64e1 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: none;
+        color: white;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .section-title-premium {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .form-control-premium, .form-select-premium {
+        border: 1px solid var(--border-color);
+        padding: 0.6rem 1rem;
+        font-size: 14px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        background-color: #fff;
+    }
+
+    .form-control-premium:focus, .form-select-premium:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px var(--primary-soft);
+        outline: none;
+    }
+
+    /* Items Table */
+    .table-premium thead th {
+        background-color: #f8fafb;
+        color: #495057;
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+        padding: 12px 15px;
+        border-bottom: 2px solid #eff2f7;
+    }
+
+    .table-premium tbody td {
+        padding: 15px;
+        border-bottom: 1px solid #eff2f7;
+        vertical-align: middle;
+        font-size: 14px;
+    }
+
+    .item-row:hover {
+        background-color: #f9fbfd;
+    }
+
+    /* Summary Card */
+    .summary-card-premium {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        position: sticky;
+        top: 90px;
+    }
+
+    .total-row-premium {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .total-main-premium {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px dashed #eff2f7;
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+
+    .btn-premium-action {
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-premium-primary {
+        background-color: var(--primary-color);
+        border: none;
+        color: white;
+    }
+
+    .btn-premium-primary:hover {
+        background-color: #5a64e1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(101, 113, 255, 0.2);
+        color: white;
+    }
+
+    .input-row-premium {
+        background-color: #f8fafc;
+        border-top: 2px solid #eff2f7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            
+            <!-- Page Header -->
+            <div class="row mb-4 align-items-center">
+                <div class="col">
+                    <h4 class="mb-0 fw-bold text-dark">Configuration de la Facture</h4>
+                    <p class="text-muted mb-0 fs-13">Référence : #{{ facture.num_facture }} | Client : {{ facture.client.nom }} {{ facture.client.prenom }}</p>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <a href="{% url 't_conseil:DetailsFacture' facture.num_facture %}" class="btn btn-light btn-premium-action border" id="previewBtn">
+                        <i class="ri-eye-line"></i> Aperçu
+                    </a>
+                    {% if can_edit %}
+                    <button class="btn btn-premium-primary btn-premium-action" id="saveBtn">
+                        <i class="ri-save-3-line"></i> Enregistrer
+                    </button>
+                    <button class="btn btn-success btn-premium-action shadow-sm" id="validateFactureBtn">
+                        <i class="ri-checkbox-circle-line"></i> Valider la Facture
+                    </button>
+                    {% else %}
+                    <span class="badge bg-soft-success text-success fs-14 p-2 px-3 border border-success border-opacity-25 d-flex align-items-center gap-2">
+                        <i class="ri-checkbox-circle-fill"></i> FACTURE VALIDÉE
+                    </span>
+                    <a href="{% url 't_conseil:DetailsFacture' facture.num_facture %}" class="btn btn-primary btn-premium-action" style="background-color: var(--primary-color); border-color: var(--primary-color);">
+                        <i class="ri-article-line"></i> Voir les détails
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Main Content -->
+                <div class="col-lg-8">
+                    <!-- Global Info Card -->
+                    <div class="card-premium">
+                        <div class="card-body p-4">
+                            <h6 class="section-title-premium"><i class="ri-information-line"></i> Informations Générales</h6>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Entreprise émettrice</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="ri-building-line text-muted"></i></span>
+                                        <select class="form-select form-select-premium border-start-0 ps-0" id="factureEnterprise" {% if not can_edit %}disabled{% endif %}>
+                                            <option value="">-- Non définie --</option>
+                                            {% for ent in enterprises %}
+                                            <option value="{{ ent.id }}" {% if facture.entreprise.id == ent.id %}selected{% endif %}>{{ ent.designation }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date émission</label>
+                                            <input type="date" class="form-control form-control-premium text-center" id="dateEmission" value="{{ facture.date_emission|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date échéance</label>
+                                            <input type="date" class="form-control form-control-premium text-center text-danger" id="dateEcheance" value="{{ facture.date_echeance|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Card -->
+                    <div class="card-premium">
+                        <div class="card-header border-0 bg-transparent d-flex justify-content-between align-items-center p-4 pb-0">
+                            <h6 class="section-title-premium mb-0"><i class="ri-list-settings-line"></i> Prestations & Articles</h6>
+                            {% if facture.etat == 'brouillon' %}
+                            <button class="btn btn-sm btn-outline-danger px-3 rounded-pill" id="btnDeleteItems">
+                                <i class="ri-delete-bin-line"></i> Vider tout
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body p-0 mt-3">
+                            <div class="table-responsive">
+                                <table class="table table-premium mb-0">
+                                    <thead>
+                                        <tr>
+                                        <th style="width: 35%;">Service / Designation</th>
+                                        <th style="width: 10%;">Quantité</th>
+                                        <th style="width: 10%;">Prix Unitaire</th>
+                                        <th style="width: 10%;" class="col-remise">Remise (%)</th>
+                                        <th style="width: 10%;" class="col-tva">TVA (%)</th>
+                                        <th style="width: 15%;" class="text-end">Total HT</th>
+                                        <th style="width: 5%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsContainer">
+                                    <!-- Items will be injected here -->
+                                </tbody>
+                                <tfoot class="bg-light item-row" id="newItemRow" {% if not can_edit %}style="display:none;"{% endif %}>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex flex-column gap-2">
+                                                <select class="form-select form-select-premium" id="newThematique" {% if not can_edit %}disabled{% endif %}>
+                                                    <option value="">-- Sélectionner --</option>
+                                                </select>
+                                                <input type="text" class="form-control form-control-premium fs-12" id="newDesignation" placeholder="Désignation personnalisée (Optionnel)" {% if not can_edit %}disabled{% endif %}>
+                                                <textarea class="form-control form-control-premium fs-12" id="newLongDescription" rows="2" placeholder="Description détaillée (Optionnel)" {% if not can_edit %}disabled{% endif %}></textarea>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-premium text-center" id="newQty" value="1" min="1" {% if not can_edit %}disabled{% endif %}>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-premium text-end" id="newPrice" value="0.00" step="0.01" {% if not can_edit %}disabled{% endif %}>
+                                        </td>
+                                        <td class="col-remise">
+                                            <input type="number" class="form-control form-control-premium text-center" id="newRemise" value="0" min="0" max="100" {% if not can_edit %}disabled{% endif %}>
+                                        </td>
+                                        <td class="col-tva">
+                                            <select class="form-select form-select-premium text-center" id="newTva" {% if not can_edit %}disabled{% endif %}>
+                                                {% for tva in tvas %}
+                                                <option value="{{ tva.valeur|stringformat:'f' }}" {% if tva.is_default %}selected{% endif %}>{{ tva.valeur }}%</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="fw-bold text-primary" id="newRowTotal">0.00</div>
+                                            <div class="fs-10 text-muted">DZA</div>
+                                        </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-primary rounded-circle shadow-sm" id="addItemBtn" style="width: 40px; height: 40px; padding: 0;" {% if not can_edit %}disabled{% endif %}>
+                                                    <i class="ri-add-line fs-18"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-premium mt-4">
+                        <div class="card-body p-4">
+                            <h6 class="section-title-premium"><i class="ri-file-text-line"></i> Conditions Commerciales & Règlements</h6>
+                            
+                            <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-2">Conditions Commerciales</label>
+                            <textarea class="form-control form-control-premium mb-3" id="factureConditions" rows="3" placeholder="Saisissez les conditions spécifiques à cette facture..." {% if not can_edit %}readonly{% endif %}>{{ facture.conditions_commerciales|default:"" }}</textarea>
+                            
+                            <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-2 mt-3">Moyens de Paiement</label>
+                            <p class="text-muted small mb-2">Instructions de paiement (RIB, Chèque, etc.) affichées sur la facture.</p>
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label fs-12 fw-bold text-muted">Mode de paiement attendu</label>
+                                    <select class="form-select form-select-premium" id="modePaiement" {% if not can_edit %}disabled{% endif %}>
+                                        <option value="virement" {% if facture.mode_paiement == 'virement' %}selected{% endif %}>Virement Bancaire</option>
+                                        <option value="cheque" {% if facture.mode_paiement == 'cheque' %}selected{% endif %}>Chèque</option>
+                                        <option value="espece" {% if facture.mode_paiement == 'espece' %}selected{% endif %}>Espèces</option>
+                                        <option value="autre" {% if facture.mode_paiement == 'autre' %}selected{% endif %}>Autre</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Sidebar -->
+                <div class="col-lg-4">
+                    <div class="summary-card-premium">
+                        <h6 class="section-title-premium mb-4"><i class="ri-calculator-line"></i> Récapitulatif Financier</h6>
+                        
+                        <div class="total-row-premium">
+                            <span class="text-muted">Total Hors Taxes</span>
+                            <span class="fw-bold fs-16" id="subTotal">0.00 DZA</span>
+                        </div>
+
+                        <div class="mt-4 mb-4">
+                            <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 w-100 mb-2">
+                                <label class="form-check-label text-muted fs-13" for="toggleTva">Appliquer la TVA</label>
+                                <input class="form-check-input ms-0" type="checkbox" id="toggleTva" {% if facture.show_tva %}checked{% endif %} {% if not can_edit %}disabled{% endif %}>
+                            </div>
+                            <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 w-100">
+                                <label class="form-check-label text-muted fs-13" for="toggleRemise">Afficher la Remise</label>
+                                <input class="form-check-input ms-0" type="checkbox" id="toggleRemise" {% if facture.show_remise %}checked{% endif %} {% if not can_edit %}disabled{% endif %}>
+                            </div>
+                            <div id="tvaBreakdownContainer" class="mt-3">
+                                <!-- TVAs -->
+                            </div>
+                        </div>
+
+                        <div class="total-main-premium">
+                            <div class="fs-13 text-muted fw-bold text-uppercase letter-spacing-1">TOTAL TTC</div>
+                            <div id="totalAmount">0.00 DZA</div>
+                        </div>
+
+                        <div class="mt-5 border-top pt-4">
+                            <div class="text-center">
+                                <span class="badge bg-soft-primary text-primary px-3 py-2 rounded-pill fs-12">{{ facture.get_etat_display }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let items = [];
+        let thematiques = [];
+        let availableTvas = []; // To store all available TVAs for dynamic select options
+        const factureId = "{{ facture.num_facture }}"; 
+        const canEdit = {% if can_edit %}true{% else %}false{% endif %};
+
+        const itemsContainer = document.getElementById('itemsContainer');
+        const toggleTva = document.getElementById('toggleTva');
+        const toggleRemise = document.getElementById('toggleRemise');
+        const newThematique = document.getElementById('newThematique');
+        const newDesignation = document.getElementById('newDesignation');
+        const newLongDescription = document.getElementById('newLongDescription');
+        const newQty = document.getElementById('newQty');
+        const newPrice = document.getElementById('newPrice');
+        const newRemise = document.getElementById('newRemise');
+        const newTva = document.getElementById('newTva');
+        const newRowTotal = document.getElementById('newRowTotal');
+        const addItemBtn = document.getElementById('addItemBtn');
+
+        // Initial Toggle State Application
+    function applyColumnVisibility() {
+        const showTva = document.getElementById('toggleTva').checked;
+        const showRemise = document.getElementById('toggleRemise').checked;
+
+        // Headers and rows
+        document.querySelectorAll('.col-tva').forEach(el => el.style.display = showTva ? '' : 'none');
+        document.querySelectorAll('.col-remise').forEach(el => el.style.display = showRemise ? '' : 'none');
+        updateTotals(); // Recalculate totals based on TVA visibility
+    }
+
+    // Toggle Events
+    if(toggleTva) toggleTva.addEventListener('change', applyColumnVisibility);
+    if(toggleRemise) toggleRemise.addEventListener('change', applyColumnVisibility);
+
+    // Initial call
+    applyColumnVisibility();
+
+        // Load Services
+        fetch("{% url 't_conseil:ApiLoadThematique' %}", {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            thematiques = data;
+            data.forEach(t => {
+                const opt = new Option(t.label, t.id);
+                opt.dataset.price = t.prix;
+                opt.dataset.tva = t.default_tva;
+                newThematique.add(opt);
+            });
+        });
+
+        // Load Initial State
+        items = [
+            {% for l in lignes_facture %}
+            {
+                id: {{ l.id }},
+                thematique_id: "{{ l.thematique.id|default:'' }}",
+                description: "{{ l.description|escapejs }}",
+                long_description: "{{ l.long_description|default:''|escapejs }}",
+                quantity: parseFloat("{{ l.quantite|floatformat:2 }}".replace(',', '.')),
+                unitPrice: parseFloat("{{ l.montant_ht|floatformat:2 }}".replace(',', '.')) / (parseFloat("{{ l.quantite|floatformat:2 }}".replace(',', '.')) || 1),
+                remise_percent: parseFloat("{{ l.remise_percent|floatformat:2 }}".replace(',', '.')),
+                tva_percent: parseFloat("{{ l.tva_percent|floatformat:2 }}".replace(',', '.')) || 0,
+                total: parseFloat("{{ l.montant_ht|floatformat:2 }}".replace(',', '.'))
+            },
+            {% endfor %}
+        ];
+        
+        let editingIndex = -1;
+        renderItems();
+
+        newThematique.addEventListener('change', function() {
+            const tId = this.value;
+            if(!tId) return;
+            const th = thematiques.find(x => x.id == tId);
+            if(th) {
+                newDesignation.value = th.label;
+                newPrice.value = th.prix;
+                newTva.value = parseFloat(th.default_tva).toFixed(6);
+                newLongDescription.value = th.description || "";
+                updateInputRowTotal();
+            }
+        });
+
+        [newQty, newPrice, newRemise, newTva].forEach(el => {
+            if(el) el.addEventListener('input', updateInputRowTotal);
+        });
+        if(toggleTva) toggleTva.addEventListener('change', updateTotals);
+
+        function updateInputRowTotal() {
+            const q = parseFloat(newQty.value) || 0;
+            const p = parseFloat(newPrice.value) || 0;
+            const r = (parseFloat(newRemise.value) || 0); // Always calculate, visibility is for display
+            const base = q * p;
+            const discounted = base * (1 - r/100);
+            newRowTotal.textContent = discounted.toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        }
+
+        addItemBtn.addEventListener('click', () => {
+            const d = newDesignation.value.trim();
+            const longDesc = newLongDescription.value.trim();
+            const q = parseFloat(newQty.value);
+            const p = parseFloat(newPrice.value);
+            const r = (parseFloat(newRemise.value) || 0);
+            const tva = parseFloat(newTva.value) || 0;
+            const tId = newThematique.value;
+
+            if(!d && !tId) return alertify.error("Veuillez sélectionner un service ou saisir une désignation.");
+            if(q <= 0 || p < 0) return alertify.error("Saisie invalide pour la quantité ou le prix.");
+
+            const baseAt = q * p;
+            const discountedAt = baseAt * (1 - r/100);
+
+            const itemData = {
+                id: editingIndex > -1 ? items[editingIndex].id : Date.now(),
+                thematique_id: tId,
+                description: d || getTLab(tId),
+                long_description: longDesc,
+                quantity: q,
+                unitPrice: p,
+                remise_percent: r,
+                tva_percent: parseFloat(newTva ? newTva.value : 19) || 0,
+                total: discountedAt
+            };
+
+            if(editingIndex > -1) {
+                items[editingIndex] = itemData;
+                editingIndex = -1;
+                addItemBtn.innerHTML = '<i class="ri-add-line fs-18"></i>'; // Reset to add icon
+                addItemBtn.classList.remove('btn-warning');
+                addItemBtn.classList.add('btn-primary'); // Assuming btn-primary is the default add button class
+            } else {
+                items.push(itemData);
+            }
+
+            renderItems();
+            newThematique.value = ""; newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+        });
+
+        function generateTvaOptions(selectedTva) {
+            let optionsHtml = '';
+            availableTvas.forEach(tva => {
+                const isSelected = (parseFloat(tva.valeur).toFixed(6) === parseFloat(selectedTva).toFixed(6)) ? 'selected' : '';
+                optionsHtml += `<option value="${parseFloat(tva.valeur).toFixed(6)}" ${isSelected}>${tva.valeur}%</option>`;
+            });
+            return optionsHtml;
+        }
+
+        function getTvaBadge(tva_percent) {
+            if (tva_percent === 0) return '0%';
+            return `<span class="badge bg-soft-primary text-primary">${tva_percent}%</span>`;
+        }
+
+        window.editItem = (idx) => {
+            const it = items[idx];
+            editingIndex = idx;
+            
+            newThematique.value = it.thematique_id;
+            newDesignation.value = it.description;
+            newLongDescription.value = it.long_description || "";
+            newQty.value = it.quantity;
+            newPrice.value = it.unitPrice.toFixed(2);
+            newRemise.value = it.remise_percent;
+            if(newTva) newTva.value = it.tva_percent.toFixed(6);
+            
+            addItemBtn.innerHTML = '<i class="ri-pencil-line fs-18"></i>'; // Change to edit icon
+            addItemBtn.classList.remove('btn-primary'); // Assuming btn-primary is the default add button class
+            addItemBtn.classList.add('btn-warning');
+            
+            updateInputRowTotal();
+            document.getElementById('newItemRow').scrollIntoView({behavior: 'smooth'});
+        };
+
+        function renderItems() {
+            itemsContainer.innerHTML = '';
+            items.forEach((it, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'item-row';
+                tr.innerHTML = `
+                    <td>
+                        <div class="fw-bold text-dark">${it.description}</div>
+                        ${it.long_description ? `<div class="text-muted small mt-1" style="white-space: pre-wrap;">${it.long_description}</div>` : ''}
+                    </td>
+                    <td class="text-center fw-bold text-dark">${it.quantity}</td>
+                    <td class="text-end text-muted">${it.unitPrice.toFixed(2)}</td>
+                    <td class="text-center text-danger col-remise">${it.remise_percent}%</td>
+                    <td class="text-center col-tva">${getTvaBadge(it.tva_percent)}</td>
+                    <td class="text-end fw-bold text-dark">${it.total.toFixed(2)}</td>
+                    <td class="text-center">
+                        {% if can_edit %}
+                        <button class="btn btn-sm btn-link text-primary p-0 me-2" onclick="editItem(${idx})">
+                            <i class="ri-pencil-line fs-18"></i>
+                        </button>
+                        <button class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(${idx})">
+                            <i class="ri-delete-bin-line fs-18"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                `;
+                itemsContainer.appendChild(tr);
+            });
+            applyColumnVisibility(); // Re-apply visibility after rendering
+            updateTotals();
+        }
+
+        window.removeItem = (idx) => {
+            if(!canEdit) return;
+            if(editingIndex === idx) {
+                editingIndex = -1;
+                addItemBtn.innerHTML = '<i class="ri-add-line fs-18"></i>'; // Reset to add icon
+                addItemBtn.classList.remove('btn-warning');
+                addItemBtn.classList.add('btn-primary'); // Assuming btn-primary is the default add button class
+                newThematique.value = ""; newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+            } else if (editingIndex > idx) {
+                editingIndex--;
+            }
+            items.splice(idx, 1);
+            renderItems();
+        };
+
+        function getTLab(id) {
+            const x = thematiques.find(z => z.id == id);
+            return x ? x.label : 'SERVICE';
+        }
+
+        function updateTotals() {
+            const sub = items.reduce((a, c) => a + c.total, 0);
+            const showTva = toggleTva.checked;
+            const breakdown = document.getElementById('tvaBreakdownContainer');
+            breakdown.innerHTML = '';
+            let totalTva = 0;
+
+            if(showTva) {
+                const groups = {};
+                items.forEach(i => {
+                    const r = parseFloat(i.tva_percent);
+                    const amt = i.total * (r/100);
+                    const key = r.toFixed(2);
+                    groups[key] = (groups[key] || 0) + amt;
+                    totalTva += amt;
+                });
+                Object.entries(groups).forEach(([r, a]) => {
+                    breakdown.innerHTML += `
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>TVA (${parseFloat(r)}%)</span>
+                            <span class="fw-medium">${a.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DZA</span>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('subTotal').textContent = sub.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DZA';
+            document.getElementById('totalAmount').textContent = (sub + totalTva).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DZA';
+        }
+
+        const saveBtn = document.getElementById('saveBtn');
+        if(saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                if(!items.length) return alertify.warning("Aucun article");
+                this.disabled = true;
+                fetch("{% url 't_conseil:ApiSaveFactureItems' %}", {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 
+                        facture_id: factureId, 
+                        items: items,
+                show_tva: document.getElementById('toggleTva').checked,
+                show_remise: document.getElementById('toggleRemise').checked,
+                conditions_commerciales: document.getElementById('factureConditions').value,
+                        mode_paiement: document.getElementById('modePaiement').value,
+                        date_emission: document.getElementById('dateEmission').value,
+                        date_echeance: document.getElementById('dateEcheance').value,
+                        validity_date: document.getElementById('validityDate') ? document.getElementById('validityDate').value : null // If exists
+                    })
+                }).then(r => r.json()).then(d => {
+                    if(d.status === 'success') {
+                        alertify.success(d.message);
+                        setTimeout(() => location.reload(), 800);
+                    } else {
+                        alertify.error(d.message);
+                        this.disabled = false;
+                    }
+                });
+            });
+        }
+
+        const factureEnterprise = document.getElementById('factureEnterprise');
+        if (factureEnterprise) {
+            factureEnterprise.addEventListener('change', function() {
+                const entId = this.value;
+                if (!entId) return;
+
+                fetch("{% url 't_conseil:ApiFetchEnterpriseTvas' %}?enterprise_id=" + entId, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        if (newTva) {
+                            newTva.innerHTML = '';
+                            data.tvas.forEach(t => {
+                                const opt = new Option(t.valeur + '%', t.valeur.toFixed(6));
+                                if (t.is_default) opt.selected = true;
+                                newTva.add(opt);
+                            });
+                        }
+                    }
+                });
+            });
+        }
+    
+        const btnDeleteItems = document.getElementById('btnDeleteItems');
+        if(btnDeleteItems) {
+            btnDeleteItems.addEventListener('click', () => {
+                 alertify.confirm("Vider le panier", "Êtes-vous sûr de vouloir supprimer tous les articles ?", () => {
+                     items = [];
+                     renderItems();
+                 }, null);
+            });
+        }
+
+        // Validation Facture logic
+        const validateBtn = document.getElementById('validateFactureBtn');
+        if(validateBtn) {
+            validateBtn.addEventListener('click', function() {
+                alertify.confirm("Validation de la Facture", "Voulez-vous vraiment valider cette facture ? Elle ne pourra plus être modifiée.", 
+                function() {
+                    const formData = new FormData();
+                    formData.append('facture_id', factureId);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch("{% url 't_conseil:ApiValidateFacture' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    }).then(r => r.json()).then(d => {
+                        if(d.status === 'success') {
+                            alertify.success(d.message);
+                            setTimeout(() => location.reload(), 800);
+                        } else {
+                            alertify.error(d.message);
+                        }
+                    });
+                }, null).set('labels', {ok:'Valider', cancel:'Annuler'});
+            });
+        }
+    });
+</script>
+{% endblock content %}

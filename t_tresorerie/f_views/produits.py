@@ -226,6 +226,14 @@ def ApiStoreAutrePaiement(request):
         entite=entite
     )
 
+    if mode_paiement == "che" or mode_paiement == "vir":
+        OperationsBancaire.objects.create(
+            operation_type = "entree",
+            autre_produit = autre_paiement,
+            montant = montant_paiement,
+            reference_bancaire = reference,
+        )
+
     return JsonResponse({
         'success': True,
         'message': 'Paiement enregistré avec succès',
