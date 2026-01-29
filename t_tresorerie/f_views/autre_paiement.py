@@ -24,7 +24,12 @@ def PageNouveauAutrePaiement(request):
 @login_required(login_url="institut_app:login")
 def ApiListeAutresPaiements(request):
     if request.method == "GET":
+        entite_id = request.GET.get('entite_id')
         paiements = AutreProduit.objects.all().select_related('client', 'compte').order_by('-date_paiement')
+        
+        if entite_id:
+            paiements = paiements.filter(entite_id=entite_id)
+            
         data = []
 
         for p in paiements:
@@ -37,6 +42,8 @@ def ApiListeAutresPaiements(request):
                 'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
                 'context': p.compte.name if p.compte else "Autre",
                 'context_key': 'autre',
+                'mode_paiement': p.get_mode_paiement_display(),
+                'date_operation': p.date_operation.strftime('%Y-%m-%d') if p.date_operation else "-",
                 'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else "-"
             })
 

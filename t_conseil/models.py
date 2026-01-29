@@ -281,13 +281,14 @@ class Paiement(models.Model):
     date_paiement = models.DateField()
     
     MODE_PAIEMENT_CHOICES = [
-        ('virement', 'Virement Bancaire'),
-        ('cheque', 'Chèque'),
-        ('espece', 'Espèces'),
+        ('vir', 'Virement Bancaire'),
+        ('che', 'Chèque'),
+        ('esp', 'Espèce'),
         ('autre', 'Autre'),
     ]
     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT_CHOICES)
     reference = models.CharField(max_length=100, null=True, blank=True)
+    is_done = models.BooleanField(default=False)
     note = models.TextField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)

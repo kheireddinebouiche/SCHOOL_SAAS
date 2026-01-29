@@ -34,6 +34,7 @@ def ApiListeCategoriesProduits(request):
             'children_count': cat.children.count(),
             'is_active': True,
             'is_parent': cat.parent is None,
+            'category_type': cat.category_type, # Include category_type
             'created_at': cat.created_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(cat, 'created_at') else '-',
             'children': []
         }
@@ -62,6 +63,7 @@ def ApiCreerCategorieProduit(request):
             data = json.loads(request.body)
             name = data.get('name')
             parent_id = data.get('parent_id')
+            category_type = data.get('category_type', 'standard')
 
             if not name:
                 return JsonResponse({'error': 'Le nom de la catégorie est requis'}, status=400)
@@ -72,7 +74,8 @@ def ApiCreerCategorieProduit(request):
 
             category = PaymentCategory.objects.create(
                 name=name,
-                parent=parent
+                parent=parent,
+                category_type=category_type
             )
 
             return JsonResponse({
@@ -95,6 +98,7 @@ def ApiModifierCategorieProduit(request):
             category_id = data.get('id')
             name = data.get('name')
             parent_id = data.get('parent_id')
+            category_type = data.get('category_type', 'standard')
 
             if not category_id or not name:
                 return JsonResponse({'error': 'ID et nom de la catégorie sont requis'}, status=400)
@@ -107,6 +111,7 @@ def ApiModifierCategorieProduit(request):
 
             category.name = name
             category.parent = parent
+            category.category_type = category_type
             category.save()
 
             return JsonResponse({
@@ -168,7 +173,8 @@ def PageCategoriesProduits(request):
 @login_required(login_url="institut_app:login")
 def PageAutrePaiements(request):
     """Page to manage other payments"""
-    return render(request, 'tenant_folder/comptabilite/paiements/liste_autre_paiements.html')
+    entites = Entreprise.objects.all()
+    return render(request, 'tenant_folder/comptabilite/paiements/liste_autre_paiements.html', {'entites': entites})
 
 
 @login_required(login_url="institut_app:login")
@@ -186,8 +192,12 @@ def ApiStoreAutrePaiement(request):
     client_id = data.get('client')
     entite_id = data.get('entite')
 
-    if not label or not montant_paiement or not mode_paiement or not date_operation or not date_paiement:
+    if not label or not montant_paiement or not mode_paiement or not date_operation:
         return JsonResponse({'error': 'Tous les champs obligatoires doivent être remplis'}, status=400)
+
+    # Date de paiement verification
+    if mode_paiement == 'esp' and not date_paiement:
+         return JsonResponse({'error': 'La date de règlement est obligatoire pour les paiements en espèces.'}, status=400)
 
     # Get the PaymentCategory if provided
     compte = None
@@ -204,7 +214,7 @@ def ApiStoreAutrePaiement(request):
             client = Prospets.objects.get(id=client_id)
         except Prospets.DoesNotExist:
             pass 
-
+    
     # Get the Entite if provided
     entite = None
     if entite_id:
@@ -220,7 +230,7 @@ def ApiStoreAutrePaiement(request):
         mode_paiement=mode_paiement,
         date_operation=date_operation,
         reference=reference,
-        date_paiement=date_paiement,
+        date_paiement=date_paiement if date_paiement else None,
         compte=compte,
         client=client,
         entite=entite
@@ -259,6 +269,7 @@ def ApiListeAutrePaiements(request):
             'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
             'context': p.compte.name if p.compte else "Autre",
             'context_key': 'autre',
+            'mode_paiement': p.get_mode_paiement_display(),
             'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else "-"
         })
 
@@ -319,6 +330,24 @@ def ApiUpdateAutrePaiement(request):
             paiement.compte = compte
             paiement.save()
 
+            # Handle OperationsBancaire for banking modes
+            if mode_paiement == "che" or mode_paiement == "vir":
+                op, created = OperationsBancaire.objects.get_or_create(
+                    autre_produit=paiement,
+                    defaults={
+                        'operation_type': "entree",
+                        'montant': montant_paiement,
+                        'reference_bancaire': reference
+                    }
+                )
+                if not created:
+                    op.montant = montant_paiement
+                    op.reference_bancaire = reference
+                    op.save()
+            else:
+                # If changed to cash/other, remove any linked bank operation if not rapproche
+                OperationsBancaire.objects.filter(autre_produit=paiement, is_rapproche=False).delete()
+
             return JsonResponse({
                 'success': True,
                 'message': 'Paiement mis à jour avec succès'
@@ -344,6 +373,10 @@ def ApiDeleteAutrePaiement(request):
                 return JsonResponse({'error': 'ID du paiement est requis'}, status=400)
 
             paiement = AutreProduit.objects.get(id=paiement_id)
+            
+            # Delete linked bank operations that are not rapproche
+            OperationsBancaire.objects.filter(autre_produit=paiement, is_rapproche=False).delete()
+            
             paiement.delete()
 
             return JsonResponse({

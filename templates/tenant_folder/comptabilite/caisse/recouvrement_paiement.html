@@ -1,0 +1,335 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Comptabilité - Recouvrement{% endblock title %}
+
+{% block content %}
+<style>
+  .search-box {
+    position: relative;
+  }
+  .search-box .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  .table td {
+    vertical-align: middle;
+  }
+  .badge {
+    padding: 0.5em 1em;
+    font-weight: 500;
+  }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- start page title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-check-shield-line text-primary fs-4"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Recouvrement des paiements</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Comptabilité</a></li>
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Banque</a></li>
+                                    <li class="breadcrumb-item active">Recouvrement</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- KPI Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="ri-time-line text-warning fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 text-muted">Total en attente</h5>
+                                    <h3 class="mb-0 fw-bold" id="totalMontant">0.00 DA</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="ri-refund-2-line text-info fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 text-muted">Nombre d'opérations</h5>
+                                    <h3 class="mb-0 fw-bold" id="totalCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="ri-coupon-line text-success fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 text-muted">Chèques</h5>
+                                    <h3 class="mb-0 fw-bold" id="totalCheques">0.00 DA</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0 bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                                    <i class="ri-bank-transfer-line text-danger fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 text-muted">Virements</h5>
+                                    <h3 class="mb-0 fw-bold" id="totalVirements">0.00 DA</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm border-0 rounded-3">
+                        <div class="card-header bg-white align-items-center d-flex p-3">
+                            <h5 class="card-title mb-0 flex-grow-1">Paiements en attente de validation bancaire</h5>
+                            <div class="d-flex gap-2">
+                                <div class="search-box">
+                                    <input type="text" placeholder="Rechercher..." id="tableSearch" class="form-control rounded-pill" style="width: 250px;"/>
+                                    <i class="ri-search-line text-muted search-icon"></i>
+                                </div>
+                                <button type="button" class="btn btn-soft-info rounded-pill" id="refreshBtn">
+                                    <i class="ri-refresh-line align-middle"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="recouvrementTable">
+                                    <thead>
+                                        <tr>
+                                            <th>N° Paiement</th>
+                                            <th>Reçu le</th>
+                                            <th>Client</th>
+                                            <th>Entité</th>
+                                            <th>Montant</th>
+                                            <th>Mode</th>
+                                            <th>Référence</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data populated via AJAX -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recouvrement -->
+<div class="modal fade" id="recouvrementModal" tabindex="-1" aria-labelledby="recouvrementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary p-3">
+                <h5 class="modal-title text-white" id="recouvrementModalLabel">Valider le Recouvrement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-24">
+                            <i class="ri-bank-card-line"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted">Veuillez indiquer la date effective à laquelle les fonds ont été reçus sur votre compte bancaire.</p>
+                </div>
+                <form id="recouvrementForm">
+                    <input type="hidden" id="paiementId" name="paiement_id">
+                    <input type="hidden" id="paiementType" name="type">
+                    <div class="form-group mb-0">
+                        <label for="effectiveDate" class="form-label fw-semibold">Date Effective de Paiement</label>
+                        <input type="date" class="form-control form-control-lg border-2" id="effectiveDate" name="effective_date" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light p-3">
+                <button type="button" class="btn btn-ghost-danger rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="validateRecouvrementBtn">Confirmer le Recouvrement</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        loadRecouvrementData();
+        loadStats();
+
+        $('#refreshBtn').click(function() {
+            loadRecouvrementData();
+            loadStats();
+        });
+
+        $('#tableSearch').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $("#recouvrementTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        $('#validateRecouvrementBtn').click(function() {
+            const id = $('#paiementId').val();
+            const p_type = $('#paiementType').val();
+            const date = $('#effectiveDate').val();
+
+            if (!date) {
+                alertify.error('Veuillez sélectionner une date');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiUpdateEffectiveDate' %}",
+                type: 'POST',
+                data: {
+                    'paiement_id': id,
+                    'type': p_type,
+                    'effective_date': date,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        $('#recouvrementModal').modal('hide');
+                        loadRecouvrementData();
+                        loadStats();
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function() {
+                    alertify.error('Une erreur est survenue');
+                },
+                complete: function() {
+                    $('#validateRecouvrementBtn').prop('disabled', false).html('Confirmer le Recouvrement');
+                }
+            });
+        });
+    });
+
+    function loadStats() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiRecouvrementStats' %}",
+            type: 'GET',
+            success: function(data) {
+                $('#totalMontant').text(data.total_montant.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+                $('#totalCount').text(data.total_count);
+                $('#totalCheques').text(data.total_cheques.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+                $('#totalVirements').text(data.total_virements.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+            }
+        });
+    }
+
+    function loadRecouvrementData() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiListRecouvrementPaiements' %}",
+            type: 'GET',
+            success: function(data) {
+                let tableBody = $('#recouvrementTable tbody');
+                tableBody.empty();
+
+                if (data.length === 0) {
+                    tableBody.append('<tr><td colspan="8" class="text-center py-4 text-muted">Aucun paiement en attente de recouvrement</td></tr>');
+                    return;
+                }
+
+                data.forEach(function(item) {
+                    let badgeClass = item.mode_paiement.toLowerCase().includes('chèque') ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
+                    let row = `
+                        <tr>
+                            <td><span class="fw-bold text-primary">${item.num || '-'}</span></td>
+                            <td><span class="text-muted"><i class="ri-calendar-event-line me-1"></i>${item.created_at || '-'}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0 avatar-xs me-2">
+                                        <div class="avatar-title bg-soft-info text-info rounded-circle font-size-12">
+                                            ${item.client.charAt(0)}
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">${item.client}</div>
+                                </div>
+                            </td>
+                            <td>${item.entite}</td>
+                            <td><span class="fw-bold">${item.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</span></td>
+                            <td><span class="badge ${badgeClass}">${item.mode_paiement}</span></td>
+                            <td><code class="text-dark">${item.reference}</code></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-primary rounded-pill px-3 recouvrement-btn shadow-sm" 
+                                        data-id="${item.id}" 
+                                        data-type="${item.type}"
+                                        data-date="${item.date_paiement || ''}">
+                                    <i class="ri-checkbox-circle-line me-1"></i> Recouvrer
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.append(row);
+                });
+
+                $(document).on('click', '.recouvrement-btn', function() {
+                    const id = $(this).data('id');
+                    const type = $(this).data('type');
+                    const date = $(this).data('date');
+                    
+                    $('#paiementId').val(id);
+                    $('#paiementType').val(type);
+                    const today = new Date().toISOString().split('T')[0];
+                    $('#effectiveDate').val(date || today);
+                    $('#recouvrementModal').modal('show');
+                });
+            },
+            error: function() {
+                alertify.error('Erreur lors du chargement des données');
+            }
+        });
+    }
+</script>
+{% endblock extra_js %}

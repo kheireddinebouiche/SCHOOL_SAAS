@@ -372,6 +372,12 @@ class PaymentCategory(models.Model):
         blank=True,
         related_name="children",
     )
+    category_type = models.CharField(
+        max_length=50, 
+        choices=[('standard', 'Standard'), ('rachat_credit', 'Rachat de Crédit')],
+        default='standard',
+        verbose_name="Type de Catégorie"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -387,12 +393,13 @@ class AutreProduit(models.Model):
     num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de paiement")
     client = models.ForeignKey(Prospets, on_delete=models.DO_NOTHING, null=True, blank=True)
     montant_paiement = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
-    mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('chq','Chéque'),('vir','Virement'),('cach','Cash')])
+    mode_paiement = models.CharField(max_length=100, null=True, blank=True, choices=[('che','Chèque'),('esp','Espèce'),('vir','Virement Bancaire')])
     date_operation = models.DateField(auto_now_add=True)
     reference = models.CharField(null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     entite = models.ForeignKey(Entreprise, on_delete=models.DO_NOTHING, null=True, blank=True)
     compte = models.ForeignKey(PaymentCategory, on_delete=models.SET_NULL, null=True, blank=True)
+    is_done = models.BooleanField(default=False)
 
     def __str__(self):
         return self.label

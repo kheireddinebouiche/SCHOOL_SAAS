@@ -214,37 +214,103 @@
     <div class="modal-content border-0 shadow-lg rounded-4">
       <div class="modal-body p-4 p-sm-5">
         
-        <div class="text-center mb-4">
-           <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 64px; height: 64px;">
-              <i class="ri-folder-add-line fs-2"></i>
+        <div class="text-center mb-5">
+           <div class="avatar-lg mx-auto mb-3">
+               <div class="avatar-title bg-soft-primary text-primary display-5 rounded-circle shadow-sm">
+                   <i class="ri-folder-add-line"></i>
+               </div>
            </div>
-           <h4 class="modal-title fw-bold" id="categoryModalLabel">Nouvelle Catégorie</h4>
-           <p class="text-muted small">Créez une nouvelle classification pour vos produits</p>
+           <h3 class="modal-title fw-bold text-dark" id="categoryModalLabel">Nouvelle Catégorie</h3>
+           <p class="text-muted fs-15">Configurez les détails de votre catégorie</p>
         </div>
 
         <form id="categoryForm">
           <input type="hidden" id="categoryId">
           
-          <div class="form-floating mb-3">
-            <input type="text" class="form-control rounded-3" id="categoryName" placeholder="T-shirts, Électronique, etc." required>
-            <label for="categoryName">Nom de la catégorie</label>
+          <div class="mb-4">
+            <label for="categoryName" class="form-label fw-semibold text-dark">Nom de la catégorie <span class="text-danger">*</span></label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="ri-text"></i></span>
+                <input type="text" class="form-control bg-light border-start-0 ps-0" id="categoryName" placeholder="Ex: Matériel Informatique" required style="height: 45px;">
+            </div>
           </div>
 
-          <div class="form-floating mb-4">
-            <select class="form-select rounded-3" id="categoryParent" aria-label="Catégorie parente">
-              <option value="">Aucune (Principal)</option>
-              <!-- Options loaded via AJAX -->
-            </select>
-            <label for="categoryParent">Catégorie Parente (Optionnel)</label>
+          <div class="mb-4">
+            <label for="categoryParent" class="form-label fw-semibold text-dark">Catégorie Parente</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted"><i class="ri-node-tree"></i></span>
+                <select class="form-select bg-light border-start-0 ps-0" id="categoryParent" style="height: 45px;">
+                    <option value="">Aucune (Principal)</option>
+                    <!-- Options loaded via AJAX -->
+                </select>
+            </div>
+            <div class="form-text text-muted">Laissez vide pour créer une catégorie principale.</div>
           </div>
 
-          <div class="d-grid gap-2">
-             <button type="button" class="btn btn-primary btn-lg rounded-pill shadow-sm" id="saveCategory">
-               <i class="ri-check-line me-1"></i> Enregistrer
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-3">Type de catégorie</label>
+            
+            <div class="p-1 bg-light rounded-pill d-flex position-relative border" style="height: 54px;">
+                <div class="position-absolute w-50 h-100 p-1 transition-all" id="selector-highlight" style="left: 0; transition: left 0.3s ease;">
+                    <div class="bg-white rounded-pill shadow-sm w-100 h-100 border"></div>
+                </div>
+                
+                <input type="radio" class="btn-check" name="categoryType" id="typeStandard" value="standard" checked onchange="updateSelector(this)">
+                <label class="btn border-0 rounded-pill w-50 h-100 d-flex align-items-center justify-content-center position-relative fw-semibold z-1" for="typeStandard" id="labelStandard">
+                    <i class="ri-folder-line me-2 fs-18"></i> Standard
+                </label>
+            
+                <input type="radio" class="btn-check" name="categoryType" id="typeRachat" value="rachat_credit" onchange="updateSelector(this)">
+                <label class="btn border-0 rounded-pill w-50 h-100 d-flex align-items-center justify-content-center position-relative fw-semibold z-1 text-muted" for="typeRachat" id="labelRachat">
+                    <i class="ri-exchange-dollar-line me-2 fs-18"></i> Rachat de Crédit
+                </label>
+            </div>
+
+            <div class="alert alert-soft-warning border-0 d-flex align-items-center mt-3 d-none fade show" role="alert" id="rachatAlert">
+                <i class="ri-alert-line me-2 fs-18"></i>
+                <div class="small">Cette catégorie sera dédiée exclusivement à la gestion des rachats de crédits.</div>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 mt-5">
+             <button type="button" class="btn btn-primary btn-lg rounded-pill shadow-lg" id="saveCategory" style="height: 50px;">
+               <span class="fw-bold">Enregistrer la catégorie</span> <i class="ri-arrow-right-line ms-1"></i>
              </button>
-             <button type="button" class="btn btn-light btn-lg rounded-pill" data-bs-dismiss="modal">Annuler</button>
+             <button type="button" class="btn btn-ghost-secondary btn-lg rounded-pill text-muted" data-bs-dismiss="modal">Annuler</button>
           </div>
         </form>
+
+        <script>
+            function updateSelector(radio) {
+                const highlight = document.getElementById('selector-highlight');
+                const labelStandard = document.getElementById('labelStandard');
+                const labelRachat = document.getElementById('labelRachat');
+                const rachatAlert = document.getElementById('rachatAlert');
+
+                if (radio.value === 'standard') {
+                    highlight.style.left = '0';
+                    labelStandard.classList.remove('text-muted');
+                    labelRachat.classList.add('text-muted');
+                    rachatAlert.classList.add('d-none');
+                } else {
+                    highlight.style.left = '50%';
+                    labelStandard.classList.add('text-muted');
+                    labelRachat.classList.remove('text-muted');
+                    labelRachat.classList.add('text-danger'); 
+                    rachatAlert.classList.remove('d-none');
+                }
+                
+                if (radio.value === 'rachat_credit') {
+                     labelRachat.classList.remove('text-muted');
+                     labelRachat.classList.add('text-danger');
+                     labelStandard.classList.add('text-muted');
+                } else {
+                     labelRachat.classList.remove('text-danger');
+                     labelRachat.classList.add('text-muted');
+                     labelStandard.classList.remove('text-muted');
+                }
+            }
+        </script>
       </div>
     </div>
   </div>
@@ -378,6 +444,7 @@ $(document).ready(function() {
                                 `<span class="expand-icon"><i class="fas fa-chevron-down"></i></span>` : 
                                 `<span style="display:inline-block; width: 20px; text-align:center; color:#adb5bd; margin-right: 0.5rem;">&bull;</span>`}
                             <span class="fw-medium">${item.name}</span>
+                            ${item.category_type === 'rachat_credit' ? '<span class="badge bg-warning text-dark ms-2"><i class="ri-exchange-dollar-line me-1"></i>Rachat</span>' : ''}
                         </td>
                         <td>${item.parent_name || '-'}</td>
                         <td><span class="badge bg-primary">${item.children_count}</span></td>
@@ -393,6 +460,7 @@ $(document).ready(function() {
                                         <a class="dropdown-item edit-btn" href="#"
                                            data-id="${item.id}"
                                            data-name="${item.name}"
+                                           data-category-type="${item.category_type || 'standard'}"
                                            data-parent-id="${item.parent_id || ''}">
                                             <i class="fas fa-edit me-2"></i>Modifier
                                         </a>
@@ -511,9 +579,14 @@ $(document).ready(function() {
     $('#addCategoryBtn').on('click', function() {
         $('#categoryModalLabel').text('Nouvelle Catégorie');
         $('#categoryModal .text-muted.small').text('Créez une nouvelle classification pour vos produits');
+        // Reset values
         $('#categoryId').val('');
         $('#categoryName').val('');
         $('#categoryParent').val('');
+        // Reset custom selector
+        $('input[name="categoryType"][value="standard"]').prop('checked', true);
+        updateSelector(document.querySelector('input[name="categoryType"][value="standard"]'));
+        
         $('#categoryModal').modal('show');
     });
 
@@ -521,6 +594,8 @@ $(document).ready(function() {
         const id = $('#categoryId').val();
         const name = $('#categoryName').val().trim();
         const parentId = $('#categoryParent').val() || null;
+        // Get checked radio value
+        const categoryType = $('input[name="categoryType"]:checked').val();
 
         if (!name) {
             alert('Veuillez entrer un nom pour la catégorie');
@@ -532,10 +607,12 @@ $(document).ready(function() {
         const data = id ? {
             id: id,
             name: name,
-            parent_id: parentId
+            parent_id: parentId,
+            category_type: categoryType
         } : {
             name: name,
-            parent_id: parentId
+            parent_id: parentId,
+            category_type: categoryType
         };
 
         $.ajax({
@@ -567,14 +644,21 @@ $(document).ready(function() {
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
         const id = $(this).data('id');
-        const name = $(this).closest('tr').find('td:first').text().replace(/^\s*[▶▼]?\s*/, '').trim();
+        // Robustly get name by targeting the span, avoiding badge text
+        const name = $(this).closest('tr').find('.fw-medium').text().trim();
         const parentId = $(this).data('parent-id');
+        const categoryType = $(this).data('category-type');
 
         $('#categoryModalLabel').text('Modifier la Catégorie');
         $('#categoryModal .text-muted.small').text('Modifiez les informations de cette classification');
         $('#categoryId').val(id);
         $('#categoryName').val(name);
         $('#categoryParent').val(parentId || '');
+        // Set radio button based on value and update UI
+        const typeVal = categoryType || 'standard';
+        $(`input[name="categoryType"][value="${typeVal}"]`).prop('checked', true);
+        updateSelector(document.querySelector(`input[name="categoryType"][value="${typeVal}"]`));
+        
         $('#categoryModal').modal('show');
     });
 
@@ -582,10 +666,11 @@ $(document).ready(function() {
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         currentDeleteId = $(this).data('id');
-        const categoryName = $(this).closest('tr').find('td:first').text().replace(/^\s*[▶▼]?\s*/, '').trim();
+        const categoryName = $(this).closest('tr').find('.fw-medium').text().trim();
         $('#deleteModalLabel').text(`Supprimer "${categoryName}"`);
         $('#deleteModal').modal('show');
     });
+
 
     // Confirm delete
     $('#confirmDelete').on('click', function() {

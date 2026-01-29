@@ -243,4 +243,9 @@ urlpatterns = [
 
 
     path('reporting-das/', ReportingDAS, name='ReportingDAS'),
+    
+    path('recouvrement/', PageRecouvrement, name='PageRecouvrement'),
+    path('api/update-effective-date/', ApiUpdateEffectiveDate, name='ApiUpdateEffectiveDate'),
+    path('api/list-recouvrement-paiements/', ApiListRecouvrementPaiements, name='ApiListRecouvrementPaiements'),
+    path('api/recouvrement-stats/', ApiRecouvrementStats, name='ApiRecouvrementStats'),
 ]

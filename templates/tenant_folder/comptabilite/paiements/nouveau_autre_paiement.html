@@ -201,16 +201,16 @@
                                             </div>
                                         </div>
                                         <div class="col-lg-6">
-                                            <label class="form-label">Date de règlement <span class="text-danger">*</span></label>
-                                            <input type="date" class="form-control" id="date_paiement" name="date_paiement" required>
+                                            <label class="form-label" id="label_date_paiement">Date de règlement</label>
+                                            <input type="date" class="form-control" id="date_paiement" name="date_paiement">
                                         </div>
                                         <div class="col-lg-6">
                                             <label class="form-label">Mode de règlement <span class="text-danger">*</span></label>
                                             <select class="form-select" id="mode_paiement" name="mode_paiement" required>
                                                 <option value="">Sélectionner...</option>
-                                                <option value="chq">Chèque</option>
+                                                <option value="che">Chèque</option>
                                                 <option value="vir">Virement Bancaire</option>
-                                                <option value="cach">Espèces (Cash)</option>
+                                                <option value="esp">Espèces (Cash)</option>
                                             </select>
                                         </div>
                                         <div class="col-lg-6">
@@ -500,8 +500,13 @@
             var client = $('#client').val();
             var entite = $('#entite').val();
 
-            if(!label || !montant_paiement || !mode_paiement || !date_operation || !date_paiement) {
+            if(!label || !montant_paiement || !mode_paiement || !date_operation) {
                 alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+
+            if(mode_paiement === 'esp' && !date_paiement) {
+                alert('La date de règlement est obligatoire pour les paiements en espèces.');
                 return;
             }
 
@@ -536,6 +541,19 @@
                 }
             });
         });
+        // Dynamic validation for date_paiement based on mode
+        $('#mode_paiement').change(function(){
+            var mode = $(this).val();
+            var label = $('#label_date_paiement');
+            if(mode === 'esp') {
+                label.html('Date de règlement <span class="text-danger">*</span>');
+            } else {
+                label.html('Date de règlement');
+            }
+        });
+
+        // Trigger change to set initial state
+        $('#mode_paiement').trigger('change');
     });
 </script>
 {% endblock content %}
