@@ -71,7 +71,7 @@ def brouillard_caisse_json(request):
     paiements = Paiements.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
         nom=F('paiement_label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_paye'),
+        mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
         type=Value('entree', output_field=CharField()),
         descri=Coalesce('paiement_label', Value('')),
         ref=F('num'),
@@ -86,7 +86,7 @@ def brouillard_caisse_json(request):
     autres_produits = AutreProduit.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
         nom=F('label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_paiement'),
+        mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
         type=Value('entree', output_field=CharField()),
         descri=F('label'),
         ref=F('num'),
@@ -103,7 +103,7 @@ def brouillard_caisse_json(request):
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='espece', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
-            mouvement_montant=F('montant'),
+            mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
             type=Value('entree', output_field=CharField()),
             descri=F('note'),
             ref=F('facture__num_facture'),
@@ -115,10 +115,10 @@ def brouillard_caisse_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en espèce) ----
-    depenses = Depenses.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         nom=F('label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_ttc'),
+        mouvement_montant=Coalesce(F('montant_ttc'), F('montant_ht'), Value(0, output_field=models.DecimalField())),
         type=Value('sortie', output_field=CharField()),
         descr=F('description'),
         ref=Coalesce('reference', Value('')),
@@ -144,7 +144,7 @@ def brouillard_caisse_json(request):
     solde = 0
     results = []
     for mv in mouvements:
-        montant = float(mv['mouvement_montant']) if mv.get('mouvement_montant') else 0
+        montant = float(mv['mouvement_montant'] or 0)
         if mv['type'] == 'entree':
             solde += montant
         else:
@@ -189,7 +189,7 @@ def brouillard_banck_json(request):
     paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
         nom=F('paiement_label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_paye'),
+        mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
         type=Value('entree', output_field=CharField()),
         descri=Coalesce('paiement_label', Value('')),
         ref=F('num'),
@@ -205,7 +205,7 @@ def brouillard_banck_json(request):
     autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
         nom=F('label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_paiement'),
+        mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
         type=Value('entree', output_field=CharField()),
         descri=F('label'),
         ref=F('num'),
@@ -223,7 +223,7 @@ def brouillard_banck_json(request):
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
-            mouvement_montant=F('montant'),
+            mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
             type=Value('entree', output_field=CharField()),
             descri=F('note'),
             ref=F('facture__num_facture'),
@@ -236,10 +236,10 @@ def brouillard_banck_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
-    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         nom=F('label'),
         date=F('date_paiement'),
-        mouvement_montant=F('montant_ttc'),
+        mouvement_montant=Coalesce(F('montant_ttc'), F('montant_ht'), Value(0, output_field=models.DecimalField())),
         type=Value('sortie', output_field=CharField()),
         descr=F('description'),
         ref=Coalesce('reference', Value('')),
@@ -263,7 +263,7 @@ def brouillard_banck_json(request):
     solde = 0
     results = []
     for mv in mouvements:
-        montant = float(mv['mouvement_montant']) if mv.get('mouvement_montant') else 0
+        montant = float(mv['mouvement_montant'] or 0)
         if mv['type'] == 'entree':
             solde += montant
         else:

@@ -3021,6 +3021,36 @@
     </div>                                                                                                                                                        
 </div>    
 
+<!-- Modal Configuration Facture -->
+<div class="modal fade" id="invoiceConfigModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configuration de la Facture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="tvaSelect" class="form-label">Taux de TVA</label>
+                    <select class="form-select" id="tvaSelect">
+                        <option value="0">0%</option>
+                        <option value="9">9%</option>
+                        <option value="19" selected>19%</option>
+                    </select>
+                    <div class="form-text">Sélectionnez le taux de TVA applicable pour cette facture.</div>
+                </div>
+                <input type="hidden" id="invoicePaymentId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveInvoiceBtn">
+                    <i class="ri-save-line me-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     
     
@@ -4749,6 +4779,49 @@
             }
         });
 
+        // Open Invoice Configuration Modal
+        $(document).on('click', '.print-facture-btn', function(){
+            var id = $(this).data('id');
+            $('#invoicePaymentId').val(id);
+            $('#invoiceConfigModal').modal('show');
+        });
+
+        // Save Invoice Generation
+        $('#saveInvoiceBtn').on('click', function(){
+            var btn = $(this);
+            var paiementId = $('#invoicePaymentId').val();
+            var tvaPercent = $('#tvaSelect').val();
+            
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGenerateInvoiceFromPayment' %}",
+                type: "POST",
+                data: {
+                    'paiement_id': paiementId,
+                    'tva_percent': tvaPercent,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                dataType: "JSON",
+                success: function(response){
+                    if(response.status === 'success'){
+                        alertify.success(response.message);
+                        $('#invoiceConfigModal').modal('hide');
+                        // Optional: Reload data or update UI to show invoice link?
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function(xhr, status, error){
+                    alertify.error("Une erreur est survenue lors de la génération de la facture.");
+                    console.error(error);
+                },
+                complete: function(){
+                    btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i>Enregistrer');
+                }
+            });
+        });
+
         $('#signataireSelectRefund').on('change', function(){
             var selectedValue = $(this).val();
             var parentTuteurFields = $('#parentTuteurFieldsRefund');
@@ -5098,13 +5171,6 @@
             }
         }
 
-        // Imprimer la facture
-        $(document).on('click', '.print-facture-btn', function(e){
-            e.preventDefault();
-            var id = $(this).data('id');
-            alert("Fonctionnalité d'impression de facture - à implémenter pour le paiement ID: " + id);
-            // À implémenter : Logique d'impression de la facture
-        });   
         
         function checkForPaiements(){
             

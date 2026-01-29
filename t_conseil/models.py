@@ -157,6 +157,11 @@ class Facture(models.Model):
     
     conditions_commerciales = models.TextField(null=True, blank=True, help_text="Conditions spécifiques à cette facture")
     
+    module_source = models.CharField(max_length=50, choices=[
+        ('conseil', 'Executive Education'),
+        ('tresorerie', 'Comptabilité')
+    ], default='conseil', help_text="Module d'origine de la facture")
+
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="factures_entreprise")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

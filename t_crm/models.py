@@ -265,12 +265,12 @@ class Prospets(models.Model):
             ('recouvrement', 'RECOUVREMENT'),
         ]
     )
-    conseil_budget = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Budget Conseil")
-    conseil_probability = models.IntegerField(default=0, verbose_name="Probabilité (%)")
-    conseil_is_favorite = models.BooleanField(default=False, verbose_name="Favori Conseil")
+    conseil_budget = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Budget Conseil", blank=True, null=True)
+    conseil_probability = models.IntegerField(default=0, verbose_name="Probabilité (%)", blank=True, null=True)
+    conseil_is_favorite = models.BooleanField(default=False, verbose_name="Favori Conseil", blank=True, null=True)
     conseil_commercial = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="prospects_conseil", verbose_name="Commercial Conseil")
     conseil_closing_date = models.DateField(null=True, blank=True, verbose_name="Date de closing prévue")
-    conseil_is_active = models.BooleanField(default=True, verbose_name="Pipeline Actif")
+    conseil_is_active = models.BooleanField(default=True, verbose_name="Pipeline Actif", blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

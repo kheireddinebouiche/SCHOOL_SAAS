@@ -478,6 +478,61 @@
     </div>
 </div>
 
+<!-- Modal de configuration de la facture -->
+<div class="modal fade" id="invoiceConfigModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-file-list-3-line me-2"></i>Configuration de la facture
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="modalPaiementId">
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-muted mb-2">Sélectionner le taux de TVA</label>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="tvaRate" id="tva0" value="0">
+                            <label class="btn btn-outline-success w-100 py-3" for="tva0">
+                                <span class="d-block fw-bold fs-5">0%</span>
+                                <small>Sans TVA</small>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="tvaRate" id="tva9" value="9">
+                            <label class="btn btn-outline-success w-100 py-3" for="tva9">
+                                <span class="d-block fw-bold fs-5">9%</span>
+                                <small>Taux réduit</small>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="tvaRate" id="tva19" value="19" checked>
+                            <label class="btn btn-outline-success w-100 py-3" for="tva19">
+                                <span class="d-block fw-bold fs-5">19%</span>
+                                <small>Taux normal</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info border-0 bg-info bg-opacity-10 d-flex align-items-center mb-0" role="alert">
+                    <i class="ri-information-line fs-4 me-3 text-info"></i>
+                    <div class="small text-info">
+                        L'invoice sera générée avec le numéro suivant dans la séquence de facturation.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success px-4 bg-gradient-success shadow-sm" id="confirmGenerateInvoice">
+                    <i class="ri-check-line me-1"></i> Générer la facture
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ============================================================== -->
 <!-- Start right Content here -->
 <!-- ============================================================== -->
@@ -5105,13 +5160,50 @@
             }
         }
 
-        // Imprimer la facture
+        // Ouvrir le modal de configuration de la facture
         $(document).on('click', '.print-facture-btn', function(e){
             e.preventDefault();
             var id = $(this).data('id');
-            alert("Fonctionnalité d'impression de facture - à implémenter pour le paiement ID: " + id);
-            // À implémenter : Logique d'impression de la facture
-        });   
+            $('#modalPaiementId').val(id);
+            var modal = new bootstrap.Modal(document.getElementById('invoiceConfigModal'));
+            modal.show();
+        });
+
+        $(document).on('click', '#confirmGenerateInvoice', function(){
+            var id = $('#modalPaiementId').val();
+            var tva = $('input[name="tvaRate"]:checked').val();
+            var btn = $(this);
+            
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Génération...');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGenerateInvoiceFromPayment' %}",
+                type: "POST",
+                data: {
+                    'paiement_id': id,
+                    'tva_percent': tva,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alertify.success(response.message);
+                        $('#invoiceConfigModal').modal('hide');
+                        if(response.facture_num) {
+                             setTimeout(() => {
+                                window.location.href = `/comptabilite/tresorerie/details-facture/${response.facture_num}/`;
+                             }, 1000);
+                        }
+                    } else {
+                        alertify.error(response.message || 'Erreur lors de la génération');
+                        btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i> Générer la facture');
+                    }
+                },
+                error: function() {
+                    alertify.error('Erreur réseau');
+                    btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i> Générer la facture');
+                }
+            });
+        });
         
         function checkForPaiements(){
             

@@ -26,7 +26,7 @@
     }
 
     .invoice-header-premium {
-        background: linear-gradient(135deg, #3b7ddd 0%, #326bc9 100%);
+        background: linear-gradient(135deg, #0ab39c 0%, #099885 100%); /* Greenish for treasury/compta */
         padding: 3rem;
         color: white;
     }
@@ -111,14 +111,14 @@
     .total-amount-display {
         font-size: 28px;
         font-weight: 900;
-        color: var(--primary-color);
+        color: #0ab39c;
     }
 
     @media print {
         .no-print { display: none !important; }
         .main-content { padding: 0 !important; background: white !important; }
         .invoice-card-premium { box-shadow: none !important; border: 1px solid #eee !important; }
-        .invoice-header-premium { background: #3b7ddd !important; -webkit-print-color-adjust: exact; }
+        .invoice-header-premium { background: #0ab39c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 </style>
 
@@ -128,29 +128,15 @@
             <!-- Top Actions -->
             <div class="row mb-4 no-print align-items-center">
                 <div class="col">
-                    <h5 class="mb-0 fw-bold text-dark">Détails de la Facture</h5>
+                    <h5 class="mb-0 fw-bold text-dark">Détails de la Facture (Comptabilité)</h5>
                 </div>
                 <div class="col-auto d-flex gap-2">
                     <a href="{% url 't_conseil:DownloadFacturePDF' facture.num_facture %}" class="btn btn-primary px-4 shadow">
                         <i class="ri-file-pdf-line me-2"></i> Télécharger PDF
                     </a>
-                    {% if facture.etat == 'envoye' %}
-                    <button class="btn btn-warning px-4" id="btnRevertFacture">
-                        <i class="ri-refresh-line me-2"></i> Rendre en brouillon
-                    </button>
-                    {% endif %}
-                    
-                    {% if facture.etat == 'brouillon' %}
-                    <a href="{% url 't_conseil:configure-facture' facture.num_facture %}" class="btn btn-outline-secondary px-4">
-                        <i class="ri-edit-line me-2"></i> Modifier
+                    <a href="{% url 't_tresorerie:PageFacturation' %}" class="btn btn-light px-4">
+                        <i class="ri-arrow-left-line me-2"></i> Retour à la liste
                     </a>
-                    {% endif %}
-
-                    {% if facture.etat != 'brouillon' and facture.etat != 'annule' and facture.etat != 'paye' %}
-                    <button class="btn btn-success px-4" onclick="openPaymentModal()">
-                        <i class="ri-hand-coin-line me-2"></i> Saisir Paiement
-                    </button>
-                    {% endif %}
                 </div>
             </div>
 
@@ -160,12 +146,9 @@
                         <!-- Header Section -->
                         <div class="invoice-header-premium d-flex justify-content-between align-items-start">
                             <div>
-                                <span class="premium-badge mb-3 d-inline-block">Facture Client</span>
+                                <span class="premium-badge mb-3 d-inline-block">Facture Comptabilité</span>
                                 <h1 class="text-white fw-bold mb-1 display-5">FACTURE #{{ facture.num_facture }}</h1>
                                 <p class="mb-0 opacity-75 fw-medium">Émise le {{ facture.date_emission|date:"d F Y" }}</p>
-                                {% if facture.devis_source %}
-                                <p class="mb-0 opacity-75 fw-medium mt-1"><i class="ri-file-list-3-line me-1"></i>Ref. Devis: {{ facture.devis_source.num_devis }}</p>
-                                {% endif %}
                             </div>
                             <div class="text-end">
                                 {% if tenant.logo %}
@@ -173,7 +156,7 @@
                                 {% else %}
                                     <h2 class="text-white fw-bold mb-3">{{ tenant.nom|default:"SALDAE" }}</h2>
                                 {% endif %}
-                                <div class="badge bg-white text-primary px-3 py-2 rounded-pill fw-bold">
+                                <div class="badge bg-white text-success px-3 py-2 rounded-pill fw-bold">
                                     {{ facture.get_etat_display|upper }}
                                 </div>
                             </div>
@@ -297,217 +280,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Payments History Section -->
-            <div class="row justify-content-center mt-4 no-print">
-                <div class="col-xl-10">
-                    <div class="card shadow-sm border-0" style="border-radius: 16px;">
-                        <div class="card-header bg-white border-bottom p-4">
-                            <h5 class="mb-0 fw-bold"><i class="ri-history-line me-2 text-primary"></i>Historique des Paiements</h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="ps-4">Date</th>
-                                            <th>Mode</th>
-                                            <th>Référence</th>
-                                            <th class="text-end pe-4">Montant</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="paymentsTableBody">
-                                        {% for p in facture.paiements.all %}
-                                        <tr>
-                                            <td class="ps-4">{{ p.date_paiement|date:"d/m/Y" }}</td>
-                                            <td>{{ p.get_mode_paiement_display }}</td>
-                                            <td>{{ p.reference|default:"-" }}</td>
-                                            <td class="text-end pe-4 fw-bold text-success">{{ p.montant|floatformat:2 }} DZA</td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr id="emptyPaymentsRow">
-                                            <td colspan="4" class="text-center py-4 text-muted">Aucun paiement enregistré pour le moment.</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
-
-<!-- Add Payment Modal -->
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title fw-bold"><i class="ri-add-circle-line me-2"></i>Saisir un Paiement</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="paymentForm">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Montant du Paiement (DZA)</label>
-                        <input type="number" step="0.01" class="form-control" id="payMontant" required>
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Date</label>
-                            <input type="date" class="form-control" id="payDate" value="{{ today|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Mode de Paiement</label>
-                            <select class="form-select" id="payMode" required>
-                                <option value="vir">Virement Bancaire</option>
-                                <option value="che">Chèque</option>
-                                <option value="esp">Espèces</option>
-                                <option value="autre">Autre</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Référence (N° Chèque, etc.)</label>
-                        <input type="text" class="form-control" id="payRef" placeholder="Optionnel">
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label small fw-bold">Note / Commentaire</label>
-                        <textarea class="form-control" id="payNote" rows="2" placeholder="Optionnel"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-success px-4" onclick="submitPayment()">Enregistrer le paiement</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Revert to Draft logic
-        const revertBtn = document.getElementById('btnRevertFacture');
-        if (revertBtn) {
-            revertBtn.addEventListener('click', function() {
-                alertify.confirm("Remettre en Brouillon", "Voulez-vous repasser cette facture en état de brouillon pour la modifier ?", 
-                function() {
-                    const formData = new FormData();
-                    formData.append('facture_id', "{{ facture.num_facture }}");
-                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                    fetch("{% url 't_conseil:ApiRevertFactureToDraft' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
-                    }).then(r => r.json()).then(d => {
-                        if(d.status === 'success') {
-                            alertify.success(d.message);
-                            setTimeout(() => {
-                                location.href = "{% url 't_conseil:configure-facture' facture.num_facture %}";
-                            }, 800);
-                        } else {
-                            alertify.error(d.message);
-                        }
-                    });
-                }, null).set('labels', {ok:'Confirmer', cancel:'Annuler'});
-            });
-        }
-    });
-
-    function openPaymentModal() {
-        // Calculate remaining balance roughly (can be refined)
-        const total = parseFloat("{{ facture.total_ttc }}".replace(',', '.'));
-        let paid = 0;
-        {% for p in facture.paiements.all %}
-            paid += parseFloat("{{ p.montant }}".replace(',', '.'));
-        {% endfor %}
-        
-        const remaining = total - paid;
-        document.getElementById('payMontant').value = remaining > 0 ? remaining.toFixed(2) : 0;
-        document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
-        
-        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
-        modal.show();
-    }
-
-    function submitPayment() {
-        const montant = document.getElementById('payMontant').value;
-        const date = document.getElementById('payDate').value;
-        const mode = document.getElementById('payMode').value;
-        const ref = document.getElementById('payRef').value;
-        const note = document.getElementById('payNote').value;
-
-        if(!montant || montant <= 0) {
-            alertify.error("Veuillez saisir un montant valide.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('facture_id', "{{ facture.num_facture }}");
-        formData.append('montant', montant);
-        formData.append('date_paiement', date);
-        formData.append('mode_paiement', mode);
-        formData.append('reference', ref);
-        formData.append('note', note);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch("{% url 't_conseil:ApiAddPaiement' %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.status === 'success') {
-                alertify.success(data.message);
-                
-                // Update Badge in UI
-                const badge = document.querySelector('.badge.bg-white.text-primary');
-                if(badge) badge.textContent = data.new_status.toUpperCase();
-                
-                // Add to table
-                const tableBody = document.getElementById('paymentsTableBody');
-                const emptyRow = document.getElementById('emptyPaymentsRow');
-                if(emptyRow) emptyRow.remove();
-
-                const modeLabel = document.getElementById('payMode').options[document.getElementById('payMode').selectedIndex].text;
-                
-                const newRow = `
-                    <tr>
-                        <td class="ps-4">${date.split('-').reverse().join('/')}</td>
-                        <td>${modeLabel}</td>
-                        <td>${ref || '-'}</td>
-                        <td class="text-end pe-4 fw-bold text-success">${parseFloat(montant).toFixed(2)} DZA</td>
-                    </tr>
-                `;
-                tableBody.insertAdjacentHTML('afterbegin', newRow);
-
-                // Close modal
-                const modalEl = document.getElementById('paymentModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if(modal) modal.hide();
-
-                // If fully paid, hide the button?
-                // For simplicity, we can reload if partial payment logic gets too complex for status visibility, 
-                // but let's stick to dynamic for now.
-                if(data.new_status.toLowerCase() === 'payée') {
-                     const payBtn = document.querySelector('button[onclick="openPaymentModal()"]');
-                     if(payBtn) payBtn.remove();
-                }
-
-            } else {
-                alertify.error(data.message);
-            }
-        });
-    }
-</script>
 {% endblock %}

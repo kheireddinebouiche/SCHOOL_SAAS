@@ -12,8 +12,18 @@ def PageDepenses(request):
 
 @login_required(login_url="institut_app:ApiListeDepenses")
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at').order_by('-id')
+    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation').order_by('-id')
     return JsonResponse(list(liste), safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadEntites(request):
+    if request.method == "GET":
+        # Fetch all enterprises/entities
+        # You might want to filter this based on user permissions if necessary
+        entites = Entreprise.objects.all().values('id', 'designation', 'entite_afficher')
+        return JsonResponse(list(entites), safe=False)
+    else:
+        return JsonResponse({"status": "error", "message": "Method not allowed"})
 
 @login_required(login_url="institut_app:login")
 def PageNouvelleDepense(request):
@@ -166,9 +176,11 @@ def ApiGetDepenseDetails(request):
         data = {
             'id' : obj.id,
             'label' : obj.label,
-            'fournisseur' : obj.fournisseur.id,
-            'fournisseur_designation' : obj.fournisseur.designation,
-            'date' : obj.date,
+            'fournisseur' : obj.fournisseur.id if obj.fournisseur else None,
+            'fournisseur_designation' : obj.fournisseur.designation if obj.fournisseur else None,
+            'client_nom' : obj.client.nom if obj.client else None,
+            'client_prenom' : obj.client.prenom if obj.client else None,
+            'date' : obj.date_paiement,
             'category': obj.category.id if obj.category else None,
             'category_name': obj.category.name if obj.category else None,
             'category_parent_name': obj.category.parent.name if obj.category and obj.category.parent else None,
@@ -242,3 +254,27 @@ def ApiDeleteDepense(request):
         return JsonResponse({"status":"success"})
     else:
         return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiRecordExpensePayment(request):
+    if request.method == "POST":
+        try:
+            id = request.POST.get('id')
+            payment_date = request.POST.get('payment_date')
+            
+            if not id or not payment_date:
+                return JsonResponse({"status":"error", "message":"ID et date de paiement requis"})
+            
+            obj = Depenses.objects.get(id=id)
+            obj.date_paiement = payment_date
+            obj.etat = True  # Mark as validated when payment is recorded
+            obj.save()
+            
+            return JsonResponse({"status":"success", "message":"Paiement enregistré avec succès"})
+        except Depenses.DoesNotExist:
+            return JsonResponse({"status":"error", "message":"Dépense introuvable"})
+        except Exception as e:
+            return JsonResponse({"status":"error", "message":str(e)})
+    else:
+        return JsonResponse({"status":"error", "message":"Méthode non autorisée"})

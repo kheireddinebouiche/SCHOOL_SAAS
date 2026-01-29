@@ -10,10 +10,11 @@ from .f_views.depenses import *
 from .f_views.fournisseurs import *
 from .f_views.caisse import *
 from .f_views.plan_comptable import *
-from .f_views.facturation import *
+from .f_views import facturation
 from .f_views.produits import *
 from .f_views.imputation_comptable_specialite import *
 from .f_views.autre_paiement import *
+from .f_views.invoice_generation import *
 from .f_views.configure_penalite import *
 from .f_views.reporting_das import *
 from .f_views.type_depense import *
@@ -161,12 +162,14 @@ urlpatterns = [
     path('ApiUpdateDepense', ApiUpdateDepense, name="ApiUpdateDepense"),
     path('ApiValidateDepense', ApiValidateDepense, name="ApiValidateDepense"),
     path('ApiDeleteDepense', ApiDeleteDepense, name="ApiDeleteDepense"),
+    path('ApiRecordExpensePayment', ApiRecordExpensePayment, name="ApiRecordExpensePayment"),
     
     # Depenses Categories
     path('ApiLoadDepensesCategories', ApiLoadDepensesCategories, name="ApiLoadDepensesCategories"),
     path('ApiStoreDepenseCategory', ApiStoreDepenseCategory, name="ApiStoreDepenseCategory"),
     path('ApiUpdateDepenseCategory', ApiUpdateDepenseCategory, name="ApiUpdateDepenseCategory"),
     path('ApiDeleteDepenseCategory', ApiDeleteDepenseCategory, name="ApiDeleteDepenseCategory"),
+    path('ApiLoadEntites/', ApiLoadEntites, name='ApiLoadEntites'),
 
     path('ApiLoadPaiements',ApiLoadPaiements , name="ApiLoadPaiements"),
 
@@ -192,9 +195,9 @@ urlpatterns = [
 
 
     ##### Facturation 
-    path('facturation/liste/', PageFacturation, name="PageFacturation"),
-    path('ApiListeDesFactures', ApiListeDesFactures, name="ApiListeDesFactures"),
-
+    path('facturation/liste/', facturation.PageFacturation, name="PageFacturation"),
+    path('ApiListeDesFactures', facturation.ApiListeDesFactures, name="ApiListeDesFactures"),
+    path('details-facture/<str:pk>/', facturation.DetailsFactureTresorerie, name="DetailsFactureTresorerie"),
 
 
     path('categorie-produits/liste/', PageProduits, name="PageProduits"),
@@ -205,6 +208,7 @@ urlpatterns = [
     path('ApiCreerCategorieProduit', ApiCreerCategorieProduit, name="ApiCreerCategorieProduit"),
     path('ApiModifierCategorieProduit', ApiModifierCategorieProduit, name="ApiModifierCategorieProduit"),
     path('ApiSupprimerCategorieProduit', ApiSupprimerCategorieProduit, name="ApiSupprimerCategorieProduit"),
+    path('ApiGenerateInvoiceFromPayment', generate_invoice_from_payment, name="ApiGenerateInvoiceFromPayment"),
     path('ApiGetCategorieProduit/<int:pk>/', ApiGetCategorieProduit, name="ApiGetCategorieProduit"),
 
 

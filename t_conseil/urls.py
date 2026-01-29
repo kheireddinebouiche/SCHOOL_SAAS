@@ -72,5 +72,7 @@ urlpatterns = [
   path('api/das/save/', ApiSaveDAS, name="ApiSaveDAS"),
   path('api/das/delete/', ApiDeleteDAS, name="ApiDeleteDAS"),
 
+  path('facture/pdf/<str:pk>/', DownloadFacturePDF, name="DownloadFacturePDF"),
+
   path('export/pipeline/', ExportPipelineCsv, name="ExportPipelineCsv"),
 ]

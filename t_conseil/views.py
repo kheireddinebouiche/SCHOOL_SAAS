@@ -3,11 +3,15 @@ from .forms import *
 from .models import *
 from t_tresorerie.models import PaymentCategory, OperationsBancaire
 from t_crm.models import Opportunite
+from django.template.loader import render_to_string
+from django.http import HttpResponse, JsonResponse
+from weasyprint import HTML
+import os
+from django.conf import settings
 from .utils import num_to_words_fr
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.utils import timezone
 from institut_app.decorators import ajax_required
 
@@ -351,6 +355,7 @@ def ApiStartTransformationDevisToFacture(request):
         show_tva=devis.show_tva,
         show_remise=devis.show_remise,
         etat='brouillon',
+        module_source='conseil',
         conditions_commerciales=devis.conditions_commerciales
     )
     
@@ -596,7 +601,7 @@ def ApiRevertDevisToDraft(request):
 
 @login_required(login_url="institut_app:login")
 def ListeDesFactures(request):
-    factures = Facture.objects.all().order_by('-created_at')
+    factures = Facture.objects.filter(module_source='conseil').order_by('-created_at')
     
     # Calculate stats
     stats = {
@@ -608,12 +613,17 @@ def ListeDesFactures(request):
     
     config, _ = ConseilConfiguration.objects.get_or_create(id=1)
     tvas = TvaConseil.objects.all().order_by('valeur')
+    
+    # Get all enterprises for tabs
+    enterprises = Entreprise.objects.all()
+
     context = {
         "tenant": request.tenant,
         "factures": factures,
         "stats": stats,
         "config": config,
         "tvas": tvas,
+        "enterprises": enterprises,
     }
     return render(request, 'tenant_folder/conseil/liste_des_factures.html', context)
 
@@ -1434,3 +1444,43 @@ def ApiDeleteDAS(request):
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
+@login_required(login_url="institut_app:login")
+def DownloadFacturePDF(request, pk):
+    try:
+        facture = get_object_or_404(Facture, num_facture=pk)
+        lignes = facture.lignes_facture.all()
+        
+        # Calculate totals
+        total_ht = sum(ligne.montant_ht for ligne in lignes)
+        total_tva = sum(ligne.montant_ht * (ligne.tva_percent / 100) for ligne in lignes)
+        total_ttc = total_ht + total_tva
+        
+        # Convert total to words
+        amount_in_words = num_to_words_fr(float(total_ttc))
+        
+        # Logo URL for WeasyPrint
+        logo_url = ""
+        if facture.entreprise and facture.entreprise.logo:
+            logo_url = request.build_absolute_uri(facture.entreprise.logo.url)
+            
+        context = {
+            'facture': facture,
+            'total_ht': total_ht,
+            'total_tva': total_tva,
+            'total_ttc': total_ttc,
+            'amount_in_words': amount_in_words,
+            'logo_url': logo_url,
+        }
+        
+        html_string = render_to_string('pdf/facture_pdf.html', context)
+        
+        # Create PDF
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        pdf = html.write_pdf()
+        
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Facture_{facture.num_facture}.pdf"'
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f"Erreur lors de la génération du PDF: {str(e)}", status=500)

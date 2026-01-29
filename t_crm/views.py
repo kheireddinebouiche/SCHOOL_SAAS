@@ -380,7 +380,9 @@ def InscriptionParticulier(request):
                 messages.success(request, "L'inscription du prospect est réussie")
                 return redirect('t_crm:ListeDesProspects')
         else:
-            messages.error(request, "Une erreur s'est produite lors de l'enregistrement du prospect")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field} : {error}")
 
     context = {
         'tenant' : request.tenant,
