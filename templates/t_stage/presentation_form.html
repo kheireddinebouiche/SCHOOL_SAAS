@@ -2,7 +2,73 @@
 {% load static %}
 
 {% block title %} Validation de Présentation {% endblock title %}
+{% block extra_css %}
+<style>
+    /* Custom Slider Track with Color Zones */
+    #tauxSlider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 10px;
+        border-radius: 5px;
+        background: #e9ebec;
+        outline: none;
+        margin: 10px 0;
+    }
 
+    #tauxSlider::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 10px;
+        cursor: pointer;
+        /* Distant segments: P1 (0-40), P2 (40-80), P3 (80-100) */
+        background: linear-gradient(to right, 
+            #405189 0%, #405189 39.5%, 
+            #fff 39.5%, #fff 40.5%, 
+            #f7b84b 40.5%, #f7b84b 79.5%, 
+            #fff 79.5%, #fff 80.5%, 
+            #0ab39c 80.5%, #0ab39c 100%);
+        border-radius: 5px;
+    }
+
+    #tauxSlider::-moz-range-track {
+        width: 100%;
+        height: 10px;
+        cursor: pointer;
+        background: linear-gradient(to right, 
+            #405189 0%, #405189 39.5%, 
+            #fff 39.5%, #fff 40.5%, 
+            #f7b84b 40.5%, #f7b84b 79.5%, 
+            #fff 79.5%, #fff 80.5%, 
+            #0ab39c 80.5%, #0ab39c 100%);
+        border-radius: 5px;
+    }
+
+    #tauxSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #405189; /* Dynamic color will be set via JS */
+        cursor: pointer;
+        margin-top: -6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        transition: border-color 0.3s ease;
+    }
+
+    #tauxSlider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #405189;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        transition: border-color 0.3s ease;
+    }
+</style>
+{% endblock extra_css %}
 {% block content %}
 <div class="main-content">
     <div class="page-content">
@@ -102,18 +168,16 @@
                                                 </div>
                                                 <div class="flex-shrink-0">
                                                     <div class="input-group input-group-sm" style="width: 100px;">
-                                                        <input type="number" class="form-control fw-bold text-center" id="tauxInput" name="taux_avancement_declare" value="30" min="0" max="100" required>
+                                                        <input type="number" class="form-control fw-bold text-center" id="tauxInput" name="taux_avancement_declare" value="{{ stage.taux_avancement }}" min="{{ stage.taux_avancement }}" max="100" required>
                                                         <span class="input-group-text">%</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <input type="range" class="form-range" id="tauxSlider" min="0" max="100" value="30">
-                                            <div class="d-flex justify-content-between fs-10 text-muted mt-1">
-                                                <span>0%</span>
-                                                <span>25%</span>
-                                                <span>50%</span>
-                                                <span>75%</span>
-                                                <span>100%</span>
+                                            <input type="range" class="form-range" id="tauxSlider" min="{{ stage.taux_avancement }}" max="100" value="{{ stage.taux_avancement }}">
+                                            <div class="d-flex fs-11 fw-bold mt-2 text-center text-uppercase">
+                                                <div style="width: 40%;" class="text-primary border-top border-primary border-2 pt-1">P1 (0-40%)</div>
+                                                <div style="width: 40%;" class="text-warning border-top border-warning border-2 pt-1">P2 (40-80%)</div>
+                                                <div style="width: 20%;" class="text-success border-top border-success border-2 pt-1">P3 (80-100%)</div>
                                             </div>
                                         </div>
                                     </div>
@@ -194,7 +258,7 @@
                     </div>
                     
                     <!-- Progress Card -->
-                     <div class="card bg-primary">
+                     <div class="card bg-primary mb-3">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
@@ -207,6 +271,39 @@
                         </div>
                     </div>
 
+                    <!-- Work Sessions History -->
+                    <div class="card">
+                        <div class="card-header align-items-center d-flex">
+                            <h4 class="card-title mb-0 flex-grow-1">Séances de Travail</h4>
+                        </div>
+                        <div class="card-body">
+                            {% if sessions %}
+                                <div class="acitivity-timeline acitivity-main">
+                                    {% for seance in sessions %}
+                                    <div class="acitivity-item d-flex mb-3">
+                                        <div class="flex-shrink-0 avatar-xs acitivity-avatar">
+                                            <div class="avatar-title rounded-circle bg-info-subtle text-info">
+                                                <i class="ri-calendar-event-line"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1 lh-base">{{ seance.date_seance|date:"d M Y" }} <small class="text-muted">{{ seance.date_seance|date:"H:i" }}</small></h6>
+                                            <p class="text-muted mb-1">{{ seance.compte_rendu|truncatechars:100 }}</p>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-light text-secondary">{{ seance.duree_heures }} h</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <p class="text-muted mb-0">Aucune séance enregistrée pour ce stage.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -215,21 +312,60 @@
 </div>
 
 <script>
-    // Elements
     const slider = document.getElementById('tauxSlider');
     const input = document.getElementById('tauxInput');
     const rangeSuggestion = document.getElementById('rangeSuggestion');
 
+    function updateColors(val) {
+        let color = "#405189"; // Primary/P1
+        let step = 1;
+
+        if (val > 40 && val <= 80) {
+            color = "#f7b84b"; // Warning/P2
+            step = 2;
+        } else if (val > 80) {
+            color = "#0ab39c"; // Success/P3
+            step = 3;
+        }
+
+        // Update Slider Thumb Color (using a style injection or variable)
+        slider.style.setProperty('--thumb-color', color);
+        // We can't easily target pseudo-elements with inline style, so we use a style tag update or just class
+        let styleTag = document.getElementById('dynamic-slider-style');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'dynamic-slider-style';
+            document.head.appendChild(styleTag);
+        }
+        styleTag.innerHTML = `
+            #tauxSlider::-webkit-slider-thumb { border-color: ${color} !important; }
+            #tauxSlider::-moz-range-thumb { border-color: ${color} !important; }
+            #tauxInput { border-color: ${color} !important; color: ${color} !important; }
+        `;
+
+        // Sync with Radio Buttons
+        const radio = document.getElementById('etape' + step);
+        if (radio && !radio.checked) {
+            radio.checked = true;
+            updateStepInfo(step);
+        }
+    }
+
     // Sync Slider and Input
     slider.addEventListener('input', function() {
         input.value = this.value;
+        updateColors(this.value);
     });
 
     input.addEventListener('input', function() {
         if(this.value > 100) this.value = 100;
-        if(this.value < 0) this.value = 0;
+        if(this.value < {{ stage.taux_avancement }}) this.value = {{ stage.taux_avancement }};
         slider.value = this.value;
+        updateColors(this.value);
     });
+
+    // Initial color setup
+    updateColors(slider.value);
 
     // Update suggestions based on Step
     function updateStepInfo(step) {

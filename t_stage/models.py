@@ -62,6 +62,7 @@ class SeanceFocusGroup(models.Model):
     date_seance = models.DateTimeField()
     duree_heures = models.DecimalField(max_digits=4, decimal_places=2, default=3.0, help_text="Durée en heures (ex: 3.5)")
     compte_rendu = models.TextField(null=True, blank=True)
+    stages = models.ManyToManyField(Stage, related_name='seances_discussion', blank=True)
     
     class Meta:
         verbose_name = "Séance Focus Group"

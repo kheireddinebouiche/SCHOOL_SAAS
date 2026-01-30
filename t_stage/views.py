@@ -54,10 +54,11 @@ def progressive_presentation_form(request, stage_id):
             }
         )
         
-        # Mise à jour de l'avancement global du stage
-        if taux > stage.taux_avancement:
-            stage.taux_avancement = taux
-            stage.save()
+        # Mise à jour de l'avancement global du stage basé sur le maximum des présentations
+        from django.db.models import Max
+        max_taux = stage.presentations.aggregate(Max('taux_avancement_declare'))['taux_avancement_declare__max'] or 0
+        stage.taux_avancement = max_taux
+        stage.save()
             
         return redirect('t_stage:presentation_form', stage_id=stage.id)
     
@@ -65,19 +66,37 @@ def progressive_presentation_form(request, stage_id):
     presentations = PresentationProgressive.objects.filter(stage=stage).order_by('etape')
     completed_steps = presentations.values_list('etape', flat=True)
 
+    # Autocorrection de l'avancement global si incohérent
+    from django.db.models import Max
+    actual_max = presentations.aggregate(Max('taux_avancement_declare'))['taux_avancement_declare__max'] or 0
+    if stage.taux_avancement != actual_max:
+        stage.taux_avancement = actual_max
+        stage.save()
+
+    # Get session history for this stage
+    sessions = stage.seances_discussion.all().order_by('-date_seance')
+
     return render(request, 't_stage/presentation_form.html', {
         'stage': stage, 
         'presentations': presentations,
-        'completed_steps': completed_steps
+        'completed_steps': completed_steps,
+        'sessions': sessions
     })
 
 @login_required
 def delete_presentation(request, pk):
     """Suppression d'une présentation progressive."""
     presentation = get_object_or_404(PresentationProgressive, pk=pk)
-    stage_id = presentation.stage.id
+    stage = presentation.stage
     presentation.delete()
-    return redirect('t_stage:presentation_form', stage_id=stage_id)
+    
+    # Recalculer l'avancement global
+    from django.db.models import Max
+    max_taux = stage.presentations.aggregate(Max('taux_avancement_declare'))['taux_avancement_declare__max'] or 0
+    stage.taux_avancement = max_taux
+    stage.save()
+    
+    return redirect('t_stage:presentation_form', stage_id=stage.id)
 
 @login_required
 def validation_council(request):
@@ -276,13 +295,17 @@ def add_seance(request, fg_id):
         date_seance = request.POST.get('date_seance')
         duree = request.POST.get('duree')
         compte_rendu = request.POST.get('compte_rendu')
+        stages_ids = request.POST.getlist('stages')
         
-        SeanceFocusGroup.objects.create(
+        seance = SeanceFocusGroup.objects.create(
             focus_group=fg,
             date_seance=date_seance,
             duree_heures=duree,
             compte_rendu=compte_rendu
         )
+        if stages_ids:
+            seance.stages.set(stages_ids)
+            
         return redirect('t_stage:focus_group_detail', pk=fg.pk)
     
     return render(request, 't_stage/seance_form.html', {'focus_group': fg})
