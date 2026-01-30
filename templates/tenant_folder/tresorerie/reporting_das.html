@@ -132,28 +132,34 @@
                                  </div>
                               </td>
                               <td class="text-center">
-                                {% if item.stats.student_total > 0 %}
-                                  <span class="text-dark">{{ item.stats.student_total|floatformat:0 }} DA</span>
+                                {% if item.stats.student_total != 0 %}
+                                  <span class="{% if item.stats.student_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                    {{ item.stats.student_total|floatformat:0 }} DA
+                                  </span>
                                 {% else %}
                                   <span class="text-muted">-</span>
                                 {% endif %}
                               </td>
                               <td class="text-center">
-                                {% if item.stats.consulting_total > 0 %}
-                                  <span class="text-dark">{{ item.stats.consulting_total|floatformat:0 }} DA</span>
+                                {% if item.stats.consulting_total != 0 %}
+                                  <span class="{% if item.stats.consulting_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                    {{ item.stats.consulting_total|floatformat:0 }} DA
+                                  </span>
                                 {% else %}
                                   <span class="text-muted">-</span>
                                 {% endif %}
                               </td>
                               <td class="text-center">
-                                {% if item.stats.other_total > 0 %}
-                                  <span class="text-dark">{{ item.stats.other_total|floatformat:0 }} DA</span>
+                                {% if item.stats.other_total != 0 %}
+                                  <span class="{% if item.stats.other_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                    {{ item.stats.other_total|floatformat:0 }} DA
+                                  </span>
                                 {% else %}
                                   <span class="text-muted">-</span>
                                 {% endif %}
                               </td>
                               <td class="text-end pe-4">
-                                <span class="fw-bold {% if item.is_root %}text-primary{% endif %}">
+                                <span class="fw-bold {% if item.stats.grand_total < 0 %}text-danger{% elif item.is_root %}text-primary{% else %}text-dark{% endif %}">
                                    {{ item.stats.grand_total|floatformat:0 }} DA
                                 </span>
                               </td>
@@ -268,6 +274,8 @@
             const amount = parseFloat(item.total) || 0;
             total += amount;
             
+            const isNegative = amount < 0;
+            
             // Format Currency
             const formattedAmount = new Intl.NumberFormat('fr-DZ', { 
                 minimumFractionDigits: 2,
@@ -277,13 +285,14 @@
             let typeBadge = '';
             if (item.type === 'Etudiant') typeBadge = '<span class="badge bg-soft-primary text-primary">Étudiant</span>';
             else if (item.type === 'Conseil') typeBadge = '<span class="badge bg-soft-success text-success">Conseil</span>';
+            else if (item.type === 'Depense') typeBadge = '<span class="badge bg-soft-danger text-danger">Dépense</span>';
             else typeBadge = '<span class="badge bg-light text-dark border">Autre</span>';
 
             modalBody.innerHTML += `
                 <tr>
                     <td class="ps-4">${item.label}</td>
                     <td class="text-center">${typeBadge}</td>
-                    <td class="text-end pe-4 font-monospace">${formattedAmount}</td>
+                    <td class="text-end pe-4 font-monospace ${isNegative ? 'text-danger fw-bold' : ''}">${formattedAmount}</td>
                 </tr>
             `;
         });

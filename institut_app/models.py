@@ -169,6 +169,8 @@ class Fournisseur(models.Model):
     code_banque = models.CharField(max_length=100, null=True, blank=True)
     observation = models.TextField(null=True, blank=True)
 
+    payment_category = models.ForeignKey('t_tresorerie.PaymentCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='fournisseurs')
+
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
     

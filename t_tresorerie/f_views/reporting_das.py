@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
-from ..models import PaymentCategory, Paiements, AutreProduit, SpecialiteCompte
+from ..models import PaymentCategory, Paiements, AutreProduit, SpecialiteCompte, Depenses, DepensesCategory
 from django.apps import apps
 import datetime
 
@@ -145,17 +145,54 @@ def ReportingDAS(request):
              ).filter(date_paiement__gte=start_date, date_paiement__lte=end_date)
              rachat_total = rachat_qs.aggregate(t=Sum('montant_paye'))['t'] or 0
 
+        # 5. Expense Deductions (Deduction of client-linked expenses only)
+        # We only deduct expenses linked to a client (student) from the Formation column
+        client_specialties_qs = SpecialiteCompte.objects.filter(compte_id__in=cat_ids).values_list('specialite_id', flat=True)
+        exp_client_qs = Depenses.objects.filter(
+            client__prospect_fiche_voeux__specialite_id__in=client_specialties_qs,
+            client__prospect_fiche_voeux__is_confirmed=True,
+            entite=ent,
+            date_paiement__gte=start_date,
+            date_paiement__lte=end_date,
+            date_paiement__isnull=False,
+            etat=True
+        )
+        
+        # Also include double diplomation client expenses if applicable
+        exp_client_dbl_qs = Depenses.objects.filter(
+            client__prospect_fiche_voeux_double__specialite_id__in=client_specialties_qs,
+            client__prospect_fiche_voeux_double__is_confirmed=True,
+            entite=ent,
+            date_paiement__gte=start_date,
+            date_paiement__lte=end_date,
+            date_paiement__isnull=False,
+            etat=True
+        )
+
+        # Unique IDs to avoid double counting if a student matches both (unlikely but safe)
+        all_client_exp_ids = set()
+        if exp_client_qs.exists(): all_client_exp_ids.update(exp_client_qs.values_list('id', flat=True))
+        if exp_client_dbl_qs.exists(): all_client_exp_ids.update(exp_client_dbl_qs.values_list('id', flat=True))
+        
+        expense_total = 0
+        if all_client_exp_ids:
+            exp_qs = Depenses.objects.filter(id__in=all_client_exp_ids)
+            expense_total = float(exp_qs.aggregate(total=Sum('montant_ttc'))['total'] or exp_qs.aggregate(total=Sum('montant_ht'))['total'] or 0)
+
+        # Deduct ONLY from student_total (Formation column)
+        student_total = float(student_total) - expense_total
+        
         grand_total = float(student_total) + float(consulting_total) + float(other_total) + float(rachat_total)
 
-        
-        # Merge Rachat into Other Products Total for Display (as requested by user correction)
+        # Merge Rachat into Other Products Total for Display
         other_total = float(other_total) + float(rachat_total)
 
         return {
             'student_total': student_total,
             'consulting_total': consulting_total,
             'other_total': other_total,
-            'rachat_total': rachat_total, # Kept for reference
+            'rachat_total': rachat_total, 
+            'expense_total': expense_total,
             'grand_total': grand_total
         }
 
@@ -333,6 +370,35 @@ def ReportingDAS(request):
                     'total': g['total'],
                     'type': 'Autre'
                 })
+
+        # 4. Student Expense Details (Deductions)
+        # We only show expenses linked to students
+        client_specialties_qs = SpecialiteCompte.objects.filter(compte_id=cat_id).values_list('specialite_id', flat=True)
+        if client_specialties_qs:
+            # Fiche Voeux
+            exp_client_qs = Depenses.objects.filter(
+                client__prospect_fiche_voeux__specialite_id__in=client_specialties_qs,
+                client__prospect_fiche_voeux__is_confirmed=True,
+                entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date,
+                date_paiement__isnull=False, etat=True
+            )
+            for e in exp_client_qs:
+                amount = e.montant_ttc or e.montant_ht or 0
+                label = f"Dépense Étudiant: {e.client.nom if e.client else '-'} ({e.label or 'sans label'})"
+                details.append({'label': label, 'total': -float(amount), 'type': 'Depense'})
+
+            # Fiche Voeux Double
+            exp_client_dbl_qs = Depenses.objects.filter(
+                client__prospect_fiche_voeux_double__specialite_id__in=client_specialties_qs,
+                client__prospect_fiche_voeux_double__is_confirmed=True,
+                entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date,
+                date_paiement__isnull=False, etat=True
+            ).exclude(id__in=exp_client_qs.values_list('id', flat=True))
+            
+            for e in exp_client_dbl_qs:
+                amount = e.montant_ttc or e.montant_ht or 0
+                label = f"Dépense Étudiant (Double): {e.client.nom if e.client else '-'} ({e.label or 'sans label'})"
+                details.append({'label': label, 'total': -float(amount), 'type': 'Depense'})
 
         return details
 

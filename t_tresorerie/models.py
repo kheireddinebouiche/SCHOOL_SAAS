@@ -353,6 +353,7 @@ class DepensesCategory(models.Model):
         blank=True,
         related_name="children",
     )
+    payment_category = models.ForeignKey('PaymentCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='depense_categories')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
