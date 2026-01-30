@@ -16,36 +16,64 @@ from django.utils.timezone import now
 @login_required(login_url="institut_app:login")
 def ApiLoadConvertedProspects(request):
 
-    clients = Prospets.objects.filter(statut="convertit").values('id', 'nom', 'prenom', 'email', 'telephone','is_double').annotate(
-        total_paye=Sum('paiements__montant_paye',filter=Q(paiements__context="frais_f"))
+    # Total payé par étudiant (tous contextes confondus, hors remboursements)
+    clients = Prospets.objects.filter(statut="convertit").values('id', 'nom', 'prenom', 'email', 'telephone', 'is_double').annotate(
+        total_paye=Sum('paiements__montant_paye', filter=Q(paiements__is_refund=False))
     )
 
-    promos = (Promos.objects.filter(etat="active").annotate(
-            total_inscrit=Count('promo_fiche_voeux',filter=Q(promo_fiche_voeux__is_confirmed=True) & Q(promo_fiche_voeux__prospect__statut="convertit")) ,
-            
-            montant_total=Sum('promo_fiche_voeux__specialite__formation__prix_formation',filter=Q(promo_fiche_voeux__is_confirmed=True, promo_fiche_voeux__prospect__statut="convertit"))
-            
-        ).values('id','code','date_debut','date_fin','begin_year','end_year','session','total_inscrit','montant_total')
-    )
+    promos = list(Promos.objects.filter(etat="active").values('id', 'code', 'date_debut', 'date_fin', 'begin_year', 'end_year', 'session'))
 
     for promo in promos:
-        total_paye = Paiements.objects.filter(promo_id=promo['id'],context="frais_f").filter(Q(prospect__statut="convertit") | Q(prospect__statut="annuler")).aggregate(total=Sum('montant_paye'))['total'] or 0
+        # Total à payer : Somme des montants dûs de tous les étudiants convertis de la promo
+        promo['montant_total'] = DuePaiements.objects.filter(
+            promo_id=promo['id'],
+            client__statut="convertit",
+            is_annulated=False
+        ).aggregate(total=Sum('montant_due'))['total'] or 0
+
+        # Total payé : Somme de tous les paiements (hors remboursements) 
+        # On inclut les paiements directement liés à la promo OU liés via DuePaiements de la promo
+        payments_qs = Paiements.objects.filter(is_refund=False).filter(
+            Q(promo_id=promo['id']) | Q(due_paiements__promo_id=promo['id'])
+        ).filter(
+            Q(prospect__statut="convertit") | Q(prospect__statut="annuler")
+        ).distinct()
+        
+        total_paye = payments_qs.aggregate(total=Sum('montant_paye'))['total'] or 0
 
         # Total remboursé pour cette promo
-        try:
-            val = PromoRembourssement.objects.get(promo_id=promo['id'])
-            total_rembourse = val.montant
-        except:
-            total_rembourse = 0
+        total_rembourse = PromoRembourssement.objects.filter(promo_id=promo['id']).aggregate(total=Sum('montant'))['total'] or 0
 
         # Montant payé effectif après remboursement
-        promo['montant_paye'] = total_paye - total_rembourse
+        promo['montant_paye'] = float(total_paye) - float(total_rembourse)
 
         # Autres calculs
-        promo['montant_rembouser'] = total_rembourse
-        promo['montant_echus'] = DuePaiements.objects.filter(is_done=False,promo_id=promo['id'],client__statut="convertit",date_echeance__lt=now().date()).aggregate(total=Sum('montant_restant'))['total'] or 0
-        promo['montant_restant'] = DuePaiements.objects.filter( is_done=False,promo_id=promo['id'],client__statut="convertit").aggregate(total=Sum('montant_restant'))['total'] or 0
-        promo['nombre_paiement'] = Paiements.objects.filter(promo_id=promo['id'], is_refund=False).count()
+        promo['montant_rembouser'] = float(total_rembourse)
+        
+        # Échus : Montant restant des échéances dépassées non payées (is_done=False)
+        promo['montant_echu'] = DuePaiements.objects.filter(
+            is_done=False,
+            is_annulated=False,
+            promo_id=promo['id'],
+            client__statut="convertit",
+            date_echeance__lt=now().date()
+        ).aggregate(total=Sum('montant_restant'))['total'] or 0
+
+        # Reste à payer : Total des montants restants (futurs + échus)
+        promo['montant_restant'] = DuePaiements.objects.filter(
+            is_done=False,
+            is_annulated=False,
+            promo_id=promo['id'],
+            client__statut="convertit"
+        ).aggregate(total=Sum('montant_restant'))['total'] or 0
+
+        promo['nombre_paiement'] = payments_qs.count()
+        
+        # Nombre d'inscrits convertis
+        promo['total_inscrit'] = Prospets.objects.filter(
+            statut="convertit",
+            duepaiements__promo_id=promo['id']
+        ).distinct().count() or FicheDeVoeux.objects.filter(promo_id=promo['id'], is_confirmed=True, prospect__statut="convertit").count()
 
     data = {
         'clients': list(clients),
@@ -69,8 +97,8 @@ def ApiStats(request):
     data = {
         'nombre_inscrit': nombre_inscrit,
         'nombre_paiement': nombre_paiement,
-        'montant_echu': montant_echu,
-        'paiement_attente': paiement_attente,
+        'montant_echu': montant_echu,  # Correctly labeled for overdue
+        'paiement_attente': paiement_attente,  # Correctly labeled for all pending
     }
 
     return JsonResponse({"data": data})
@@ -176,13 +204,20 @@ def ApiGetClientEcheancier(request):
 
         echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
 
-        groupe = GroupeLine.objects.filter(student_id = id_client).first()
-        
-        groupe_data = {
-            'id' : groupe.groupe.id,
-            'nom' : groupe.groupe.nom,
-            'semestre' : groupe.groupe.semestre,
-        }
+        try:
+            groupe = GroupeLine.objects.filter(student_id = id_client).first()
+            
+            groupe_data = {
+                'id' : groupe.groupe.id,
+                'nom' : groupe.groupe.nom,
+                'semestre' : groupe.groupe.semestre,
+            }
+        except:
+            groupe_data = {
+                'id' : None,
+                'nom' : None,
+                'semestre' : None,
+            }
 
         special_echeancier_data = []
         has_special_echeancier = False
@@ -199,7 +234,7 @@ def ApiGetClientEcheancier(request):
 
         if due_paiement.count() > 0:
             has_due_paiement = True
-            total_initial = DuePaiements.objects.filter(client = obj).aggregate(total=Sum('montant_due'))['total'] or 0
+            total_initial = DuePaiements.objects.filter(client = obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0
             for i in due_paiement:
                 due_paiement_data.append({
                     'id_due_paiement' : i.id,
@@ -405,7 +440,7 @@ def ApiGetClientEcheancierDouble(request):
 
         if due_paiement.count() > 0:
             has_due_paiement = True
-            total_initial = DuePaiements.objects.filter(client = obj).aggregate(total=Sum('montant_due'))['total'] or 0
+            total_initial = DuePaiements.objects.filter(client = obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0
             for i in due_paiement:
                 due_paiement_data.append({
                     'id_due_paiement' : i.id,
@@ -585,7 +620,16 @@ def ApiSaveRefundOperation(request):
         if not entite_select:
             return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
 
-        promo = FicheDeVoeux.objects.filter(prospect__id = id_client, is_confirmed=True).last()
+        prospect = Prospets.objects.get(id=id_client)
+        if prospect.is_double:
+            promo = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
+        else:
+            promo = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).last()
+
+        if not promo:
+            return JsonResponse({"status":"error",'message':"Promotion non trouvée pour ce client"})
+
+        print(f"DEBUG REFUND: id_client={id_client}, fiche_id={promo.id}, promo_id={promo.promo_id}")
 
         obj_refund = Rembourssements.objects.get(id = id_refund)
         obj_refund.entite = Entreprise.objects.get(id = entite_select)
@@ -613,12 +657,13 @@ def ApiSaveRefundOperation(request):
             entite_id = entite_select,
         )
 
-        PromoRembourssement.objects.update_or_create(
-            promo_id = promo.id,
-            defaults={
-                "montant" : amount
-            }
-        )
+        # Update or create cumulative refund for the promo
+        promo_refund, created = PromoRembourssement.objects.get_or_create(promo_id=promo.promo_id)
+        if created:
+            promo_refund.montant = Decimal(amount)
+        else:
+            promo_refund.montant = Decimal(promo_refund.montant or 0) + Decimal(amount)
+        promo_refund.save()
 
         depense.save()
 
