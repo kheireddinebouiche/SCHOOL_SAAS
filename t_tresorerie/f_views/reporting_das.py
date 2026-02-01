@@ -34,9 +34,31 @@ def ReportingDAS(request):
                 ids.extend(get_descendant_ids(child.id))
         return ids
 
+    # --- DepensesCategory Setup ---
+    all_dep_categories = list(DepensesCategory.objects.all())
+    dep_cat_map = {c.id: c for c in all_dep_categories}
+    dep_children_map = {c.id: [] for c in all_dep_categories}
+    for c in all_dep_categories:
+        if c.parent_id and c.parent_id in dep_children_map:
+            dep_children_map[c.parent_id].append(c)
+
+    def get_dep_descendant_ids(cat_id):
+        ids = [cat_id]
+        if cat_id in dep_children_map:
+            for child in dep_children_map[cat_id]:
+                ids.extend(get_dep_descendant_ids(child.id))
+        return ids
+
+    dep_root_categories = [c for c in all_dep_categories if c.parent is None]
+    dep_root_categories.sort(key=lambda x: x.name)
+    # ------------------------------
+
+    entites = Entreprise.objects.all().order_by('designation')
+    
     entites = Entreprise.objects.all().order_by('designation')
     
     report_data_by_entity = []
+    grand_total_expenses_all = 0
     
     # Try to get the DASMapping and Paiement models from t_conseil dynamically
     try:
@@ -402,6 +424,41 @@ def ReportingDAS(request):
 
         return details
 
+    def _get_expense_stats(cat_ids, ent):
+        """Helper to calculate total expense for list of categories."""
+        qs = Depenses.objects.filter(
+            category_id__in=cat_ids,
+            entite=ent,
+            date_paiement__gte=start_date,
+            date_paiement__lte=end_date,
+            etat=True
+        )
+        # Using montant_ttc as primary
+        t = qs.aggregate(t=Sum('montant_ttc'))['t']
+        if t is None:
+             t = qs.aggregate(t=Sum('montant_ht'))['t'] or 0
+        return float(t)
+
+    def _get_expense_details(cat_id, ent):
+         """Helper for Direct expense details."""
+         qs = Depenses.objects.filter(
+            category_id=cat_id,
+            entite=ent,
+            date_paiement__gte=start_date,
+            date_paiement__lte=end_date,
+            etat=True
+         ).values('label').annotate(total=Sum('montant_ttc')).order_by('-total')
+         
+         details = []
+         for g in qs:
+             if g['total'] and g['total'] > 0:
+                 details.append({
+                     'label': g['label'] or "Sans Label",
+                     'total': float(g['total']),
+                     'type': 'Depense'
+                 })
+         return details
+
     for ent in entites:
         entity_report_data = [] 
         entity_total_sum = 0
@@ -452,18 +509,52 @@ def ReportingDAS(request):
         # Calculate Entity Total from Roots only to avoid double counting
         entity_total_sum = sum(item['stats']['grand_total'] for item in entity_report_data if item['level'] == 0)
 
-        if entity_report_data:
+        # Merged below with expenses
+
+        # --- Process Expenses for this Entity ---
+        entity_expenses_data = []
+        
+        def _process_expense_recursive(category, level, ent):
+            desc_ids = get_dep_descendant_ids(category.id)
+            stats_total = _get_expense_stats(desc_ids, ent)
+            details = _get_expense_details(category.id, ent)
+            
+            entity_expenses_data.append({
+                'category': category,
+                'total': stats_total,
+                'details': details,
+                'level': level,
+                'is_root': level == 0,
+                'is_parent': bool(dep_children_map.get(category.id))
+            })
+            
+            children = dep_children_map.get(category.id, [])
+            children.sort(key=lambda x: x.name)
+            
+            for child in children:
+                _process_expense_recursive(child, level + 1, ent)
+        
+        for root in dep_root_categories:
+            _process_expense_recursive(root, 0, ent)
+            
+        entity_expenses_total = sum(item['total'] for item in entity_expenses_data if item['level'] == 0)
+        grand_total_expenses_all += entity_expenses_total
+
+        # Append Composite Object
+        if entity_report_data or entity_expenses_data:
             report_data_by_entity.append({
                 'entity': ent,
-                'data': entity_report_data,
-                'total': entity_total_sum
+                'data': entity_report_data, # Revenue Data
+                'total': entity_total_sum,
+                'expenses_data': entity_expenses_data, # Expense Data
+                'expenses_total': entity_expenses_total
             })
-            grand_total_all += entity_total_sum
     
     context = {
         'tenant': request.tenant,
         'report_data_by_entity': report_data_by_entity,
         'total_all': grand_total_all,
+        'total_expenses_all': grand_total_expenses_all,
         'selected_year': selected_year,
         'available_years': range(2023, default_year + 2) # Example range, customize as needed
     }

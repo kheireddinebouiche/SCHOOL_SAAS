@@ -44,7 +44,7 @@ SHARED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'django.contrib.sessions',
-    
+    'associe_app',
 ]
 
 TENANT_APPS = [

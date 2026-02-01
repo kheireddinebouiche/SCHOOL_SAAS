@@ -144,6 +144,13 @@ def login_view(request):
         if user is not None:
             login(request, user)
             messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
+            if 'next' in request.POST:
+                return redirect(request.POST.get('next'))
+            elif 'next' in request.GET:
+                return redirect(request.GET.get('next'))
+            
+            if request.tenant.schema_name == 'public':
+                return redirect('configuration_index')
             return redirect('index') 
         else:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")

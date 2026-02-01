@@ -1,0 +1,302 @@
+{% extends 'public_folder/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Header & Selector Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0">
+                        <div class="card-body p-4 bg-white d-sm-flex align-items-center justify-content-between">
+                            <div>
+                                <h4 class="mb-1 text-primary fw-bold"><i class="ri-dashboard-3-line me-2"></i>Tableau de Bord CRM Avancé</h4>
+                                <p class="text-muted mb-0">Visualisation dynamique des prospects et opportunités</p>
+                            </div>
+                            <div class="mt-3 mt-sm-0" style="min-width: 300px;">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-building-line text-primary"></i></span>
+                                    <select class="form-select border-0 bg-light fw-medium" id="instituteSelector" onchange="loadInstituteStats(this.value)">
+                                        <option value="global" selected>Vue Globale (Tous les Instituts)</option>
+                                        {% for tenant in tenants %}
+                                        <option value="{{ tenant.id }}">{{ tenant.nom }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content Container (will be replaced or updated) -->
+            <div id="dashboardContent">
+                <!-- KPI Cards (Global initially) -->
+                <div class="row g-4 mb-4" id="kpiContainer">
+                    <!-- Cards will be dynamically injected here for better consistency, but we render global first -->
+                    <div class="col-md-3">
+                        <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-start border-4 border-primary">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-sm bg-soft-primary text-primary rounded-circle me-3">
+                                    <i class="ri-user-follow-line fs-20"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-0">Total Prospects</h6>
+                            </div>
+                            <h2 class="fw-bold mb-0" id="totalProspects">{{ global_stats.total_prospects }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-start border-4 border-warning">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-sm bg-soft-warning text-warning rounded-circle me-3">
+                                    <i class="ri-timer-2-line fs-20"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-0">En Instance</h6>
+                            </div>
+                            <h2 class="fw-bold mb-0" id="instancePaiement">{{ global_stats.status_counts.instance }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-start border-4 border-success">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-sm bg-soft-success text-success rounded-circle me-3">
+                                    <i class="ri-briefcase-line fs-20"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-0">Opportunités</h6>
+                            </div>
+                            <h2 class="fw-bold mb-0" id="activeOpportunities">{{ global_stats.active_opportunities }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-start border-4 border-info">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-sm bg-soft-info text-info rounded-circle me-3">
+                                    <i class="ri-money-dollar-circle-line fs-20"></i>
+                                </div>
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-0">Budget Total</h6>
+                            </div>
+                            <h2 class="fw-bold mb-0 fs-20" id="totalBudget">{{ global_stats.total_budget|floatformat:2 }} <small class="fs-12">DZD</small></h2>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Distribution -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-8">
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <div class="card-header bg-white py-3 border-0 d-flex align-items-center justify-content-between">
+                                <h5 class="card-title mb-0 fw-bold"><i class="ri-bar-chart-2-line me-2 text-primary"></i>Statuts des Prospects</h5>
+                                <span class="badge bg-soft-primary text-primary" id="currentViewLabel">Vue Globale</span>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row g-4" id="statusGrid">
+                                    <!-- Status items injected here -->
+                                    {% for status, count in global_stats.status_counts.items %}
+                                    <div class="col-md-6 col-xl-4 status-item">
+                                        <div class="p-3 rounded-3 bg-light bg-opacity-50">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-semibold text-capitalize">{{ status }}</span>
+                                                <span class="text-primary fw-bold">{{ count }}</span>
+                                            </div>
+                                            <div class="progress progress-sm">
+                                                {% with percentage=count|default:0 %}
+                                                <div class="progress-bar bg-primary" role="progressbar" style="width: {% widthratio count global_stats.total_prospects|default:1 100 %}%" aria-valuenow="{{ count }}" aria-valuemin="0" aria-valuemax="{{ global_stats.total_prospects }}"></div>
+                                                {% endwith %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-header bg-white py-3 border-0">
+                                <h5 class="card-title mb-0 fw-bold"><i class="ri-pie-chart-line me-2 text-primary"></i>Conversion Pipe</h5>
+                            </div>
+                            <div class="card-body p-4 d-flex flex-column justify-content-center">
+                                <div class="conversion-step mb-4 p-3 rounded-3 bg-soft-warning border border-warning border-opacity-10">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fs-24 text-warning"><i class="ri-user-search-line"></i></div>
+                                        <div>
+                                            <div class="text-uppercase fs-10 fw-bold text-muted mb-1">Visiteurs</div>
+                                            <div class="fs-18 fw-bold" id="pipeVisiteur">{{ global_stats.status_counts.visiteur }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="conversion-step mb-4 p-3 rounded-3 bg-soft-primary border border-primary border-opacity-10">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fs-24 text-primary"><i class="ri-user-add-line"></i></div>
+                                        <div>
+                                            <div class="text-uppercase fs-10 fw-bold text-muted mb-1">Pré-inscrits</div>
+                                            <div class="fs-18 fw-bold" id="pipePrinscrit">{{ global_stats.status_counts.prinscrit }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="conversion-step p-3 rounded-3 bg-soft-success border border-success border-opacity-10">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fs-24 text-success"><i class="ri-user-star-line"></i></div>
+                                        <div>
+                                            <div class="text-uppercase fs-10 fw-bold text-muted mb-1">Convertis</div>
+                                            <div class="fs-18 fw-bold" id="pipeConvertit">{{ global_stats.status_counts.convertit }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown Toggle -->
+                <div class="row" id="detailedTableSection">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                            <div class="card-header bg-white py-3 border-0">
+                                <h5 class="card-title mb-0 fw-bold"><i class="ri-table-line me-2 text-primary"></i>Détail par Institut</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light text-muted">
+                                            <tr>
+                                                <th class="ps-4">Institut</th>
+                                                <th class="text-center">Prospects</th>
+                                                <th class="text-center">Opportunités</th>
+                                                <th class="text-end pe-4">Budget Total (DZD)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for stat in institutes_stats %}
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-xs me-3">
+                                                            <div class="avatar-title bg-soft-primary text-primary rounded-circle fw-bold">
+                                                                {{ stat.name|slice:":1"|upper }}
+                                                            </div>
+                                                        </div>
+                                                        <span class="fw-semibold text-dark">{{ stat.name }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge badge-soft-primary fs-12 px-3 py-2 rounded-pill">{{ stat.prospects_count }}</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge badge-soft-success fs-12 px-3 py-2 rounded-pill">{{ stat.opportunities_count }}</span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <span class="fw-bold text-dark">{{ stat.budget_sum|floatformat:2 }}</span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-sm { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .bg-soft-primary { background-color: rgba(99, 102, 241, 0.1); }
+    .bg-soft-warning { background-color: rgba(245, 158, 11, 0.1); }
+    .bg-soft-success { background-color: rgba(16, 185, 129, 0.1); }
+    .bg-soft-info { background-color: rgba(6, 182, 212, 0.1); }
+    
+    .status-item { transition: transform 0.2s; }
+    .status-item:hover { transform: translateY(-2px); }
+    
+    .conversion-step { transition: all 0.3s ease; }
+    .conversion-step:hover { background-color: rgba(99, 102, 241, 0.05); }
+    
+    .progress-sm { height: 6px; border-radius: 3px; }
+    
+    .stat-card { transition: all 0.3s ease; }
+    .stat-card:hover { transform: translateY(-5px); }
+</style>
+
+<script>
+    const statusMap = {
+        'visiteur': 'Visiteur',
+        'prinscrit': 'Pré-inscrit',
+        'instance': 'En Instance',
+        'convertit': 'Convertit',
+        'annuler': 'Annulé'
+    };
+
+    function loadInstituteStats(tenantId) {
+        if (tenantId === 'global') {
+            location.reload(); // Simplest for global view for now, or we could handle it via AJAX
+            return;
+        }
+
+        // Show loading state
+        document.getElementById('currentViewLabel').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Chargement...';
+        
+        fetch(`/configuration/crm-statistics/api/${tenantId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateDashboard(data);
+                } else {
+                    alert('Erreur: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erreur lors du chargement des statistiques.');
+            });
+    }
+
+    function updateDashboard(data) {
+        // Update Label
+        document.getElementById('currentViewLabel').innerText = data.tenant_name;
+        
+        // Update KPIs
+        document.getElementById('totalProspects').innerText = data.total_prospects;
+        document.getElementById('activeOpportunities').innerText = data.active_opportunities;
+        document.getElementById('totalBudget').innerHTML = `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(data.total_budget)} <small class="fs-12">DZD</small>`;
+        
+        // Find Instance count from breakdown
+        const instanceData = data.status_breakdown.find(s => s.statut === 'instance');
+        document.getElementById('instancePaiement').innerText = instanceData ? instanceData.count : 0;
+
+        // Update Status Grid
+        let statusHtml = '';
+        data.status_breakdown.forEach(item => {
+            const label = statusMap[item.statut] || item.statut;
+            statusHtml += `
+                <div class="col-md-6 col-xl-4 status-item">
+                    <div class="p-3 rounded-3 bg-light bg-opacity-50">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-capitalize">${label}</span>
+                            <span class="text-primary fw-bold">${item.count}</span>
+                        </div>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${item.percentage}%" aria-valuenow="${item.count}" aria-valuemin="0" aria-valuemax="${data.total_prospects}"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Update conversion pipe items if they exist
+            const pipeId = 'pipe' + item.statut.charAt(0).toUpperCase() + item.statut.slice(1);
+            const pipeElem = document.getElementById(pipeId);
+            if (pipeElem) {
+                pipeElem.innerText = item.count;
+            }
+        });
+        document.getElementById('statusGrid').innerHTML = statusHtml;
+
+        // Hide detailed table when viewing specific institute
+        document.getElementById('detailedTableSection').style.display = 'none';
+    }
+</script>
+{% endblock %}

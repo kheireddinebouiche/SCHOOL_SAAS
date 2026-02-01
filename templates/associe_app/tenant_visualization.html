@@ -1,0 +1,549 @@
+{% extends 'public_folder/base.html' %} 
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Title Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-white rounded shadow-sm p-3 mb-4">
+                        <h4 class="mb-sm-0 text-primary fw-bold"><i class="bx bx-building-house me-2"></i>Visualisation par Institut</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des Instituts -->
+            <div class="row">
+                <div class="col-12">
+                     <div class="card border-0 shadow-sm rounded-3">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-nowrap align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col" style="width: 40px;">#</th>
+                                            <th scope="col">Institut</th>
+                                            <th scope="col">Date de Création</th>
+                                            <th scope="col" class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for tenant in tenants %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm flex-shrink-0 me-3">
+                                                        <div class="avatar-title bg-soft-info text-info rounded-circle fs-16">
+                                                            {{ tenant.nom|slice:":1"|upper }}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h5 class="fs-14 mb-1">{{ tenant.nom }}</h5>
+                                                        <p class="text-muted mb-0">Schema: {{ tenant.schema_name }}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ tenant.date_creation|date:"d/m/Y H:i" }}</td>
+                                            <td class="text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <button class="btn btn-soft-primary btn-sm waves-effect waves-light" onclick="inspectTenant({{ tenant.id }})">
+                                                        <i class="ri-search-eye-line align-bottom me-1"></i> Inspecter
+                                                    </button>
+                                                    <button class="btn btn-soft-danger btn-sm waves-effect waves-light purge-btn-{{ tenant.id }}" onclick="purgeTenant({{ tenant.id }}, '{{ tenant.nom|escapejs }}')">
+                                                        <i class="ri-delete-bin-3-line align-bottom me-1"></i> Purger
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5 text-muted">Aucun institut trouvé.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Styles for Inspection Modal -->
+<style>
+    /* Glassmorphism for Modal */
+    #inspectionModal .modal-content {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    #inspectionModal .modal-header {
+        background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+        border-bottom: none;
+        padding: 1.5rem 2rem;
+    }
+
+    #inspectionModal .modal-title {
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        font-size: 1.25rem;
+    }
+
+    /* Tab Customization */
+    #inspectionModal .nav-tabs-custom {
+        background: rgba(248, 249, 250, 0.5);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 0 1rem;
+    }
+
+    #inspectionModal .nav-tabs-custom .nav-link {
+        border-bottom: 3px solid transparent;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.3s ease;
+    }
+
+    #inspectionModal .nav-tabs-custom .nav-link.active {
+        color: #4338ca;
+        border-bottom-color: #4338ca;
+        background: transparent;
+    }
+
+    #inspectionModal .nav-tabs-custom .nav-link:hover:not(.active) {
+        color: #4338ca;
+        background: rgba(67, 56, 202, 0.05);
+    }
+
+    /* Table & Content Styling */
+    #inspectionModal .table {
+        border-radius: 12px;
+        overflow: hidden;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    #inspectionModal .table thead th {
+        background-color: #f1f5f9;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1rem;
+    }
+
+    #inspectionModal .table tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+    }
+
+    #inspectionModal .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    #inspectionModal .table tbody tr:hover {
+        background-color: rgba(99, 102, 241, 0.03);
+    }
+
+    /* Badge Enhancements */
+    #inspectionModal .badge-soft-primary {
+        background-color: rgba(99, 102, 241, 0.1);
+        color: #4338ca;
+        font-weight: 600;
+    }
+
+    #inspectionModal .badge-soft-info {
+        background-color: rgba(14, 165, 233, 0.1);
+        color: #0369a1;
+        font-weight: 600;
+    }
+
+    #inspectionModal .modal-footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        background: rgba(248, 249, 250, 0.5);
+    }
+
+    /* CRM Dashboard Cards */
+    .crm-card {
+        background: rgba(255, 255, 255, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .crm-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.6);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .crm-card .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .stat-label {
+        font-size: 0.813rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    /* Progress bar styling */
+    .crm-progress {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #f1f5f9;
+        margin-top: 0.5rem;
+    }
+
+    .crm-progress-bar {
+        border-radius: 3px;
+        transition: width 0.6s ease;
+    }
+</style>
+
+<!-- Inspection Modal -->
+<div class="modal fade" id="inspectionModal" tabindex="-1" aria-labelledby="inspectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0">
+            <div class="modal-header">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-3">
+                        <div class="avatar-title bg-white bg-opacity-25 text-white rounded-circle fs-18">
+                            <i class="ri-search-eye-line"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="modal-title text-white mb-0" id="inspectionModalLabel">Inspection de l'Institut</h5>
+                        <p class="text-white text-opacity-75 mb-0 fs-12" id="modalTenantName"></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#p-cats-tab" role="tab">
+                            <i class="ri-bank-card-line me-1 align-bottom"></i> Catégories de Paiement
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#d-cats-tab" role="tab">
+                            <i class="ri-refund-2-line me-1 align-bottom"></i> Catégories de Dépense
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#crm-stats-tab" role="tab" onclick="renderCRMStats()">
+                            <i class="ri-user-star-line me-1 align-bottom"></i> CRM / Prospects
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Tab Panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active p-4 animate-fade-in-up" id="p-cats-tab" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Nom du Catégorie</th>
+                                        <th>Catégorie Parente</th>
+                                        <th>Type de Paiement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="p-cats-body">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane p-4 animate-fade-in-up" id="d-cats-tab" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Nom du Dépense</th>
+                                        <th>Parent</th>
+                                        <th>Lien avec Paiement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="d-cats-body">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane p-4 animate-fade-in-up" id="crm-stats-tab" role="tabpanel">
+                        <div class="row g-4 mb-4" id="crm-summary-cards">
+                            <!-- Cards will be injected here -->
+                        </div>
+                        
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-none bg-transparent">
+                                    <div class="card-header bg-transparent border-0 px-0">
+                                        <h6 class="fw-bold mb-0">Répartition par Statut</h6>
+                                    </div>
+                                    <div class="card-body px-0" id="crm-status-breakdown">
+                                        <!-- Breakdown lines injected here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-none bg-transparent">
+                                    <div class="card-header bg-transparent border-0 px-0">
+                                        <h6 class="fw-bold mb-0">Répartition par État</h6>
+                                    </div>
+                                    <div class="card-body px-0" id="crm-etat-breakdown">
+                                        <!-- Breakdown lines injected here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer p-3">
+                <button type="button" class="btn btn-light rounded-pill px-4 shadow-none" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let inspectionModal;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalElement = document.getElementById('inspectionModal');
+        if (modalElement) {
+            inspectionModal = new bootstrap.Modal(modalElement);
+        }
+    });
+
+    let currentCRMData = null;
+
+    function inspectTenant(id) {
+        $(`#p-cats-body, #d-cats-body`).html('<tr><td colspan="3" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Chargement...</td></tr>');
+        $(`#crm-summary-cards, #crm-status-breakdown, #crm-etat-breakdown`).html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+        
+        // Ensure modal is initialized if DOMContentLoaded was somehow missed or bootstrap loaded late
+        if (!inspectionModal) {
+            const modalElement = document.getElementById('inspectionModal');
+            if (modalElement && typeof bootstrap !== 'undefined') {
+                inspectionModal = new bootstrap.Modal(modalElement);
+            }
+        }
+
+        $.ajax({
+            url: "{% url 'get_tenant_categories' 0 %}".replace('0', id),
+            type: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#modalTenantName').text(response.tenant_name);
+                    
+                    // Render Payment Categories
+                    let pRows = '';
+                    if (response.payment_categories.length > 0) {
+                        response.payment_categories.forEach(pc => {
+                            pRows += `<tr>
+                                <td class="fw-semibold">${pc.name}</td>
+                                <td><span class="badge badge-soft-primary">${pc.parent}</span></td>
+                                <td><span class="badge bg-info">${pc.type}</span></td>
+                            </tr>`;
+                        });
+                    } else {
+                        pRows = '<tr><td colspan="3" class="text-center text-muted">Aucune catégorie trouvée.</td></tr>';
+                    }
+                    $('#p-cats-body').html(pRows);
+
+                    // Render Depenses Categories
+                    let dRows = '';
+                    if (response.depenses_categories.length > 0) {
+                        response.depenses_categories.forEach(dc => {
+                            dRows += `<tr>
+                                <td class="fw-semibold">${dc.name}</td>
+                                <td><span class="badge badge-soft-primary">${dc.parent}</span></td>
+                                <td><span class="badge badge-soft-info">${dc.payment_category}</span></td>
+                            </tr>`;
+                        });
+                    } else {
+                        dRows = '<tr><td colspan="3" class="text-center text-muted">Aucune catégorie trouvée.</td></tr>';
+                    }
+                    $('#d-cats-body').html(dRows);
+
+                    // Store CRM Data
+                    currentCRMData = response.crm_stats;
+                    // Auto-render if tab is visible, but normally we'll render on tab click
+                    if ($('#crm-stats-tab').hasClass('active')) {
+                        renderCRMStats();
+                    }
+
+                    if (inspectionModal) {
+                        inspectionModal.show();
+                    } else {
+                        // Fallback show if bootstrap modal object still fails
+                        $('#inspectionModal').modal('show');
+                    }
+                } else {
+                    alertify.error('Impossible de charger les données de l\'institut.');
+                }
+            },
+            error: function() {
+                alertify.error('Erreur réseau lors de l\'inspection.');
+            }
+        });
+    }
+
+    function purgeTenant(id, name) {
+        alertify.confirm('Confirmer la purge', `Voulez-vous vraiment purger toutes les catégories de l'institut <b>${name}</b> ? <br><br><span class="text-danger"><i class="ri-error-warning-line me-1"></i> Cette action est irréversible.</span>`, 
+            function() {
+                const btn = $(`.purge-btn-${id}`);
+                const originalHtml = btn.html();
+                
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Purge...');
+
+                $.ajax({
+                    url: "{% url 'purge_tenant_categories' 0 %}".replace('0', id),
+                    type: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                        } else {
+                            alertify.error(response.message);
+                        }
+                    },
+                    error: function() {
+                        alertify.error('Erreur réseau lors de la purge.');
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false);
+                        btn.html(originalHtml);
+                    }
+                });
+            }, function() {}
+        );
+    }
+    function renderCRMStats() {
+        if (!currentCRMData) return;
+
+        const stats = currentCRMData;
+        
+        // Render Cards
+        const cardHtml = `
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-primary text-primary">
+                        <i class="ri-user-line fs-24"></i>
+                    </div>
+                    <div class="stat-label">Total Prospects</div>
+                    <div class="stat-value">${stats.total_prospects}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-success text-success">
+                        <i class="ri-briefcase-line fs-24"></i>
+                    </div>
+                    <div class="stat-label">Opportunités Actives</div>
+                    <div class="stat-value">${stats.active_opportunities}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-warning text-warning">
+                        <i class="ri-money-dollar-circle-line fs-24"></i>
+                    </div>
+                    <div class="stat-label">Budget Total</div>
+                    <div class="stat-value">${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'DZD' }).format(stats.total_budget)}</div>
+                </div>
+            </div>
+        `;
+        $('#crm-summary-cards').html(cardHtml);
+
+        // Render Breakdowns
+        const statusMap = {
+            'visiteur': 'Visiteur',
+            'prinscrit': 'Pré-inscrit',
+            'instance': 'En Instance',
+            'convertit': 'Convertit',
+            'annuler': 'Annulé'
+        };
+
+        const etatMap = {
+            'en_attente': 'En attente',
+            'accepte': 'Accepté',
+            'rejete': 'Rejeté'
+        };
+
+        let statusHtml = '';
+        stats.by_status.forEach(item => {
+            const percentage = stats.total_prospects > 0 ? (item.count / stats.total_prospects * 100).toFixed(0) : 0;
+            const label = statusMap[item.statut] || item.statut || 'Inconnu';
+            statusHtml += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fs-13 fw-medium">${label}</span>
+                        <span class="fs-12 text-muted">${item.count} (${percentage}%)</span>
+                    </div>
+                    <div class="crm-progress">
+                        <div class="crm-progress-bar bg-primary" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            `;
+        });
+        $('#crm-status-breakdown').html(statusHtml || '<p class="text-muted">Aucune donnée de statut.</p>');
+
+        let etatHtml = '';
+        stats.by_etat.forEach(item => {
+            const percentage = stats.total_prospects > 0 ? (item.count / stats.total_prospects * 100).toFixed(0) : 0;
+            const label = etatMap[item.etat] || item.etat || 'Inconnu';
+            let color = 'bg-info';
+            if (item.etat === 'accepte') color = 'bg-success';
+            if (item.etat === 'rejete') color = 'bg-danger';
+
+            etatHtml += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fs-13 fw-medium">${label}</span>
+                        <span class="fs-12 text-muted">${item.count} (${percentage}%)</span>
+                    </div>
+                    <div class="crm-progress">
+                        <div class="crm-progress-bar ${color}" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            `;
+        });
+        $('#crm-etat-breakdown').html(etatHtml || '<p class="text-muted">Aucune donnée d\'état.</p>');
+    }
+</script>
+
+{% endblock %}

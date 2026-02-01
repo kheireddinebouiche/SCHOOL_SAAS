@@ -8,14 +8,13 @@ class Institut(TenantMixin):
     telephone = models.CharField(max_length=15, null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
-    tenant_type = models.CharField(max_length=255, null=True, blank=True, choices=[('master','Compte maitre'),('second','Compte standard')])
+    tenant_type = models.CharField(max_length=255, null=True, blank=True, choices=[('associe','Associe'),('master','Compte maitre'),('second','Compte standard')])
 
     def __str__(self):
         return self.nom
     
 class Domaine(DomainMixin):
     pass
-
 
 class TenantFolder(models.Model):
     sender = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='sent_folders')

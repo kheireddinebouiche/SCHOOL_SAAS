@@ -23,6 +23,10 @@
                                 <h4 class="mb-0 fw-bold text-dark">{{ total_all|floatformat:0 }} <small class="text-muted fs-6">DZD</small></h4>
                                 <small class="text-muted">Chiffre d'affaires Global</small>
                            </div>
+                           <div class="text-end me-4">
+                                <h4 class="mb-0 fw-bold text-danger">{{ total_expenses_all|floatformat:0 }} <small class="text-muted fs-6">DZD</small></h4>
+                                <small class="text-muted">Dépenses Globales</small>
+                           </div>
                            
                            <!-- Year Selector -->
                            <form method="get" class="d-inline-block">
@@ -73,105 +77,198 @@
              role="tabpanel" 
              aria-labelledby="tab-entity-{{ forloop.counter }}">
              
-              <div class="row">
-                <div class="col-12">
-                  <div class="card">
-                    <div class="card-header align-items-center d-flex">
-                        <h4 class="card-title mb-0 flex-grow-1">{{ entity_block.entity.designation }}</h4>
-                        <div class="flex-shrink-0">
-                            <span class="badge bg-primary fs-12">Total: {{ entity_block.total|floatformat:2 }} DA</span>
+               <!-- TABS HEADER -->
+               <div class="card bg-transparent shadow-none">
+                    <div class="card-header border-0 bg-transparent p-0 pb-3">
+                        <ul class="nav nav-pills nav-custom nav-custom-light" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#revenue-{{ forloop.counter }}" role="tab">
+                                    <i class="ri-money-dollar-circle-line me-1 align-bottom"></i> Recettes
+                                    <span class="badge bg-soft-primary text-primary ms-1">{{ entity_block.total|floatformat:0 }} DA</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#expenses-{{ forloop.counter }}" role="tab">
+                                    <i class="ri-shopping-cart-line me-1 align-bottom"></i> Dépenses
+                                    <span class="badge bg-soft-danger text-danger ms-1">{{ entity_block.expenses_total|floatformat:0 }} DA</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+               </div>
+
+               <!-- TABS CONTENT -->
+               <div class="tab-content text-muted">
+                    <!-- REVENUE TAB -->
+                    <div class="tab-pane active" id="revenue-{{ forloop.counter }}" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header align-items-center d-flex">
+                                <h4 class="card-title mb-0 flex-grow-1">Recettes - {{ entity_block.entity.designation }}</h4>
+                                <div class="flex-shrink-0">
+                                    <span class="badge bg-primary fs-12">Total: {{ entity_block.total|floatformat:2 }} DA</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                              <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                  <thead class="table-light">
+                                    <tr>
+                                      <th scope="col" class="ps-4">Catégorie</th>
+                                      <th scope="col" class="text-center">Formations (Étudiants)</th>
+                                      <th scope="col" class="text-center">Conseil / Education</th>
+                                      <th scope="col" class="text-center">Autres Produits</th>
+                                      <th scope="col" class="text-end pe-4">Total Général</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {% for item in entity_block.data %}
+                                    <tr class="{% if item.is_root %}bg-light fw-bold{% endif %}">
+                                      <td class="ps-4">
+                                        <div class="d-flex align-items-center" style="padding-left: {{ item.level|add:item.level }}rem;">
+                                           {% if item.is_root %}
+                                              <i class="ri-folder-3-fill text-primary me-2"></i>
+                                              <span class="text-primary text-uppercase">{{ item.category.name }}</span>
+                                           {% else %}
+                                               {% if item.is_parent %}
+                                                 <i class="ri-folder-3-line text-warning me-2"></i>
+                                                 <span class="text-dark">{{ item.category.name }}</span>
+                                               {% else %}
+                                                 <i class="ri-price-tag-3-line text-muted me-2"></i>
+                                                 <span>{{ item.category.name }}</span>
+                                               {% endif %}
+                                           {% endif %}
+                                           
+                                           {% if not item.is_parent %}
+                                           {% with cat_id=item.category.id|stringformat:"s" %}
+                                           {% with ent_id=entity_block.entity.id|stringformat:"s" %}
+                                           {% with details_id="details-data-"|add:cat_id|add:"-"|add:ent_id %}
+                                           <button class="btn btn-sm btn-ghost-primary p-0 ms-2 detail-btn text-muted" type="button" 
+                                                   onclick="openDetailsModal('{{ item.category.name|escapejs }}', '{{ details_id }}')">
+                                              <i class="ri-eye-line"></i>
+                                           </button>
+                                           {{ item.details|json_script:details_id }}
+                                           {% endwith %}
+                                           {% endwith %}
+                                           {% endwith %}
+                                           {% endif %}
+                                         </div>
+                                      </td>
+                                      <td class="text-center">
+                                        {% if item.stats.student_total != 0 %}
+                                          <span class="{% if item.stats.student_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                            {{ item.stats.student_total|floatformat:0 }} DA
+                                          </span>
+                                        {% else %}
+                                          <span class="text-muted">-</span>
+                                        {% endif %}
+                                      </td>
+                                      <td class="text-center">
+                                        {% if item.stats.consulting_total != 0 %}
+                                          <span class="{% if item.stats.consulting_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                            {{ item.stats.consulting_total|floatformat:0 }} DA
+                                          </span>
+                                        {% else %}
+                                          <span class="text-muted">-</span>
+                                        {% endif %}
+                                      </td>
+                                      <td class="text-center">
+                                        {% if item.stats.other_total != 0 %}
+                                          <span class="{% if item.stats.other_total < 0 %}text-danger{% else %}text-dark{% endif %}">
+                                            {{ item.stats.other_total|floatformat:0 }} DA
+                                          </span>
+                                        {% else %}
+                                          <span class="text-muted">-</span>
+                                        {% endif %}
+                                      </td>
+                                      <td class="text-end pe-4">
+                                        <span class="fw-bold {% if item.stats.grand_total < 0 %}text-danger{% elif item.is_root %}text-primary{% else %}text-dark{% endif %}">
+                                           {{ item.stats.grand_total|floatformat:0 }} DA
+                                        </span>
+                                      </td>
+                                    </tr>
+                                    {% endfor %}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                      <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                          <thead class="table-light">
-                            <tr>
-                              <th scope="col" class="ps-4">Catégorie</th>
-                              <th scope="col" class="text-center">Formations (Étudiants)</th>
-                              <th scope="col" class="text-center">Conseil / Education</th>
-                              <th scope="col" class="text-center">Autres Produits</th>
-                              <th scope="col" class="text-end pe-4">Total Général</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {% for item in entity_block.data %}
-                            <!-- Category Row -->
-                            <tr class="{% if item.is_root %}bg-light fw-bold{% endif %}">
-                              <td class="ps-4">
-                                <!-- Hierarchy Visualization -->
-                                <div class="d-flex align-items-center" style="padding-left: {{ item.level|add:item.level }}rem;">
-                                   {% if item.is_root %}
-                                      <i class="ri-folder-3-fill text-primary me-2"></i>
-                                      <span class="text-primary text-uppercase">{{ item.category.name }}</span>
-                                   {% else %}
-                                       {% if item.is_parent %}
-                                         <i class="ri-folder-3-line text-warning me-2"></i>
-                                         <span class="text-dark">{{ item.category.name }}</span>
-                                       {% else %}
-                                         <i class="ri-price-tag-3-line text-muted me-2"></i>
-                                         <span>{{ item.category.name }}</span>
-                                       {% endif %}
-                                   {% endif %}
-                                   
-                                   {% if not item.is_parent %}
-                                   <!-- Eye Button -->
-                                   {% with cat_id=item.category.id|stringformat:"s" %}
-                                   {% with ent_id=entity_block.entity.id|stringformat:"s" %}
-                                   {% with details_id="details-data-"|add:cat_id|add:"-"|add:ent_id %}
-                                   <button class="btn btn-sm btn-ghost-primary p-0 ms-2 detail-btn text-muted" type="button" 
-                                           onclick="openDetailsModal('{{ item.category.name|escapejs }}', '{{ details_id }}')">
-                                      <i class="ri-eye-line"></i>
-                                   </button>
-                                   <!-- Hidden JSON Data -->
-                                   {{ item.details|json_script:details_id }}
-                                   {% endwith %}
-                                   {% endwith %}
-                                   {% endwith %}
-                                   {% endif %}
-                                 </div>
-                              </td>
-                              <td class="text-center">
-                                {% if item.stats.student_total != 0 %}
-                                  <span class="{% if item.stats.student_total < 0 %}text-danger{% else %}text-dark{% endif %}">
-                                    {{ item.stats.student_total|floatformat:0 }} DA
-                                  </span>
-                                {% else %}
-                                  <span class="text-muted">-</span>
-                                {% endif %}
-                              </td>
-                              <td class="text-center">
-                                {% if item.stats.consulting_total != 0 %}
-                                  <span class="{% if item.stats.consulting_total < 0 %}text-danger{% else %}text-dark{% endif %}">
-                                    {{ item.stats.consulting_total|floatformat:0 }} DA
-                                  </span>
-                                {% else %}
-                                  <span class="text-muted">-</span>
-                                {% endif %}
-                              </td>
-                              <td class="text-center">
-                                {% if item.stats.other_total != 0 %}
-                                  <span class="{% if item.stats.other_total < 0 %}text-danger{% else %}text-dark{% endif %}">
-                                    {{ item.stats.other_total|floatformat:0 }} DA
-                                  </span>
-                                {% else %}
-                                  <span class="text-muted">-</span>
-                                {% endif %}
-                              </td>
-                              <td class="text-end pe-4">
-                                <span class="fw-bold {% if item.stats.grand_total < 0 %}text-danger{% elif item.is_root %}text-primary{% else %}text-dark{% endif %}">
-                                   {{ item.stats.grand_total|floatformat:0 }} DA
-                                </span>
-                              </td>
-                            </tr>
-                            {% endfor %}
-                          </tbody>
-                        </table>
-                      </div>
+
+                    <!-- EXPENSES TAB -->
+                    <div class="tab-pane" id="expenses-{{ forloop.counter }}" role="tabpanel">
+                      {% if entity_block.expenses_data %}
+                          <div class="card shadow-sm border-top border-danger border-2">
+                            <div class="card-header align-items-center d-flex bg-soft-danger">
+                                <h4 class="card-title mb-0 flex-grow-1 text-danger">Dépenses (Charges) - {{ entity_block.entity.designation }}</h4>
+                                <div class="flex-shrink-0">
+                                    <span class="badge bg-danger fs-12">Total: {{ entity_block.expenses_total|floatformat:2 }} DA</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                  <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                      <thead class="table-light">
+                                        <tr>
+                                          <th scope="col" class="ps-4">Catégorie de Dépense</th>
+                                          <th scope="col" class="text-end pe-4">Montant Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {% for item in entity_block.expenses_data %}
+                                        <tr class="{% if item.is_root %}bg-light fw-bold{% endif %}">
+                                          <td class="ps-4">
+                                            <div class="d-flex align-items-center" style="padding-left: {{ item.level|add:item.level }}rem;">
+                                               {% if item.is_root %}
+                                                  <i class="ri-folder-reduce-fill text-danger me-2"></i>
+                                                  <span class="text-danger text-uppercase">{{ item.category.name }}</span>
+                                               {% else %}
+                                                   {% if item.is_parent %}
+                                                     <i class="ri-folder-reduce-line text-warning me-2"></i>
+                                                     <span class="text-dark">{{ item.category.name }}</span>
+                                                   {% else %}
+                                                     <i class="ri-price-tag-3-line text-muted me-2"></i>
+                                                     <span>{{ item.category.name }}</span>
+                                                   {% endif %}
+                                               {% endif %}
+                                               
+                                               {% if not item.is_parent %}
+                                                {% with cat_id=item.category.id|stringformat:"s" %}
+                                                {% with ent_id=entity_block.entity.id|stringformat:"s" %}
+                                                {% with details_id="exp-details-"|add:cat_id|add:"-"|add:ent_id %}
+                                                <button class="btn btn-sm btn-ghost-danger p-0 ms-2 detail-btn text-muted" type="button" 
+                                                        onclick="openDetailsModal('{{ item.category.name|escapejs }}', '{{ details_id }}')">
+                                                    <i class="ri-eye-line"></i>
+                                                </button>
+                                                {{ item.details|json_script:details_id }}
+                                                {% endwith %}
+                                                {% endwith %}
+                                                {% endwith %}
+                                               {% endif %}
+                                            </div>
+                                          </td>
+                                          <td class="text-end pe-4">
+                                            <span class="fw-bold {% if item.total > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                               {{ item.total|floatformat:0 }} DA
+                                            </span>
+                                          </td>
+                                        </tr>
+                                        {% endfor %}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                            </div>
+                          </div>
+                      {% else %}
+                          <div class="card">
+                              <div class="card-body text-center py-5">
+                                  <i class="ri-shopping-cart-2-line fs-1 text-muted"></i>
+                                  <h5 class="text-muted mt-2">Aucune dépense enregistrée pour cette période.</h5>
+                              </div>
+                          </div>
+                      {% endif %}
                     </div>
-                  </div>
-                </div>
-              </div>
+               </div>
+
 
         </div>
         {% endfor %}
