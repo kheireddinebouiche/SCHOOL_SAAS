@@ -7,101 +7,94 @@
 {% block content %}
 <style>
     :root {
-        --kanban-bg: #f0f2f5;
-        --column-width: 320px;
-        --column-gap: 1.25rem;
-        --primary-blue: #0088cc;
+        --kanban-bg: #f3f4f6;
+        --column-width: 340px;
+        --column-gap: 1.5rem;
+        --primary-blue: #3b82f6;
+        --primary-dark: #1e3a8a;
+        --text-main: #1f2937;
+        --text-sub: #6b7280;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     .main-content {
         background-color: var(--kanban-bg);
         min-height: 100vh;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* Toolbar Redesign */
+    /* Toolbar & Filters */
     .pipeline-toolbar {
-        background: #fff;
-        padding: 0.75rem 1.5rem;
-        border-bottom: 1px solid #e1e4e8;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        padding: 1rem 2rem;
+        border-bottom: 1px solid #e5e7eb;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
         gap: 1rem;
         position: sticky;
-        top: 70px; /* Adjust based on header height */
-        z-index: 100;
+        top: 70px;
+        z-index: 50;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
     }
 
     .pipeline-tabs {
-        display: flex;
-        gap: 0.5rem;
+        background: #f3f4f6;
+        padding: 4px;
+        border-radius: 8px;
+        display: inline-flex;
     }
 
     .pipeline-tab {
-        padding: 0.5rem 1.25rem;
-        border-radius: 25px;
-        font-size: 0.85rem;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 0.875rem;
         font-weight: 500;
-        cursor: pointer;
-        border: 1px solid #e1e4e8;
-        background: #fff;
-        color: #555;
-        transition: all 0.2s ease;
+        color: var(--text-sub);
         text-decoration: none !important;
+        transition: all 0.2s;
+        border: none;
     }
 
+    .pipeline-tab:hover { color: var(--text-main); }
     .pipeline-tab.active {
-        background: #ebf5ff;
-        border-color: var(--primary-blue);
+        background: #fff;
         color: var(--primary-blue);
-        box-shadow: 0 2px 4px rgba(0, 136, 204, 0.1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        font-weight: 600;
     }
 
-    /* Filter Bar Area */
     .filter-bar {
+        padding: 0.75rem 2rem;
         background: #fff;
-        padding: 0.5rem 1.5rem;
-        border-bottom: 1px solid #e1e4e8;
+        border-bottom: 1px solid #e5e7eb;
         display: flex;
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
     }
-
-    .search-input-group {
-        position: relative;
-        min-width: 250px;
-    }
-
-    .search-input-group i {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #adb5bd;
-    }
-
+    
     .search-input-group input {
-        padding-left: 35px;
-        border-radius: 8px;
-        background: #f8f9fa;
-        border: 1px solid #e1e4e8;
+        border-radius: 99px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        padding-left: 2.5rem;
+        transition: border-color 0.2s;
     }
-
-    .filter-select {
-        min-width: 150px;
-        border-radius: 8px;
-        border: 1px solid #e1e4e8;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.85rem;
+    .search-input-group input:focus {
+        border-color: var(--primary-blue);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
+    .search-input-group i { left: 14px; top: 50%; transform: translateY(-50%); position: absolute; color: #9ca3af; }
 
-    /* Kanban Container */
+    /* Kanban Layout */
     .kanban-wrapper {
-        padding: 1.5rem;
+        padding: 2rem;
         overflow-x: auto;
         height: calc(100vh - 180px);
+        scrollbar-gutter: stable;
     }
 
     .kanban-container {
@@ -109,172 +102,219 @@
         gap: var(--column-gap);
         height: 100%;
         min-width: max-content;
+        align-items: flex-start;
     }
 
     .kanban-column {
         width: var(--column-width);
         display: flex;
         flex-direction: column;
-        height: 100%;
+        max-height: 100%;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        transition: background-color 0.2s;
+    }
+
+    .kanban-column.drag-over {
+        background: #eff6ff;
+        border-color: var(--primary-blue);
     }
 
     .column-header {
         margin-bottom: 1rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 4px solid #dee2e6;
+        padding: 0 0.5rem;
+        flex-shrink: 0;
     }
-
-    /* Column Header Logic Classes */
-    .col-stage-entrant { border-color: #3498db !important; }
-    .col-stage-contacte { border-color: #1abc9c !important; }
-    .col-stage-negociation { border-color: #2ecc71 !important; }
-    .col-stage-devis_envoye { border-color: #9b59b6 !important; }
-    .col-stage-en_negociation { border-color: #f1c40f !important; }
-    .col-stage-facture { border-color: #e67e22 !important; }
-    .col-stage-recouvrement { border-color: #e74c3c !important; }
-    .col-closing { border-color: #405189 !important; }
-
+    
     .column-title-row {
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 0.25rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
     }
 
     .column-title {
         font-weight: 700;
-        color: #2d3436;
-        font-size: 1rem;
-        margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .column-total {
-        font-weight: 700;
-        color: #4a5568;
         font-size: 0.95rem;
+        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .column-info {
-        font-size: 0.8rem;
-        color: #a0aec0;
-        font-weight: 500;
+    .column-count {
+        background: #e5e7eb;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-sub);
     }
 
     .kanban-body {
         flex-grow: 1;
         overflow-y: auto;
-        min-height: 100px;
+        padding: 0 4px 1rem 4px; /* Space for shadow/scroll */
+        min-height: 150px;
     }
+    
+    /* Scrollbar styling for columns */
+    .kanban-body::-webkit-scrollbar { width: 4px; }
+    .kanban-body::-webkit-scrollbar-track { background: transparent; }
+    .kanban-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .kanban-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* Card Design */
+    /* Cards */
     .pipeline-card {
-        background: #fff;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        padding: 1rem;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1.25rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle default shadow */
+        border: 1px solid #f3f4f6;
         cursor: grab;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
     }
 
     .pipeline-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        border-color: var(--primary-blue);
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow);
+        border-color: #e5e7eb;
+    }
+    
+    .pipeline-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+        transform: scale(0.95);
     }
 
-    .card-header-row {
+    .card-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.75rem;
+        align-items: flex-start;
+    }
+    
+    .card-tag {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: #f3f4f6;
+        color: var(--text-sub);
     }
 
-    .card-avatar {
-        width: 28px;
-        height: 28px;
-        background: #edf2f7;
-        color: #4a5568;
-        border-radius: 50%;
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        opacity: 0; /* Hidden by default */
+        transition: opacity 0.2s;
+    }
+    .pipeline-card:hover .card-actions { opacity: 1; }
+    
+    .action-btn {
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
-        font-weight: 700;
-        border: 1px solid #e2e8f0;
-    }
-
-    .card-star {
-        font-size: 1rem;
+        border-radius: 4px;
+        color: var(--text-sub);
         cursor: pointer;
-        transition: color 0.2s;
+        transition: all 0.2s;
+    }
+    .action-btn:hover { background: #f3f4f6; color: var(--primary-blue); }
+
+    .card-content {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
     }
 
-    .card-star.active { color: #f6ad55; }
-    .card-star.inactive { color: #e2e8f0; }
-    .card-star:hover { color: #f6ad55; }
-
-    .card-main-title {
-        font-weight: 600;
-        color: #1a202c;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
-        display: block;
-        line-height: 1.4;
-    }
-
-    .card-meta {
-        font-size: 0.75rem;
-        color: #718096;
+    .client-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        color: #0284c7;
+        font-weight: 700;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
     }
 
-    .card-bottom {
+    .card-title-group {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .card-main-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-decoration: none;
+        margin-bottom: 2px;
+    }
+    .card-main-title:hover { color: var(--primary-blue); }
+
+    .card-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-sub);
+    }
+
+    .card-footer {
+        padding-top: 0.75rem;
+        border-top: 1px dashed #e5e7eb;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 1rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #edf2f7;
+        margin-top: auto;
     }
-
-    .budget-amount {
+    
+    .budget-pill {
         font-weight: 700;
-        color: #2d3748;
         font-size: 0.9rem;
-    }
-
-    .prob-badge {
-        font-size: 0.7rem;
-        color: #4a5568;
-        background: #f7fafc;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        border: 1px solid #e2e8f0;
-    }
-
-    .status-pill {
-        font-size: 0.7rem;
-        font-weight: 700;
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
+        color: var(--text-main);
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.5rem;
+    }
+    
+    .prob-badge {
+        font-size: 0.7rem;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: #ecfdf5;
+        color: #059669;
+        font-weight: 600;
     }
 
-    .status-urgent { background: #fee2e2; color: #dc2626; }
-    .status-planned { background: #e0f2fe; color: #0284c7; }
+    .date-badge {
+        font-size: 0.75rem;
+        color: var(--text-sub);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    /* Stage Colors (Left Border for visual queue) */
+    .kanban-column[data-stage="entrant"] { border-top: 4px solid #3b82f6; }
+    .kanban-column[data-stage="contacte"] { border-top: 4px solid #06b6d4; }
+    .kanban-column[data-stage="negociation"] { border-top: 4px solid #8b5cf6; }
+    .kanban-column[data-stage="devis_envoye"] { border-top: 4px solid #ec4899; }
+    .kanban-column[data-stage="facture"] { border-top: 4px solid #10b981; }
+    .kanban-column[data-stage="recouvrement"] { border-top: 4px solid #ef4444; }
 
-    /* Drag states */
-    .dragging { opacity: 0.5; cursor: grabbing; scale: 0.98; }
-    .drag-over { background: rgba(0, 136, 204, 0.04); border-radius: 12px; }
 </style>
 
 <div class="main-content">
@@ -344,76 +384,84 @@
         <div class="kanban-container">
             {% for stage in pipeline_stages %}
             <div class="kanban-column" data-stage="{{ stage.code }}">
-                <div class="column-header {% if view_type == 'stage' %}col-stage-{{ stage.code }}{% else %}col-closing{% endif %}">
+                <!-- Header -->
+                <div class="column-header">
                     <div class="column-title-row">
                         <h6 class="column-title">{{ stage.label }}</h6>
-                        <span class="column-total">{{ stage.total_budget|floatformat:0|intcomma }} DZA</span>
+                        <span class="column-count">{{ stage.count }}</span>
                     </div>
-                    <div class="column-info">
-                        {{ stage.count }} Opportunité{{ stage.count|pluralize }}
+                    <div class="small text-muted fw-bold">
+                        {{ stage.total_budget|floatformat:0|intcomma }} DZA
                     </div>
                 </div>
 
+                <!-- Body -->
                 <div class="kanban-body" 
                      {% if view_type == 'stage' %}ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '{{ stage.code }}')"{% endif %}>
                     
                     {% for item in stage.items %}
                     <div class="pipeline-card" draggable="true" ondragstart="handleDragStart(event)" id="card-{{ item.id }}" data-id="{{ item.id }}">
-                        <div class="card-header-row">
-                            <div class="card-avatar">
+                        
+                        <!-- Top: Tags & Actions -->
+                        <div class="card-top mb-3">
+                             <div class="d-flex gap-2">
+                                <span class="card-tag">#{{ item.id }}</span>
+                                {% if item.is_favorite %}
+                                <i class="ri-star-fill text-warning" onclick="toggleFavorite(event, '{{ item.id }}')" style="cursor: pointer; font-size: 0.9rem;"></i>
+                                {% else %}
+                                <i class="ri-star-line text-muted" onclick="toggleFavorite(event, '{{ item.id }}')" style="cursor: pointer; font-size: 0.9rem;"></i>
+                                {% endif %}
+                             </div>
+                             
+                             <div class="card-actions">
+                                 <div class="action-btn" title="Modifier" onclick="editOpportunity(event, '{{ item.id }}')">
+                                    <i class="ri-pencil-line"></i>
+                                 </div>
+                                 <div class="action-btn" title="Convertir en devis" onclick="convertToQuote(event, '{{ item.id }}')">
+                                    <i class="ri-file-add-line"></i>
+                                 </div>
+                             </div>
+                        </div>
+
+                        <!-- Content: Avatar & Titles -->
+                        <div class="card-content mb-2">
+                            <div class="client-avatar">
                                 {{ item.prospect.nom|slice:":1"|upper }}{{ item.prospect.prenom|slice:":1"|upper }}
                             </div>
-                            <div class="d-flex gap-2 align-items-center">
-                                <i class="ri-pencil-line text-muted" title="Modifier" onclick="editOpportunity(event, '{{ item.id }}')" style="cursor: pointer;"></i>
-                                <i class="ri-file-add-line text-muted" title="Convertir en devis" onclick="convertToQuote(event, '{{ item.id }}')" style="cursor: pointer;"></i>
-                                <i class="ri-star-fill card-star {% if item.is_favorite %}active{% else %}inactive{% endif %}" 
-                                   onclick="toggleFavorite(event, '{{ item.id }}')"></i>
+                            <div class="card-title-group">
+                                <a href="{% url 't_crm:DetailsProspect' item.prospect.slug %}" class="card-main-title">
+                                    {% if item.prospect.entreprise %}{{ item.prospect.entreprise }}{% else %}{{ item.nom }}{% endif %}
+                                </a>
+                                <div class="card-subtitle">{{ item.prospect.nom }} {{ item.prospect.prenom }}</div>
                             </div>
                         </div>
 
-                        <a href="{% url 't_crm:DetailsProspect' item.prospect.slug %}" class="card-main-title">
-                            {% if item.prospect.entreprise %}{{ item.prospect.entreprise }}{% else %}{{ item.nom }}{% endif %}
-                        </a>
-                        <div class="small text-muted mb-2">{{ item.prospect.nom }} {{ item.prospect.prenom }}</div>
-
-                        <div class="card-meta">
-                            <i class="ri-calendar-line"></i>
-                            <span>{{ item.created_at|date:"d/m/Y H:i" }}</span>
-                            <i class="ri-message-3-line ms-auto"></i> 0
-                        </div>
-                        
-                        {% if item.closing_date %}
-                        <div class="card-meta">
-                            <i class="ri-flag-2-line text-info"></i>
-                            <span class="text-info">Closing: {{ item.closing_date|date:"d/m" }}</span>
-                        </div>
-                        {% endif %}
-
-                        <div class="card-bottom">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="budget-amount">{{ item.budget|floatformat:0|intcomma }} DZA</span>
+                        <!-- Footer: Budget & Date -->
+                        <div class="card-footer">
+                            <div class="budget-pill">
+                                <span>{{ item.budget|floatformat:0|intcomma }}</span>
                                 {% if item.probability %}
                                 <span class="prob-badge">{{ item.probability }}%</span>
                                 {% endif %}
                             </div>
 
-                            {% if item.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}
-                            <div class="status-pill status-urgent">
-                                <i class="ri-flashlight-fill"></i> Aujourd'hui
+                            {% if item.closing_date %}
+                            <div class="date-badge text-primary" title="Date de closing">
+                                <i class="ri-flag-line"></i> {{ item.closing_date|date:"d/m" }}
                             </div>
                             {% else %}
-                            <div class="status-pill status-planned">
-                                <i class="ri-time-line"></i> Dans 1j
+                            <div class="date-badge">
+                                <i class="ri-calendar-line"></i> {{ item.created_at|date:"d/m" }}
                             </div>
                             {% endif %}
                         </div>
+
                     </div>
                     {% endfor %}
 
                     {% if not stage.items %}
-                    <div class="text-center py-5 border border-dashed rounded bg-light bg-opacity-50 opacity-50">
-                        <i class="ri-add-line fs-1 d-block mb-1"></i>
-                        <span class="small">Déposer ici</span>
+                    <div class="text-center py-5 border border-dashed rounded bg-light bg-opacity-50 opacity-50 mx-2">
+                        <i class="ri-add-line fs-1 d-block mb-1 text-muted"></i>
                     </div>
                     {% endif %}
                 </div>
@@ -960,38 +1008,53 @@
             if (data.status === 'success') {
                 alertify.success(data.message);
                 
+                const today = new Date().toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'});
+                
                 // Dynamic Card Creation
                 const newCardHtml = `
                     <div class="pipeline-card" draggable="true" ondragstart="handleDragStart(event)" id="card-${data.id}" data-id="${data.id}">
-                        <div class="card-header-row">
-                            <div class="card-avatar">
-                                ${pName.substring(0,2).toUpperCase()}
-                            </div>
-                            <div class="d-flex gap-2 align-items-center">
-                                <i class="ri-pencil-line text-muted" title="Modifier" onclick="editOpportunity(event, '${data.id}')" style="cursor: pointer;"></i>
-                                <i class="ri-file-add-line text-muted" title="Convertir en devis" onclick="convertToQuote(event, '${data.id}')" style="cursor: pointer;"></i>
-                                <i class="ri-star-fill card-star inactive" onclick="toggleFavorite(event, '${data.id}')"></i>
-                            </div>
-                        </div>
-
-                        <a href="#" class="card-main-title">${nom}</a>
-                        <div class="small text-muted mb-2">${pName}</div>
-
-                        <div class="card-meta">
-                            <i class="ri-calendar-line"></i>
-                            <span>Aujourd'hui</span>
-                            <i class="ri-message-3-line ms-auto"></i> 0
-                        </div>
                         
-                        <div class="card-bottom">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="budget-amount">${parseFloat(budget || 0).toLocaleString()} DZA</span>
-                            </div>
+                        <!-- Top: Tags & Actions -->
+                        <div class="card-top mb-3">
+                             <div class="d-flex gap-2">
+                                <span class="card-tag">#${data.id}</span>
+                                <i class="ri-star-line text-muted" onclick="toggleFavorite(event, '${data.id}')" style="cursor: pointer; font-size: 0.9rem;"></i>
+                             </div>
+                             
+                             <div class="card-actions">
+                                 <div class="action-btn" title="Modifier" onclick="editOpportunity(event, '${data.id}')">
+                                    <i class="ri-pencil-line"></i>
+                                 </div>
+                                 <div class="action-btn" title="Convertir en devis" onclick="convertToQuote(event, '${data.id}')">
+                                    <i class="ri-file-add-line"></i>
+                                 </div>
+                             </div>
+                        </div>
 
-                            <div class="status-pill status-urgent">
-                                <i class="ri-flashlight-fill"></i> Aujourd'hui
+                        <!-- Content: Avatar & Titles -->
+                        <div class="card-content mb-2">
+                            <div class="client-avatar">
+                                ${data.initials}
+                            </div>
+                            <div class="card-title-group">
+                                <a href="/crm/details-prospect/${data.slug}/" class="card-main-title">
+                                    ${data.entreprise || nom}
+                                </a>
+                                <div class="card-subtitle">${data.nom_complet}</div>
                             </div>
                         </div>
+
+                        <!-- Footer: Budget & Date -->
+                        <div class="card-footer">
+                            <div class="budget-pill">
+                                <span>${parseFloat(budget || 0).toLocaleString()}</span>
+                            </div>
+
+                            <div class="date-badge">
+                                <i class="ri-calendar-line"></i> ${today}
+                            </div>
+                        </div>
+
                     </div>
                 `;
                 

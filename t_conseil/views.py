@@ -649,16 +649,13 @@ def ApiQuickCreateProspect(request):
         
         prospect = Prospets.objects.create(
             nom=nom,
-            prenom=prenom if type_prospect == 'particulier' else None, # Prenom ignored if purely company? Or maybe contact person.
-            # Usually for company type, nom might be contact name or company name depending on logic.
-            # But based on user request "Create a prospect... specific info if individual or company".
-            # Let's assume standard fields.
+            prenom=prenom,  # Keep prenom for both types - it's the contact person name
             email=email,
             telephone=telephone,
             type_prospect=type_prospect,
             context='con', # Conseil
             indic='+213', # Default
-            # Enterprise specific
+            # Enterprise specific fields - only populated for entreprise type
             entreprise=entreprise_nom if type_prospect == 'entreprise' else None,
             poste_dans_entreprise=poste if type_prospect == 'entreprise' else None,
         )
@@ -804,7 +801,6 @@ def PipelineConseil(request):
         ('contacte', 'Contacté'),
         ('negociation', 'Négociation'),
         ('devis_envoye', 'Devis envoyé'),
-        ('en_negociation', 'En Négociation'),
         ('facture', 'Facturé'),
         ('recouvrement', 'RECOUVREMENT'),
     ]
@@ -995,7 +991,7 @@ def ApiCreateOpportunite(request):
         try:
             prospect = Prospets.objects.get(id=prospect_id)
             
-            Opportunite.objects.create(
+            opp = Opportunite.objects.create(
                 prospect=prospect,
                 nom=nom,
                 budget=budget,
@@ -1003,7 +999,20 @@ def ApiCreateOpportunite(request):
                 commercial=request.user
             )
             
-            return JsonResponse({'status': 'success', 'message': 'Opportunité créée avec succès.'})
+            # Get initials
+            initials = ""
+            if prospect.nom: initials += prospect.nom[0].upper()
+            if prospect.prenom: initials += prospect.prenom[0].upper()
+
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Opportunité créée avec succès.', 
+                'id': opp.id,
+                'slug': prospect.slug,
+                'initials': initials,
+                'nom_complet': f"{prospect.nom} {prospect.prenom or ''}".strip(),
+                'entreprise': prospect.entreprise or ''
+            })
             
         except Prospets.DoesNotExist:
              return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
