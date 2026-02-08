@@ -98,6 +98,23 @@ MIDDLEWARE = [
     
 ]
 
+# Redis cache and sessions - only in production
+if not DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://:1230042690@aZeRTy@127.0.0.1:6379/1",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    # Development: use local memory cache (default, no config needed)
+    pass
+
 ROOT_URLCONF = 'app.urls'
 PUBLIC_SCHEMA_URLCONF  = "app.urls_public"
 
