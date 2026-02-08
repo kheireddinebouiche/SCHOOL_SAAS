@@ -97,6 +97,19 @@
   .dropdown-toggle-no-caret::after {
     display: none !important;
   }
+  
+  .rotated {
+    transform: rotate(-180deg);
+  }
+  
+  .group-header {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .group-header:hover {
+    background-color: #e9ecef !important;
+  }
 </style>
 
 <div class="main-content">
@@ -356,23 +369,58 @@
         success: function(data){
           var row = "";
           var option = "<option value='0'>Filtrer par groupe</option>";
-          if(data.seances){
+
+          if(data.seances && data.seances.length > 0){
+            // Group data by: Group Name -> Semester
+            var groupedData = {};
             $.each(data.seances, function(index, p){
-              row +='<tr class="align-middle timetable-item" data-groupe-id="{{seance.registre.groupe.id}}">';
-              row +='<td><div class="d-flex align-items-center"><div class="flex-grow-1"><h6 class="mb-0 fw-semibold">'+p.module__code +'-'+p.module__label+'</h6>';
-              row +='<p class="mb-0 text-muted small">'+p.registre__groupe__nom+'</p></div></div></td>';
-              row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">Semestre '+p.registre__semestre+'</span></div></td>';
-              row +='<td class="text-center">'+p.registre__groupe__annee_scolaire+'</td>';
-              row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">'+p.module__duree+'h</span></div></td>';
-              row +='<td class="text-center"><div class="text-body"><span class="badge bg-success">'+p.faites+' / '+p.total+'</span></div></td>';
-              row +='<td class="text-end"><div class="dropdown d-inline-block">';
-              row +='<button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-g1" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-2-fill align-middle"></i></button>';
-              row +='<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-g1" style="z-index: 1060 !important;">';
-              row +='<li><a href="#" id="detailsBtn" data-id="'+p.module__id+'" data-ligne="'+p.id+'" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">';
-              row +='<i class="ri-eye-line text-primary me-3"></i><span>Voir détails</span></a>';
-              row +='</li></ul></div>';
-              row +='</td></tr>';
+               var groupName = p.registre__groupe__nom;
+               var semester = p.registre__semestre;
+               var key = groupName + '|' + semester;
+
+               if(!groupedData[key]){
+                   groupedData[key] = {
+                       group: groupName,
+                       semester: semester,
+                       items: []
+                   };
+               }
+               groupedData[key].items.push(p);
             });
+
+            // Iterate over groups
+            var groupIndex = 0;
+            $.each(groupedData, function(key, groupData){
+                groupIndex++;
+                var groupId = 'group-' + groupIndex;
+                
+                // Add Header Row for the Group/Semester
+                row += '<tr class="table-light group-header" data-target=".' + groupId + '">';
+                row += '<td colspan="6" class="fw-bold text-primary">';
+                row += '<div class="d-flex align-items-center justify-content-between">';
+                row += '<span><i class="ri-group-line me-2"></i>' + groupData.group + ' - Semestre ' + groupData.semester + '</span>';
+                row += '<i class="ri-arrow-down-s-line arrow-icon fs-5" style="transition: transform 0.3s;"></i>';
+                row += '</div></td></tr>';
+
+                // Add items for this group
+                $.each(groupData.items, function(i, p){
+                  row +='<tr class="align-middle timetable-item ' + groupId + '" data-groupe-id="'+ p.registre__groupe__id +'">'; 
+                  row +='<td class="ps-4"><div class="d-flex align-items-center"><div class="flex-grow-1"><h6 class="mb-0 fw-semibold">'+p.module__code +'-'+p.module__label+'</h6>';
+                  row +='</div></div></td>';
+                  row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">Semestre '+p.registre__semestre+'</span></div></td>';
+                  row +='<td class="text-center">'+ p.registre__groupe__annee_scolaire +'</td>';
+                  row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">'+p.module__duree+'h</span></div></td>';
+                  row +='<td class="text-center"><div class="text-body"><span class="badge bg-success">'+p.faites+' / '+p.total+'</span></div></td>';
+                  row +='<td class="text-end"><div class="dropdown d-inline-block">';
+                  row +='<button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-g'+p.id+'" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-2-fill align-middle"></i></button>';
+                  row +='<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-g'+p.id+'" style="z-index: 1060 !important;">';
+                  row +='<li><a href="#" id="detailsBtn" data-id="'+p.module__id+'" data-ligne="'+p.id+'" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">';
+                  row +='<i class="ri-eye-line text-primary me-3"></i><span>Voir détails</span></a>';
+                  row +='</li></ul></div>';
+                  row +='</td></tr>';
+                });
+            });
+
           }else{
             row +="<tr>";
             row +="<td colspan='6'>";
@@ -537,6 +585,13 @@
           button.prop('disabled', false).text('Sauvegarder');
         }
       });
+    });
+
+    // Handle group header click for collapse/expand
+    $(document).on('click', '.group-header', function() {
+        var target = $(this).data('target');
+        $(target).toggle();
+        $(this).find('.arrow-icon').toggleClass('rotated');
     });
   });
 </script>

@@ -111,12 +111,12 @@ class Paiements(models.Model):
             # if not self.due_paiements or not self.due_paiements.entite or not self.due_paiements.ref_echeancier:
             #     raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
 
-            entite_obj = self.due_paiements.entite
-            
-            if not entite_obj:
-                entite_obj = self.due_paiements.ref_echeancier.entite
-            else:
+            if self.refund_id:
                 entite_obj = self.refund_id.entite
+            else:
+                entite_obj = self.due_paiements.entite
+                if not entite_obj and self.due_paiements.ref_echeancier:
+                    entite_obj = self.due_paiements.ref_echeancier.entite
 
             # 2. Lecture des champs Entreprise
             entite = entite_obj.designation or "ENTITE"
