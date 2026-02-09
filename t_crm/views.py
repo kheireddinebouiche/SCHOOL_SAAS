@@ -332,7 +332,7 @@ def filter_visiteur(request):
 @login_required(login_url='institut_app:login')
 @module_permission_required('crm','view')
 @module_permission_required('crm','add')
-@role_required('crm', ['Administrateur','Utilisateur'])
+@role_required('crm', ['Administrateur','Manager','Utilisateur'])
 @transaction.atomic
 def InscriptionParticulier(request):
     form = NewProspecFormParticulier()
@@ -416,7 +416,7 @@ def InscriptionEntreprise(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('crm','view')
-@role_required('crm', ['Administrateur','Manager'])
+@role_required('crm', ['Administrateur','Manager','Utilisateur'])
 def ListeDesProspects(request):
     context = {
         'tenant' : request.tenant,
