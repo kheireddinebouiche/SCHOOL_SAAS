@@ -315,11 +315,14 @@
             </div>
             <ul class="navbar-nav" id="navbar-nav">
                 <li class="menu-title"><span data-key="t-menu">Menu Principal</span></li> 
+                {% user_can_access 'ger' 'view' as can_view_tab_gerant %}
+                {% if can_view_tab_gerant or request.user.is_superuser %}
                 <li class="nav-item">
                     <a href="{% url 'institut_app:directeur_dashboard' %}" class="nav-link menu-link rounded-2 mx-2 mb-1 {% if request.resolver_match.url_name in 'directeur_dashboard' %}active{% endif %}">
                         <i class="bx bx-tachometer fs-5"></i> <span class="ms-1">Tableau de bord</span>
                     </a>
                 </li>
+                {% endif %}
                   <!-- Communication -->
                 <li class="nav-item {% if request.resolver_match.url_name in 'tenant_comm_hub tenant_comm_detail calendar messages conversation index' %}active{% endif %}">
                     <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarCommunication" data-bs-toggle="collapse" role="button"
@@ -342,12 +345,15 @@
                                             <span>Mes Messages</span>
                                         </a>
                                     </div>
+                                     {% user_can_access 'com' 'view' as can_view_communication %}
+                                    {% if can_view_communication or request.user.is_superuser %}
                                     <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                         <a href="{% url 'tenant_comm_hub' %}" class="nav-link {% if request.resolver_match.url_name in 'tenant_comm_hub tenant_comm_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                             <i class="ri-git-repository-private-line me-1"></i>
                                             <span>Flux Inter-Etablissements</span>
                                         </a>
                                     </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -864,508 +870,520 @@
                     </li>
                     <!-- Ressources Humaines -->              
                 {% endif %}
-
-                <!-- Scolarité -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'PageModeleContrat AffectationPage StudentDetails AffectationAuGroupe ListeStudents listegroupes nouveaugroupe detailsgroupe' %}active{% endif %}">
-                    <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarScolarite" data-bs-toggle="collapse" role="button" 
-                        aria-expanded="{% if request.resolver_match.url_name in 'PageModeleContrat ListeStudents StudentDetails AffectationAuGroupe listegroupes nouveaugroupe detailsgroupe' %}true{% else %}false{% endif %}" 
-                        aria-controls="sidebarScolarite">
-                        <i class="bx bx-book-content fs-5"></i><span class="ms-1">Scolarité</span>
-                    </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageModeleContrat AffectationPage StudentDetails AffectationAuGroupe ListeStudents listegroupes nouveaugroupe detailsgroupe' %}show{% endif %}" 
-                        id="sidebarScolarite">
-                        <div class="submenu-container">
-                            <div class="row g-1">
-                                <div class="col-12">
-                                    <a href="#sidbareGroupe" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-group text-primary"></i>
+                
+                {% user_can_access 'scol' 'view' as can_view_scolarite %}
+                {% if can_view_scolarite or request.user.is_superuser %}
+                    <!-- Scolarité -->
+                    <li class="nav-item {% if request.resolver_match.url_name in 'PageModeleContrat AffectationPage StudentDetails AffectationAuGroupe ListeStudents listegroupes nouveaugroupe detailsgroupe' %}active{% endif %}">
+                        <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarScolarite" data-bs-toggle="collapse" role="button" 
+                            aria-expanded="{% if request.resolver_match.url_name in 'PageModeleContrat ListeStudents StudentDetails AffectationAuGroupe listegroupes nouveaugroupe detailsgroupe' %}true{% else %}false{% endif %}" 
+                            aria-controls="sidebarScolarite">
+                            <i class="bx bx-book-content fs-5"></i><span class="ms-1">Scolarité</span>
+                        </a>
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageModeleContrat AffectationPage StudentDetails AffectationAuGroupe ListeStudents listegroupes nouveaugroupe detailsgroupe' %}show{% endif %}" 
+                            id="sidebarScolarite">
+                            <div class="submenu-container">
+                                <div class="row g-1">
+                                    <div class="col-12">
+                                        <a href="#sidbareGroupe" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-group text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Gestion des Groupes</h6>
+                                                    <small class="text-muted">Classes et affectations</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Gestion des Groupes</h6>
-                                                <small class="text-muted">Classes et affectations</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'listegroupes nouveaugroupe detailsgroupe' %}show{% endif %}" id="sidbareGroupe">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_groupe:listegroupes' %}" class="nav-link {% if request.resolver_match.url_name in 'listegroupes detailsgroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Liste des groupes</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'listegroupes nouveaugroupe detailsgroupe' %}show{% endif %}" id="sidbareGroupe">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_groupe:listegroupes' %}" class="nav-link {% if request.resolver_match.url_name in 'listegroupes detailsgroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Liste des groupes</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_groupe:nouveaugroupe' %}" class="nav-link {% if request.resolver_match.url_name == 'nouveaugroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-plus-circle me-1"></i>
-                                                <span>Nouveau groupe</span>
-                                            </a>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_groupe:nouveaugroupe' %}" class="nav-link {% if request.resolver_match.url_name == 'nouveaugroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-plus-circle me-1"></i>
+                                                    <span>Nouveau groupe</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                    
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebaraffectation" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-transfer text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Affectations</h6>
+                                                    <small class="text-muted">Répartition des étudiants</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1" id="sidebaraffectation">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_groupe:AffectationPage' %}" class="nav-link {% if request.resolver_match.url_name in 'AffectationPage AffectationAuGroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-time me-1"></i>
+                                                    <span>En attente d'affectation</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebaraffectation" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-transfer text-info"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Affectations</h6>
-                                                <small class="text-muted">Répartition des étudiants</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1" id="sidebaraffectation">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_groupe:AffectationPage' %}" class="nav-link {% if request.resolver_match.url_name in 'AffectationPage AffectationAuGroupe' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-time me-1"></i>
-                                                <span>En attente d'affectation</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
 
-                            
-
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarStudent" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-user text-success"></i>
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarStudent" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-user text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Gestion des Étudiants</h6>
+                                                    <small class="text-muted">Inscriptions et dossiers</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Gestion des Étudiants</h6>
-                                                <small class="text-muted">Inscriptions et dossiers</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeStudents' %}show{% endif %}" id="sidebarStudent">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeStudents StudentDetails' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Liste des étudiants</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeStudents' %}show{% endif %}" id="sidebarStudent">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeStudents StudentDetails' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Liste des étudiants</span>
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </li>
-                <!-- Scolarité -->
+                    </li>
+                    <!-- Scolarité -->
+                {% endif %}
 
-                <!-- Chargé de formation -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}active{% endif %}">
-                    <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarChargedeFormation" data-bs-toggle="collapse" role="button" 
-                    aria-expanded="{% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}true{% else %}false{% endif %}"
-                    aria-controls="sidebarChargedeFormation">
-                        <i class="bx bx-calendar-edit fs-5"></i><span class="ms-1">Interface pédagogique</span>
-                    </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}show{% endif %}" 
-                        id="sidebarChargedeFormation">
-                        <div class="submenu-container">
-                            <div class="row g-1">
-                                <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                    <a href="{% url 'institut_app:pedago_dashboard' %}" class="nav-link {% if request.resolver_match.url_name in 'pedago_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                        <i class="bx bx-tachometer me-1"></i>
-                                        <span>Tableau de bord</span>
-                                    </a>
-                                </div>
-                                <!-- Emploi du temps submenu -->
-                                <div class="col-12">
-                                    <a href="#sidebarEmploiTemps" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-calendar text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Emploi du temps</h6>
-                                                <small class="text-muted">Gestion des horaires</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'model_creneau_detail ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit' %}show{% endif %}" 
-                                        id="sidebarEmploiTemps">
-                                        <div class="row g-1">
-                                            
-                                            <div class="col-12">
-                                                <div class="submenu-section rounded-2 p-2 mb-2">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                                        <a href="{% url 't_timetable:ListeDesEmploie' %}" class="nav-link {% if request.resolver_match.url_name in 'timetable_view ListeDesEmploie timetable_configure timetable_edit' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-list-ul me-1"></i>
-                                                            <span>Emplois du temps</span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                                        <a href="{% url 't_timetable:CreateTimeTable' %}" class="nav-link {% if request.resolver_match.url_name == 'CreateTimeTable' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-plus-circle me-1"></i>
-                                                            <span>Nouvel emploi du temps</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Formateurs submenu -->
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarFormateurs" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-chalkboard text-warning"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Formateurs</h6>
-                                                <small class="text-muted">Gestion des formateurs</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1" id="sidebarFormateurs">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_formations:PageFormateurs' %}" class="nav-link {% if request.resolver_match.url_name in 'PageFormateurs' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Liste des formateurs</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-plus-circle me-1"></i>
-                                                <span>Nouveau formateur</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_timetable:PageAffectation' %}" class="nav-link {% if request.resolver_match.url_name in 'PageAffectation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-transfer me-1"></i>
-                                                <span>Affectation module</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Avancement Cours submenu -->
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarAvancementCours" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-bar-chart text-info"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Avancement Cours</h6>
-                                                <small class="text-muted">Suivi de progression</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1" 
-                                        id="sidebarAvancementCours">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_timetable:PageSuivieCours' %}" class="nav-link {% if request.resolver_match.url_name in 'PageSuivieCours' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Rapport d'avancement</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Suivi des présences submenu -->
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarSuiviPresence" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-calendar-check text-success"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Suivi des présences</h6>
-                                                <small class="text-muted">Gestion des présences</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'DetailsRegistrePresence RegistrePage DetailsListePresence' %}show{% endif %}" 
-                                        id="sidebarSuiviPresence">
-                                        <div class="row g-1">
-                                            <div class="col-12">
-                                                <a href="#sidebarRegistrePresence" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                            <i class="bx bx-book text-primary"></i>
-                                                        </div>
-                                                        <div>
-                                                            <h6 class="mb-0 fw-semibold">Registre</h6>
-                                                            <small class="text-muted">Gestion des registres</small>
-                                                        </div>
-                                                    </div>
-                                                    <i class="bx bx-chevron-down submenu-arrow"></i>
-                                                </a>
-                                                <div class="collapse submenu-content mt-1" id="sidebarRegistrePresence">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                                        <a href="{% url 't_etudiants:RegistrePage' %}" class="nav-link {% if request.resolver_match.url_name in 'RegistrePage DetailsRegistrePresence DetailsListePresence' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-list-ul me-1"></i>
-                                                            <span>Liste des registres</span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                                        <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in '' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-user me-1"></i>
-                                                            <span>Liste des étudiants</span>
-                                                        </a>
-                                                    </div>
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                                        <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-file me-1"></i>
-                                                            <span>Rapport de présence</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Configuration -->
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarConfigurationInterface" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-bar-chart text-info"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Configuration</h6>
-                                                <small class="text-muted">Parametres de gestion</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesSalles ListeModelCrenau' %}show{% endif %}" id="sidebarConfigurationInterface" >
-                                        <div class="col-12">
-                                                <a href="#sidebarSalle" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                            <i class="bx bx-door-open text-primary"></i>
-                                                        </div>
-                                                        <div>
-                                                            <h6 class="mb-0 fw-semibold">Gestion des Salles</h6>
-                                                            <small class="text-muted">Salles de cours</small>
-                                                        </div>
-                                                    </div>
-                                                    <i class="bx bx-chevron-down submenu-arrow"></i>
-                                                </a>
-                                                <div class="collapse submenu-content mt-1" id="sidebarSalle">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                                        <a href="{% url 't_timetable:ListeDesSalles' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesSalles' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-list-ul me-1"></i>
-                                                            <span>Liste des salles</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-12 mt-2">
-                                                <a href="#sidebarModeleCreneau" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
-                                                            <i class="bx bx-time text-warning"></i>
-                                                        </div>
-                                                        <div>
-                                                            <h6 class="mb-0 fw-semibold">Modèles de créneau</h6>
-                                                            <small class="text-muted">Modèles d'horaires</small>
-                                                        </div>
-                                                    </div>
-                                                    <i class="bx bx-chevron-down submenu-arrow"></i>
-                                                </a>
-                                                <div class="collapse submenu-content mt-1" id="sidebarModeleCreneau">
-                                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                                        <a href="{% url 't_timetable:ListeModelCrenau' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeModelCrenau model_creneau_edit model_creneau_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                            <i class="bx bx-list-ul me-1"></i>
-                                                            <span>Modèles disponibles</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-                <!-- Chargé de formation -->
-
-                <!-- Examens -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission PageCommission NouvelleCommission ModelBuilltinPage DetailsSession ListeSession' %}active{% endif %}">
-                    <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarGesExam" data-bs-toggle="collapse" role="button"
-                    aria-expanded="{% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission PageCommission NouvelleCommission ModelBuilltinPage DetailsSession ListeSession' %}true{% else %}false{% endif %}"
-                    aria-controls="sidebarGesExam">
-                        <i class="bx bx-file fs-5"></i><span class="ms-1">Examens</span>
-                    </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission NouvelleCommission PageCommission ModelBuilltinPage DetailsSession ListeSession' %}show{% endif %}" id="sidebarGesExam">
-                        <div class="submenu-container">
-                            <div class="row g-1">
-                                <div class="col-12">
-                                    <a href="#sidebarExamens" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-file text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Examens</h6>
-                                                <small class="text-muted">Gestion des examens</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1" id="sidebarExamens">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_exam:ListeSession' %}" class="nav-link {% if request.resolver_match.url_name in 'PageDetailsSessionExamPlan ShowPv DetailsSession ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-history me-1"></i>
-                                                <span>Sessions d'examens</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_exam:exams_results' %}" class="nav-link {% if request.resolver_match.url_name in 'exams_results' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-line-chart me-1"></i>
-                                                <span>PV d'examens</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_exam:PagePvDeliberation' %}" class="nav-link {% if request.resolver_match.url_name in 'PagePvDeliberation PageDeliberationResult' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-line-chart me-1"></i>
-                                                <span>PV de délibération</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_exam:PageListeSessionExam' %}" class="nav-link {% if request.resolver_match.url_name in 'PageListeSessionExam liste_etudiants student_bulletin' and request.resolver_match.url_name != 'ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-line-chart me-1"></i>
-                                                <span>Bulletins de notes</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-12">
-                                    <a href="#sideBarCommission" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="ri-folder-shared-line"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Commission pédagogique</h6>
-                                                <small class="text-muted">Planification des examens</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageCommission NouvelleCommission' %}show{% endif %}" id="sideBarCommission">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_exam:PageCommission' %}" class="nav-link {% if request.resolver_match.url_name in 'PageCommission UpdateCommission' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-file me-1"></i>
-                                                <span>Liste des commissions</span>
-                                            </a>
-                                            <a href="{% url 't_exam:NouvelleCommission' %}" class="nav-link {% if request.resolver_match.url_name == 'NouvelleCommission' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-file me-1"></i>
-                                                <span>Nouvelle commission</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12">
-                                    <a href="#sideBarParamExam" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-cog text-warning"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Paramètres</h6>
-                                                <small class="text-muted">Configuration des examens</small>
-                                            </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ModelBuilltinPage ' %}show{% endif %}" id="sideBarParamExam">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_exam:ModelBuilltinPage' %}" class="nav-link {% if request.resolver_match.url_name == 'ModelBuilltinPage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-file me-1"></i>
-                                                <span>Modèles de PV</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-                <!-- Examens -->
-
-                <!-- Stages -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}active{% endif %}">
-                    <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarStages" data-bs-toggle="collapse" role="button"
-                    aria-expanded="{% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}true{% else %}false{% endif %}"
-                    aria-controls="sidebarStages">
-                        <i class="bx bxs-graduation fs-5"></i><span class="ms-1">Stages</span>
-                    </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}show{% endif %}" id="sidebarStages">
-                        <div class="submenu-container">
-                            <div class="row g-1">
-                                <div class="col-12">
+                {% user_can_access 'ped' 'view' as can_view_interface %}
+                {% if can_view_interface or request.user.is_superuser %}
+                    <!-- Chargé de formation -->
+                    <li class="nav-item {% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}active{% endif %}">
+                        <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarChargedeFormation" data-bs-toggle="collapse" role="button" 
+                        aria-expanded="{% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}true{% else %}false{% endif %}"
+                        aria-controls="sidebarChargedeFormation">
+                            <i class="bx bx-calendar-edit fs-5"></i><span class="ms-1">Interface pédagogique</span>
+                        </a>
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'pedago_dashboard timetable_view PageSuivieCours model_creneau_detail PageAffectation CreateTimeTable PageFormateurs ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit RegistrePage DetailsRegistrePresence DetailsListePresence' %}show{% endif %}" 
+                            id="sidebarChargedeFormation">
+                            <div class="submenu-container">
+                                <div class="row g-1">
                                     <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                        <a href="{% url 't_stage:stage_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'stage_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                        <a href="{% url 'institut_app:pedago_dashboard' %}" class="nav-link {% if request.resolver_match.url_name in 'pedago_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                             <i class="bx bx-tachometer me-1"></i>
                                             <span>Tableau de bord</span>
                                         </a>
                                     </div>
-                                    <a href="#sidebarSuiviStages" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-list-ul text-primary"></i>
+                                    <!-- Emploi du temps submenu -->
+                                    <div class="col-12">
+                                        <a href="#sidebarEmploiTemps" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-calendar text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Emploi du temps</h6>
+                                                    <small class="text-muted">Gestion des horaires</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Suivi des Stages</h6>
-                                                <small class="text-muted">Étudiants et Focus Groups</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'model_creneau_detail ListeDesEmploie timetable_edit ListeDesSalles ListeModelCrenau timetable_configure model_creneau_edit' %}show{% endif %}" 
+                                            id="sidebarEmploiTemps">
+                                            <div class="row g-1">
+                                                
+                                                <div class="col-12">
+                                                    <div class="submenu-section rounded-2 p-2 mb-2">
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                            <a href="{% url 't_timetable:ListeDesEmploie' %}" class="nav-link {% if request.resolver_match.url_name in 'timetable_view ListeDesEmploie timetable_configure timetable_edit' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-list-ul me-1"></i>
+                                                                <span>Emplois du temps</span>
+                                                            </a>
+                                                        </div>
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                            <a href="{% url 't_timetable:CreateTimeTable' %}" class="nav-link {% if request.resolver_match.url_name == 'CreateTimeTable' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-plus-circle me-1"></i>
+                                                                <span>Nouvel emploi du temps</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                
                                             </div>
                                         </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'launch_stage list_stages focus_group_detail presentation_form' %}show{% endif %}" id="sidebarSuiviStages">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_stage:launch_stage' %}" class="nav-link {% if request.resolver_match.url_name == 'launch_stage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-plus-circle me-1"></i>
-                                                <span>Lancement de stage</span>
-                                            </a>
+                                    </div>
+                                    
+                                    <!-- Formateurs submenu -->
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarFormateurs" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-chalkboard text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Formateurs</h6>
+                                                    <small class="text-muted">Gestion des formateurs</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1" id="sidebarFormateurs">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_formations:PageFormateurs' %}" class="nav-link {% if request.resolver_match.url_name in 'PageFormateurs' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Liste des formateurs</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-plus-circle me-1"></i>
+                                                    <span>Nouveau formateur</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_timetable:PageAffectation' %}" class="nav-link {% if request.resolver_match.url_name in 'PageAffectation' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-transfer me-1"></i>
+                                                    <span>Affectation module</span>
+                                                </a>
+                                            </div>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_stage:list_stages' %}" class="nav-link {% if request.resolver_match.url_name == 'list_stages' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-user-voice me-1"></i>
-                                                <span>Liste des stages</span>
-                                            </a>
+                                    </div>
+                                    
+                                    <!-- Avancement Cours submenu -->
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarAvancementCours" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-bar-chart text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Avancement Cours</h6>
+                                                    <small class="text-muted">Suivi de progression</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1" 
+                                            id="sidebarAvancementCours">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_timetable:PageSuivieCours' %}" class="nav-link {% if request.resolver_match.url_name in 'PageSuivieCours' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Rapport d'avancement</span>
+                                                </a>
+                                            </div>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_stage:list_focus_groups' %}" class="nav-link {% if request.resolver_match.url_name == 'list_focus_groups' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-group me-1"></i>
-                                                <span>Gestion des Focus Groups</span>
-                                            </a>
+                                    </div>
+                                    
+                                    <!-- Suivi des présences submenu -->
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarSuiviPresence" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-calendar-check text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Suivi des présences</h6>
+                                                    <small class="text-muted">Gestion des présences</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'DetailsRegistrePresence RegistrePage DetailsListePresence' %}show{% endif %}" 
+                                            id="sidebarSuiviPresence">
+                                            <div class="row g-1">
+                                                <div class="col-12">
+                                                    <a href="#sidebarRegistrePresence" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                                <i class="bx bx-book text-primary"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-semibold">Registre</h6>
+                                                                <small class="text-muted">Gestion des registres</small>
+                                                            </div>
+                                                        </div>
+                                                        <i class="bx bx-chevron-down submenu-arrow"></i>
+                                                    </a>
+                                                    <div class="collapse submenu-content mt-1" id="sidebarRegistrePresence">
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                            <a href="{% url 't_etudiants:RegistrePage' %}" class="nav-link {% if request.resolver_match.url_name in 'RegistrePage DetailsRegistrePresence DetailsListePresence' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-list-ul me-1"></i>
+                                                                <span>Liste des registres</span>
+                                                            </a>
+                                                        </div>
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                            <a href="{% url 't_etudiants:ListeStudents' %}" class="nav-link {% if request.resolver_match.url_name in '' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-user me-1"></i>
+                                                                <span>Liste des étudiants</span>
+                                                            </a>
+                                                        </div>
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                            <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-file me-1"></i>
+                                                                <span>Rapport de présence</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_stage:validation_council' %}" class="nav-link {% if request.resolver_match.url_name == 'validation_council' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-check-shield me-1"></i>
-                                                <span>Conseils de Validation</span>
-                                            </a>
+                                    </div>
+
+                                    <!-- Configuration -->
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarConfigurationInterface" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-bar-chart text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Configuration</h6>
+                                                    <small class="text-muted">Parametres de gestion</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesSalles ListeModelCrenau' %}show{% endif %}" id="sidebarConfigurationInterface" >
+                                            <div class="col-12">
+                                                    <a href="#sidebarSalle" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                                <i class="bx bx-door-open text-primary"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-semibold">Gestion des Salles</h6>
+                                                                <small class="text-muted">Salles de cours</small>
+                                                            </div>
+                                                        </div>
+                                                        <i class="bx bx-chevron-down submenu-arrow"></i>
+                                                    </a>
+                                                    <div class="collapse submenu-content mt-1" id="sidebarSalle">
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                            <a href="{% url 't_timetable:ListeDesSalles' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesSalles' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-list-ul me-1"></i>
+                                                                <span>Liste des salles</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-12 mt-2">
+                                                    <a href="#sidebarModeleCreneau" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
+                                                                <i class="bx bx-time text-warning"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0 fw-semibold">Modèles de créneau</h6>
+                                                                <small class="text-muted">Modèles d'horaires</small>
+                                                            </div>
+                                                        </div>
+                                                        <i class="bx bx-chevron-down submenu-arrow"></i>
+                                                    </a>
+                                                    <div class="collapse submenu-content mt-1" id="sidebarModeleCreneau">
+                                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                            <a href="{% url 't_timetable:ListeModelCrenau' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeModelCrenau model_creneau_edit model_creneau_detail' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                                <i class="bx bx-list-ul me-1"></i>
+                                                                <span>Modèles disponibles</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </li>
-                <!-- Stages -->
+                    </li>
+                    <!-- Chargé de formation -->
+                {% endif %}
+
+                {% user_can_access 'exa' 'view' as cas_view_exam %}
+                {% if can_view_exam or request.user.is_superuser %}
+                    <!-- Examens -->
+                    <li class="nav-item {% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission PageCommission NouvelleCommission ModelBuilltinPage DetailsSession ListeSession' %}active{% endif %}">
+                        <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarGesExam" data-bs-toggle="collapse" role="button"
+                        aria-expanded="{% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission PageCommission NouvelleCommission ModelBuilltinPage DetailsSession ListeSession' %}true{% else %}false{% endif %}"
+                        aria-controls="sidebarGesExam">
+                            <i class="bx bx-file fs-5"></i><span class="ms-1">Examens</span>
+                        </a>
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageListeSessionExam PageDetailsSessionExamPlan PageDeliberationResult PagePvDeliberation ShowPv exams_results DetailsCommission UpdateCommission NouvelleCommission PageCommission ModelBuilltinPage DetailsSession ListeSession' %}show{% endif %}" id="sidebarGesExam">
+                            <div class="submenu-container">
+                                <div class="row g-1">
+                                    <div class="col-12">
+                                        <a href="#sidebarExamens" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-file text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Examens</h6>
+                                                    <small class="text-muted">Gestion des examens</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1" id="sidebarExamens">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_exam:ListeSession' %}" class="nav-link {% if request.resolver_match.url_name in 'PageDetailsSessionExamPlan ShowPv DetailsSession ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-history me-1"></i>
+                                                    <span>Sessions d'examens</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_exam:exams_results' %}" class="nav-link {% if request.resolver_match.url_name in 'exams_results' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-line-chart me-1"></i>
+                                                    <span>PV d'examens</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_exam:PagePvDeliberation' %}" class="nav-link {% if request.resolver_match.url_name in 'PagePvDeliberation PageDeliberationResult' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-line-chart me-1"></i>
+                                                    <span>PV de délibération</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_exam:PageListeSessionExam' %}" class="nav-link {% if request.resolver_match.url_name in 'PageListeSessionExam liste_etudiants student_bulletin' and request.resolver_match.url_name != 'ListeSession' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-line-chart me-1"></i>
+                                                    <span>Bulletins de notes</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <a href="#sideBarCommission" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="ri-folder-shared-line"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Commission pédagogique</h6>
+                                                    <small class="text-muted">Planification des examens</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageCommission NouvelleCommission' %}show{% endif %}" id="sideBarCommission">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_exam:PageCommission' %}" class="nav-link {% if request.resolver_match.url_name in 'PageCommission UpdateCommission' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-file me-1"></i>
+                                                    <span>Liste des commissions</span>
+                                                </a>
+                                                <a href="{% url 't_exam:NouvelleCommission' %}" class="nav-link {% if request.resolver_match.url_name == 'NouvelleCommission' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-file me-1"></i>
+                                                    <span>Nouvelle commission</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <a href="#sideBarParamExam" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-cog text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Paramètres</h6>
+                                                    <small class="text-muted">Configuration des examens</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ModelBuilltinPage ' %}show{% endif %}" id="sideBarParamExam">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_exam:ModelBuilltinPage' %}" class="nav-link {% if request.resolver_match.url_name == 'ModelBuilltinPage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-file me-1"></i>
+                                                    <span>Modèles de PV</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <!-- Examens -->
+                {% endif %}
+
+                {% user_can_access 'scol' 'view' as cas_view_stage %}
+                {% if can_view_stage or request.user.is_superuser %}
+                    <!-- Stages -->
+                    <li class="nav-item {% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}active{% endif %}">
+                        <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarStages" data-bs-toggle="collapse" role="button"
+                        aria-expanded="{% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}true{% else %}false{% endif %}"
+                        aria-controls="sidebarStages">
+                            <i class="bx bxs-graduation fs-5"></i><span class="ms-1">Stages</span>
+                        </a>
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'list_focus_groups launch_stage stage_dashboard list_stages focus_group_detail presentation_form validation_council' %}show{% endif %}" id="sidebarStages">
+                            <div class="submenu-container">
+                                <div class="row g-1">
+                                    <div class="col-12">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                            <a href="{% url 't_stage:stage_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'stage_dashboard' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                <i class="bx bx-tachometer me-1"></i>
+                                                <span>Tableau de bord</span>
+                                            </a>
+                                        </div>
+                                        <a href="#sidebarSuiviStages" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-list-ul text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Suivi des Stages</h6>
+                                                    <small class="text-muted">Étudiants et Focus Groups</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'launch_stage list_stages focus_group_detail presentation_form' %}show{% endif %}" id="sidebarSuiviStages">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_stage:launch_stage' %}" class="nav-link {% if request.resolver_match.url_name == 'launch_stage' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-plus-circle me-1"></i>
+                                                    <span>Lancement de stage</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_stage:list_stages' %}" class="nav-link {% if request.resolver_match.url_name == 'list_stages' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-user-voice me-1"></i>
+                                                    <span>Liste des stages</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_stage:list_focus_groups' %}" class="nav-link {% if request.resolver_match.url_name == 'list_focus_groups' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-group me-1"></i>
+                                                    <span>Gestion des Focus Groups</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_stage:validation_council' %}" class="nav-link {% if request.resolver_match.url_name == 'validation_council' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-check-shield me-1"></i>
+                                                    <span>Conseils de Validation</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <!-- Stages -->
+                {% endif %}
 
                 {% user_can_access 'tre' 'view' as can_view_finance %}
                 {% if can_view_finance or request.user.is_superuser %}
@@ -1742,184 +1760,185 @@
                     <!-- Finance -->
                 {% endif %}
 
-              
-                
-                <!-- Conseil -->
-                <!-- Conseil -->
-                <li class="nav-item {% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis prospectInstance ListeThematique AddNewDevis ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}active{% endif %}">
-                    <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarConseil" data-bs-toggle="collapse" role="button" 
-                    aria-expanded="{% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis prospectInstance ListeThematique AddNewDevis ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}true{% else %}false{% endif %}" 
-                    aria-controls="sidebarConseil">
-                        <i class='bx bx-briefcase-alt-2 fs-5'></i> <span data-key="t-authentication" class="ms-1">Executive Education</span>
-                    </a>
-                    <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis AddNewDevis prospectInstance ListeThematique ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}show{% endif %}" id="sidebarConseil">
-                        <div class="submenu-container">
-                            <div class="row g-1">
-                                <div class="col-12">
-                                    <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-2">
-                                        <a href="{% url 't_conseil:PipelineConseil' %}" class="nav-link {% if request.resolver_match.url_name == 'PipelineConseil' %}active{% endif %} d-flex align-items-center py-2 px-2 rounded-2">
-                                            <i class="bx bx-grid-alt me-2 text-primary"></i>
-                                            <span class="fw-bold">Pipeline Dashboard</span>
+                    
+                {% user_can_access 'con' 'view' as cans_view_conseil %}
+                {% if can_view_conseil or request.user.is_superuser %}
+                    <!-- Conseil -->
+                    <!-- Conseil -->
+                    <li class="nav-item {% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis prospectInstance ListeThematique AddNewDevis ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}active{% endif %}">
+                        <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarConseil" data-bs-toggle="collapse" role="button" 
+                        aria-expanded="{% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis prospectInstance ListeThematique AddNewDevis ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}true{% else %}false{% endif %}" 
+                        aria-controls="sidebarConseil">
+                            <i class='bx bx-briefcase-alt-2 fs-5'></i> <span data-key="t-authentication" class="ms-1">Executive Education</span>
+                        </a>
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'ListeDAS PipelineConseil ConfigurationConseil configure-devis DetailsDevis ListeDesDevis AddNewDevis prospectInstance ListeThematique ArchiveThematique ListeDesFactures AddNewFacture configure-facture DetailsFacture' %}show{% endif %}" id="sidebarConseil">
+                            <div class="submenu-container">
+                                <div class="row g-1">
+                                    <div class="col-12">
+                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-2">
+                                            <a href="{% url 't_conseil:PipelineConseil' %}" class="nav-link {% if request.resolver_match.url_name == 'PipelineConseil' %}active{% endif %} d-flex align-items-center py-2 px-2 rounded-2">
+                                                <i class="bx bx-grid-alt me-2 text-primary"></i>
+                                                <span class="fw-bold">Pipeline Dashboard</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <a href="#sidebarThematique" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-book-content text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Produits & Services</h6>
+                                                    <small class="text-muted">Catalogue de formations</small>
+                                                </div>
+                                            </div>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <a href="#sidebarThematique" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-book-content text-primary"></i>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDAS ArchiveThematique ListeThematique ' %}show{% endif %}" id="sidebarThematique">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_conseil:ListeThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Catalogue</span>
+                                                </a>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Produits & Services</h6>
-                                                <small class="text-muted">Catalogue de formations</small>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_conseil:ListeDAS' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeDAS' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Ajouter un DAS</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDAS ArchiveThematique ListeThematique ' %}show{% endif %}" id="sidebarThematique">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_conseil:ListeThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Catalogue</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_conseil:ListeDAS' %}" class="nav-link {% if request.resolver_match.url_name == 'ListeDAS' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Ajouter un DAS</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_conseil:ArchiveThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ArchiveThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-archive me-1"></i>
-                                                <span>Archives</span>
-                                            </a>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_conseil:ArchiveThematique' %}" class="nav-link {% if request.resolver_match.url_name in 'ArchiveThematique' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-archive me-1"></i>
+                                                    <span>Archives</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarGestionClients" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-group text-warning"></i>
+                                    
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarGestionClients" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-warning bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-group text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Gestion des Clients</h6>
+                                                    <small class="text-muted">Prospects et clients</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Gestion des Clients</h6>
-                                                <small class="text-muted">Prospects et clients</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'prospectInstance' %}show{% endif %}" id="sidebarGestionClients">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_conseil:prospectInstance' %}" class="nav-link {% if request.resolver_match.url_name in 'prospectInstance' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-user-plus me-1"></i>
+                                                    <span>Prospects</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'prospectInstance' %}show{% endif %}" id="sidebarGestionClients">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_conseil:prospectInstance' %}" class="nav-link {% if request.resolver_match.url_name in 'prospectInstance' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-user-plus me-1"></i>
-                                                <span>Prospects</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-user-check me-1"></i>
-                                                <span>Clients</span>
-                                            </a>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-user-check me-1"></i>
+                                                    <span>Clients</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarDevis" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-file text-success"></i>
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarDevis" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-success bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-file text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Devis</h6>
+                                                    <small class="text-muted">Gestion commerciale</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Devis</h6>
-                                                <small class="text-muted">Gestion commerciale</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'AddNewDevis   ' %}show{% endif %}" id="sidebarDevis">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_conseil:AddNewDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'AddNewDevis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-plus-circle me-1"></i>
+                                                    <span>Nouveau devis</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'AddNewDevis   ' %}show{% endif %}" id="sidebarDevis">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_conseil:AddNewDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'AddNewDevis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-plus-circle me-1"></i>
-                                                <span>Nouveau devis</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_conseil:ListeDesDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesDevis DetailsDevis configure-devis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Liste des devis</span>
-                                            </a>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_conseil:ListeDesDevis' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesDevis DetailsDevis configure-devis' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Liste des devis</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarFacture" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-receipt text-info"></i>
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarFacture" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-info bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-receipt text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Factures</h6>
+                                                    <small class="text-muted">Gestion de la facturation</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Factures</h6>
-                                                <small class="text-muted">Gestion de la facturation</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesFactures DetailsFacture AddNewFacture configure-facture' %}show{% endif %}" id="sidebarFacture">
+                                            {# Nouvelle facture via conversion de devis pour le moment #}
+                                            <!-- <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="" class="nav-link {% if request.resolver_match.url_name in ' ' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-plus-circle me-1"></i>
+                                                    <span>Nouvelle facture</span>
+                                                </a>
+                                            </div> -->
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_conseil:ListeDesFactures' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesFactures DetailsFacture configure-facture' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Liste des factures</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'ListeDesFactures DetailsFacture AddNewFacture configure-facture' %}show{% endif %}" id="sidebarFacture">
-                                        {# Nouvelle facture via conversion de devis pour le moment #}
-                                        <!-- <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="" class="nav-link {% if request.resolver_match.url_name in ' ' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-plus-circle me-1"></i>
-                                                <span>Nouvelle facture</span>
-                                            </a>
-                                        </div> -->
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
-                                            <a href="{% url 't_conseil:ListeDesFactures' %}" class="nav-link {% if request.resolver_match.url_name in 'ListeDesFactures DetailsFacture configure-facture' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Liste des factures</span>
-                                            </a>
-                                        </div>
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-list-ul me-1"></i>
-                                                <span>Tous les paiements</span>
-                                            </a>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="#" class="nav-link d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-list-ul me-1"></i>
+                                                    <span>Tous les paiements</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="col-12 mt-2">
-                                    <a href="#sidebarConfigConseil" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
-                                        <div class="d-flex align-items-center">
-                                            <div class="submenu-icon bg-secondary bg-opacity-10 rounded-circle p-1 me-2">
-                                                <i class="bx bx-cog text-secondary"></i>
+                                    <div class="col-12 mt-2">
+                                        <a href="#sidebarConfigConseil" class="submenu-header d-flex align-items-center justify-content-between p-2 rounded-2" data-bs-toggle="collapse">
+                                            <div class="d-flex align-items-center">
+                                                <div class="submenu-icon bg-secondary bg-opacity-10 rounded-circle p-1 me-2">
+                                                    <i class="bx bx-cog text-secondary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-semibold">Paramètres</h6>
+                                                    <small class="text-muted">Configuration du module</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-semibold">Paramètres</h6>
-                                                <small class="text-muted">Configuration du module</small>
+                                            <i class="bx bx-chevron-down submenu-arrow"></i>
+                                        </a>
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name == 'ConfigurationConseil' %}show{% endif %}" id="sidebarConfigConseil">
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2">
+                                                <a href="{% url 't_conseil:ConfigurationConseil' %}" class="nav-link {% if request.resolver_match.url_name == 'ConfigurationConseil' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-slider-alt me-1"></i>
+                                                    <span>Configuration globale</span>
+                                                </a>
                                             </div>
-                                        </div>
-                                        <i class="bx bx-chevron-down submenu-arrow"></i>
-                                    </a>
-                                    <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name == 'ConfigurationConseil' %}show{% endif %}" id="sidebarConfigConseil">
-                                        <div class="submenu-item bg-light bg-opacity-50 rounded-2">
-                                            <a href="{% url 't_conseil:ConfigurationConseil' %}" class="nav-link {% if request.resolver_match.url_name == 'ConfigurationConseil' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
-                                                <i class="bx bx-slider-alt me-1"></i>
-                                                <span>Configuration globale</span>
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </li>
-                <!-- Conseil -->
-
+                    </li>
+                    <!-- Conseil -->
+                {% endif %}
                 <!-- Entreprise moved to Configuration section -->
 
                 <!-- Administration moved to Configuration section -->

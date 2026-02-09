@@ -181,6 +181,7 @@ class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
         ('ped',_('Pédagogie')),
+        ('exa',_('Chargé(e) des examens')),
         ('eva',_('Evaluation')),
         ('con',_('Conseil')),
         ('adm',_('Administration')),
@@ -189,6 +190,8 @@ class Module(models.Model):
         ('scol',_('Scolarité')),
         ('rh',_('Ressources Humaines')),
         ('rem',_('Remise')),
+        ('com',_('Communications')),
+        ('ger',_('Gérant'))
     ]
 
     name = models.CharField(max_length=50, null=True, blank=True, choices=MODULES, unique=True, verbose_name=_("Module"))
