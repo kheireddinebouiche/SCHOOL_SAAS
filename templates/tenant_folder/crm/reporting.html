@@ -1,0 +1,223 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %}Reporting CRM - Matrice{% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+        --danger-color: #ef233c;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .nav-tabs-custom .nav-item .nav-link {
+        border: none;
+        position: relative;
+        color: #878a99;
+    }
+    .nav-tabs-custom .nav-item .nav-link.active {
+        color: var(--primary-color);
+        background-color: transparent;
+    }
+    .nav-tabs-custom .nav-item .nav-link::after {
+        content: "";
+        background: var(--primary-color);
+        height: 2px;
+        position: absolute;
+        width: 100%;
+        left: 0px;
+        bottom: 0px;
+        transition: all 250ms ease 0s;
+        transform: scale(0);
+    }
+    .nav-tabs-custom .nav-item .nav-link.active::after {
+        transform: scale(1);
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Page Title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                     <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                         <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-table-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Matrice de Répartition</h4>
+                        </div>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0 bg-transparent">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">CRM</a></li>
+                                <li class="breadcrumb-item active">Reporting</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrix Section Only -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title mb-0 fs-15">Statistiques par Spécialité et Statut</h5>
+                                </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="width: 200px;">
+                                    <span class="input-group-text bg-light border-0"><i class="ri-calendar-event-line text-primary"></i></span>
+                                    <select class="form-select border-0 bg-light" id="promoSelect" aria-label="Sélectionner une promotion">
+                                        <option value="" selected>Toutes les années</option>
+                                        {% for promo in promos %}
+                                            <option value="{{ promo.id }}">{{ promo.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <ul class="nav nav-tabs-custom card-header-tabs" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-bs-toggle="tab" href="#simple_matrix" role="tab">
+                                            Diplomation Simple
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#double_matrix" role="tab">
+                                            Double Diplomation
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content text-muted">
+                                <div class="tab-pane active" id="simple_matrix" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-nowrap align-middle mb-0" id="table-simple">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th scope="col">Spécialité</th>
+                                                    <th scope="col" class="text-center">Visiteur</th>
+                                                    <th scope="col" class="text-center">Pré-inscrit</th>
+                                                    <th scope="col" class="text-center">Instance</th>
+                                                    <th scope="col" class="text-center">Convertit</th>
+                                                    <th scope="col" class="text-center">Annulé</th>
+                                                    <th scope="col" class="text-center fw-bold text-primary">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="tab-pane" id="double_matrix" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table table-nowrap align-middle mb-0" id="table-double">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th scope="col">Spécialité</th>
+                                                    <th scope="col" class="text-center">Visiteur</th>
+                                                    <th scope="col" class="text-center">Pré-inscrit</th>
+                                                    <th scope="col" class="text-center">Instance</th>
+                                                    <th scope="col" class="text-center">Convertit</th>
+                                                    <th scope="col" class="text-center">Annulé</th>
+                                                    <th scope="col" class="text-center fw-bold text-primary">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const promoSelect = document.getElementById('promoSelect');
+        
+        // Initial fetch
+        fetchData();
+
+        // Event listener for promo change
+        promoSelect.addEventListener('change', function() {
+            fetchData(this.value);
+        });
+
+        function fetchData(promoId = '') {
+            let url = "{% url 't_crm:ApiGetCrmReportingData' %}";
+            if (promoId) {
+                url += `?promo_id=${promoId}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    populateMatrixTable('table-simple', data.matrix_simple);
+                    populateMatrixTable('table-double', data.matrix_double);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function populateMatrixTable(tableId, data) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Aucune donnée disponible</td></tr>';
+                return;
+            }
+
+            data.forEach(item => {
+                const row = `
+                    <tr>
+                        <td class="fw-medium text-truncate" style="max-width: 250px;" title="${item.label}">${item.label || 'N/A'}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark fs-12">${item.visiteur}</span></td>
+                        <td class="text-center"><span class="badge bg-info-subtle text-info fs-12">${item.prinscrit}</span></td>
+                        <td class="text-center"><span class="badge bg-warning-subtle text-warning fs-12">${item.instance}</span></td>
+                        <td class="text-center"><span class="badge bg-success-subtle text-success fs-12">${item.convertit}</span></td>
+                        <td class="text-center"><span class="badge bg-danger-subtle text-danger fs-12">${item.annuler}</span></td>
+                        <td class="text-center fw-bold fs-13 text-primary">${item.total}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+    });
+</script>
+{% endblock %}

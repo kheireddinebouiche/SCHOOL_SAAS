@@ -10,6 +10,7 @@ from .f_views.secondwishe import *
 from .f_views.remise import *
 from.f_views.counter import *
 from .f_views.logs import *
+from .f_views.reporting import *
 
 app_name="t_crm"
 
@@ -179,5 +180,10 @@ urlpatterns = [
     
     path('user-logs/', user_action_log_list, name='user_action_log_list'),
     path('user-logs/clear/', clear_logs, name='clear_logs'),
+
+    ########################################## Reporting ###################################################
+    path('reporting/', crm_reporting, name='crm_reporting'),
+    path('api/reporting-data/', ApiGetCrmReportingData, name='ApiGetCrmReportingData'),
+    ########################################## Reporting ###################################################
 
 ]
