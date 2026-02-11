@@ -35,6 +35,8 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1','*','insim360.com']
 # Application definition
 
 SHARED_APPS = [
+    'daphne',
+    'channels',
     'django_tenants',
     'app',
    
@@ -140,6 +142,23 @@ DATABASE_ROUTERS = (
 )
 
 WSGI_APPLICATION = 'school.wsgi.application'
+ASGI_APPLICATION = 'school.asgi.application'
+
+if os.name == 'nt':
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
+    }
 
 
 # Database

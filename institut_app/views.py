@@ -1052,3 +1052,44 @@ def directeur_dashboard(request):
         'recent_reminders': recent_reminders
     }
     return render(request, 'tenant_folder/directeur/directeur.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiMarkNotificationRead(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        try:
+            notif = Notification.objects.get(id=id, user=request.user)
+            notif.is_read = True
+            notif.save()
+            return JsonResponse({'status': 'success'})
+        except Notification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification not found'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'})
+
+@login_required(login_url="institut_app:login")
+def ApiMarkAllNotificationsRead(request):
+    if request.method == "POST":
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'})
+
+@login_required(login_url="institut_app:login")
+def ApiDeleteNotification(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        try:
+            notif = Notification.objects.get(id=id, user=request.user)
+            notif.delete()
+            return JsonResponse({'status': 'success'})
+        except Notification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification not found'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'})
+
+@login_required(login_url="institut_app:login")
+def AllNotificationsPage(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    context = {
+        'tenant': request.tenant,
+        'notifications': notifications
+    }
+    return render(request, 'tenant_folder/notifications/all_notifications.html', context)
