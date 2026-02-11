@@ -219,33 +219,37 @@ def ApiAjouterHistoriqueAbsence(request):
             payload = json.loads(request.POST.get("data"))
             ligne_id = payload.get("ligne_presence")
             date_str = payload.get("date")
+            is_done = payload.get("is_done", True)
+            observation = payload.get("observation", "")
             records = payload.get("records", [])
 
             ligne = LigneRegistrePresence.objects.get(id=ligne_id)
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
 
             SuiviCours.objects.create(
-                is_done = True,
+                is_done = is_done,
                 ligne_presence_id = ligne_id,
                 module =ligne.module,
                 date_seance = date_obj,
+                observation = observation,
             )
 
-            for record in records:
-                student_id = record.get("student_id")
-                status = record.get("status", "P")
+            if is_done:
+                for record in records:
+                    student_id = record.get("student_id")
+                    status = record.get("status", "P")
 
-                etudiant = Prospets.objects.get(id=student_id)
-                historique, _ = HistoriqueAbsence.objects.get_or_create(
-                    etudiant=etudiant,
-                    ligne_presence=ligne
-                )
+                    etudiant = Prospets.objects.get(id=student_id)
+                    historique, _ = HistoriqueAbsence.objects.get_or_create(
+                        etudiant=etudiant,
+                        ligne_presence=ligne
+                    )
 
-                module_label = ligne.module.label if ligne.module else "N/A"
-                module_code  = ligne.module.code if ligne.module.code else "N/A"
+                    module_label = ligne.module.label if ligne.module else "N/A"
+                    module_code  = ligne.module.code if ligne.module.code else "N/A"
 
-                # Appel de la méthode du modèle
-                historique.ajouter_entree(date_obj, module_label, module_code, status)
+                    # Appel de la méthode du modèle
+                    historique.ajouter_entree(date_obj, module_label, module_code, status)
 
             return JsonResponse({"status": "success", "message": "Historique mis à jour avec succès"})
         

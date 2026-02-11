@@ -12,6 +12,8 @@
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: none;
+    color: #aaa;
   }
   .table th {
     font-weight: 600;
@@ -361,14 +363,23 @@
 <script>
   $(document).ready(function(){
 
+    var isGroupLoaded = false;
+
     function loadItems(){
+      var groupeId = $('#filter-groupes').val();
+      var searchQuery = $('#table-filter').val();
+
       $.ajax({
         url : '{% url "t_timetable:ApiGetCours" %}',
         dataType:"JSON",
         type:"GET",
+        data: {
+            'groupe_id': groupeId,
+            'q': searchQuery
+        },
         success: function(data){
           var row = "";
-          var option = "<option value='0'>Filtrer par groupe</option>";
+
 
           if(data.seances && data.seances.length > 0){
             // Group data by: Group Name -> Semester
@@ -438,17 +449,34 @@
             row +="</td>";
           }
 
-          $.each(data.groupes, function(index, t){
-            option += "<option value="+t.id+">"+t.nom+"</option>"
-          });
-
           $('#suiviCoursListBody').html(row);
-          $('#filter-groupes').html(option);
+          
+          if(!isGroupLoaded){
+            var option = "<option value='0'>Filtrer par groupe</option>";
+            $.each(data.groupes, function(index, t){
+                option += "<option value="+t.id+">"+t.nom+"</option>"
+            });
+            $('#filter-groupes').html(option);
+            isGroupLoaded = true;
+          }
+
         }
       });
     }
 
     loadItems();
+
+    // Event listeners for filters
+    $('#filter-groupes').on('change', function(){
+        loadItems();
+    });
+
+    var searchTimer;
+    $('#table-filter').on('keyup', function(){
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadItems, 500); // Debounce of 500ms
+    });
+
 
    
     $(document).on('click','#detailsBtn', function(){

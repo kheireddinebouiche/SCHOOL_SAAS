@@ -46,3 +46,27 @@ class GlobalDepensesCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+class PostesBudgetaire(models.Model):
+    label = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='sub_postes')
+    
+    TYPE_CHOICES = (
+        ('depense', 'Dépense'),
+        ('recette', 'Recette'),
+    )
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='depense')
+
+    depense_categories = models.ManyToManyField('GlobalDepensesCategory', blank=True, related_name='postes_budgetaires')
+    payment_categories = models.ManyToManyField('GlobalPaymentCategory', blank=True, related_name='postes_budgetaires')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Poste Budgetaire"
+        verbose_name_plural = "Postes Budgetaires"
+
+    def __str__(self):
+        return self.label

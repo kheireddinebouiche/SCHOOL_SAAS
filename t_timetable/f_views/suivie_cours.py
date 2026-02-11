@@ -17,13 +17,24 @@ def PageSuivieCours(request):
 
 @login_required(login_url="institut_app:login")
 def ApiGetCours(request):
+    groupe_id = request.GET.get('groupe_id')
+    search_query = request.GET.get('q')
+
+    filters = Q()
+
+    if groupe_id and groupe_id != '0':
+        filters &= Q(registre__groupe_id=groupe_id)
+
+    if search_query:
+        filters &= (Q(module__label__icontains=search_query) | Q(module__code__icontains=search_query))
+
     seances = (LigneRegistrePresence.objects
-               .filter()
+               .filter(filters)
                .annotate(
                     total=Count('seance_module'),
                     faites=Count('seance_module', filter=Q(seance_module__is_done=True))
                 )
-            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__annee_scolaire','registre__semestre','total','faites')
+            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites')
     
     groupes = Groupe.objects.all().values('id','nom')
 

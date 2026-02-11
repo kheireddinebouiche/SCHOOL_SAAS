@@ -308,3 +308,63 @@ def purge_tenant_categories(request, tenant_id):
             })
             
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+# --- Postes Budgetaires Views ---
+
+from .models import PostesBudgetaire
+from .forms import PostesBudgetaireForm
+
+@login_required(login_url='login')
+def postes_budgetaires_list(request):
+    postes = PostesBudgetaire.objects.all()
+    form = PostesBudgetaireForm()
+    return render(request, 'associe_app/postes_budgetaires_list.html', {'postes': postes, 'form': form})
+
+@login_required(login_url='login')
+def postes_budgetaire_create(request):
+    if request.method == 'POST':
+        form = PostesBudgetaireForm(request.POST)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Poste budgétaire créé avec succès.'})
+            return redirect('postes_budgetaires_list')
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+    return redirect('postes_budgetaires_list')
+
+@login_required(login_url='login')
+def postes_budgetaire_edit(request, pk):
+    poste = get_object_or_404(PostesBudgetaire, pk=pk)
+    if request.method == 'POST':
+        form = PostesBudgetaireForm(request.POST, instance=poste)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Poste budgétaire modifié avec succès.'})
+            return redirect('postes_budgetaires_list')
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+    
+    # For loading form data via AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'label': poste.label,
+            'type': poste.type,
+            'description': poste.description,
+            'parent': poste.parent.id if poste.parent else '',
+            'depense_categories': list(poste.depense_categories.values_list('id', flat=True)),
+            'payment_categories': list(poste.payment_categories.values_list('id', flat=True))
+        })
+    return redirect('postes_budgetaires_list')
+
+@login_required(login_url='login')
+def postes_budgetaire_delete(request, pk):
+    poste = get_object_or_404(PostesBudgetaire, pk=pk)
+    if request.method == 'POST':
+        poste.delete()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Poste budgétaire supprimé avec succès.'})
+    return redirect('postes_budgetaires_list')

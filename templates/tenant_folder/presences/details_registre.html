@@ -713,14 +713,12 @@
             
             <div id="reasonSection" style="display: none;">
               <div class="mb-3">
-                <label for="reasonInput" class="form-label">Raison</label>
-                <textarea class="form-control" id="reasonInput" rows="3" placeholder="Entrez la raison de l'annulation ou du report de la séance"></textarea>
-              </div>
-              
-              <div class="text-end">
-                <button type="button" class="btn btn-success px-4" id="validateSessionBtn">
-                  <i class="ri-check-line me-1"></i> Valider
-                </button>
+                <label for="reasonInput" class="form-label">Raison <span class="text-danger">*</span></label>
+                <select class="form-select" id="reasonInput">
+                    <option value="">Sélectionnez une raison</option>
+                    <option value="Formateur absent">Formateur absent</option>
+                    <option value="Séance reportée">Séance reportée</option>
+                </select>
               </div>
             </div>
             
@@ -1634,9 +1632,24 @@
       updateAttendanceCounts();
     });
 
+    // Handle session completion toggle
+    $('#sessionCompleted').change(function() {
+        if($(this).is(':checked')) {
+            $('#reasonSection').hide();
+            $('#attendanceContent').fadeIn();
+            $('#saveAttendanceBtnModal').html('<i class="ri-save-line me-1"></i> Enregistrer Présences');
+        } else {
+            $('#reasonSection').fadeIn();
+            $('#attendanceContent').hide();
+            $('#saveAttendanceBtnModal').html('<i class="ri-check-line me-1"></i> Valider la séance non effectuée');
+        }
+    });
+
     $(document).on('click','#saveAttendanceBtnModal', function(){
       const sessionDate = $('#attendanceDateInput').val();
       const lignePresenceId = $(this).data('id_ligne_registre');
+      const isDone = $('#sessionCompleted').is(':checked');
+      const observation = isDone ? '' : $('#reasonInput').val();
 
       console.log(lignePresenceId);
 
@@ -1645,20 +1658,29 @@
           return;
       }
 
-      const attendanceRecords = [];
-      $('.student-absent').each(function() {
-          const studentId = $(this).data('student-id-take');
-          const isAbsent = $(this).is(':checked');
+      if (!isDone && !observation) {
+          alertify.error("Veuillez sélectionner une raison pour la séance non effectuée");
+          return;
+      }
 
-          attendanceRecords.push({
-          student_id: studentId,
-          status: isAbsent ? 'A' : 'P' // A = absent, P = présent
-          });
-      });
+      const attendanceRecords = [];
+      if (isDone) {
+        $('.student-absent').each(function() {
+            const studentId = $(this).data('student-id-take');
+            const isAbsent = $(this).is(':checked');
+
+            attendanceRecords.push({
+            student_id: studentId,
+            status: isAbsent ? 'A' : 'P' // A = absent, P = présent
+            });
+        });
+      }
 
       const attendanceSession = {
           ligne_presence: lignePresenceId,
           date: sessionDate,
+          is_done: isDone,
+          observation: observation,
           records: attendanceRecords
       };
 

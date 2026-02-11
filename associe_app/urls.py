@@ -16,7 +16,11 @@ from .views import (
     get_tenant_categories,
     purge_tenant_categories,
     crm_statistics,
-    get_crm_stats_api
+    get_crm_stats_api,
+    postes_budgetaires_list,
+    postes_budgetaire_create,
+    postes_budgetaire_edit,
+    postes_budgetaire_delete
 )
 
 urlpatterns = [
@@ -42,6 +46,12 @@ urlpatterns = [
     path('depenses-categories/create/', global_depenses_category_create, name='global_depenses_category_create'),
     path('depenses-categories/edit/<int:pk>/', global_depenses_category_edit, name='global_depenses_category_edit'),
     path('depenses-categories/delete/<int:pk>/', global_depenses_category_delete, name='global_depenses_category_delete'),
+
+    # Postes Budgetaires
+    path('postes-budgetaires/', postes_budgetaires_list, name='postes_budgetaires_list'),
+    path('postes-budgetaires/create/', postes_budgetaire_create, name='postes_budgetaire_create'),
+    path('postes-budgetaires/edit/<int:pk>/', postes_budgetaire_edit, name='postes_budgetaire_edit'),
+    path('postes-budgetaires/delete/<int:pk>/', postes_budgetaire_delete, name='postes_budgetaire_delete'),
 
     path('sync-categories/', sync_categories_view, name='sync_categories_view'),
 ]
