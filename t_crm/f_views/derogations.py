@@ -8,7 +8,10 @@ from datetime import datetime
 from ..models import *
 from django.db import transaction
 from django.utils.dateformat import format
+from django.utils.dateformat import format
 from institut_app.decorators import *
+from institut_app.utils_notifications import send_notification_to_module_level
+from django.urls import reverse
 
 
 @login_required(login_url='institut_app:login')
@@ -60,8 +63,15 @@ def ApiStoreDerogation(request):
         demandeur = preinscrit,
         type = reason,
         motif = "Documents Incomplets",
-        
     )
+
+    # Send Notification to Supervisors (2) and Managers (3) of CRM module
+    try:
+        link = reverse('t_crm:liste_derogations')
+        message = f"Nouvelle demande de dérogation de {preinscrit.nom} {preinscrit.prenom}"
+        send_notification_to_module_level('crm', [2, 3], message, link)
+    except Exception as e:
+        print(f"Error sending notification: {e}")
 
     return JsonResponse({"status" : 'success', 'message' : "La demande de dérogation est en attente de traitement."})
 

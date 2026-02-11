@@ -128,6 +128,11 @@ urlpatterns = [
     #### Sessions Management #####
     path('sessions-actives/', active_sessions_view, name="active_sessions"),
     path('ApiTerminateSession', terminate_session_api, name="terminate_session"),
+    
+    path('ApiMarkNotificationRead', ApiMarkNotificationRead, name="ApiMarkNotificationRead"),
+    path('ApiMarkAllNotificationsRead', ApiMarkAllNotificationsRead, name="ApiMarkAllNotificationsRead"),
+    path('ApiDeleteNotification', ApiDeleteNotification, name="ApiDeleteNotification"),
+    path('Toutes-les-notifications', AllNotificationsPage, name="AllNotificationsPage"),
 ]
 
 

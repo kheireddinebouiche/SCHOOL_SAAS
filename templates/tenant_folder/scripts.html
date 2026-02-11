@@ -21,3 +21,167 @@
 <script src="{% static 'design/assets/js/app.js' %}"></script>
 
 <script type="text/javascript" src="{% static 'design/assets/js/table_view.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if user is authenticated (simplistic check or rely on server closing connection)
+        // We can check if the socket closes immediately.
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = protocol + '//' + window.location.host + '/ws/notifications/';
+        
+        console.log("Connecting to WebSocket:", socketUrl);
+        
+        const socket = new WebSocket(socketUrl);
+
+        socket.onopen = function(e) {
+            console.log("WebSocket connection established");
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const message = data.message;
+            
+            // Show toast using Alertify
+            if (typeof alertify !== 'undefined') {
+                alertify.set('notifier','position', 'top-right');
+                alertify.success(message);
+            }
+
+            // Update badge
+            const btn = document.getElementById('page-header-notifications-dropdown');
+            if (btn) {
+                let badge = btn.querySelector('.badge.bg-danger');
+                if (badge) {
+                    let count = parseInt(badge.innerText);
+                    if (!isNaN(count)) {
+                        badge.innerText = count + 1;
+                    }
+                } else {
+                    const newBadge = document.createElement('span');
+                    newBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                    newBadge.innerText = '1';
+                    newBadge.innerHTML += '<span class="visually-hidden">unread messages</span>';
+                    btn.appendChild(newBadge);
+                }
+            }
+            
+            // Append to all-noti-tab (which is where we list all notifications now)
+            const allNotiTab = document.getElementById('all-noti-tab');
+            if (allNotiTab) {
+                 const container = allNotiTab.querySelector('[data-simplebar] .simplebar-content') || allNotiTab.querySelector('[data-simplebar]');
+                 // Note: simplebar structure might differ slightly, usually .mCSB_container or similar if using custom scrollbar, 
+                 // but checking the header.html structure it's a div with data-simplebar.
+                 // If simplebar is initialized, it wraps content. We might need to prepend to the internal container.
+                 
+                const alertHtml = `
+                    <div class="text-reset notification-item d-block dropdown-item cursor-pointer bg-light-info fw-bold" onclick="location.reload()">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-xs me-3 flex-shrink-0">
+                                <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-16">
+                                    <i class="bx bx-bell"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mt-0 mb-1 fs-13 fw-semibold">Nouvelle Notification <span class="badge bg-danger rounded-pill float-end">New</span></h6>
+                                <div class="fs-13 text-muted">
+                                    <p class="mb-1">${message}</p>
+                                </div>
+                                <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
+                                    <span>Juste maintenant</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                // Try to prepend to simplebar content if available, else direct container
+                const contentWrapper = container.querySelector('.simplebar-content');
+                if (contentWrapper) {
+                    contentWrapper.insertAdjacentHTML('afterbegin', alertHtml);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', alertHtml);
+                }
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+    });
+
+    function markAsRead(id, link) {
+        // Send AJAX request to mark as read
+        fetch("{% url 'institut_app:ApiMarkNotificationRead' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'id=' + id
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Determine redirect
+                if (link && link !== 'None' && link !== '#') {
+                    window.location.href = link;
+                } else {
+                     // Just reload or remove unread style
+                     location.reload(); 
+                }
+            }
+        });
+    }
+
+    function markAllAsRead() {
+        fetch("{% url 'institut_app:ApiMarkAllNotificationsRead' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            }
+        });
+    }
+
+    // Delete Notification Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        var deleteModal = document.getElementById('removeNotificationModal');
+        var deleteBtn = document.getElementById('delete-notification');
+        var notificationIdToDelete = null;
+
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget;
+                notificationIdToDelete = button.getAttribute('data-id');
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function() {
+                if (notificationIdToDelete) {
+                    fetch("{% url 'institut_app:ApiDeleteNotification' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'id=' + notificationIdToDelete
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        } else {
+                            alert("Erreur lors de la suppression");
+                        }
+                    });
+                }
+            });
+        }
+    });
+</script>
