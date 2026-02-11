@@ -954,12 +954,7 @@
 
     // Function to display prospects in table view
     function displayProspectsTable(data) {
-      // Sort data by date (newest first)
-      data.sort(function(a, b) {
-         var dateA = a.created_at ? new Date(a.created_at) : new Date(0);
-         var dateB = b.created_at ? new Date(b.created_at) : new Date(0);
-         return dateB - dateA;
-      });
+
 
       var row = "";
       var lastMonthYear = "";
@@ -1031,12 +1026,7 @@
 
     // Function to display prospects in card view
     function displayProspectsCard(data) {
-      // Sort data by date (newest first)
-      data.sort(function(a, b) {
-         var dateA = a.created_at ? new Date(a.created_at) : new Date(0);
-         var dateB = b.created_at ? new Date(b.created_at) : new Date(0);
-         return dateB - dateA;
-      });
+
 
       var cards = "";
       // Colors for avatars
@@ -1209,8 +1199,8 @@
         }
         
         // Apply date filter if not default (for sorting)
-        if (currentFilterDate !== '0') {
-          filteredData.sort(function(a, b) {
+        // Apply date filter logic (defaulting to recent first if 0 or -created_at)
+        filteredData.sort(function(a, b) {
             // Check if created_at field exists and is valid, otherwise skip sorting or use id as fallback
             var dateA, dateB;
             
@@ -1227,15 +1217,14 @@
               dateB = new Date(0); // Default to epoch time if no valid date
             }
             
-            if (currentFilterDate === '-created_at') {
-              // Sort by most recent first
-              return dateB - dateA;
-            } else if (currentFilterDate === 'created_at') {
+            if (currentFilterDate === 'created_at') {
               // Sort by oldest first
               return dateA - dateB;
+            } else {
+              // Default or '0' or '-created_at': Sort by most recent first
+              return dateB - dateA;
             }
-          });
-        }
+        });
         
         // Display the results
         displayProspects(filteredData);
