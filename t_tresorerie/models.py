@@ -92,6 +92,8 @@ class Paiements(models.Model):
     reference_paiement = models.CharField(max_length=100, null=True, blank=True)
     context = models.CharField(max_length=100, null=True, blank=True,choices=[('frais_f','Frais de formation'),('autre','Autres'),('dette','Module en dette'),('facture','Paiement facture'),('rach','Rachât de crédit')])
 
+    payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True)
+
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True, related_name="promo_paiements")
     
     is_done = models.BooleanField(default=False)
@@ -497,6 +499,19 @@ class OperationsBancaire(models.Model):
     def __str__(self):
         return f"Lettrage {self.id} - {self.compte_bancaire}"
     
+class PaymentType(models.Model):
+    name = models.CharField(max_length=100)
+    payment_categories = models.ManyToManyField(PaymentCategory, related_name='payment_types')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Type de Paiement"
+        verbose_name_plural = "Types de Paiement"
+
+    def __str__(self):
+        return self.name
+
 class SpecialiteCompte(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)
     compte = models.ForeignKey(PaymentCategory, on_delete=models.CASCADE, null=True)

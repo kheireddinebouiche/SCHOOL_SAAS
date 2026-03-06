@@ -1,0 +1,756 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% load budget_tags %}
+
+{% block title %}Répartition Budgétaire - {{ campaign.name }} | {{ tenant.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --info-color: #3b82f6;
+        --light-bg: #f8fafc;
+        --dark-text: #1e293b;
+        --muted-text: #64748b;
+        --border-color: #e2e8f0;
+    }
+
+    .modern-card {
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .matrix-table {
+        font-size: 0.85rem;
+    }
+
+    .matrix-header {
+        background-color: #f1f5f9 !important;
+        font-weight: 600 !important;
+        color: var(--dark-text) !important;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--border-color) !important;
+        vertical-align: middle !important;
+        padding: 12px 16px !important;
+    }
+
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: white !important;
+        z-index: 10;
+        border-right: 1px solid var(--border-color) !important;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+    }
+
+    /* Poste Rows */
+    .poste-row {
+        background-color: #f8fafc;
+    }
+    
+    .poste-row td {
+         border-top: 1px solid var(--border-color);
+         border-bottom: 1px solid var(--border-color);
+         padding: 12px 16px !important;
+    }
+
+    .poste-label {
+        font-weight: 600;
+        color: var(--dark-text);
+        font-size: 0.9rem;
+    }
+
+    .poste-type-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-depense { background-color: #fee2e2; color: #991b1b; }
+    .badge-recette { background-color: #d1fae5; color: #065f46; }
+
+    /* Category Rows */
+    .category-row td {
+        padding: 8px 16px !important;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .category-label {
+        color: var(--muted-text);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        padding-left: 1.5rem;
+        position: relative;
+    }
+    
+    .category-label::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 50%;
+        width: 12px;
+        height: 1px;
+        background-color: #cbd5e1;
+    }
+    
+    .category-label::after {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 50%;
+        width: 1px;
+        background-color: #cbd5e1;
+    }
+
+    /* Inputs */
+    .matrix-input {
+        border: 1px solid var(--border-color) !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        text-align: right;
+        font-family: 'JetBrains Mono', 'Menlo', monospace;
+        font-size: 0.85rem;
+        color: var(--dark-text);
+        transition: all 0.2s;
+        width: 100%;
+        min-width: 120px;
+        background-color: white;
+    }
+
+    .matrix-input:focus {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1) !important;
+        outline: none;
+    }
+
+    .matrix-input[readonly] {
+        background-color: #f8fafc;
+        color: var(--muted-text);
+        border-color: transparent !important;
+    }
+
+    /* Totals */
+    .total-cell {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        text-align: right;
+        color: var(--primary-color);
+    }
+    
+    .poste-total-display {
+        font-weight: 600;
+        color: var(--muted-text);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .grand-total-display {
+        font-weight: 700;
+        color: var(--dark-text);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .footer-total {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        color: var(--dark-text);
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                     <div class="d-flex justify-content-between align-items-center bg-white px-4 py-3 rounded-3 shadow-sm border border-light">
+                        <div>
+                             <h4 class="fs-18 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <span class="text-muted fw-normal">Répartition:</span> {{ campaign.name }}
+                                {% if statut == 'draft' %}
+                                    <span class="badge bg-light text-muted border fs-11 fw-medium">Brouillon</span>
+                                {% elif statut == 'submitted' %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle fs-11 fw-medium">En attente</span>
+                                {% elif statut == 'validated' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-11 fw-medium">Validé</span>
+                                {% elif statut == 'rejected' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-11 fw-medium">Rejeté</span>
+                                {% endif %}
+                            </h4>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0 fs-12">
+                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:directeur_dashboard' %}" class="text-muted">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:my_budget_campaigns' %}" class="text-muted">Campagnes</a></li>
+                                    <li class="breadcrumb-item active text-primary" aria-current="page">Répartition</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <div class="d-flex gap-2">
+                             <a href="{% url 'institut_app:my_budget_campaigns' %}" class="btn btn-sm btn-light border shadow-sm">
+                                <i class="ri-arrow-left-line me-1"></i> Retour
+                            </a>
+                            {% if statut == 'validated' %}
+                            <a href="{% url 'institut_app:request_extension' campaign.id %}" class="btn btn-sm btn-warning shadow-sm">
+                                <i class="ri-exchange-dollar-line me-1"></i> Demander une Rallonge
+                            </a>
+                            {% endif %}
+                            {% if can_edit %}
+                            <button type="submit" form="dispatch-form" name="action" value="save" class="btn btn-sm btn-outline-primary shadow-sm px-3">
+                                <i class="ri-save-3-line me-1"></i> Enregistrer
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary shadow-sm" onclick="confirmSubmission()">
+                                <i class="ri-send-plane-fill me-1"></i> Soumettre
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if statut == 'rejected' and commentaire %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-0 d-flex align-items-center">
+                        <i class="ri-error-warning-line fs-24 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">Proposition rejetée</h6>
+                            <p class="mb-0">{{ commentaire }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if statut == 'submitted' %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info border-0 shadow-sm rounded-3 mb-0 d-flex align-items-center">
+                        <i class="ri-time-line fs-24 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">En attente de validation</h6>
+                            <p class="mb-0">Votre répartition budgétaire a été soumise et est en cours d'examen. Vous ne pourrez plus la modifier tant qu'elle n'aura pas été traitée par l'administration.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if statut == 'validated' %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-success border-0 shadow-sm rounded-3 mb-0 d-flex align-items-center">
+                        <i class="ri-checkbox-circle-line fs-24 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">Proposition validée</h6>
+                            <p class="mb-0">Votre répartition budgétaire a été approuvée par l'administration centrale.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stats Bar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card modern-card">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-3 border-end">
+                                    <p class="text-muted mb-0 fs-11 text-uppercase fw-semibold ls-1">Objectif Global</p>
+                                    <h3 class="fw-bold mb-0 text-dark mt-1" id="disp-global-obj" data-value="{{ global_objective.montant }}">
+                                        {{ global_objective.montant|intcomma }} <small class="text-muted fs-14 fw-normal">DA</small>
+                                    </h3>
+                                </div>
+                                <div class="col-md-3 border-end">
+                                    <p class="text-muted mb-0 fs-11 text-uppercase fw-semibold ls-1">Total Réparti</p>
+                                    <h3 class="fw-bold mb-0 text-primary mt-1" id="disp-total-dispatched">
+                                        {{ total_dispatched|intcomma }} <small class="text-muted fs-14 fw-normal">DA</small>
+                                    </h3>
+                                </div>
+                                <div class="col-md-3 border-end">
+                                    <p class="text-muted mb-0 fs-11 text-uppercase fw-semibold ls-1">Reste à ventiler</p>
+                                    <h3 class="fw-bold mb-0 {% if remaining < 0 %}text-danger{% else %}text-success{% endif %} mt-1" id="disp-remaining">
+                                        {{ remaining|intcomma }} <small class="text-muted fs-14 fw-normal">DA</small>
+                                    </h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex justify-content-between align-items-end mb-2">
+                                        <span class="fs-11 text-uppercase fw-semibold text-muted">Progression</span>
+                                        <span class="fs-14 fw-bold text-primary" id="disp-percent">{{ percent_dispatched|floatformat:1 }}%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div id="disp-progress-bar" class="progress-bar bg-primary" role="progressbar" style="width:{{ percent_dispatched }}%" aria-valuenow="{{ percent_dispatched }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrix Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card modern-card">
+                        <div class="card-header bg-white border-bottom py-3 px-4">
+                            <h5 class="card-title mb-0 fs-15 fw-bold">Saisie de la Répartition</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <form id="dispatch-form" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" id="form-action" value="save">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 matrix-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="sticky-col matrix-header" style="min-width: 250px;">Poste & Catégorie</th>
+                                                {% for ent in entreprises %}
+                                                <th class="text-end matrix-header" style="min-width: 150px;">{{ ent.designation }}</th>
+                                                {% endfor %}
+                                                <th class="text-end matrix-header bg-light" style="min-width: 150px;">Total</th>
+                                                <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T1%</th>
+                                                <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T2%</th>
+                                                <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T3%</th>
+                                                <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T4%</th>
+                                                <th class="text-center matrix-header" style="min-width: 60px; width: 60px;">Total %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for poste in postes %}
+                                            <!-- Poste Header -->
+                                            <tr class="poste-row">
+                                                <td class="sticky-col" style="background-color: #f8fafc !important;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <span class="poste-label">{{ poste.label }}</span>
+                                                        <span class="poste-type-badge {% if poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
+                                                            {{ poste.get_type_display }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {% for ent in entreprises %}
+                                                <td class="text-end">
+                                                    <span class="poste-total-display" id="total_poste_{{ poste.id }}_{{ ent.id }}">0,00</span>
+                                                </td>
+                                                {% endfor %}
+                                                <td class="text-end bg-light border-start">
+                                                    <span class="grand-total-display" id="grand_total_poste_{{ poste.id }}">0,00</span>
+                                                </td>
+                                                <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t1_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
+                                                <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t2_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
+                                                <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t3_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
+                                                <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t4_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
+                                                <td class="bg-light"></td>
+                                            </tr>
+
+                                            <!-- Payment Categories -->
+                                            {% for cat in poste.payment_categories.all %}
+                                            <tr class="category-row">
+                                                <td class="sticky-col ps-4">
+                                                    <div class="category-label">{{ cat.name }}</div>
+                                                </td>
+                                                {% for ent in entreprises %}
+                                                <td class="p-2">
+                                                    {% get_allocation allocations poste.id cat.id ent.id as detail %}
+                                                    <input type="text" 
+                                                           name="amount_{{ poste.id }}_{{ cat.id }}_{{ ent.id }}" 
+                                                           class="form-control matrix-input amount-input" 
+                                                           placeholder="0,00"
+                                                           data-poste="{{ poste.id }}" 
+                                                           data-element="category"
+                                                           data-ent="{{ ent.id }}"
+                                                           value="{{ detail.montant|floatformat:2 }}"
+                                                           {% if not can_edit %}readonly{% endif %}>
+                                                </td>
+                                                {% endfor %}
+                                                <td class="text-end bg-light border-start">
+                                                    <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
+                                                </td>
+                                                
+                                                <!-- Quarterly Percentages (Row Level) -->
+                                                <!-- Quarterly Percentages (Row Level) -->
+                                                {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
+                                                {% with row_key=pid|add:"_"|add:cid %}
+                                                {% get_dict_value row_quarters row_key as quarters %}
+                                                
+                                                <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1" {% if not can_edit %}readonly{% endif %}></td>
+                                                <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2" {% if not can_edit %}readonly{% endif %}></td>
+                                                <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3" {% if not can_edit %}readonly{% endif %}></td>
+                                                <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4" {% if not can_edit %}readonly{% endif %}></td>
+                                                <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
+                                                {% endwith %}
+                                                {% endwith %}
+                                            </tr>
+                                            {% empty %}
+                                            <tr class="category-row">
+                                                <td colspan="{{ entreprises|length|add:2 }}" class="text-center text-muted fst-italic py-3 fs-11">
+                                                    Aucune catégorie de paiement associée
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="bg-light border-top">
+                                            <tr style="height: 50px;">
+                                                <th class="sticky-col footer-total text-uppercase ps-4">TOTAL GÉNÉRAL</th>
+                                                {% for ent in entreprises %}
+                                                <th class="text-end footer-total text-primary" id="total-ent-{{ ent.id }}">0,00</th>
+                                                {% endfor %}
+                                                <th class="text-end footer-total text-primary border-start bg-soft-primary" id="grand-total">0,00</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="card-footer bg-white border-top p-3 d-flex justify-content-end gap-2">
+                            <a href="{% url 'institut_app:my_budget_campaigns' %}" class="btn btn-light waves-effect waves-light px-3">Annuler</a>
+                            {% if can_edit %}
+                            <button type="submit" form="dispatch-form" name="action" value="save" class="btn btn-primary px-4 shadow-sm fw-medium">Enregistrer la répartition</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('.amount-input');
+        const grandTotalElem = document.getElementById('grand-total');
+        const totalDispatchedElem = document.getElementById('disp-total-dispatched');
+        const remainingElem = document.getElementById('disp-remaining');
+        const percentElem = document.getElementById('disp-percent');
+        const progressBar = document.getElementById('disp-progress-bar');
+        const globalObj = parseFloat(document.getElementById('disp-global-obj').dataset.value) || 0;
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(val);
+        }
+
+        function cleanValue(val) {
+            if (!val) return 0;
+            // Handle spaces, non-breaking spaces (normal & narrow), and commas
+            return parseFloat(val.toString().replace(/\xa0/g, '').replace(/\u202f/g, '').replace(/ /g, '').replace(',', '.')) || 0;
+        }
+
+        function updateTotals() {
+            let globalTotal = 0;
+            // Map to store temporary totals for Postes: key = "poste_id_ent_id"
+            let posteTotals = {};
+            let posteGrandTotals = {};
+            let entTotals = {}; // For the footer row
+            let categoryRowTotals = {}; // For the category row totals
+
+            document.querySelectorAll('.amount-input').forEach(input => {
+                let val = cleanValue(input.value);
+                let posteId = input.dataset.poste;
+                let entId = input.dataset.ent;
+                let categoryId = input.name.split('_')[2]; // Extract category ID from name
+
+                // Add to global total
+                globalTotal += val;
+                
+                // Add to Poste-Enterprise total
+                let posteEntKey = `${posteId}_${entId}`;
+                posteTotals[posteEntKey] = (posteTotals[posteEntKey] || 0) + val;
+                
+                // Add to Poste Grand Total (across all enterprises for that poste)
+                posteGrandTotals[posteId] = (posteGrandTotals[posteId] || 0) + val;
+
+                // Add to Enterprise Total (for the footer)
+                entTotals[entId] = (entTotals[entId] || 0) + val;
+            }); // End of forEach loop over inputs
+
+            // 1. Update Poste-Enterprise totals (the cells in the gray header rows)
+            for (let [key, val] of Object.entries(posteTotals)) {
+                let display = document.getElementById(`total_poste_${key}`);
+                if (display) display.textContent = formatCurrency(val);
+            }
+            
+            // 2. Update Poste Grand Totals (the bold cell at the end of the gray header rows)
+            for (let [posteId, val] of Object.entries(posteGrandTotals)) {
+                let display = document.getElementById(`grand_total_poste_${posteId}`);
+                if (display) display.innerText = formatCurrency(val);
+            }
+
+            // 3. Update Enterprise Totals (footer)
+            for (let [entId, val] of Object.entries(entTotals)) {
+                let display = document.getElementById(`total-ent-${entId}`);
+                if (display) display.textContent = formatCurrency(val);
+            }
+            
+            // 4. Update Row Totals (the light gray cell at the end of each category row)
+            document.querySelectorAll('tbody tr').forEach(row => {
+                // Check if this is a category row (has inputs)
+                let inputs = row.querySelectorAll('.amount-input');
+                if (inputs.length > 0) {
+                    let rowTotal = 0;
+                    let rowId = ""; // We can get this from the first input
+                    
+                    inputs.forEach(inp => {
+                        rowTotal += cleanValue(inp.value);
+                        // input name is amount_{poste}_{cat}_{ent}
+                        // We want to find the row total span which is row_total_{poste}_{cat}
+                        let parts = inp.name.split('_');
+                        if (parts.length === 4) {
+                             rowId = `row_total_${parts[1]}_${parts[2]}`;
+                        }
+                    });
+                    
+                    if (rowId) {
+                        let display = document.getElementById(rowId);
+                        if (display) display.textContent = formatCurrency(rowTotal);
+                    }
+                }
+            });
+
+            // 5. Update Global Total (grand total in the footer)
+            grandTotalElem.innerHTML = formatCurrency(globalTotal);
+            
+            // Update the stats bar elements
+            totalDispatchedElem.innerHTML = formatCurrency(globalTotal) + ' <small class="text-muted fw-normal">DA</small>';
+            
+            const remaining = globalObj - globalTotal;
+            remainingElem.innerHTML = formatCurrency(remaining) + ' <small class="text-muted fw-normal">DA</small>';
+            remainingElem.className = `fw-bold mb-0 ${remaining < 0 ? 'text-danger' : 'text-success'}`;
+
+            const percent = globalObj > 0 ? (globalTotal / globalObj * 100) : 0;
+            percentElem.innerHTML = percent.toFixed(1) + '%';
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', percent);
+            
+            if (percent > 100) progressBar.className = 'progress-bar bg-danger';
+            else if (percent === 100) progressBar.className = 'progress-bar bg-success';
+            else progressBar.className = 'progress-bar bg-primary';
+        }
+
+        inputs.forEach(input => {
+            // Initial formatting
+            if (input.value) {
+                const initialVal = cleanValue(input.value);
+                input.value = formatCurrency(initialVal);
+            }
+
+            input.addEventListener('focus', function() {
+                this.value = this.value.replace(/\xa0/g, '').replace(/ /g, '');
+                this.select();
+            });
+
+            input.addEventListener('blur', function() {
+                const val = cleanValue(this.value);
+                this.value = formatCurrency(val);
+                updateTotals();
+            });
+
+            input.addEventListener('input', function() {
+                updateTotals();
+            });
+        });
+
+        // First run
+        updateTotals();
+
+        // Initialize Quarterly Logic
+        const quarterlyInputs = document.querySelectorAll('input[name^="t1_"], input[name^="t2_"], input[name^="t3_"], input[name^="t4_"]');
+        
+        function updateQuarterlyTotals() {
+            // Group by row (poste_cat) for percentage totals
+            let rowPercentTotals = {};
+            
+            // Group by Poste for monetary totals per quarter
+            let posteQuarterTotals = {}; // { posteId: {t1: 0, t2: 0, t3: 0, t4: 0} }
+
+            // First pass: Calculate row percentage totals
+            quarterlyInputs.forEach(input => {
+                let parts = input.name.split('_'); // tN_{poste}_{cat}
+                let quarter = parts[0]; // t1, t2, t3, t4
+                let posteId = parts[1];
+                let catId = parts[2];
+                let rowKey = `${posteId}_${catId}`;
+                let percentVal = parseFloat(input.value) || 0;
+                
+                // 1. Percentage Check per Row
+                rowPercentTotals[rowKey] = (rowPercentTotals[rowKey] || 0) + percentVal;
+
+                // 2. Monetary Calculation per Quarter per Poste
+                // We need the total amount for this row (poste_cat) to apply percentage
+                let rowAmount = 0;
+                // Find all amount inputs for this row
+                // This is slightly inefficient to loop every time, but standard DOM manipulation
+                // Optimization: pre-calculate row amounts
+            });
+
+            // Optimization: Calculate row amounts once
+            let rowAmounts = {};
+            document.querySelectorAll('.amount-input').forEach(input => {
+                let val = cleanValue(input.value);
+                if (val > 0) {
+                     let parts = input.name.split('_'); // amount_{poste}_{cat}_{ent}
+                     let rowKey = `${parts[1]}_${parts[2]}`;
+                     rowAmounts[rowKey] = (rowAmounts[rowKey] || 0) + val;
+                }
+            });
+
+            // Second pass: Calculate monetary totals using pre-calced row amounts
+            quarterlyInputs.forEach(input => {
+                let parts = input.name.split('_'); 
+                let quarter = parts[0];
+                let posteId = parts[1];
+                let catId = parts[2];
+                let rowKey = `${posteId}_${catId}`;
+                let percentVal = parseFloat(input.value) || 0;
+                
+                let rowTotalAmount = rowAmounts[rowKey] || 0;
+                let quarterAmount = rowTotalAmount * (percentVal / 100);
+                
+                if (!posteQuarterTotals[posteId]) {
+                    posteQuarterTotals[posteId] = {t1: 0, t2: 0, t3: 0, t4: 0};
+                }
+                posteQuarterTotals[posteId][quarter] += quarterAmount;
+            });
+            
+            // Update Row Percentage UI
+            for (let [key, total] of Object.entries(rowPercentTotals)) {
+                let display = document.getElementById(`t_total_${key}`);
+                if (display) {
+                    display.textContent = Math.round(total) + '%';
+                    
+                    // Only validate if there is an amount allocated to this row
+                    if ((rowAmounts[key] || 0) > 0) {
+                         if (Math.abs(total - 100) < 0.1) {
+                            display.className = 'text-center fw-bold text-success ps-1 pe-2';
+                        } else {
+                            display.className = 'text-center fw-bold text-danger ps-1 pe-2';
+                        }
+                    } else {
+                         // No amount, validation is loose but still show status
+                         if (total === 0) display.className = 'text-center fw-bold text-muted ps-1 pe-2';
+                         else if (Math.abs(total - 100) < 0.1) display.className = 'text-center fw-bold text-success opacity-50 ps-1 pe-2';
+                         else display.className = 'text-center fw-bold text-warning ps-1 pe-2';
+                    }
+                }
+            }
+            
+            // Update Poste Quarterly Totals UI
+            for (let [posteId, quarters] of Object.entries(posteQuarterTotals)) {
+                document.getElementById(`total_t1_poste_${posteId}`).textContent = formatCurrency(quarters.t1);
+                document.getElementById(`total_t2_poste_${posteId}`).textContent = formatCurrency(quarters.t2);
+                document.getElementById(`total_t3_poste_${posteId}`).textContent = formatCurrency(quarters.t3);
+                document.getElementById(`total_t4_poste_${posteId}`).textContent = formatCurrency(quarters.t4);
+            }
+        }
+        
+        quarterlyInputs.forEach(input => {
+            input.addEventListener('input', updateQuarterlyTotals);
+            input.addEventListener('blur', updateQuarterlyTotals);
+        });
+        
+        updateQuarterlyTotals(); // Initial run
+
+        window.confirmSubmission = function() {
+            // Validate Quarterly Percentages
+            let invalidRows = false;
+            
+            // Check each row that has a budget amount
+            // We need to know if a row has amount > 0
+            // Let's iterate over rows again
+            let rowAmounts = {};
+            document.querySelectorAll('.amount-input').forEach(input => {
+                let val = cleanValue(input.value);
+                if (val > 0) {
+                     let parts = input.name.split('_'); // amount_{poste}_{cat}_{ent}
+                     let rowKey = `${parts[1]}_${parts[2]}`;
+                     rowAmounts[rowKey] = (rowAmounts[rowKey] || 0) + val;
+                }
+            });
+            
+            // Now check their quarterly totals
+            for (let [key, amount] of Object.entries(rowAmounts)) {
+                if (amount > 0) {
+                     // Check total percent
+                     let display = document.getElementById(`t_total_${key}`);
+                     if (display) {
+                         let percent = parseFloat(display.textContent) || 0;
+                         if (Math.abs(percent - 100) > 0.1) {
+                             invalidRows = true;
+                             break;
+                         }
+                     }
+                }
+            }
+            
+            if (invalidRows) {
+                Swal.fire({
+                    title: 'Erreur de validation',
+                    text: "Certaines lignes budgétaires n'ont pas une répartition trimestrielle égale à 100%. Veuillez corriger avant de soumettre.",
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            if (globalObj > 0) {
+                const grandTotal = cleanValue(grandTotalElem.innerHTML);
+                if (Math.abs(grandTotal - globalObj) > 0.01) {
+                    Swal.fire({
+                        title: 'Attention',
+                        text: "Le montant total réparti ne correspond pas à l'objectif global. Voulez-vous quand même soumettre ?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, soumettre',
+                        cancelButtonText: 'Annuler'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            submitForm();
+                        }
+                    });
+                    return;
+                }
+            }
+
+            Swal.fire({
+                title: 'Soumettre pour validation ?',
+                text: "Une fois soumis, vous ne pourrez plus modifier la répartition jusqu'à ce qu'elle soit validée ou rejetée.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmer la soumission',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    submitForm();
+                }
+            });
+        };
+
+        function submitForm() {
+            document.getElementById('form-action').value = 'submit';
+            document.getElementById('dispatch-form').submit();
+        }
+    });
+</script>
+{% endblock %}

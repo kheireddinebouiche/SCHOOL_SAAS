@@ -206,9 +206,7 @@ class PromoForm(forms.ModelForm):
 class ImportDataForm(forms.Form):
     DATA_TYPES = [
         ('Partenaires', 'Partenaires'),
-        ('Formation', 'Formations'),
-        ('Specialites', 'Spécialités'),
-        ('Modules', 'Modules'),
+        ('Formation', 'Plan de formation'),
         ('Formateurs', 'Formateurs'),
     ]
     

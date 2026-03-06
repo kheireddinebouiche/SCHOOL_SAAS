@@ -2243,6 +2243,16 @@
                                     </div>
                                 </div>
                                 
+                                <div class="mb-3">
+                                    <label class="form-label fw-medium" for="typePaiement">Type de paiement <span class="text-danger">*</span></label>
+                                    <select class="form-select border-0 py-2" id="typePaiement" required style="background-color: #f8f9fa !important;">
+                                        <option value="">Sélectionnez un type de paiement</option>
+                                        {% for pt in payment_types %}
+                                        <option value="{{ pt.id }}">{{ pt.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
                                 <div class="mb-0">
                                     <label class="form-label fw-medium" for="observationPaiement">Observations</label>
                                     <textarea class="form-control border-0 py-2" id="observationPaiement" rows="2" placeholder="Informations supplémentaires..." style="background-color: #f8f9fa !important;"></textarea>
@@ -2272,6 +2282,10 @@
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted">Mode de paiement:</span>
                                     <span class="fw-medium" id="resumeMode">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted">Type de paiement:</span>
+                                    <span class="fw-medium" id="resumeType">-</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">Référence:</span>
@@ -3827,6 +3841,7 @@
             $('#resumeDate').text('-');
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
+            $('#resumeType').text('-');
             $('#resumeReference').text('-');
         });
         
@@ -3883,6 +3898,15 @@
             }
         });
         
+        $(document).on('change', '#typePaiement', function(){
+            var type = $(this).find('option:selected').text();
+            if (type && type !== 'Sélectionnez un type de paiement') {
+                $('#resumeType').text(type);
+            } else {
+                $('#resumeType').text('-');
+            }
+        });
+        
         // Afficher la synthèse du paiement
         $(document).on('click', '#enregistrerPaiementBtn', function(){
             // Récupérer les données du formulaire
@@ -3894,9 +3918,10 @@
             var reference = $('#referencePaiement').val();
             var observation = $('#observationPaiement').val();
             var clientIdPaiement = $('#clientIdInput').val();
+            var typePaiement = $('#typePaiement').val();
             
             // Validation simple
-            if (!echeance || !datePaiement || !montant || !modePaiement) {
+            if (!echeance || !datePaiement || !montant || !modePaiement || !typePaiement) {
                 alertify.error("Veuillez remplir tous les champs obligatoires.");
                 return;
             }
@@ -3927,6 +3952,7 @@
             $('#confirmerPaiementBtn').data('reference', reference);
             $('#confirmerPaiementBtn').data('observation', observation);
             $('#confirmerPaiementBtn').data('clientIdPaiement', clientIdPaiement);
+            $('#confirmerPaiementBtn').data('typePaiement', typePaiement);
             
             // Fermer la modale de paiement et ouvrir la modale de synthèse
             $('#nouveauPaiementModal').modal('hide');
@@ -3944,6 +3970,7 @@
             var reference = $(this).data('reference');
             var observation = $(this).data('observation');
             var clientIdPaiement = $(this).data('clientIdPaiement');
+            var typePaiement = $(this).data('typePaiement');
             
             $.ajax({
                 url : "{% url 't_tresorerie:ApiStoreClientPaiement' %}",
@@ -3959,6 +3986,7 @@
                     'observation' : observation,
                     'clientId' : clientIdPaiement,
                     'promo' : promoCode,
+                    'paymentType': typePaiement,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
 
@@ -3980,6 +4008,7 @@
             $('#datePaiement').val('');
             $('#montantPaiement').val('');
             $('#modePaiement').val('');
+            $('#typePaiement').val('');
             $('#referencePaiement').val('');
             $('#observationPaiement').val('');
             
@@ -3988,6 +4017,7 @@
             $('#resumeDate').text('-');
             $('#resumeMontant').text('0.00 DA');
             $('#resumeMode').text('-');
+            $('#resumeType').text('-');
             $('#resumeReference').text('-');
         });
         
@@ -4108,8 +4138,8 @@
 
                     doc.setFontSize(10);  // Set the same font size as other texts
                     doc.setTextColor(40, 40, 40);
-                    doc.text("Date: " + currentDate, 150, yOffset + 25);
-                    doc.text("N° Bon: " + payment.num, 150, yOffset + 30);
+                    doc.text("Date: " + currentDate, 105, yOffset + 25,'center');
+                    doc.text("N° Bon: " + payment.num, 105, yOffset + 30,'center');
 
                     doc.setFontSize(10);
                     doc.text("Reçu de:", 20, yOffset + 35);

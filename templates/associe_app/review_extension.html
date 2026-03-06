@@ -1,0 +1,170 @@
+{% extends 'public_folder/base.html' %} 
+{% load humanize %}
+{% load budget_tags %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Page Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                     <div class="d-flex justify-content-between align-items-center bg-white px-4 py-3 rounded-3 shadow-sm border border-light">
+                        <div>
+                            <h4 class="fs-18 fw-bold text-dark mb-1">Examen de la demande de rallonge</h4>
+                            <p class="text-muted mb-0 fs-13">
+                                Institut: <span class="fw-semibold text-primary">{{ ext_request.institut.nom }}</span> | 
+                                Campagne: <span class="fw-semibold text-primary">{{ ext_request.campaign.name }}</span>
+                            </p>
+                        </div>
+                        <div>
+                            <a href="{% url 'extension_requests_list' %}" class="btn btn-light btn-sm shadow-sm">
+                                <i class="ri-arrow-left-line align-middle me-1"></i> Retour à la liste
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Request Details -->
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-soft-primary border-bottom-dashed">
+                            <h5 class="card-title mb-0">Détails de la demande</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-borderless mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td class="fw-medium">Date</td>
+                                            <td class="text-end">{{ ext_request.created_at|date:"d M Y, H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-medium">Statut</td>
+                                            <td class="text-end">
+                                                {% if ext_request.status == 'pending' %}
+                                                    <span class="badge badge-soft-warning text-uppercase">En attente</span>
+                                                {% elif ext_request.status == 'approved' %}
+                                                    <span class="badge badge-soft-success text-uppercase">Approuvée</span>
+                                                {% elif ext_request.status == 'rejected' %}
+                                                    <span class="badge badge-soft-danger text-uppercase">Rejetée</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h6 class="text-muted text-uppercase fs-12 fw-bold">Motif de la demande</h6>
+                                <div class="p-3 bg-light rounded border border-light mt-2">
+                                    <p class="mb-0 text-dark">{{ ext_request.motif }}</p>
+                                </div>
+                            </div>
+                            
+                            {% if ext_request.status != 'pending' and ext_request.admin_comment %}
+                            <div class="mt-4">
+                                <h6 class="text-muted text-uppercase fs-12 fw-bold">Commentaire Admin</h6>
+                                <div class="p-3 bg-light rounded border border-light mt-2">
+                                    <p class="mb-0 text-dark">{{ ext_request.admin_comment }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparisons Table -->
+                <div class="col-lg-8">
+                     <div class="card h-100">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="card-title mb-0">Modifications demandées</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light text-muted text-uppercase fs-12">
+                                        <tr>
+                                            <th class="ps-4">Poste Budgétaire</th>
+                                            <th>Détail</th>
+                                            <th class="text-end">Montant Actuel</th>
+                                            <th class="text-end">Nouveau Montant</th>
+                                            <th class="text-end pe-4">Différence</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in items %}
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="fw-medium text-dark">{{ item.poste.label }}</div>
+                                                <div class="text-muted fs-11">{{ item.poste.get_type_display }}</div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    {% if item.payment_category %}
+                                                    <span class="badge badge-soft-info mb-1 w-fit">{{ item.payment_category.name }}</span>
+                                                    {% endif %}
+                                                    <span class="text-muted fs-12">
+                                                        {# Resolve entreprise name using map from view #}
+                                                        {% with ent_name=entreprise_map|get_item:item.entreprise_id %}
+                                                            {{ ent_name|default:"Entreprise inconnue" }}
+                                                        {% endwith %}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-medium text-muted">
+                                                {{ item.old_amount|intcomma }} DA
+                                            </td>
+                                            <td class="text-end fw-bold text-primary">
+                                                {{ item.requested_amount|intcomma }} DA
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                {% with diff=item.requested_amount|sub:item.old_amount %}
+                                                    {% if diff > 0 %}
+                                                    <span class="text-success fw-bold">+{{ diff|intcomma }}</span>
+                                                    {% elif diff < 0 %}
+                                                    <span class="text-danger fw-bold">{{ diff|intcomma }}</span>
+                                                    {% else %}
+                                                    <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">Aucun détail trouvé.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        {% if ext_request.status == 'pending' %}
+                        <div class="card-footer bg-white border-top p-3">
+                            <form method="POST">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="admin_comment" class="form-label text-muted fs-13">Commentaire (optionnel)</label>
+                                    <textarea class="form-control" name="admin_comment" rows="2" placeholder="Ajouter un commentaire sur la décision..."></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-label shadow-sm">
+                                        <i class="ri-close-circle-line label-icon align-middle fs-16 me-2"></i> Rejeter
+                                    </button>
+                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-label shadow-sm">
+                                        <i class="ri-checkbox-circle-line label-icon align-middle fs-16 me-2"></i> Approuver la demande
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

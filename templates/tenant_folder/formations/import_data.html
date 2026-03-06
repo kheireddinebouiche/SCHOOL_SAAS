@@ -2,46 +2,141 @@
 {% load static %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Import de Données</h4>
-        </div>
-    </div>
-</div>
+<style>
+    .upload-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: none;
+        overflow: hidden;
+    }
+    .upload-card .card-header {
+        background: linear-gradient(135deg, #f3f6fa, #ffffff);
+        border-bottom: 1px solid #edf1f5;
+        padding: 1.5rem;
+    }
+    .upload-card .card-body {
+        padding: 2rem;
+    }
+    .instruction-alert {
+        background-color: #f8f9fc;
+        border-left: 4px solid #4b38b3;
+        border-radius: 6px;
+        color: #5c626f;
+        padding: 1.2rem;
+        font-size: 0.95rem;
+    }
+    .instruction-icon {
+        color: #4b38b3;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    .custom-file-upload {
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        background-color: #fafbfc;
+        transition: all 0.3s ease;
+    }
+    .custom-file-upload:hover {
+        border-color: #4b38b3;
+        background-color: #f3f6fa;
+    }
+    .custom-file-upload input[type="file"] {
+        max-width: 100%;
+        color: #495057;
+    }
+</style>
 
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header align-items-center d-flex">
-                <h4 class="card-title mb-0 flex-grow-1">Uploader un fichier</h4>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info" role="alert">
-                    <strong>Instructions :</strong>
-                    <ul>
-                        <li>Formats supportés : Excel (.xlsx, .xls) et JSON (.json).</li>
-                        <li>Assurez-vous que les colonnes/clés correspondent aux champs attendus.</li>
-                        <li>L'identifiant unique (Code ou Email) est utilisé pour la mise à jour ou la création.</li>
-                    </ul>
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- page title -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-sm flex-shrink-0">
+                                <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded d-flex align-items-center justify-content-center" style="font-size: 24px;">
+                                    <i class="ri-upload-cloud-2-line" style="color: var(--vz-primary) !important;"></i>
+                                </div>
+                            </div>
+                            <h4 class="mb-0 fw-bold">Importation des données</h4>
+                        </div>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb m-0 bg-transparent px-0">
+                                <li class="breadcrumb-item"><a href="javascript:void(0);" class="text-muted">Configuration</a></li>
+                                <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Import</li>
+                            </ol>
+                        </nav>
+                    </div>
                 </div>
-                
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="{{ form.data_type.id_for_label }}" class="form-label">{{ form.data_type.label }}</label>
-                        {{ form.data_type }}
+            </div>
+
+            <!-- main content -->
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card upload-card mb-5">
+                        <div class="card-header pt-4 pb-3 px-4">
+                            <h5 class="card-title mb-0 d-flex align-items-center text-dark fw-bold">
+                                <i class="ri-file-add-line text-primary me-2"></i> Uploader un nouveau fichier
+                            </h5>
+                        </div>
+                        <div class="card-body px-4 pt-3 pb-4">
+                            
+                            <!-- Instructions -->
+                            <div class="instruction-alert mb-4 d-flex align-items-start">
+                                <i class="ri-information-line instruction-icon"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">Instructions d'importation</h6>
+                                    <p class="mb-1">Formats acceptés : <strong>Excel (.xlsx, .xls)</strong> et <strong>JSON (.json)</strong>.</p>
+                                    <p class="mb-1">Utilisez l'en-tête exact de nos modèles d'exportation pour garantir le lien des données parente-enfant en cascade.</p>
+                                    <p class="mb-0">L'identifiant unique (le <em>Code</em> généré) sera utilisé pour mettre à jour les enregistrements existants sans les dupliquer.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Form -->
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="{{ form.data_type.id_for_label }}" class="form-label fs-14">
+                                                <i class="ri-database-2-line text-muted me-1 align-bottom"></i> {{ form.data_type.label }}
+                                            </label>
+                                            {{ form.data_type }}
+                                            <div class="form-text mt-2"><i class="ri-error-warning-line align-bottom text-muted"></i> Choisissez le processus cible afin d'appliquer les bonnes règles de validation.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 mt-3">
+                                        <label for="{{ form.file.id_for_label }}" class="form-label fs-14">
+                                            <i class="ri-file-upload-line text-muted me-1 align-bottom"></i> Sélectionnez votre document
+                                        </label>
+                                        <div class="custom-file-upload shadow-sm mt-1">
+                                            {{ form.file }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-light mt-2 mb-4">
+                                
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="javascript:history.back()" class="btn btn-light rounded-pill px-4 fw-medium">Annuler</a>
+                                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-medium shadow-sm d-flex align-items-center">
+                                        Lancer l'analyse <i class="ri-arrow-right-line ms-2"></i>
+                                    </button>
+                                </div>
+                            </form>
+                            
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.file.id_for_label }}" class="form-label">{{ form.file.label }}</label>
-                        {{ form.file }}
-                    </div>
-                    
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary">Prévisualiser <i class="bx bx-right-arrow-alt ms-1"></i></button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>

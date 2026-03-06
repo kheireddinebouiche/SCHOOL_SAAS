@@ -1,0 +1,322 @@
+{% extends 'tenant_folder/base.html' %} 
+{% load humanize %}
+
+{% block content %}
+<style>
+    .matrix-table th, .matrix-table td {
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background-color: #fff !important;
+        border-right: 1px solid #e2e8f0;
+    }
+    .input-cell {
+        min-width: 120px;
+    }
+    .form-control-sm {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+    }
+    .changed-value {
+        background-color: #f0fdf4; /* Green-50 */
+        border-color: #86efac; /* Green-300 */
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            
+            <!-- Page Header -->
+             <div class="row mb-3">
+                <div class="col-12">
+                     <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded-3 shadow-sm border border-light">
+                        <div>
+                            <h4 class="fs-18 fw-bold text-dark mb-1">Demande de Rallonge Budgétaire</h4>
+                            <p class="text-muted mb-0 fs-13">Campagne: <span class="fw-semibold text-primary">{{ campaign.name }}</span></p>
+                        </div>
+                        <div>
+                            <a href="{% url 'institut_app:dispatch_budget' campaign.id %}" class="btn btn-light btn-sm">
+                                <i class="ri-arrow-left-line align-middle me-1"></i> Retour
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrix Section -->
+            <form method="POST" id="extensionForm" action="">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Motif Section -->
+                    <div class="col-12 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <label for="motif" class="form-label fw-bold">Motif de la demande <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="motif" name="motif" rows="3" placeholder="Veuillez expliquer pourquoi vous demandez cette rallonge..." required></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Matrix Table -->
+                    <div class="col-12">
+                        <div class="card modern-card">
+                            <div class="card-header bg-white border-bottom py-3 px-4">
+                                <h5 class="card-title mb-0 fs-15 fw-bold">Saisie de la Répartition</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 matrix-table">
+                                        <thead>
+                                            <tr>
+                                                <th rowspan="2" class="sticky-col matrix-header align-middle" style="min-width: 250px; z-index: 100;">Poste & Catégorie</th>
+                                                {% for ent in entreprises %}
+                                                <th colspan="2" class="text-center matrix-header border-bottom" style="min-width: 220px;">{{ ent.designation }}</th>
+                                                {% endfor %}
+                                                <th rowspan="2" class="text-end matrix-header bg-light align-middle" style="min-width: 150px;">Total Demandé</th>
+                                            </tr>
+                                            <tr>
+                                                {% for ent in entreprises %}
+                                                <th class="text-end matrix-sub-header bg-light text-muted fw-normal border-end" style="min-width: 100px; font-size: 0.75rem;">Actuel</th>
+                                                <th class="text-end matrix-sub-header fw-medium" style="min-width: 120px; font-size: 0.75rem;">Proposition</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for poste in postes %}
+                                            <!-- Poste Header -->
+                                            <tr class="poste-row">
+                                                <td class="sticky-col" style="background-color: #f8fafc !important;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <span class="poste-label">{{ poste.label }}</span>
+                                                        <span class="poste-type-badge {% if poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
+                                                            {{ poste.get_type_display }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {% for ent in entreprises %}
+                                                <td class="text-end bg-light border-end">
+                                                    <span class="text-muted" style="font-size: 0.8rem;" id="total_current_poste_{{ poste.id }}_{{ ent.id }}">0,00</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="poste-total-display" id="total_poste_{{ poste.id }}_{{ ent.id }}">0,00</span>
+                                                </td>
+                                                {% endfor %}
+                                                <td class="text-end bg-light border-start">
+                                                    <span class="grand-total-display" id="grand_total_poste_{{ poste.id }}">0,00</span>
+                                                </td>
+                                            </tr>
+
+                                            <!-- Payment Categories -->
+                                            {% for cat in poste.payment_categories.all %}
+                                            <tr class="category-row">
+                                                <td class="sticky-col ps-4">
+                                                    <div class="category-label">{{ cat.name }}</div>
+                                                </td>
+                                                {% for ent in entreprises %}
+                                                <!-- Current Value (Read-Only) -->
+                                                <td class="text-end align-middle bg-light border-end px-2">
+                                                    <span class="current-val-display text-muted" 
+                                                          style="font-size: 0.8rem;"
+                                                          data-poste="{{ poste.id }}" 
+                                                          data-cat="{{ cat.id }}" 
+                                                          data-ent="{{ ent.id }}">0,00</span>
+                                                </td>
+                                                <!-- Proposed Value (Input) -->
+                                                <td class="p-2">
+                                                    <input type="number" 
+                                                           step="0.01" 
+                                                           min="0"
+                                                           name="extension_amount_{{ poste.id }}_{{ cat.id }}_{{ ent.id }}" 
+                                                           class="form-control matrix-input amount-input text-end" 
+                                                           placeholder="0,00"
+                                                           data-poste="{{ poste.id }}" 
+                                                           data-element="category"
+                                                           data-ent="{{ ent.id }}"
+                                                           value="0"> 
+                                                </td>
+                                                {% endfor %}
+                                                <td class="text-end bg-light border-start">
+                                                    <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr class="category-row">
+                                                <td colspan="{{ entreprises|length|add:entreprises|length|add:2 }}" class="text-center text-muted fst-italic py-3 fs-11">
+                                                    Aucune catégorie de paiement associée
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="bg-light border-top">
+                                            <tr style="height: 50px;">
+                                                <th class="sticky-col footer-total text-uppercase ps-4">TOTAL GÉNÉRAL</th>
+                                                {% for ent in entreprises %}
+                                                <th class="text-end footer-total text-muted border-end" id="total-current-ent-{{ ent.id }}">0,00</th>
+                                                <th class="text-end footer-total text-primary" id="total-ent-{{ ent.id }}">0,00</th>
+                                                {% endfor %}
+                                                <th class="text-end footer-total text-primary border-start bg-soft-primary" id="grand-total">0,00</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light p-3 d-flex justify-content-end gap-2 fixed-bottom-action">
+                                <a href="{% url 'institut_app:dispatch_budget' campaign.id %}" class="btn btn-light shadow-sm">Annuler</a>
+                                <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                    <i class="ri-send-plane-fill align-middle me-1"></i> Soumettre la demande
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Pass allocations data to JS for pre-filling #}
+{{ allocations|json_script:"allocations-data" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Data Loading & Pre-filling
+        const allocationsData = JSON.parse(document.getElementById('allocations-data').textContent);
+        
+        // Populate Inputs (Proposition)
+        document.querySelectorAll('.amount-input').forEach(input => {
+            const posteId = input.dataset.poste;
+            const nameParts = input.name.split('_'); 
+            const catId = nameParts[3]; 
+            const entId = input.dataset.ent;
+            
+            const key = `${posteId}_${catId}_${entId}`;
+            
+            if (allocationsData[key] !== undefined) {
+                const val = parseFloat(allocationsData[key]);
+                input.value = val; 
+                input.setAttribute('data-initial', val); 
+            } else {
+                input.value = 0;
+            }
+        });
+
+        // Populate Current Values (Active)
+        document.querySelectorAll('.current-val-display').forEach(span => {
+            const posteId = span.dataset.poste;
+            const catId = span.dataset.cat;
+            const entId = span.dataset.ent;
+            const key = `${posteId}_${catId}_${entId}`;
+            
+            if (allocationsData[key] !== undefined) {
+                const val = parseFloat(allocationsData[key]);
+                span.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                span.dataset.value = val; // Store numeric value for calcs if needed
+            } else {
+                span.textContent = "0,00";
+                span.dataset.value = 0;
+            }
+        });
+
+        // 2. Calculation Logic
+        const inputs = document.querySelectorAll('.amount-input');
+        const currentSpans = document.querySelectorAll('.current-val-display');
+
+        function calculateTotals() {
+            // Reset totals
+            const posteTotals = {}; // { posteId_entId: val }
+            const posteGrandTotals = {}; // { posteId: val }
+            const rowTotals = {}; // { posteId_catId: val }
+            const colTotals = {}; // { entId: val }
+            
+            // Current Totals
+            const posteCurrentTotals = {}; // { posteId_entId: val }
+            const colCurrentTotals = {}; // { entId: val }
+
+            let grandTotal = 0;
+
+            // Calculate Proposed Totals
+            inputs.forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                const posteId = input.dataset.poste;
+                const entId = input.dataset.ent;
+                const nameParts = input.name.split('_'); 
+                const catId = nameParts[3];
+
+                // Row Total
+                const rowKey = `${posteId}_${catId}`;
+                rowTotals[rowKey] = (rowTotals[rowKey] || 0) + val;
+
+                // Poste Total per Entity
+                const posteEntKey = `${posteId}_${entId}`;
+                posteTotals[posteEntKey] = (posteTotals[posteEntKey] || 0) + val;
+
+                // Poste Grand Total
+                posteGrandTotals[posteId] = (posteGrandTotals[posteId] || 0) + val;
+
+                // Column Total
+                colTotals[entId] = (colTotals[entId] || 0) + val;
+
+                // Global Grand Total
+                grandTotal += val;
+            });
+
+            // Calculate Current Totals
+            currentSpans.forEach(span => {
+                const val = parseFloat(span.dataset.value) || 0;
+                const posteId = span.dataset.poste;
+                const entId = span.dataset.ent;
+
+                const posteEntKey = `${posteId}_${entId}`;
+                posteCurrentTotals[posteEntKey] = (posteCurrentTotals[posteEntKey] || 0) + val;
+
+                colCurrentTotals[entId] = (colCurrentTotals[entId] || 0) + val;
+            });
+
+            // Update DOM - Proposed
+            for (const [key, val] of Object.entries(rowTotals)) {
+                const el = document.getElementById(`row_total_${key}`);
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            for (const [key, val] of Object.entries(posteTotals)) {
+                const el = document.getElementById(`total_poste_${key}`); 
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            for (const [key, val] of Object.entries(posteGrandTotals)) {
+                const el = document.getElementById(`grand_total_poste_${key}`);
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            for (const [key, val] of Object.entries(colTotals)) {
+                const el = document.getElementById(`total-ent-${key}`);
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            const gtEl = document.getElementById('grand-total');
+            if(gtEl) gtEl.textContent = grandTotal.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            // Update DOM - Current
+            for (const [key, val] of Object.entries(posteCurrentTotals)) {
+                const el = document.getElementById(`total_current_poste_${key}`);
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            for (const [key, val] of Object.entries(colCurrentTotals)) {
+                const el = document.getElementById(`total-current-ent-${key}`);
+                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        }
+
+        // Attach listeners
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateTotals);
+        });
+
+        // Initial Calculation
+        calculateTotals();
+    });
+</script>
+{% endblock %}

@@ -18,6 +18,8 @@ from .f_views.invoice_generation import *
 from .f_views.configure_penalite import *
 from .f_views.reporting_das import *
 from .f_views.type_depense import *
+from .f_views.payment_types import *
+
 
 app_name="t_tresorerie"
 
@@ -252,4 +254,5 @@ urlpatterns = [
     path('api/update-effective-date/', ApiUpdateEffectiveDate, name='ApiUpdateEffectiveDate'),
     path('api/list-recouvrement-paiements/', ApiListRecouvrementPaiements, name='ApiListRecouvrementPaiements'),
     path('api/recouvrement-stats/', ApiRecouvrementStats, name='ApiRecouvrementStats'),
+    path('payment-types/', payment_type_list, name='payment_type_list'),
 ]

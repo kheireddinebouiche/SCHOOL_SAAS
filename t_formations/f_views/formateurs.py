@@ -9,7 +9,57 @@ from django.http import JsonResponse
 from django.db.models import Q
 from datetime import datetime
 import json
+import csv
+import openpyxl
+from django.http import HttpResponse
 
+login_required(login_url="institut_app:login")
+def export_formateurs(request):
+    format_type = request.GET.get('format', 'csv')
+    formateurs = Formateurs.objects.all()
+
+    headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme']
+
+    if format_type == 'excel':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="formateurs_export.xlsx"'
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = 'Formateurs'
+        sheet.append(headers)
+
+        for f in formateurs:
+            sheet.append([
+                f.email,
+                f.nom,
+                f.prenom,
+                f.telephone,
+                f.diplome
+            ])
+
+        workbook.save(response)
+        return response
+
+    else:
+        # Default to CSV
+        response = HttpResponse(content_type='text/csv')
+        response.write('\ufeff'.encode('utf8'))
+        response['Content-Disposition'] = 'attachment; filename="formateurs_export.csv"'
+
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(headers)
+
+        for f in formateurs:
+            writer.writerow([
+                f.email,
+                f.nom,
+                f.prenom,
+                f.telephone,
+                f.diplome
+            ])
+
+        return response
 
 login_required(login_url="institut_app:login")
 def PageFormateurs(request):

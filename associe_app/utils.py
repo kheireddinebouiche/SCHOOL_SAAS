@@ -1,12 +1,13 @@
 from django_tenants.utils import schema_context
 from app.models import Institut
-from .models import GlobalPaymentCategory, GlobalDepensesCategory
-from t_tresorerie.models import PaymentCategory, DepensesCategory
+from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType
+from t_tresorerie.models import PaymentCategory, DepensesCategory, PaymentType
 
 def sync_global_categories():
     tenants = Institut.objects.exclude(schema_name='public')
     global_payment_cats = GlobalPaymentCategory.objects.all()
     global_depenses_cats = GlobalDepensesCategory.objects.all()
+    global_payment_types = GlobalPaymentType.objects.all()
 
     for tenant in tenants:
         with schema_context(tenant.schema_name):
@@ -61,3 +62,18 @@ def sync_global_categories():
                     if d_cat and parent_cat:
                         d_cat.parent = parent_cat
                         d_cat.save()
+
+            # 3. Sync Payment Types
+            for g_type in global_payment_types:
+                p_type, created = PaymentType.objects.get_or_create(
+                    name=g_type.name
+                )
+                # Sync Many-to-Many categories
+                cats_to_set = []
+                for g_cat in g_type.payment_categories.all():
+                    tenant_cat = payment_cat_map.get(g_cat.id)
+                    if tenant_cat:
+                        cats_to_set.append(tenant_cat)
+                
+                p_type.payment_categories.set(cats_to_set)
+                p_type.save()

@@ -1,0 +1,123 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Mes Campagnes Budgétaires | {{ tenant.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: #4361ee; }
+    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: #4cc9f0; }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Page Title & Breadcrumbs -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center bg-white px-4 py-3 rounded-3 shadow-sm">
+                        <div>
+                            <h4 class="fs-20 fw-bold text-dark mb-1">Mes Campagnes Budgétaires</h4>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0">
+                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:directeur_dashboard' %}" class="text-muted">Tableau de bord</a></li>
+                                    <li class="breadcrumb-item active text-primary" aria-current="page">Mes Campagnes</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-primary border border-primary-subtle px-3 py-2 rounded-pill fs-12">
+                                <i class="ri-government-line me-1"></i> {{ tenant.nom }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                {% if campaign_data %}
+                    {% for campaign in campaign_data %}
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card modern-card mb-4 h-100">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center mb-4">
+                                    <div class="flex-grow-1">
+                                        <h5 class="fs-16 mb-1 fw-bold text-dark">{{ campaign.name }}</h5>
+                                        <p class="text-muted mb-0 fs-13">
+                                            <i class="ri-calendar-event-line align-middle me-1"></i>
+                                            {{ campaign.date_debut|date:"d M Y" }} - {{ campaign.date_fin|date:"d M Y" }}
+                                        </p>
+                                    </div>
+                                    <div class="icon-box primary">
+                                        <i class="ri-history-line"></i>
+                                    </div>
+                                </div>
+
+                                <div class="p-3 bg-light rounded-3 mb-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <p class="text-muted mb-1 fs-12 text-uppercase fw-semibold">Objectif Global (DA)</p>
+                                            <h3 class="mb-0 fw-bold text-primary" style="font-family: 'JetBrains Mono', 'Fira Code', monospace;">
+                                                {{ campaign.objectif|intcomma|default:"0,00" }} 
+                                                <span class="fs-14 fw-normal text-muted">DA</span>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-11">
+                                            <i class="ri-checkbox-circle-line me-1"></i> Campagne Active
+                                        </span>
+                                        <a href="{% url 'institut_app:dispatch_budget' campaign.id %}" class="btn btn-link link-primary p-0 fs-14 fw-semibold">
+                                            Détails <i class="ri-arrow-right-s-line align-middle ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <div class="avatar-title bg-light text-secondary rounded-circle fs-30">
+                                <i class="ri-folder-info-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="fw-bold">Aucune campagne active</h5>
+                        <p class="text-muted mx-auto" style="max-width: 400px;">Il n'y a actuellement aucune campagne budgétaire active pour votre établissement.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -194,6 +194,7 @@ def ApiStoreClientPaiement(request):
     clientId = request.POST.get('clientId')
     id_due_paiement = request.POST.get('id_due_paiement')
     promo = request.POST.get('promo')
+    paymentType = request.POST.get('paymentType')
 
     try:
         due_paiement = DuePaiements.objects.get(id=id_due_paiement)
@@ -214,6 +215,7 @@ def ApiStoreClientPaiement(request):
             context = "frais_f",
             paiement_label = echeance,
             promo = Promos.objects.get(code = promo) if promo else None,
+            payment_type_id = paymentType if paymentType else None,
         )
 
         if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):

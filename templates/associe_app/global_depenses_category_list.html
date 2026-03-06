@@ -21,63 +21,24 @@
                 </div>
             </div>
 
-            <!-- Table Section -->
+            <!-- Tree View Section -->
             <div class="row">
                 <div class="col-12">
                      <div class="card border-0 shadow-sm rounded-3">
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover table-nowrap align-middle mb-0" id="categoryTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width: 40px;">#</th>
-                                            <th scope="col">Nom</th>
-                                            <th scope="col">Parent</th>
-                                            <th scope="col">Catégorie Paiement</th>
-                                            <th scope="col" class="text-end">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for category in categories %}
-                                        <tr id="row-{{ category.id }}">
-                                            <td>{{ forloop.counter }}</td>
-                                            <td class="fw-semibold text-dark">{{ category.name }}</td>
-                                            <td>
-                                                {% if category.parent %}
-                                                <span class="badge badge-soft-primary fs-12">{{ category.parent.name }}</span>
-                                                {% else %}
-                                                <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if category.payment_category %}
-                                                <span class="badge badge-soft-info fs-12">{{ category.payment_category.name }}</span>
-                                                {% else %}
-                                                <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-end">
-                                               <div class="dropdown">
-                                                    <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="ri-more-fill align-middle"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
-                                                        <li><a class="dropdown-item edit-item-btn" href="javascript:void(0);" onclick="openEditModal({{ category.id }})"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                        <li><a class="dropdown-item remove-item-btn" href="javascript:void(0);" onclick="deleteCategory({{ category.id }})"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer</a></li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr id="emptyRow">
-                                            <td colspan="5" class="text-center py-5 text-muted">
-                                                <i class="ri-folder-open-line fs-1 display-5 d-block mb-3"></i>
-                                                Aucune catégorie trouvée.
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                        <div class="card-body p-4">
+                            <div id="category-tree" class="category-tree">
+                                <!-- Tree will be rendered here by JS -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="empty-state" class="d-none text-center py-5 text-muted">
+                                <i class="ri-folder-open-line fs-1 display-5 d-block mb-3"></i>
+                                <p>Aucune catégorie trouvée.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="openCreateModal()">Créer une catégorie</button>
                             </div>
                         </div>
                     </div>
@@ -102,6 +63,7 @@
                     <div class="mb-3">
                         <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">Nom de la catégorie</label>
                         {{ form.name }}
+                        <div class="invalid-feedback" id="error-name"></div>
                     </div>
                     <div class="mb-3">
                         <label for="{{ form.parent.id_for_label }}" class="form-label fw-bold">Catégorie Parente</label>
@@ -121,19 +83,133 @@
     </div>
 </div>
 
+<style>
+    /* Modern Tree View Styles */
+    .category-tree {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .tree-node {
+        position: relative;
+        margin-bottom: 0.5rem;
+    }
+
+    .tree-content {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background-color: #fff;
+        border: 1px solid #e9ebec;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .tree-content:hover {
+        background-color: #f8f9fa;
+        border-color: #dbe0e4;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .tree-toggle {
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+        color: #878a99;
+        transition: background-color 0.2s;
+    }
+
+    .tree-toggle:hover {
+        background-color: #eff2f7;
+        color: #405189;
+    }
+
+    .tree-toggle.empty {
+        background: transparent;
+        cursor: default;
+    }
+
+    .node-icon {
+        color: #405189;
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .node-label {
+        font-weight: 500;
+        color: #495057;
+        flex-grow: 1;
+    }
+
+    .node-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .node-badge {
+        font-size: 0.75rem;
+        padding: 0.25em 0.6em;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+
+    .node-actions {
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .tree-content:hover .node-actions {
+        opacity: 1;
+    }
+
+    .tree-children {
+        margin-left: 2rem;
+        padding-left: 1rem;
+        border-left: 1px dashed #e9ebec;
+        display: none;
+        margin-top: 0.5rem;
+    }
+
+    .tree-children.show {
+        display: block;
+        animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
 <script>
     let categoryModal;
     let form;
     let saveBtn;
     let syncBtn;
+    
+    // Data from Django
+    const rawCategories = {{ categories_json|safe }};
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap/UI elements
         const modalElement = document.getElementById('categoryModal');
         if (modalElement) categoryModal = new bootstrap.Modal(modalElement);
         form = document.getElementById('categoryForm');
         saveBtn = document.getElementById('saveBtn');
         syncBtn = document.getElementById('syncBtn');
 
+        // Render Tree
+        renderTree(rawCategories);
+
+        // Form Submission Handler
         if (form) {
             form.onsubmit = function(e) {
                 e.preventDefault();
@@ -161,6 +237,7 @@
             };
         }
 
+        // Sync Handler
         if (syncBtn) {
             syncBtn.onclick = function() {
                 syncBtn.disabled = true;
@@ -188,6 +265,116 @@
             }
         }
     });
+
+    // --- Tree Logic ---
+
+    function buildHierarchy(items) {
+        const root = [];
+        const map = {};
+
+        // Index items by ID
+        items.forEach(item => {
+            item.children = [];
+            map[item.id] = item;
+        });
+
+        // Build hierarchy
+        items.forEach(item => {
+            if (item.parent_id && map[item.parent_id]) {
+                map[item.parent_id].children.push(item);
+            } else {
+                root.push(item);
+            }
+        });
+
+        return root;
+    }
+
+    function createNodeElement(node) {
+        const hasChildren = node.children && node.children.length > 0;
+        
+        // Custom badge for Payment Category
+        let paymentBadge = '';
+        if (node.payment_category && node.payment_category !== '-') {
+            paymentBadge = `<span class="node-badge badge-soft-info"><i class="ri-bank-card-line me-1"></i>${node.payment_category}</span>`;
+        } else {
+            paymentBadge = `<span class="text-muted fs-11 fst-italic">Non associé</span>`;
+        }
+
+        const nodeHtml = `
+            <div class="tree-node" id="node-${node.id}">
+                <div class="tree-content">
+                    <div class="tree-toggle ${hasChildren ? '' : 'empty'}" onclick="${hasChildren ? `toggleNode(${node.id})` : ''}">
+                        ${hasChildren ? '<i class="ri-arrow-right-s-line" id="icon-' + node.id + '"></i>' : '<i class="ri-checkbox-blank-circle-fill" style="font-size: 6px;"></i>'}
+                    </div>
+                    <div class="node-icon">
+                        <i class="ri-folder-line"></i>
+                    </div>
+                    <div class="node-label">
+                        ${node.name}
+                    </div>
+                    <div class="node-meta">
+                        ${paymentBadge}
+                        <div class="node-actions">
+                            <button class="btn btn-sm btn-ghost-secondary btn-icon" onclick="openEditModal(${node.id})" title="Modifier">
+                                <i class="ri-pencil-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-ghost-danger btn-icon" onclick="deleteCategory(${node.id})" title="Supprimer">
+                                <i class="ri-delete-bin-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ${hasChildren ? `<div class="tree-children" id="children-${node.id}"></div>` : ''}
+            </div>
+        `;
+        return nodeHtml;
+    }
+
+    function renderTreeNodes(nodes, container) {
+        nodes.forEach(node => {
+            container.insertAdjacentHTML('beforeend', createNodeElement(node));
+            if (node.children && node.children.length > 0) {
+                const childContainer = container.querySelector(`#children-${node.id}`);
+                renderTreeNodes(node.children, childContainer);
+            }
+        });
+    }
+
+    function renderTree(data) {
+        const container = document.getElementById('category-tree');
+        const emptyState = document.getElementById('empty-state');
+        
+        container.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            container.classList.add('d-none');
+            emptyState.classList.remove('d-none');
+            return;
+        }
+
+        const hierarchy = buildHierarchy(data);
+        renderTreeNodes(hierarchy, container);
+    }
+
+    function toggleNode(id) {
+        const childrenContainer = document.getElementById(`children-${id}`);
+        const icon = document.getElementById(`icon-${id}`);
+        
+        if (childrenContainer) {
+            if (childrenContainer.classList.contains('show')) {
+                childrenContainer.classList.remove('show');
+                icon.classList.remove('ri-arrow-down-s-line');
+                icon.classList.add('ri-arrow-right-s-line');
+            } else {
+                childrenContainer.classList.add('show');
+                icon.classList.remove('ri-arrow-right-s-line');
+                icon.classList.add('ri-arrow-down-s-line');
+            }
+        }
+    }
+
+    // --- Modal Logic ---
 
     function openCreateModal() {
         if (!form) form = document.getElementById('categoryForm');
@@ -230,7 +417,7 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                            $(`#row-${id}`).fadeOut(300, function() { $(this).remove(); });
+                            $(`#node-${id}`).fadeOut(300, function() { $(this).remove(); });
                         }
                     }
                 });
@@ -240,3 +427,4 @@
 </script>
 
 {% endblock %}
+

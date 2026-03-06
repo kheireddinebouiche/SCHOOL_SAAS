@@ -1,5 +1,6 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
+from decimal import Decimal
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
@@ -9,7 +10,6 @@ from .form import *
 from .models import Profile
 from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
-from django.shortcuts import redirect
 from django.db import transaction
 from django.template.loader import render_to_string
 from t_crm.models import *
@@ -1093,3 +1093,354 @@ def AllNotificationsPage(request):
         'notifications': notifications
     }
     return render(request, 'tenant_folder/notifications/all_notifications.html', context)
+
+@login_required(login_url="institut_app:login")
+def my_budget_campaigns(request):
+    """
+    Shows budget campaigns for the current tenant (Institute).
+    Fetches data from the public schema (associe_app).
+    """
+    from associe_app.models import BudgetCampaign, BudgetLine
+    
+    with schema_context('public'):
+        # Fetch active campaigns
+        campaigns = BudgetCampaign.objects.filter(is_active=True).order_by('-date_debut')
+        
+        # Get budget lines for this specific institute
+        institute = request.tenant
+        budget_lines = BudgetLine.objects.filter(
+            campaign__in=campaigns,
+            institut=institute
+        ).select_related('campaign')
+        
+        # Build a list of campaigns with their specific objective for this institute
+        # Map campaign id to amount for easy lookup
+        objectives_map = {line.campaign_id: line.montant for line in budget_lines}
+        
+        campaign_data = []
+        for campaign in campaigns:
+            campaign_data.append({
+                'id': campaign.id,
+                'name': campaign.name,
+                'date_debut': campaign.date_debut,
+                'date_fin': campaign.date_fin,
+                'objectif': objectives_map.get(campaign.id, 0),
+            })
+
+    context = {
+        'tenant': request.tenant,
+        'campaign_data': campaign_data,
+    }
+    return render(request, 'tenant_folder/budget/my_campaigns.html', context)
+@login_required(login_url="institut_app:login")
+def budget_campaign_dispatch(request, campaign_id):
+    """
+    Matrix view for tenants to dispatch their global budget objective 
+    across their entities (Entreprises) and budget items (Postes).
+    """
+    from associe_app.models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
+    from django_tenants.utils import schema_context
+    from django.db.models import Sum
+    
+    # 1. Basic Info (from public schema)
+    with schema_context('public'):
+        campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+        # Global objective for this tenant set by Associe
+        global_objective = BudgetLine.objects.filter(campaign=campaign, institut=request.tenant).first()
+        
+        if not global_objective:
+            messages.error(request, "Aucun objectif global n'a été défini pour votre institut sur cette campagne.")
+            return redirect('institut_app:my_budget_campaigns')
+
+        # Get all budget items (Postes) with pre-fetched payment categories
+        postes = PostesBudgetaire.objects.prefetch_related('payment_categories').order_by('type', 'label')
+
+    # 2. Entities (from tenant schema)
+    entreprises = list(Entreprise.objects.all().order_by('designation'))
+
+    # Status check
+    can_edit = global_objective.statut in ['draft', 'rejected', 'none']
+
+    if request.method == "POST":
+        if not can_edit:
+            messages.error(request, "Ce budget est déjà soumis ou validé et ne peut plus être modifié.")
+            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+
+        action = request.POST.get('action', 'save')
+        
+        saved_count = 0
+        deleted_count = 0
+        found_fields = 0
+        
+        try:
+            from decimal import InvalidOperation
+            with transaction.atomic():
+                with schema_context('public'):
+                    for key, value in request.POST.items():
+                        if not key.startswith('amount_'):
+                            continue
+                        
+                        found_fields += 1
+                        try:
+                            # Expected format: amount_{poste_id}_{cat_id}_{ent_id}
+                            # cat_id might be 'None' for legacy or direct poste assignment (though we want to avoid that now)
+                            parts = key.split('_')
+                            if len(parts) != 4:
+                                continue
+                                
+                            poste_id = int(parts[1])
+                            cat_id = int(parts[2])
+                            ent_id = int(parts[3])
+                            
+                            # Robust cleaning: remove all non-numeric/non-separator chars
+                            # but keep the last separator (dot or comma) as decimal if multiple
+                            clean_val = value.strip()
+                            if not clean_val:
+                                amount_val = Decimal('0')
+                            else:
+                                # Replace comma with dot for standard decimal parsing
+                                # Handle cases like 1 500,00 or 1,500.00
+                                clean_val = clean_val.replace('\xa0', '').replace('\u202f', '').replace(' ', '')
+                                if ',' in clean_val and '.' in clean_val:
+                                    # Mixed: remove the thousands separator
+                                    if clean_val.rfind('.') > clean_val.rfind(','):
+                                        clean_val = clean_val.replace(',', '')
+                                    else:
+                                        clean_val = clean_val.replace('.', '').replace(',', '.')
+                                elif ',' in clean_val:
+                                    clean_val = clean_val.replace(',', '.')
+                                
+                                try:
+                                    amount_val = Decimal(clean_val)
+                                except (InvalidOperation, ValueError):
+                                    amount_val = Decimal('0')
+                            
+                            if amount_val > 0:
+                                obj, created = BudgetLineDetail.objects.update_or_create(
+                                    campaign=campaign,
+                                    institut_id=request.tenant.id,
+                                    poste_id=poste_id,
+                                    payment_category_id=cat_id,
+                                    entreprise_id=ent_id,
+                                    defaults={'montant': amount_val}
+                                )
+                                # Check for quarterly data in this same post? No, usually separate inputs.
+                                # But we iterate over items. Let's see if we can grab them.
+                                # The loop is over all items.
+                                # We can't easily grab t1_... inside this loop efficiently if we don't know the keys.
+                                # BETTER STRATEGY: 
+                                # 1. Process amounts first (as done).
+                                # 2. Process T1-T4 in a second pass or lookups.
+                                
+                                # Look up T1-T4 from request.POST for this ROW (Poste + Cat)
+                                # Input name format: t1_{poste_id}_{cat_id}
+                                t1_key = f"t1_{poste_id}_{cat_id}"
+                                t2_key = f"t2_{poste_id}_{cat_id}"
+                                t3_key = f"t3_{poste_id}_{cat_id}"
+                                t4_key = f"t4_{poste_id}_{cat_id}"
+                                
+                                # We use the row-level value to update this specific detail
+                                if t1_key in request.POST: obj.t1_percent = min(max(float(request.POST.get(t1_key, 0) or 0), 0), 100)
+                                if t2_key in request.POST: obj.t2_percent = min(max(float(request.POST.get(t2_key, 0) or 0), 0), 100)
+                                if t3_key in request.POST: obj.t3_percent = min(max(float(request.POST.get(t3_key, 0) or 0), 0), 100)
+                                if t4_key in request.POST: obj.t4_percent = min(max(float(request.POST.get(t4_key, 0) or 0), 0), 100)
+                                obj.save()
+
+                                saved_count += 1
+                            else:
+                                # Delete if 0 or empty
+                                deleted = BudgetLineDetail.objects.filter(
+                                    campaign=campaign,
+                                    institut_id=request.tenant.id,
+                                    poste_id=poste_id,
+                                    payment_category_id=cat_id,
+                                    entreprise_id=ent_id
+                                ).delete()
+                                if deleted[0] > 0:
+                                    deleted_count += 1
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    if action == 'submit':
+                        global_objective.statut = 'submitted'
+                        global_objective.save()
+                        messages.success(request, f"Proposition soumise ! {saved_count} allocations enregistrées.")
+                    else:
+                        if found_fields == 0:
+                            messages.warning(request, "Aucune donnée budgétaire n'a été détectée dans l'envoi.")
+                        else:
+                            messages.success(request, f"Brouillon enregistré : {saved_count} montants sauvegardés.")
+                            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
+                
+        return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+
+    # 3. Fetch existing allocations (from public schema)
+    with schema_context('public'):
+        details = BudgetLineDetail.objects.filter(campaign=campaign, institut_id=request.tenant.id)
+        # Map: (poste_id, cat_id, exp_id) -> BudgetLineDetail
+        allocations = {}
+        # Map: (poste_id, cat_id) -> {t1, t2, t3, t4} (Use the first found to populate the row input)
+        row_quarters = {}
+        
+        for d in details:
+            # Handle potential None for legacy data if needed, or assume migration handled it
+            # We'll use a tuple key: (poste_id, payment_category_id, entreprise_id)
+            cat_id = d.payment_category_id if d.payment_category_id else 0
+            key = (d.poste_id, cat_id, d.entreprise_id)
+            allocations[key] = d
+            
+            # Populate row quarters if not already set (or overwrite, assuming they are consistent)
+            # Use string key for easy template lookup: "poste_cat"
+            row_key = f"{d.poste_id}_{cat_id}"
+            if row_key not in row_quarters:
+                row_quarters[row_key] = {
+                    't1': d.t1_percent,
+                    't2': d.t2_percent,
+                    't3': d.t3_percent,
+                    't4': d.t4_percent
+                }
+            
+        total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+
+    context = {
+        'tenant': request.tenant,
+        'campaign': campaign,
+        'global_objective': global_objective,
+        'postes': postes,
+        'entreprises': entreprises,
+        'allocations': allocations,
+        'row_quarters': row_quarters,
+        'total_dispatched': total_dispatched,
+        'remaining': global_objective.montant - total_dispatched,
+        'percent_dispatched': (total_dispatched / global_objective.montant * 100) if global_objective.montant > 0 else 0,
+        'can_edit': can_edit,
+        'statut': global_objective.statut,
+        'commentaire': global_objective.commentaire,
+    }
+    return render(request, 'tenant_folder/budget/dispatch_budget.html', context)
+
+@login_required(login_url="institut_app:login")
+def request_extension(request, campaign_id):
+    """
+    View for institutes to request a budget extension (rallonge).
+    Shows current validated budget and allows proposing new amounts.
+    """
+    from associe_app.models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail, BudgetExtensionRequest, BudgetExtensionItem
+    from django_tenants.utils import schema_context
+    
+    # 1. Basic Info (from public schema)
+    with schema_context('public'):
+        campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+        global_objective = BudgetLine.objects.filter(campaign=campaign, institut=request.tenant).first()
+        
+        if not global_objective or global_objective.statut != 'validated':
+            messages.error(request, "Vous ne pouvez demander une rallonge que sur un budget validé.")
+            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+
+        # Check for pending requests
+        pending_request = BudgetExtensionRequest.objects.filter(
+            campaign=campaign, 
+            institut=request.tenant, 
+            status='pending'
+        ).first()
+        
+        if pending_request:
+            messages.warning(request, "Vous avez déjà une demande de rallonge en attente. Veuillez patienter.")
+            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+
+        postes = PostesBudgetaire.objects.prefetch_related('payment_categories').order_by('type', 'label')
+
+    # 2. Entities (from tenant schema)
+    entreprises = list(Entreprise.objects.all().order_by('designation'))
+
+    if request.method == "POST":
+        motif = request.POST.get('motif')
+        if not motif:
+            messages.error(request, "Veuillez fournir un motif pour la demande.")
+            return redirect(request.path)
+
+        try:
+            with transaction.atomic():
+                with schema_context('public'):
+                    # Create Request
+                    ext_request = BudgetExtensionRequest.objects.create(
+                        campaign=campaign,
+                        institut=request.tenant,
+                        motif=motif,
+                        status='pending'
+                    )
+
+                    saved_count = 0
+                    
+                    # Iterate form data to find changes
+                    # Expected format: extension_amount_{poste_id}_{cat_id}_{ent_id}
+                    for key, value in request.POST.items():
+                        if key.startswith('extension_amount_'):
+                            try:
+                                parts = key.split('_')
+                                # extension_amount_1_2_3 -> parts: ['extension', 'amount', '1', '2', '3']
+                                poste_id = int(parts[2])
+                                cat_id = int(parts[3]) if parts[3] != '0' else None
+                                ent_id = int(parts[4])
+                                
+                                new_amount = float(value) if value else 0
+                                
+                                # Get current amount
+                                current_detail = BudgetLineDetail.objects.filter(
+                                    campaign=campaign,
+                                    institut=request.tenant,
+                                    poste_id=poste_id,
+                                    payment_category_id=cat_id,
+                                    entreprise_id=ent_id
+                                ).first()
+                                
+                                current_amount = float(current_detail.montant) if current_detail else 0.0
+                                
+                                # Only save if there is a change or a non-zero request
+                                if new_amount != current_amount:
+                                    BudgetExtensionItem.objects.create(
+                                        request=ext_request,
+                                        poste_id=poste_id,
+                                        payment_category_id=cat_id,
+                                        entreprise_id=ent_id,
+                                        old_amount=current_amount,
+                                        requested_amount=new_amount
+                                    )
+                                    saved_count += 1
+                                    
+                            except (ValueError, IndexError) as e:
+                                continue
+
+                    if saved_count == 0:
+                        # No changes detected
+                        ext_request.delete()
+                        messages.warning(request, "Aucune modification budgétaire détectée.")
+                    else:
+                        messages.success(request, f"Demande de rallonge envoyée avec succès ({saved_count} lignes modifiées).")
+                        return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+
+        except Exception as e:
+            messages.error(request, f"Erreur: {str(e)}")
+
+    # 3. Fetch existing allocations for display
+    with schema_context('public'):
+        details = BudgetLineDetail.objects.filter(campaign=campaign, institut=request.tenant)
+        # Use string keys for easy JS parsing: "poste_cat_ent"
+        allocations = {}
+        for d in details:
+            # key = f"{poste_id}_{cat_id}_{ent_id}"
+            cat = d.payment_category_id if d.payment_category_id else 0
+            key = f"{d.poste_id}_{cat}_{d.entreprise_id}"
+            # allocations[key] = float(d.montant) # OLD
+            allocations[key] = float(d.montant) # FIXED: Pass amount for JSON serialization
+
+    context = {
+        'tenant': request.tenant,
+        'campaign': campaign,
+        'postes': postes,
+        'entreprises': entreprises,
+        'allocations': allocations,
+    }
+    return render(request, 'tenant_folder/budget/request_extension.html', context)

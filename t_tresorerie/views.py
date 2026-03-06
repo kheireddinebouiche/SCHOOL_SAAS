@@ -55,6 +55,7 @@ def PageDetailsDemandePaiement(request, pk):
     context = {
         'tenant' : request.tenant,
         'pk' : pk,
+        'payment_types': PaymentType.objects.all()
     }
 
     if obj.client.is_double:
@@ -686,6 +687,7 @@ def ApiStorePaiement(request):
     observation = request.POST.get('observation')
     mode_paiement = request.POST.get('mode_paiement')
     paiement_ref = request.POST.get('paiement_ref')
+    paymentType = request.POST.get('paymentType')
     
     if not due_paiements or not date_paiement or not received_amount or not mode_paiement:
         return JsonResponse({'status' : 'error', 'message' : "Veuillez remplir tous les champs"})
@@ -715,6 +717,7 @@ def ApiStorePaiement(request):
                 observation = observation,
                 mode_paiement = mode_paiement,
                 reference_paiement = paiement_ref,
+                payment_type_id = paymentType if paymentType else None,
             )
 
             new_paiement.save()

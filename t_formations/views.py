@@ -5,7 +5,9 @@ from .forms import *
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+import csv
+import openpyxl
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from .import_utils import handle_uploaded_file, verify_data, import_data
@@ -1124,3 +1126,133 @@ def import_data_view(request):
         form = ImportDataForm()
 
     return render(request, 'tenant_folder/formations/import_data.html', {'form': form, 'tenant': request.tenant})
+
+
+@login_required(login_url="institut_app:login")
+def export_formations(request):
+    format_type = request.GET.get('format', 'csv')
+    formations = Formation.objects.prefetch_related('formation_specilite').all()
+
+    # Define headers
+    headers = [
+        'Code Formation', 'Nom Formation', 'Description Formation', 'Durée Formation', 'Partenaire', 'Type de formation', 'Frais Inscription', 'Prix Formation',
+        'Code Spécialité', 'Label Spécialité', 'Durée Spécialité', 'Branche', 'Prix Spécialité',
+        'Code Module', 'Code Interne Module', 'Label Module', 'Durée Module', 'Coefficient'
+    ]
+
+    def get_rows_for_formation(f):
+        rows = []
+        partenaire_val = f.partenaire.code if f.partenaire else ''
+        base_f_row = [
+            f.code, f.nom, f.description, f.duree, partenaire_val,
+            f.type_formation if f.type_formation else '',
+            f.frais_inscription, f.prix_formation
+        ]
+        
+        specialites = f.formation_specilite.all()
+        if not specialites:
+            rows.append(base_f_row + [''] * 5 + [''] * 5)
+        else:
+            for spec in specialites:
+                base_s_row = [
+                    spec.code, spec.label, spec.duree, spec.branche, spec.prix
+                ]
+                
+                modules = Modules.objects.filter(specialite=spec)
+                if not modules:
+                    rows.append(base_f_row + base_s_row + [''] * 5)
+                else:
+                    for mod in modules:
+                        mod_row = [
+                            mod.code, mod.code_interne, mod.label, mod.duree, mod.coef
+                        ]
+                        rows.append(base_f_row + base_s_row + mod_row)
+        return rows
+
+
+    if format_type == 'excel':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="formations_export.xlsx"'
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = 'Formations'
+        sheet.append(headers)
+
+        for f in formations:
+            for row in get_rows_for_formation(f):
+                sheet.append(row)
+
+        workbook.save(response)
+        return response
+
+    else:
+        # Default to CSV
+        response = HttpResponse(content_type='text/csv')
+        response.write('\ufeff'.encode('utf8'))
+        response['Content-Disposition'] = 'attachment; filename="formations_export.csv"'
+
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(headers)
+
+        for f in formations:
+            for row in get_rows_for_formation(f):
+                writer.writerow(row)
+
+        return response
+
+@login_required(login_url="institut_app:login")
+def export_partenaires(request):
+    format_type = request.GET.get('format', 'csv')
+    partenaires = Partenaires.objects.all()
+
+    if format_type == 'excel':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="partenaires_export.xlsx"'
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = 'Partenaires'
+
+        # Headers
+        headers = ['Code', 'Nom', 'Adresse', 'Téléphone', 'Email', 'Site Web', 'Type de partenaire', 'Etat']
+        sheet.append(headers)
+
+        for p in partenaires:
+            sheet.append([
+                p.code,
+                p.nom,
+                p.adresse,
+                p.telephone,
+                p.email,
+                p.site_web,
+                p.type_partenaire if p.type_partenaire else '',
+                p.etat
+            ])
+
+        workbook.save(response)
+        return response
+
+    else:
+        # Default to CSV
+        response = HttpResponse(content_type='text/csv')
+        # Add UTF-8 BOM for Excel compatibility with CSV
+        response.write('\ufeff'.encode('utf8'))
+        response['Content-Disposition'] = 'attachment; filename="partenaires_export.csv"'
+
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Code', 'Nom', 'Adresse', 'Téléphone', 'Email', 'Site Web', 'Type de partenaire', 'Etat'])
+
+        for p in partenaires:
+            writer.writerow([
+                p.code,
+                p.nom,
+                p.adresse,
+                p.telephone,
+                p.email,
+                p.site_web,
+                p.type_partenaire if p.type_partenaire else '',
+                p.etat
+            ])
+
+        return response

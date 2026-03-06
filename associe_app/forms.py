@@ -1,5 +1,14 @@
 from django import forms
-from .models import GlobalPaymentCategory, GlobalDepensesCategory, PostesBudgetaire
+from .models import GlobalPaymentCategory, GlobalDepensesCategory, PostesBudgetaire, GlobalPaymentType
+
+class GlobalPaymentTypeForm(forms.ModelForm):
+    class Meta:
+        model = GlobalPaymentType
+        fields = ['name', 'payment_categories']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'payment_categories': forms.SelectMultiple(attrs={'class': 'form-control select2', 'multiple': 'multiple'}),
+        }
 
 class GlobalPaymentCategoryForm(forms.ModelForm):
     class Meta:

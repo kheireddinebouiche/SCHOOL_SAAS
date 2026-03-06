@@ -107,7 +107,8 @@ def ApiStats(request):
 @login_required(login_url="institut_app:login")
 def DetailsEcheancierClient(request, pk):
     context = {
-        'pk': pk
+        'pk': pk,
+        'payment_types': PaymentType.objects.all()
     }
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
 
@@ -115,6 +116,7 @@ def DetailsEcheancierClient(request, pk):
 def DetailsEcheancierClientDouble(request, pk):
     context = {
         'pk' : pk,
+        'payment_types': PaymentType.objects.all()
     }
     return render(request,'tenant_folder/comptabilite/echeancier/details-suivie-echeancier-double.html', context)
 

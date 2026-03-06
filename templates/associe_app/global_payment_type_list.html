@@ -1,0 +1,361 @@
+{% extends 'public_folder/base.html' %} 
+
+{% block content %}
+<style>
+    /* Modern UI Variables override or extra */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --accent-teal: #0f766e;
+        --accent-indigo: #4f46e5;
+    }
+
+    .main-content {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        min-height: 100vh;
+    }
+
+    .page-title-box {
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px !important;
+    }
+
+    /* Card Item Styling */
+    .type-card {
+        border: 1px solid var(--border-color);
+        background: #ffffff;
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .type-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1);
+        border-color: var(--accent-teal);
+    }
+
+    .type-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent-teal);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .type-card:hover::before {
+        opacity: 1;
+    }
+
+    .card-icon-container {
+        width: 48px;
+        height: 48px;
+        background: rgba(15, 118, 110, 0.1);
+        color: var(--accent-teal);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .category-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #eff6ff;
+        color: #1d4ed8;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Modal Glassmorphism */
+    .modal-content {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 20px !important;
+    }
+
+    .modal-header {
+        border-top-left-radius: 20px !important;
+        border-top-right-radius: 20px !important;
+        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+    }
+
+    /* Actions buttons */
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        border: none;
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .action-btn:hover {
+        background: #e2e8f0;
+        color: var(--text-main);
+    }
+
+    .action-btn.edit:hover { background: #dcfce7; color: #166534; }
+    .action-btn.delete:hover { background: #fee2e2; color: #991b1b; }
+
+    /* Animated entry */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .staggered-item {
+        animation: fadeInUp 0.5s ease forwards;
+        opacity: 0;
+        animation-delay: calc(var(--index) * 0.1s);
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Title Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between p-3 mb-4 staggered-item" style="--index: 1;">
+                        <div>
+                            <h4 class="mb-1 text-primary">Configuration des Paiements</h4>
+                            <p class="text-muted mb-0">Gérez vos types de paiement globaux et leurs associations.</p>
+                        </div>
+                        <div class="page-title-right d-flex gap-2">
+                            <button type="button" class="btn btn-success btn-label waves-effect waves-light shadow-sm rounded-pill" onclick="syncWithTenants()" id="syncBtn">
+                                <i class="ri-refresh-line label-icon align-middle fs-16 me-2"></i> Synchroniser
+                            </button>
+                            <button type="button" class="btn btn-primary btn-label waves-effect waves-light shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#typeModal" onclick="openCreateModal()">
+                                <i class="ri-add-line label-icon align-middle fs-16 me-2"></i> Nouveau Type
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Section -->
+            <div class="row" id="types-container">
+                {% if types %}
+                    {% for object in types %}
+                    <div class="col-xl-3 col-md-6 staggered-item" style="--index: {{ forloop.counter|add:2 }};" id="row-{{ object.id }}">
+                        <div class="card type-card p-4 h-100">
+                            <div class="card-icon-container">
+                                <i class="ri-bank-card-line"></i>
+                            </div>
+                            <h5 class="fs-16 fw-bold mb-2">{{ object.name }}</h5>
+                            <div class="mb-4 d-flex flex-wrap gap-1">
+                                {% for cat in object.payment_categories.all %}
+                                <span class="category-badge">
+                                    <i class="ri-price-tag-3-line"></i> {{ cat.name }}
+                                </span>
+                                {% empty %}
+                                <span class="category-badge" style="background: #f8fafc; color: #94a3b8;">
+                                    <i class="ri-price-tag-3-line"></i> Aucune catégorie
+                                </span>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <small class="text-muted"><i class="ri-time-line me-1"></i> {{ object.created_at|date:"d M Y" }}</small>
+                                <div class="d-flex gap-2">
+                                    <button class="action-btn edit" onclick="openEditModal({{ object.id }})" title="Modifier">
+                                        <i class="ri-pencil-line"></i>
+                                    </button>
+                                    <button class="action-btn delete" onclick="deleteType({{ object.id }})" title="Supprimer">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5 staggered-item" style="--index: 2;">
+                        <div class="p-5 bg-white rounded-4 shadow-sm">
+                            <lord-icon src="https://cdn.lordicon.com/vlynuwzf.json" trigger="loop" colors="primary:#0f766e,secondary:#4f46e5" style="width:120px;height:120px"></lord-icon>
+                            <h4 class="mt-4">Aucun type de paiement</h4>
+                            <p class="text-muted mx-auto" style="max-width: 400px;">Commencez par créer votre premier type de paiement pour organiser vos flux financiers.</p>
+                            <button class="btn btn-primary rounded-pill px-4 mt-3" onclick="openCreateModal()">
+                                <i class="ri-add-line me-1"></i> Créer maintenant
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Type Modal -->
+<div class="modal fade" id="typeModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-transparent border-0 p-4">
+                <h5 class="modal-title fw-bold" id="modalTitle">Nouveau Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"></button>
+            </div>
+            <form id="typeForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body px-4 pb-4">
+                    <input type="hidden" id="type_pk" name="id">
+                    <div class="mb-4">
+                        <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">Nom du type</label>
+                        {{ form.name }}
+                        <small class="text-muted mt-1 d-block">Ex: Virement, Chèque, Espèces...</small>
+                        <div class="invalid-feedback" id="error-name"></div>
+                    </div>
+                    <div class="mb-0">
+                        <label for="{{ form.payment_categories.id_for_label }}" class="form-label fw-semibold">Catégorie(s) de paiement associée(s)</label>
+                        {{ form.payment_categories }}
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="saveBtn">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let typeModal;
+    let form;
+    let saveBtn;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalElement = document.getElementById('typeModal');
+        if (modalElement) typeModal = new bootstrap.Modal(modalElement);
+        form = document.getElementById('typeForm');
+        saveBtn = document.getElementById('saveBtn');
+
+        if (form) {
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                $.ajax({
+                    url: form.action,
+                    type: 'POST',
+                    data: $(form).serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.set('notifier','position', 'top-right');
+                            alertify.success('<i class="ri-checkbox-circle-line me-2"></i>' + response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            alertify.error('Veuillez vérifier les champs.');
+                        }
+                    },
+                    complete: function() {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = 'Enregistrer';
+                    }
+                });
+            };
+        }
+    });
+
+    $(document).ready(function() {
+        $('.select2').each(function() {
+            $(this).select2({
+                dropdownParent: $(this).closest('.modal-content') || null,
+                width: '100%',
+                placeholder: "Sélectionnez une ou plusieurs catégories..."
+            });
+        });
+    });
+
+    function openCreateModal() {
+        document.getElementById('modalTitle').innerText = 'Nouveau Type de Paiement';
+        document.getElementById('typeForm').action = "{% url 'global_payment_type_create' %}";
+        document.getElementById('type_pk').value = "";
+        document.getElementById('id_name').value = "";
+        
+        // Clear Select2
+        $('#id_payment_categories').val(null).trigger('change');
+        if (typeModal) typeModal.show();
+    }
+
+    function openEditModal(id) {
+        document.getElementById('modalTitle').innerText = 'Modifier le Type de Paiement';
+        document.getElementById('typeForm').action = "{% url 'global_payment_type_edit' 0 %}".replace('0', id);
+        document.getElementById('type_pk').value = id;
+        
+        // Load data via AJAX
+        $.get("{% url 'global_payment_type_edit' 0 %}".replace('0', id), function(data) {
+            document.getElementById('id_name').value = data.name;
+            // Set values for Select2
+            $('#id_payment_categories').val(data.payment_categories).trigger('change');
+            
+            if (typeModal) typeModal.show();
+        });
+    }
+
+    function deleteType(id) {
+        alertify.confirm('Supprimer', 'Voulez-vous vraiment supprimer ce type ? Cette action est irréversible.', 
+            function() {
+                $.ajax({
+                    url: "{% url 'global_payment_type_delete' 0 %}".replace('0', id),
+                    type: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            $(`#row-${id}`).addClass('staggered-item').css('animation-direction', 'reverse').fadeOut(400);
+                        }
+                    }
+                });
+            }, function() {}
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+    }
+
+    function syncWithTenants() {
+        const btn = document.getElementById('syncBtn');
+        const originalHtml = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i> Synchronisation...';
+        
+        $.ajax({
+            url: "{% url 'sync_payment_types' %}",
+            type: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(response) {
+                if (response.success) {
+                    alertify.success(response.message);
+                } else {
+                    alertify.error(response.message);
+                }
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue lors de la synchronisation.');
+            },
+            complete: function() {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    }
+</script>
+{% endblock %}

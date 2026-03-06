@@ -1,15 +1,32 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from .models import GlobalPaymentCategory, GlobalDepensesCategory
-from .forms import GlobalPaymentCategoryForm, GlobalDepensesCategoryForm
-from django.contrib import messages
+from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType
+from .forms import GlobalPaymentCategoryForm, GlobalDepensesCategoryForm, GlobalPaymentTypeForm
 from .utils import sync_global_categories
+from django.contrib import messages
 from app.models import Institut
 from django_tenants.utils import schema_context
 from t_tresorerie.models import PaymentCategory, DepensesCategory
 from t_crm.models import Prospets, Opportunite
 from django.db.models import Sum, Count
+from institut_app.models import Entreprise
+from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
+
+@login_required
+def sync_payment_types(request):
+    if request.method == 'POST':
+        try:
+            sync_global_categories()
+            return JsonResponse({'success': True, 'message': 'Synchronisation terminée avec succès.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erreur lors de la synchronisation : {str(e)}'})
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée.'}, status=405)
+from t_crm.models import Prospets, Opportunite
+from django.db.models import Sum, Count
+from institut_app.models import Entreprise
+from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
 
 @login_required(login_url='login')
 def index(request):
@@ -23,13 +40,100 @@ def configuration_budget(request):
 def configuration_structure(request):
     return render(request, 'public_folder/configuration.html')
 
+# --- Global Payment Type Views ---
+
+@login_required(login_url='login')
+def global_payment_type_list(request):
+    types = GlobalPaymentType.objects.all().order_by('name')
+    types_list = []
+    for t in types:
+        cats = t.payment_categories.all()
+        types_list.append({
+            'id': t.id,
+            'name': t.name,
+            'payment_categories': [{'id': c.id, 'name': c.name} for c in cats],
+            'category_ids': [c.id for c in cats]
+        })
+    
+    import json
+    types_json = json.dumps(types_list)
+    
+    form = GlobalPaymentTypeForm()
+    return render(request, 'associe_app/global_payment_type_list.html', {
+        'types': types, 
+        'types_json': types_json,
+        'form': form
+    })
+
+@login_required(login_url='login')
+def global_payment_type_create(request):
+    if request.method == 'POST':
+        form = GlobalPaymentTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Type de paiement créé avec succès.'})
+            return redirect('global_payment_type_list')
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+    return redirect('global_payment_type_list')
+
+@login_required(login_url='login')
+def global_payment_type_edit(request, pk):
+    payment_type = get_object_or_404(GlobalPaymentType, pk=pk)
+    if request.method == 'POST':
+        form = GlobalPaymentTypeForm(request.POST, instance=payment_type)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Type de paiement modifié avec succès.'})
+            return redirect('global_payment_type_list')
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+    
+    # For loading form data via AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'name': payment_type.name,
+            'payment_categories': list(payment_type.payment_categories.values_list('id', flat=True))
+        })
+    return redirect('global_payment_type_list')
+
+@login_required(login_url='login')
+def global_payment_type_delete(request, pk):
+    payment_type = get_object_or_404(GlobalPaymentType, pk=pk)
+    if request.method == 'POST':
+        payment_type.delete()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Type de paiement supprimé avec succès.'})
+    return redirect('global_payment_type_list')
+
 # --- Global Payment Category Views ---
 
 @login_required(login_url='login')
 def global_payment_category_list(request):
-    categories = GlobalPaymentCategory.objects.all()
+    categories = GlobalPaymentCategory.objects.all().order_by('name')
+    categories_list = []
+    for cat in categories:
+        categories_list.append({
+            'id': cat.id,
+            'name': cat.name,
+            'parent_id': cat.parent.id if cat.parent else None,
+            'type': cat.category_type,
+            'type_display': cat.get_category_type_display()
+        })
+    
+    import json
+    categories_json = json.dumps(categories_list)
+    
     form = GlobalPaymentCategoryForm()
-    return render(request, 'associe_app/global_payment_category_list.html', {'categories': categories, 'form': form})
+    return render(request, 'associe_app/global_payment_category_list.html', {
+        'categories': categories, 
+        'categories_json': categories_json,
+        'form': form
+    })
 
 @login_required(login_url='login')
 def global_payment_category_create(request):
@@ -81,9 +185,26 @@ def global_payment_category_delete(request, pk):
 
 @login_required(login_url='login')
 def global_depenses_category_list(request):
-    categories = GlobalDepensesCategory.objects.all()
+    categories = GlobalDepensesCategory.objects.all().order_by('name')
+    categories_list = []
+    for cat in categories:
+        categories_list.append({
+            'id': cat.id,
+            'name': cat.name,
+            'parent_id': cat.parent.id if cat.parent else None,
+            'payment_category': cat.payment_category.name if cat.payment_category else '-',
+            'payment_category_id': cat.payment_category.id if cat.payment_category else None
+        })
+    
+    import json
+    categories_json = json.dumps(categories_list)
+
     form = GlobalDepensesCategoryForm()
-    return render(request, 'associe_app/global_depenses_category_list.html', {'categories': categories, 'form': form})
+    return render(request, 'associe_app/global_depenses_category_list.html', {
+        'categories': categories, 
+        'categories_json': categories_json,
+        'form': form
+    })
 
 @login_required(login_url='login')
 def global_depenses_category_create(request):
@@ -316,9 +437,29 @@ from .forms import PostesBudgetaireForm
 
 @login_required(login_url='login')
 def postes_budgetaires_list(request):
-    postes = PostesBudgetaire.objects.all()
+    postes = PostesBudgetaire.objects.all().order_by('label')
+    postes_list = []
+    for poste in postes:
+        postes_list.append({
+            'id': poste.id,
+            'name': poste.label, # Using 'name' for consistency with other trees
+            'label': poste.label,
+            'type': poste.type,
+            'type_display': poste.get_type_display(),
+            'parent_id': poste.parent.id if poste.parent else None,
+            'description': poste.description,
+            'depense_categories': [c.name for c in poste.depense_categories.all()],
+            'payment_categories': [c.name for c in poste.payment_categories.all()]
+        })
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse(postes_list, safe=False)
+
     form = PostesBudgetaireForm()
-    return render(request, 'associe_app/postes_budgetaires_list.html', {'postes': postes, 'form': form})
+    return render(request, 'associe_app/postes_budgetaires_list.html', {
+        'postes': postes, 
+        'form': form
+    })
 
 @login_required(login_url='login')
 def postes_budgetaire_create(request):
@@ -368,3 +509,402 @@ def postes_budgetaire_delete(request, pk):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'success', 'message': 'Poste budgétaire supprimé avec succès.'})
     return redirect('postes_budgetaires_list')
+
+# --- Budget Campaign Views ---
+
+@login_required(login_url='login')
+def budget_campaign_list(request):
+    campaigns = BudgetCampaign.objects.all().order_by('-date_debut')
+    active_count = BudgetCampaign.objects.filter(is_active=True).count()
+    return render(request, 'associe_app/budget_campaign_list.html', {
+        'campaigns': campaigns,
+        'active_count': active_count
+    })
+
+
+@login_required(login_url='login')
+def budget_campaign_activate(request, campaign_id):
+    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+    if request.method == 'POST':
+        try:
+            # Toggle the active status
+            campaign.is_active = not campaign.is_active
+            campaign.save()
+            
+            action_message = "activée" if campaign.is_active else "désactivée"
+            messages.success(request, f"Campagne '{campaign.name}' {action_message} avec succès.")
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': f"Campagne '{campaign.name}' {action_message} avec succès."})
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification du statut de la campagne: {e}")
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': f"Erreur lors de la modification du statut de la campagne: {e}"})
+                
+    return redirect('budget_campaign_list')
+
+@login_required(login_url='login')
+def budget_campaign_delete(request, campaign_id):
+    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+    if request.method == 'POST':
+        campaign.delete()
+        messages.success(request, f"Campagne '{campaign.name}' supprimée avec succès.")
+    return redirect('budget_campaign_list')
+
+@login_required(login_url='login')
+def budget_campaign_instituts(request, campaign_id):
+    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+    instituts = Institut.objects.exclude(schema_name='public')
+    
+    # 1. Process Form Submission (Bulk Save)
+    if request.method == 'POST':
+        try:
+            for key, value in request.POST.items():
+                if key.startswith('budget_'):
+                    # Format: budget_INSTITUTID
+                    parts = key.split('_')
+                    if len(parts) == 2:
+                        inst_id = parts[1]
+                        # Robust cleaning for accounting format
+                        clean_value = value.replace(' ', '').replace('\xa0', '').replace('\u202f', '')
+                        if ',' in clean_value and '.' in clean_value:
+                            if clean_value.rfind(',') > clean_value.rfind('.'):
+                                clean_value = clean_value.replace('.', '').replace(',', '.')
+                            else:
+                                clean_value = clean_value.replace(',', '')
+                        else:
+                            clean_value = clean_value.replace(',', '.')
+                        
+                        try:
+                            amount = float(clean_value) if clean_value else 0
+                            if amount >= 0:
+                                BudgetLine.objects.update_or_create(
+                                    campaign=campaign,
+                                    institut_id=inst_id,
+                                    defaults={'montant': amount}
+                                )
+                        except (ValueError, TypeError):
+                            continue
+            messages.success(request, "Objectifs globaux enregistrés avec succès.")
+        except Exception as e:
+             messages.error(request, f"Erreur lors de l'enregistrement: {e}")
+        return redirect('budget_campaign_instituts', campaign_id=campaign.id)
+
+    # 2. Build Data for Display
+    instituts_data = []
+    configured_instituts = 0
+    
+    # Prefetch extensions to avoid N+1
+    from .models import BudgetExtensionRequest
+    pending_extensions = BudgetExtensionRequest.objects.filter(
+        campaign=campaign, 
+        status='pending'
+    ).values_list('institut_id', 'id')
+    
+    # Create a map: institut_id -> request_id
+    pending_extensions_map = {inst_id: req_id for inst_id, req_id in pending_extensions}
+
+    for inst in instituts:
+        line = BudgetLine.objects.filter(campaign=campaign, institut=inst).first()
+        is_configured = line is not None
+        if is_configured:
+            configured_instituts += 1
+            
+        instituts_data.append({
+            'institut': inst,
+            'is_configured': is_configured,
+            'montant': line.montant if line else 0,
+            'statut': line.statut if line else 'none',
+            'pending_extension_id': pending_extensions_map.get(inst.id)
+        })
+        
+    total_inst = len(instituts)
+    progress = (configured_instituts / total_inst * 100) if total_inst > 0 else 0
+    
+    return render(request, 'associe_app/budget_campaign_instituts.html', {
+        'campaign': campaign,
+        'instituts_data': instituts_data,
+        'configured_count': configured_instituts,
+        'pending_count': total_inst - configured_instituts,
+        'progress': progress
+    })
+
+@login_required(login_url='login')
+def budget_campaign_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        
+        # Automatic Date Logic: Fiscal Year starts Aug 1st
+        today = date.today()
+        if today.month < 8: # Jan - July
+            start_year = today.year - 1
+        else: # Aug - Dec
+            start_year = today.year
+            
+        date_debut = date(start_year, 8, 1)
+        date_fin = date(start_year + 1, 7, 31)
+        
+        default_name = f"Budget {start_year}-{start_year + 1}"
+        
+        if not name:
+            name = default_name
+            
+        # Create or Get (to avoid duplicates for same period/name)
+        campaign, created = BudgetCampaign.objects.get_or_create(
+            name=name,
+            defaults={
+                'date_debut': date_debut, 
+                'date_fin': date_fin, 
+                'is_active': False
+            }
+        )
+        
+        if created:
+            messages.success(request, f"Campagne '{name}' créée avec succès.")
+        else:
+            messages.info(request, f"La campagne '{name}' existe déjà.")
+            
+    return redirect('budget_campaign_list')
+
+@login_required(login_url='login')
+def budget_campaign_review(request, campaign_id, institut_id):
+    """
+    Review and Validate/Reject a tenant's budget dispatch proposal.
+    """
+    campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+    institut = get_object_or_404(Institut, id=institut_id)
+    budget_line = get_object_or_404(BudgetLine, campaign=campaign, institut=institut)
+    
+    # Restriction: Admin cannot see details until submitted
+    is_visible_to_admin = budget_line.statut in ['submitted', 'validated', 'rejected']
+    
+    postes = []
+    details = []
+    allocations = {}
+    row_quarters = {}
+    total_dispatched = 0
+    entreprises = []
+
+    if is_visible_to_admin:
+        # 1. Global Items (Public)
+        postes = PostesBudgetaire.objects.prefetch_related('payment_categories').order_by('type', 'label')
+        details = BudgetLineDetail.objects.filter(campaign=campaign, institut=institut)
+        # Map: (poste_id, cat_id, ent_id) -> BudgetLineDetail
+        allocations = {}
+        for d in details:
+            # tag uses None for empty category
+            key = (d.poste_id, d.payment_category_id if d.payment_category_id else None, d.entreprise_id)
+            allocations[key] = d
+        total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+
+        # 2. Tenant Specific Entities
+        with schema_context(institut.schema_name):
+            entreprises = list(Entreprise.objects.all().order_by('designation'))
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+        commentaire = request.POST.get('commentaire', '')
+        
+        if action == 'save_quartely':
+            # Save quarterly percentages (Row Level)
+            # Input format: tX_POSTE_CAT
+            updated_details = []
+            
+            # Create a map of existing details for quick lookup: (poste_id, cat_id) -> list of details
+            details_map = {}
+            for d in details:
+                key = (d.poste_id, d.payment_category_id)
+                if key not in details_map:
+                    details_map[key] = []
+                details_map[key].append(d)
+
+            for key, value in request.POST.items():
+                if key.startswith('t1_') or key.startswith('t2_') or key.startswith('t3_') or key.startswith('t4_'):
+                    # Format: tX_POSTE_CAT
+                    parts = key.split('_') 
+                    # Expect ['t1', '12', '5'] (cat exists) or ['t1', '12', 'None']
+                    if len(parts) >= 3:
+                        quarter = parts[0] # t1, t2, t3, t4
+                        poste_id = parts[1]
+                        cat_id_str = parts[2]
+                        
+                        try:
+                            val = float(value.replace(',', '.')) if value else 0.0
+                            val = min(max(val, 0), 100) # Clamp 0-100
+                            
+                            real_cat_id = int(cat_id_str) if cat_id_str != 'None' and cat_id_str != '' else None
+                            
+                            # Update ALL details for this row (Poste + Category)
+                            # We want to apply the percentage to all entreprises in this row
+                            row_details = details_map.get((int(poste_id), real_cat_id), [])
+                            
+                            for detail in row_details:
+                                if quarter == 't1': detail.t1_percent = val
+                                elif quarter == 't2': detail.t2_percent = val
+                                elif quarter == 't3': detail.t3_percent = val
+                                elif quarter == 't4': detail.t4_percent = val
+                                updated_details.append(detail)
+                                
+                        except ValueError:
+                            continue
+            
+            # Bulk update if possible, or save individually
+            # Django bulk_update is efficient
+            if updated_details:
+                BudgetLineDetail.objects.bulk_update(updated_details, ['t1_percent', 't2_percent', 't3_percent', 't4_percent'])
+                
+            messages.success(request, "Les pourcentages trimestriels ont été enregistrés.")
+            return redirect('budget_campaign_review', campaign_id=campaign.id, institut_id=institut.id)
+
+        elif action == 'validate':
+            budget_line.statut = 'validated'
+            budget_line.commentaire = '' # Clear old comments
+            messages.success(request, f"Le budget pour {institut.nom} a été validé.")
+        elif action == 'reject':
+            budget_line.statut = 'rejected'
+            budget_line.commentaire = commentaire
+            messages.warning(request, f"Le budget pour {institut.nom} a été rejeté.")
+        elif action == 'reset':
+             # Reset Logic
+            BudgetLineDetail.objects.filter(campaign=campaign, institut=institut).delete()
+            budget_line.statut = 'none' # Or 'draft' if you prefer, but 'none' indicates fresh start
+            budget_line.commentaire = ''
+            messages.info(request, f"La proposition de budget pour {institut.nom} a été réinitialisée.")
+        
+        budget_line.save()
+        return redirect('budget_campaign_instituts', campaign_id=campaign.id)
+
+    # Prepare row_quarters for template
+    if is_visible_to_admin:
+        for d in details:
+            # Key: "poste_id_cat_id" (string for template)
+            cat_key = d.payment_category_id if d.payment_category_id else 'None'
+            row_key = f"{d.poste_id}_{cat_key}"
+            
+            # We assume all details in the same row have the same percentages
+            # So we just take the first one we see
+            if row_key not in row_quarters:
+                row_quarters[row_key] = {
+                    't1': d.t1_percent,
+                    't2': d.t2_percent,
+                    't3': d.t3_percent,
+                    't4': d.t4_percent
+                }
+
+    context = {
+        'campaign': campaign,
+        'institut': institut,
+        'budget_line': budget_line,
+        'postes': postes,
+        'entreprises': entreprises,
+        'allocations': allocations,
+        'total_dispatched': total_dispatched,
+        'row_quarters': row_quarters,
+        'is_visible_to_admin': is_visible_to_admin,
+        
+        # Stats
+        'remaining': budget_line.montant - total_dispatched,
+        'percent_dispatched': (total_dispatched / budget_line.montant * 100) if budget_line.montant > 0 else 0
+    }
+    return render(request, 'associe_app/budget_campaign_review.html', context)
+
+@login_required(login_url="associe_app:login")
+def extension_requests_list(request):
+    from .models import BudgetExtensionRequest
+    
+    requests = BudgetExtensionRequest.objects.select_related('campaign', 'institut').order_by('-created_at')
+    
+    context = {
+        'requests': requests
+    }
+    return render(request, 'associe_app/extension_requests_list.html', context)
+
+@login_required(login_url="associe_app:login")
+def review_extension(request, request_id):
+    from .models import BudgetExtensionRequest, BudgetExtensionItem, BudgetLine, BudgetLineDetail
+    from django.db import transaction
+    from institut_app.models import Entreprise # Import purely for type hinting if needed, but actual query is dynamic
+    # We need to import Entreprise dynamically from the tenant model or similar if possible, 
+    # or just use the model known in the context.
+    # Actually Entreprise is defined in `institut_app.models` usually, or `tenant_app`. 
+    # Let's check where Entreprise is defined. 
+    # In `institut_app/views.py` it was used. Let's assume it's available or we use raw SQL/ORM within context.
+    # We imported `Entreprise` in `institut_app/views.py` from where? 
+    # Likely `from app.models import Entreprise` if valid, or `from institut_app.models import Entreprise`.
+    # Based on checking `institut_app/views.py` imports earlier, it wasn't shown explicitly but used.
+    # Let's check `app/models.py` or similar later if it fails. 
+    # For now, I will use `from app.models import Entreprise` inside the context manager block if needed, 
+    # or rely on `details.entreprise_id`.
+    
+    # Correction: `Entreprise` is likely in `institut_app` or `app` but specific to tenant.
+    # I'll use `from app.models import Entreprise` assuming it's the tenant model.
+    from institut_app.models import Entreprise 
+
+    ext_request = get_object_or_404(BudgetExtensionRequest, id=request_id)
+    items = ext_request.items.select_related('poste', 'payment_category').order_by('poste__label')
+    
+    if request.method == "POST":
+        action = request.POST.get('action')
+        comment = request.POST.get('admin_comment', '')
+        
+        if action == 'approve':
+            try:
+                with transaction.atomic():
+                    # Update BudgetLineDetails
+                    for item in items:
+                        BudgetLineDetail.objects.update_or_create(
+                            campaign=ext_request.campaign,
+                            institut=ext_request.institut,
+                            poste=item.poste,
+                            payment_category=item.payment_category,
+                            entreprise_id=item.entreprise_id,
+                            defaults={'montant': item.requested_amount}
+                        )
+                    
+                    # Recalculate Global Objective
+                    total_budget = BudgetLineDetail.objects.filter(
+                        campaign=ext_request.campaign, 
+                        institut=ext_request.institut
+                    ).aggregate(Sum('montant'))['montant__sum'] or 0
+                    
+                    budget_line = BudgetLine.objects.get(campaign=ext_request.campaign, institut=ext_request.institut)
+                    budget_line.montant = total_budget
+                    budget_line.save()
+                    
+                    ext_request.status = 'approved'
+                    ext_request.admin_comment = comment
+                    ext_request.save()
+                    
+                    messages.success(request, f"La demande de rallonge pour {ext_request.institut} a été approuvée.")
+                    return redirect('associe_app:extension_requests_list')
+                    
+            except Exception as e:
+                messages.error(request, f"Erreur lors de l'approbation : {str(e)}")
+        
+        elif action == 'reject':
+            ext_request.status = 'rejected'
+            ext_request.admin_comment = comment
+            ext_request.save()
+            messages.warning(request, f"La demande de rallonge pour {ext_request.institut} a été rejetée.")
+            return redirect('associe_app:extension_requests_list')
+
+    # Fetch enterprise names mapping
+    entreprise_map = {}
+    try:
+        with schema_context(ext_request.institut.schema_name):
+            ents = Entreprise.objects.all()
+            for e in ents:
+                entreprise_map[e.id] = e.designation
+    except Exception as e:
+        print(f"Error fetching entreprises: {e}")
+
+    context = {
+        'ext_request': ext_request,
+        'items': items,
+        'entreprise_map': entreprise_map,
+    }
+    return render(request, 'associe_app/review_extension.html', context)
+
+
+

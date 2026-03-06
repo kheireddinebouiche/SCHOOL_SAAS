@@ -1,0 +1,323 @@
+{% extends 'public_folder/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<style>
+    :root {
+        /* Clean Theme Overrides */
+        --primary-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+        --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        
+        --card-bg: #ffffff;
+        --card-border: #e2e8f0;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-header {
+        background: var(--primary-gradient);
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(15, 118, 110, 0.2);
+    }
+
+    .dashboard-header::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        filter: blur(50px);
+    }
+
+    .stats-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--card-shadow);
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .campaign-card {
+        border-radius: 20px;
+        border: 1px solid #eef2f6;
+        background: #ffffff;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 100%;
+    }
+
+    .campaign-card:hover {
+        transform: translateY(-10px);
+        border-color: #0d9488;
+        box-shadow: 0 15px 35px rgba(13, 148, 136, 0.12);
+    }
+
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-create {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-weight: 600;
+        padding: 0.8rem 1.5rem;
+        border-radius: 14px;
+        transition: all 0.3s;
+    }
+
+    .btn-create:hover {
+        background: white;
+        color: #0f766e;
+        transform: scale(1.05);
+    }
+
+    .avatar-icon-lg {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 18px;
+        margin-bottom: 1.5rem;
+    }
+
+    .campaign-date-box {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Modern Header -->
+            <div class="dashboard-header">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-1 text-white-50 small">
+                                <li class="breadcrumb-item">Budget</li>
+                                <li class="breadcrumb-item active text-white" aria-current="page">Campagnes</li>
+                            </ol>
+                        </nav>
+                        <h2 class="mb-0 text-white display-5 fw-bold">Campagnes Budgétaires</h2>
+                        <p class="mt-2 text-white-50 fs-16">Gérez et configurez vos périodes budgétaires pour l'ensemble des instituts.</p>
+                    </div>
+                    <div class="col-md-5 text-md-end">
+                        <button type="button" class="btn btn-create" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                            <i class="ri-add-circle-line me-2 fs-18 align-middle"></i> Nouvelle Campagne
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stats-card p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-soft-primary text-primary rounded-circle me-3">
+                                <i class="ri-calendar-todo-line fs-18 p-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small mb-0">Total Campagnes</h6>
+                                <h4 class="mb-0 fw-bold">{{ campaigns|length }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-soft-success text-success rounded-circle me-3">
+                                <i class="ri-pulse-line fs-18 p-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small mb-0">Campagnes Actives</h6>
+                                <h4 class="mb-0 fw-bold">
+                                    {{ active_count|default:0 }}
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaign Grid -->
+            <div class="row">
+                {% for campaign in campaigns %}
+                <div class="col-xl-3 col-md-4 mb-4">
+                    <div class="campaign-card p-3 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div class="avatar-icon-lg bg-soft-primary text-primary">
+                                <i class="ri-calendar-check-line fs-32"></i>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if campaign.status_label == 'Active' %}
+                                <span class="status-badge badge-soft-success">Active</span>
+                                {% elif campaign.status_label == 'Clôturée' %}
+                                <span class="status-badge badge-soft-secondary">Clôturée</span>
+                                {% else %}
+                                <span class="status-badge badge-soft-warning">En attente</span>
+                                {% endif %}
+                                <button type="button" class="btn btn-icon btn-sm btn-ghost-danger rounded-circle" data-bs-toggle="modal" data-bs-target="#deleteCampaignModal" data-bs-id="{{ campaign.id }}" data-bs-name="{{ campaign.name }}" title="Supprimer">
+                                    <i class="ri-delete-bin-line fs-16"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <h4 class="fw-bold text-dark mb-2">{{ campaign.name }}</h4>
+                        <div class="text-muted small mb-4">
+                            <i class="ri-time-line me-1"></i> Créée le {{ campaign.created_at|date:"d M Y" }}
+                        </div>
+
+                        <div class="campaign-date-box mb-4">
+                            <div class="row g-0">
+                                <div class="col-5">
+                                    <div class="small text-muted fw-bold text-uppercase">Début</div>
+                                    <div class="text-primary fw-bold">{{ campaign.date_debut|date:"M Y" }}</div>
+                                    <div class="small">{{ campaign.date_debut|date:"d" }}</div>
+                                </div>
+                                <div class="col-2 d-flex align-items-center justify-content-center">
+                                    <i class="ri-arrow-right-line text-muted opacity-50"></i>
+                                </div>
+                                <div class="col-5">
+                                    <div class="small text-muted fw-bold text-uppercase">Fin</div>
+                                    <div class="text-primary fw-bold">{{ campaign.date_fin|date:"M Y" }}</div>
+                                    <div class="small">{{ campaign.date_fin|date:"d" }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto pt-3">
+                            <a href="{% url 'budget_campaign_instituts' campaign.id %}" class="btn btn-primary w-100 py-3 rounded-4 shadow-sm fw-bold">
+                                <i class="ri-equalizer-line me-2"></i> Gérer la configuration
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="stats-card py-5 text-center">
+                        <div class="py-5">
+                            <i class="ri-calendar-event-line display-1 text-muted opacity-25"></i>
+                            <h4 class="mt-4 text-muted">Aucune campagne budgétaire</h4>
+                            <p class="text-muted mb-4">Initialisez votre première campagne pour commencer.</p>
+                            <button type="button" class="btn btn-primary btn-lg px-5 rounded-pill" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                                <i class="ri-add-line me-2"></i> Créer maintenant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Create Modal -->
+<div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header p-4 bg-light border-0">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center">
+                        <i class="ri-add-line fs-18"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold">Nouvelle Campagne</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'budget_campaign_create' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4 pt-2">
+                    <div class="mb-4">
+                        <label for="name" class="form-label fw-bold text-muted small text-uppercase">Nom de la Campagne (Optionnel)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="ri-edit-line"></i></span>
+                            <input type="text" class="form-control border-light bg-light" id="name" name="name" placeholder="Laisser vide pour générer automatiquement">
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            <i class="ri-information-line me-1"></i> La période sera détectée automatiquement (Août - Juillet).
+                        </div>
+                    </div>
+                    
+                    <div class="bg-soft-primary p-4 rounded-4 mb-2">
+                        <div class="d-flex align-items-center text-primary fw-bold">
+                            <i class="ri-magic-line me-2 fs-20"></i> Configuration Automatique
+                        </div>
+                        <p class="text-primary-emphasis small mb-0 mt-2 opacity-75">
+                            Le système détectera l'année fiscale en cours et initialisera les dates du 01 Août au 31 Juillet.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer p-4 bg-light border-0">
+                    <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none me-3" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-5 py-2 rounded-3 shadow-sm fw-bold">Créer la campagne</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header p-4 bg-soft-danger border-0">
+                <div class="d-flex align-items-center text-danger">
+                    <div class="avatar-sm bg-white text-danger rounded-circle me-3 d-flex align-items-center justify-content-center shadow-sm">
+                        <i class="ri-delete-bin-line fs-18"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold">Supprimer la Campagne</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-0">Êtes-vous sûr de vouloir supprimer la campagne <span class="fw-bold text-dark" id="campaignNameDisplay"></span> ?</p>
+                <p class="text-danger small mt-2 mb-0"><i class="ri-alert-line me-1"></i> Cette action est irréversible et supprimera toutes les allocations associées.</p>
+            </div>
+            <div class="modal-footer p-3 bg-light border-0">
+                <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none me-auto" data-bs-dismiss="modal">Annuler</button>
+                <form id="deleteCampaignForm" method="POST" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger px-4 rounded-3 shadow-sm fw-bold">Confirmer la suppression</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var deleteModal = document.getElementById('deleteCampaignModal');
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var campaignId = button.getAttribute('data-bs-id');
+            var campaignName = button.getAttribute('data-bs-name');
+            var deleteForm = deleteModal.querySelector('#deleteCampaignForm');
+            var modalTitle = deleteModal.querySelector('#campaignNameDisplay');
+            
+            modalTitle.textContent = '"' + campaignName + '"';
+            deleteForm.action = "{% url 'budget_campaign_delete' 0 %}".replace('0', campaignId);
+        });
+    });
+</script>
+
+{% endblock %}

@@ -1,81 +1,236 @@
 {% extends 'public_folder/base.html' %} 
 
 {% block content %}
+<style>
+    /* Modern UI Variables */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --accent-teal: #0f766e;
+        --tree-line: #cbd5e1;
+    }
+
+    .main-content {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        min-height: 100vh;
+    }
+
+    .page-title-box {
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px !important;
+    }
+
+    .tree-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Modern Tree View Styles */
+    .category-tree {
+        font-family: 'Inter', sans-serif;
+        padding: 10px;
+    }
+    
+    .tree-node {
+        position: relative;
+        margin-bottom: 0.75rem;
+    }
+
+    .tree-content {
+        display: flex;
+        align-items: center;
+        padding: 0.85rem 1.25rem;
+        background-color: #ffffff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .tree-content:hover {
+        background-color: #f8fafc;
+        border-color: var(--accent-teal);
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(15, 118, 110, 0.08);
+    }
+
+    .tree-toggle {
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin-right: 0.75rem;
+        color: #64748b;
+        transition: all 0.2s;
+        background: #f1f5f9;
+    }
+
+    .tree-toggle:hover {
+        background-color: var(--accent-teal);
+        color: #ffffff;
+    }
+
+    .tree-toggle.empty {
+        background: transparent;
+        cursor: default;
+        color: #cbd5e1;
+    }
+
+    .node-icon {
+        color: var(--accent-teal);
+        margin-right: 1rem;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .node-label {
+        font-weight: 600;
+        color: #334155;
+        flex-grow: 1;
+        font-size: 0.95rem;
+    }
+
+    .node-badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-standard { background: #ecfdf5; color: #059669; }
+    .badge-rachat { background: #fef2f2; color: #dc2626; }
+
+    .node-actions {
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 0.5rem;
+        margin-left: 1.5rem;
+    }
+
+    .tree-content:hover .node-actions {
+        opacity: 1;
+    }
+
+    .action-circle-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: #ffffff;
+        color: #64748b;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s;
+    }
+
+    .action-circle-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .action-circle-btn.edit:hover { background: var(--accent-teal); color: #fff; }
+    .action-circle-btn.delete:hover { background: #ef4444; color: #fff; }
+
+    .tree-children {
+        margin-left: 2.5rem;
+        padding-left: 1rem;
+        border-left: 1.5px solid var(--tree-line);
+        display: none;
+        margin-top: 0.5rem;
+        position: relative;
+    }
+
+    .tree-children.show {
+        display: block;
+        animation: slideInLeft 0.3s ease-out;
+    }
+
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 24px;
+        border: none;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem 2rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
             <!-- Title Section -->
             <div class="row">
                 <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-white rounded shadow-sm p-3 mb-4">
-                        <h4 class="mb-sm-0 text-primary fw-bold"><i class="bx bx-list-ul me-2"></i>Catégories de Paiement (Global)</h4>
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between p-3 mb-4 shadow-sm">
+                        <div>
+                            <h4 class="mb-1 text-primary">Structure des Catégories</h4>
+                            <p class="text-muted mb-0">Organisez vos modes de paiement dans une hiérarchie logique.</p>
+                        </div>
                         <div class="page-title-right d-flex gap-2">
-                            <button type="button" id="syncBtn" class="btn btn-warning btn-label waves-effect waves-light shadow-sm">
-                                <i class="ri-refresh-line label-icon align-middle fs-16 me-2"></i> Synchroniser
+                            <button type="button" id="syncBtn" class="btn btn-soft-warning btn-icon waves-effect waves-light" title="Synchroniser">
+                                <i class="ri-refresh-line fs-18"></i>
                             </button>
-                            <button type="button" class="btn btn-primary btn-label waves-effect waves-light shadow-sm" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
-                                <i class="ri-add-line label-icon align-middle fs-16 me-2"></i> Ajouter
+                            <button type="button" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
+                                <i class="ri-add-circle-line fs-18"></i> Ajouter une catégorie
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Table Section -->
+            <!-- Tree View Section -->
             <div class="row">
                 <div class="col-12">
-                     <div class="card border-0 shadow-sm rounded-3">
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover table-nowrap align-middle mb-0" id="categoryTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width: 40px;">#</th>
-                                            <th scope="col">Nom</th>
-                                            <th scope="col">Parent</th>
-                                            <th scope="col">Type</th>
-                                            <th scope="col" class="text-end">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for category in categories %}
-                                        <tr id="row-{{ category.id }}">
-                                            <td>{{ forloop.counter }}</td>
-                                            <td class="fw-semibold text-dark">{{ category.name }}</td>
-                                            <td>
-                                                {% if category.parent %}
-                                                <span class="badge badge-soft-primary fs-12">{{ category.parent.name }}</span>
-                                                {% else %}
-                                                <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <span class="badge {% if category.category_type == 'standard' %}bg-info{% else %}bg-purple{% endif %}">
-                                                    {{ category.get_category_type_display }}
-                                                </span>
-                                            </td>
-                                            <td class="text-end">
-                                                <div class="dropdown">
-                                                    <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="ri-more-fill align-middle"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
-                                                        <li><a class="dropdown-item edit-item-btn" href="javascript:void(0);" onclick="openEditModal({{ category.id }})"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>
-                                                        <li><a class="dropdown-item remove-item-btn" href="javascript:void(0);" onclick="deleteCategory({{ category.id }})"><i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer</a></li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr id="emptyRow">
-                                            <td colspan="5" class="text-center py-5 text-muted">
-                                                <i class="ri-folder-open-line fs-1 display-5 d-block mb-3"></i>
-                                                Aucune catégorie trouvée.
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                     <div class="card tree-card">
+                        <div class="card-body p-4">
+                            <div id="category-tree" class="category-tree">
+                                <!-- Tree will be rendered here by JS -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-grow text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Chargement de la structure...</p>
+                                </div>
+                            </div>
+                            
+                            <div id="empty-state" class="d-none text-center py-5 text-muted">
+                                <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#4f46e5" style="width:150px;height:150px"></lord-icon>
+                                <h4 class="mt-4">Aucune catégorie définie</h4>
+                                <p class="mb-4">Commencez par créer une catégorie parente pour organiser vos paiements.</p>
+                                <button class="btn btn-primary rounded-pill px-4" onclick="openCreateModal()">
+                                    <i class="ri-add-line me-1"></i> Créer la première catégorie
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -88,32 +243,36 @@
 <!-- Category Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary p-3">
-                <h5 class="modal-title text-white" id="categoryModalLabel">Nouvelle Catégorie</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="close-modal"></button>
+        <div class="modal-content">
+            <div class="modal-header bg-transparent border-0">
+                <h5 class="modal-title fw-bold text-dark" id="categoryModalLabel">Nouvelle Catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"></button>
             </div>
             <form id="categoryForm" method="POST">
                 {% csrf_token %}
-                <div class="modal-body p-4">
+                <div class="modal-body">
                     <input type="hidden" id="categoryId" name="id">
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">Nom de la catégorie</label>
+                    <div class="mb-4">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Désignation</label>
                         {{ form.name }}
                         <div class="invalid-feedback" id="error-name"></div>
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.parent.id_for_label }}" class="form-label fw-bold">Catégorie Parente</label>
-                        {{ form.parent }}
-                    </div>
-                    <div class="mb-0">
-                        <label for="{{ form.category_type.id_for_label }}" class="form-label fw-bold">Type de Catégorie</label>
-                        {{ form.category_type }}
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.parent.id_for_label }}" class="form-label">Parent</label>
+                            {{ form.parent }}
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.category_type.id_for_label }}" class="form-label">Type</label>
+                            {{ form.category_type }}
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-3">
-                    <button type="button" class="btn btn-ghost-danger shadow-none" data-bs-dismiss="modal"><i class="ri-close-line align-bottom me-1"></i> Fermer</button>
-                    <button type="submit" class="btn btn-primary" id="saveBtn">Enregistrer</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-ghost-secondary px-4 me-2" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" id="saveBtn">
+                        Enregistrer
+                    </button>
                 </div>
             </form>
         </div>
@@ -125,6 +284,8 @@
     let form;
     let saveBtn;
     let syncBtn;
+    
+    const rawCategories = {{ categories_json|safe }};
 
     document.addEventListener('DOMContentLoaded', function() {
         const modalElement = document.getElementById('categoryModal');
@@ -133,11 +294,13 @@
         saveBtn = document.getElementById('saveBtn');
         syncBtn = document.getElementById('syncBtn');
 
+        renderTree(rawCategories);
+
         if (form) {
             form.onsubmit = function(e) {
                 e.preventDefault();
                 saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enregistrement...';
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
                 $.ajax({
                     url: form.action,
@@ -146,10 +309,11 @@
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
                         if (response.status === 'success') {
-                            alertify.success(response.message);
-                            location.reload();
+                            alertify.set('notifier','position', 'top-right');
+                            alertify.success('<i class="ri-checkbox-circle-line me-2"></i>' + response.message);
+                            setTimeout(() => location.reload(), 800);
                         } else {
-                            alertify.error('Veuillez vérifier les erreurs.');
+                            alertify.error('Erreur de validation.');
                         }
                     },
                     complete: function() {
@@ -162,9 +326,7 @@
 
         if (syncBtn) {
             syncBtn.onclick = function() {
-                syncBtn.disabled = true;
-                syncBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Synchronisation...';
-                
+                syncBtn.classList.add('btn-spin');
                 $.ajax({
                     url: "{% url 'sync_categories_view' %}",
                     type: 'GET',
@@ -172,21 +334,93 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                        } else {
-                            alertify.error(response.message);
+                            setTimeout(() => location.reload(), 800);
                         }
                     },
-                    error: function() {
-                        alertify.error('Une erreur est survenue lors de la synchronisation.');
-                    },
                     complete: function() {
-                        syncBtn.disabled = false;
-                        syncBtn.innerHTML = '<i class="ri-refresh-line label-icon align-middle fs-16 me-2"></i> Synchroniser';
+                        syncBtn.classList.remove('btn-spin');
                     }
                 });
             }
         }
     });
+
+    function buildHierarchy(items) {
+        const root = [];
+        const map = {};
+        items.forEach(item => { item.children = []; map[item.id] = item; });
+        items.forEach(item => {
+            if (item.parent_id && map[item.parent_id]) map[item.parent_id].children.push(item);
+            else root.push(item);
+        });
+        return root;
+    }
+
+    function createNodeElement(node) {
+        const hasChildren = node.children && node.children.length > 0;
+        const badgeClass = node.type === 'standard' ? 'badge-standard' : 'badge-rachat';
+        
+        return `
+            <div class="tree-node" id="node-${node.id}">
+                <div class="tree-content">
+                    <div class="tree-toggle ${hasChildren ? '' : 'empty'}" onclick="${hasChildren ? `toggleNode(${node.id})` : ''}">
+                        ${hasChildren ? `<i class="ri-add-line" id="icon-${node.id}"></i>` : '<i class="ri-subtract-line"></i>'}
+                    </div>
+                    <div class="node-icon">
+                        <i class="${hasChildren ? 'ri-folder-open-fill' : 'ri-folder-3-line'}"></i>
+                    </div>
+                    <div class="node-label">
+                        ${node.name}
+                    </div>
+                    <div class="node-meta d-flex align-items-center">
+                        <span class="node-badge ${badgeClass} me-3">
+                            ${node.type_display}
+                        </span>
+                        <div class="node-actions">
+                            <button class="action-circle-btn edit" onclick="openEditModal(${node.id})" title="Modifier">
+                                <i class="ri-pencil-line"></i>
+                            </button>
+                            <button class="action-circle-btn delete" onclick="deleteCategory(${node.id})" title="Supprimer">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ${hasChildren ? `<div class="tree-children" id="children-${node.id}"></div>` : ''}
+            </div>
+        `;
+    }
+
+    function renderTreeNodes(nodes, container) {
+        nodes.forEach(node => {
+            container.insertAdjacentHTML('beforeend', createNodeElement(node));
+            if (node.children && node.children.length > 0) {
+                renderTreeNodes(node.children, container.querySelector(`#children-${node.id}`));
+            }
+        });
+    }
+
+    function renderTree(data) {
+        const container = document.getElementById('category-tree');
+        const emptyState = document.getElementById('empty-state');
+        container.innerHTML = '';
+        if (!data || data.length === 0) {
+            container.classList.add('d-none');
+            emptyState.classList.remove('d-none');
+            return;
+        }
+        renderTreeNodes(buildHierarchy(data), container);
+    }
+
+    function toggleNode(id) {
+        const childrenContainer = document.getElementById(`children-${id}`);
+        const icon = document.getElementById(`icon-${id}`);
+        if (childrenContainer) {
+            const isShowing = childrenContainer.classList.contains('show');
+            childrenContainer.classList.toggle('show');
+            icon.className = isShowing ? 'ri-add-line' : 'ri-subtract-line';
+        }
+    }
 
     function openCreateModal() {
         if (!form) form = document.getElementById('categoryForm');
@@ -195,7 +429,6 @@
         document.getElementById('categoryModalLabel').innerText = 'Nouvelle Catégorie';
         form.action = "{% url 'global_payment_category_create' %}";
         if (categoryModal) categoryModal.show();
-        else $('#categoryModal').modal('show');
     }
 
     function openEditModal(id) {
@@ -204,7 +437,6 @@
         document.getElementById('categoryId').value = id;
         document.getElementById('categoryModalLabel').innerText = 'Modifier la Catégorie';
         form.action = "{% url 'global_payment_category_edit' 0 %}".replace('0', id);
-        
         $.ajax({
             url: form.action,
             type: 'GET',
@@ -214,13 +446,12 @@
                 document.getElementById('id_parent').value = data.parent;
                 document.getElementById('id_category_type').value = data.category_type;
                 if (categoryModal) categoryModal.show();
-                else $('#categoryModal').modal('show');
             }
         });
     }
 
     function deleteCategory(id) {
-        alertify.confirm('Supprimer la catégorie', 'Êtes-vous sûr de vouloir supprimer cette catégorie ?', 
+        alertify.confirm('Supprimer', 'Cette action supprimera également toutes les sous-catégories. Continuer ?', 
             function() {
                 $.ajax({
                     url: "{% url 'global_payment_category_delete' 0 %}".replace('0', id),
@@ -229,13 +460,14 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                            $(`#row-${id}`).fadeOut(300, function() { $(this).remove(); });
+                            $(`#node-${id}`).addClass('animate__animated animate__fadeOutLeft').fadeOut(400);
                         }
                     }
                 });
             }, function() {}
-        );
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
     }
 </script>
 
 {% endblock %}
+

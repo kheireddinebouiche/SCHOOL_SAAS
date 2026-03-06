@@ -133,6 +133,9 @@ urlpatterns = [
     path('ApiMarkAllNotificationsRead', ApiMarkAllNotificationsRead, name="ApiMarkAllNotificationsRead"),
     path('ApiDeleteNotification', ApiDeleteNotification, name="ApiDeleteNotification"),
     path('Toutes-les-notifications', AllNotificationsPage, name="AllNotificationsPage"),
+    path('direction/mes-campagnes-budgetaires/', my_budget_campaigns, name="my_budget_campaigns"),
+    path('direction/dispatch-budget/<int:campaign_id>/', budget_campaign_dispatch, name="dispatch_budget"),
+    path('direction/extension-budget/<int:campaign_id>/', request_extension, name="request_extension"),
 ]
 
 
