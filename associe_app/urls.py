@@ -35,7 +35,11 @@ from .views import (
     extension_requests_list,
     review_extension,
     budget_campaign_activate,
-    sync_payment_types
+    sync_payment_types,
+    export_payment_categories,
+    import_payment_categories,
+    export_depenses_categories,
+    import_depenses_categories
 )
 
 urlpatterns = [
@@ -62,12 +66,16 @@ urlpatterns = [
     path('payment-categories/create/', global_payment_category_create, name='global_payment_category_create'),
     path('payment-categories/edit/<int:pk>/', global_payment_category_edit, name='global_payment_category_edit'),
     path('payment-categories/delete/<int:pk>/', global_payment_category_delete, name='global_payment_category_delete'),
+    path('payment-categories/export/', export_payment_categories, name='export_payment_categories'),
+    path('payment-categories/import/', import_payment_categories, name='import_payment_categories'),
 
     # Depenses Categories
     path('depenses-categories/', global_depenses_category_list, name='global_depenses_category_list'),
     path('depenses-categories/create/', global_depenses_category_create, name='global_depenses_category_create'),
     path('depenses-categories/edit/<int:pk>/', global_depenses_category_edit, name='global_depenses_category_edit'),
     path('depenses-categories/delete/<int:pk>/', global_depenses_category_delete, name='global_depenses_category_delete'),
+    path('depenses-categories/export/', export_depenses_categories, name='export_depenses_categories'),
+    path('depenses-categories/import/', import_depenses_categories, name='import_depenses_categories'),
 
     # Postes Budgetaires
     path('postes-budgetaires/', postes_budgetaires_list, name='postes_budgetaires_list'),

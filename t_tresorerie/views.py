@@ -192,7 +192,7 @@ def ApiGetDetailsDemandePaiement(request):
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
-                    'is_refund' : i.is_refund,
+                    'is_refund' : i.is_refund, 'entite_id': i.entite.id if i.entite else None,
                 })
 
         else:

@@ -95,6 +95,7 @@ class Paiements(models.Model):
     payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True)
 
     promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True , blank=True, related_name="promo_paiements")
+    entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
     
     is_done = models.BooleanField(default=False)
     is_refund = models.BooleanField(default=False)
@@ -102,26 +103,37 @@ class Paiements(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    facture = models.ForeignKey('t_conseil.Facture', on_delete=models.SET_NULL, null=True, blank=True, related_name='tresorerie_paiements')
 
     def __str__(self):
         return str(self.montant_paye)
 
     def save(self, *args, **kwargs):
+        if self.refund_id:
+            entite_obj = self.refund_id.entite
+        elif self.due_paiements:
+            entite_obj = self.due_paiements.entite
+            if not entite_obj and self.due_paiements.ref_echeancier:
+                entite_obj = self.due_paiements.ref_echeancier.entite
+        else:
+            entite_obj = None
+
+        if entite_obj and not self.entite:
+            self.entite = entite_obj
+
         if not self.num:
 
             # 1. Vérifier chemin : Paiement → DuePaiement → Echeancier → Entreprise
             # if not self.due_paiements or not self.due_paiements.entite or not self.due_paiements.ref_echeancier:
             #     raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
 
-            if self.refund_id:
-                entite_obj = self.refund_id.entite
-            else:
-                entite_obj = self.due_paiements.entite
-                if not entite_obj and self.due_paiements.ref_echeancier:
-                    entite_obj = self.due_paiements.ref_echeancier.entite
+            if not entite_obj:
+                 # Fallback for num generation if entite_obj is still None
+                 super().save(*args, **kwargs)
+                 return
 
             # 2. Lecture des champs Entreprise
-            entite = entite_obj.designation or "ENTITE"
+            entite_str = entite_obj.designation or "ENTITE"
             wilaya = str(entite_obj.code_wilaya).zfill(2) if entite_obj.code_wilaya else "00"
             annexe = str(entite_obj.numero).zfill(2) if entite_obj.numero else "00"
 
@@ -136,7 +148,7 @@ class Paiements(models.Model):
             annee = date_p.strftime("%y")
 
             # 4. Génération séquence unique
-            pattern = f"/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
+            pattern = f"/ST/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
             last = Paiements.objects.filter(num__endswith=pattern)\
                                     .aggregate(max_num=Max("num"))["max_num"]
 
@@ -147,7 +159,7 @@ class Paiements(models.Model):
                 seq = "000001"
 
             # 5. Construction du numéro final
-            self.num = f"N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
+            self.num = f"N°{seq}/ST/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
 
         super().save(*args, **kwargs)
     

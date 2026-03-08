@@ -76,10 +76,8 @@ class Devis(models.Model):
             prefix = config.devis_prefix if config else "DEV"
             width = config.devis_counter_width if config else 4
 
-            # Filter by enterprise to have separate counters
+            # Filter by prefix to have a global counter for that prefix
             qs = Devis.objects.all()
-            if self.entreprise:
-                qs = qs.filter(entreprise=self.entreprise)
             
             last_devis = qs.filter(num_devis__startswith=prefix).order_by('-id').first()
             if last_devis and last_devis.num_devis:
@@ -178,9 +176,8 @@ class Facture(models.Model):
             prefix = config.facture_prefix if config else "FAC"
             width = config.facture_counter_width if config else 4
 
+            # Filter by prefix to have a global counter for that prefix
             qs = Facture.objects.all()
-            if self.entreprise:
-                qs = qs.filter(entreprise=self.entreprise)
 
             last = qs.filter(num_facture__startswith=prefix).order_by('-id').first()
             if last and last.num_facture:

@@ -1,20 +1,303 @@
 {% extends 'public_folder/base.html' %} 
 
 {% block content %}
+<style>
+    /* Modern UI Variables */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --accent-indigo: #4338ca;
+        --tree-line: #cbd5e1;
+    }
+
+    .main-content {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        min-height: 100vh;
+    }
+
+    .page-title-box {
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px !important;
+    }
+
+    .tree-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Modern Tree View Styles */
+    .category-tree {
+        font-family: 'Inter', sans-serif;
+        padding: 10px;
+    }
+    
+    .tree-node {
+        position: relative;
+        margin-bottom: 0.75rem;
+    }
+
+    .tree-content {
+        display: flex;
+        align-items: center;
+        padding: 0.85rem 1.25rem;
+        background-color: #ffffff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .tree-content:hover {
+        background-color: #f8fafc;
+        border-color: var(--accent-indigo);
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.08);
+    }
+
+    .tree-toggle {
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin-right: 0.75rem;
+        color: #64748b;
+        transition: all 0.2s;
+        background: #f1f5f9;
+    }
+
+    .tree-toggle:hover {
+        background-color: var(--accent-indigo);
+        color: #ffffff;
+    }
+
+    .tree-toggle.empty {
+        background: transparent;
+        cursor: default;
+        color: #cbd5e1;
+    }
+
+    .node-icon {
+        color: var(--accent-indigo);
+        margin-right: 1rem;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .node-label {
+        font-weight: 600;
+        color: #334155;
+        flex-grow: 1;
+        font-size: 0.95rem;
+    }
+
+    .node-badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-info { background: #e0e7ff; color: #4338ca; }
+
+    .node-actions {
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 0.5rem;
+        margin-left: 1.5rem;
+    }
+
+    .tree-content:hover .node-actions {
+        opacity: 1;
+    }
+
+    .action-circle-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: #ffffff;
+        color: #64748b;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s;
+    }
+
+    .action-circle-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .action-circle-btn.edit:hover { background: var(--accent-indigo); color: #fff; }
+    .action-circle-btn.delete:hover { background: #ef4444; color: #fff; }
+
+    .tree-children {
+        margin-left: 2.5rem;
+        padding-left: 1rem;
+        border-left: 1.5px solid var(--tree-line);
+        display: none;
+        margin-top: 0.5rem;
+        position: relative;
+    }
+
+    .tree-children.show {
+        display: block;
+        animation: slideInLeft 0.3s ease-out;
+    }
+
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 24px;
+        border: none;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem 2rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Premium Action Buttons */
+    .btn-premium-sync {
+        background: rgba(255, 193, 7, 0.1) !important;
+        border: 1px solid rgba(255, 193, 7, 0.2) !important;
+        color: #b8860b !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-sync:hover {
+        background: #ffc107 !important;
+        color: #fff !important;
+        transform: rotate(180deg) scale(1.1);
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+
+    .btn-premium-add {
+        background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+        border: none !important;
+        color: white !important;
+        padding: 0.6rem 1.5rem !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);
+    }
+
+    .btn-premium-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 56, 202, 0.3);
+        background: linear-gradient(135deg, #3730a3 0%, #4f46e5 100%) !important;
+    }
+
+    .btn-premium-add i {
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+    }
+
+    .btn-premium-add:hover i {
+        transform: rotate(90deg);
+    }
+    .btn-premium-export {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border: 1px solid rgba(16, 185, 129, 0.2) !important;
+        color: #059669 !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-export:hover {
+        background: #10b981 !important;
+        color: #fff !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-premium-import {
+        background: rgba(99, 102, 241, 0.1) !important;
+        border: 1px solid rgba(99, 102, 241, 0.2) !important;
+        color: #4f46e5 !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-import:hover {
+        background: #6366f1 !important;
+        color: #fff !important;
+        transform: translateY(-2px);
+    }
+</style>
+
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
             <!-- Title Section -->
             <div class="row">
                 <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-white rounded shadow-sm p-3 mb-4">
-                        <h4 class="mb-sm-0 text-primary fw-bold"><i class="bx bx-list-check me-2"></i>Catégories de Dépense (Global)</h4>
-                        <div class="page-title-right d-flex gap-2">
-                            <button type="button" id="syncBtn" class="btn btn-warning btn-label waves-effect waves-light shadow-sm">
-                                <i class="ri-refresh-line label-icon align-middle fs-16 me-2"></i> Synchroniser
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between p-3 mb-4 shadow-sm">
+                        <div>
+                            <h4 class="mb-1 text-primary">Catégories de Dépense (Global)</h4>
+                            <p class="text-muted mb-0">Structure hiérarchique des types de dépenses.</p>
+                        </div>
+                        <div class="page-title-right d-flex align-items-center gap-3">
+                            <button type="button" id="syncBtn" class="btn-premium-sync" title="Synchroniser">
+                                <i class="ri-refresh-line fs-20"></i>
                             </button>
-                            <button type="button" class="btn btn-primary btn-label waves-effect waves-light shadow-sm" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
-                                <i class="ri-add-line label-icon align-middle fs-16 me-2"></i> Ajouter
+                            <a href="{% url 'export_depenses_categories' %}" class="btn-premium-export" title="Exporter vers Excel">
+                                <i class="ri-file-excel-2-line fs-20"></i>
+                            </a>
+                            <button type="button" class="btn-premium-import" title="Importer" data-bs-toggle="modal" data-bs-target="#importModal">
+                                <i class="ri-upload-2-line fs-20"></i>
+                            </button>
+                            <button type="button" class="btn-premium-add" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
+                                <i class="ri-add-line"></i> Ajouter
                             </button>
                         </div>
                     </div>
@@ -24,21 +307,24 @@
             <!-- Tree View Section -->
             <div class="row">
                 <div class="col-12">
-                     <div class="card border-0 shadow-sm rounded-3">
+                     <div class="card tree-card">
                         <div class="card-body p-4">
                             <div id="category-tree" class="category-tree">
-                                <!-- Tree will be rendered here by JS -->
                                 <div class="text-center py-5">
-                                    <div class="spinner-border text-primary" role="status">
+                                    <div class="spinner-grow text-primary" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
+                                    <p class="mt-3 text-muted">Mise à jour de la structure...</p>
                                 </div>
                             </div>
                             
                             <div id="empty-state" class="d-none text-center py-5 text-muted">
-                                <i class="ri-folder-open-line fs-1 display-5 d-block mb-3"></i>
-                                <p>Aucune catégorie trouvée.</p>
-                                <button class="btn btn-sm btn-outline-primary" onclick="openCreateModal()">Créer une catégorie</button>
+                                <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#4338ca,secondary:#4f46e5" style="width:150px;height:150px"></lord-icon>
+                                <h4 class="mt-4">Aucune catégorie de dépense</h4>
+                                <p class="mb-4">Définissez une catégorie globale pour commencer la gestion des dépenses.</p>
+                                <button class="btn btn-primary rounded-pill px-4" onclick="openCreateModal()">
+                                    <i class="ri-add-line me-1"></i> Créer la première catégorie
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -51,170 +337,102 @@
 <!-- Category Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary p-3">
-                <h5 class="modal-title text-white" id="categoryModalLabel">Nouvelle Catégorie</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="close-modal"></button>
+        <div class="modal-content">
+            <div class="modal-header bg-transparent border-0 text-dark">
+                <h5 class="modal-title fw-bold" id="categoryModalLabel">Nouvelle Catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal"></button>
             </div>
             <form id="categoryForm" method="POST">
                 {% csrf_token %}
-                <div class="modal-body p-4">
+                <div class="modal-body">
                     <input type="hidden" id="categoryId" name="id">
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">Nom de la catégorie</label>
+                    <div class="mb-4">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Désignation</label>
                         {{ form.name }}
                         <div class="invalid-feedback" id="error-name"></div>
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.parent.id_for_label }}" class="form-label fw-bold">Catégorie Parente</label>
+                    <div class="mb-4">
+                        <label for="{{ form.parent.id_for_label }}" class="form-label">Parent</label>
                         {{ form.parent }}
                     </div>
                     <div class="mb-0">
-                        <label for="{{ form.payment_category.id_for_label }}" class="form-label fw-bold">Associer à une Catégorie de Paiement</label>
+                        <label for="{{ form.payment_category.id_for_label }}" class="form-label">Associer à une Catégorie de Paiement</label>
                         {{ form.payment_category }}
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-3">
-                    <button type="button" class="btn btn-ghost-danger shadow-none" data-bs-dismiss="modal"><i class="ri-close-line align-bottom me-1"></i> Fermer</button>
-                    <button type="submit" class="btn btn-primary" id="saveBtn">Enregistrer</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-ghost-secondary px-4 me-2" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" id="saveBtn">Enregistrer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<style>
-    /* Modern Tree View Styles */
-    .category-tree {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    .tree-node {
-        position: relative;
-        margin-bottom: 0.5rem;
-    }
-
-    .tree-content {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        background-color: #fff;
-        border: 1px solid #e9ebec;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .tree-content:hover {
-        background-color: #f8f9fa;
-        border-color: #dbe0e4;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-
-    .tree-toggle {
-        cursor: pointer;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        margin-right: 0.5rem;
-        color: #878a99;
-        transition: background-color 0.2s;
-    }
-
-    .tree-toggle:hover {
-        background-color: #eff2f7;
-        color: #405189;
-    }
-
-    .tree-toggle.empty {
-        background: transparent;
-        cursor: default;
-    }
-
-    .node-icon {
-        color: #405189;
-        margin-right: 0.75rem;
-        font-size: 1.1rem;
-    }
-
-    .node-label {
-        font-weight: 500;
-        color: #495057;
-        flex-grow: 1;
-    }
-
-    .node-meta {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .node-badge {
-        font-size: 0.75rem;
-        padding: 0.25em 0.6em;
-        border-radius: 4px;
-        font-weight: 600;
-    }
-
-    .node-actions {
-        opacity: 0;
-        transition: opacity 0.2s;
-        display: flex;
-        gap: 0.25rem;
-    }
-
-    .tree-content:hover .node-actions {
-        opacity: 1;
-    }
-
-    .tree-children {
-        margin-left: 2rem;
-        padding-left: 1rem;
-        border-left: 1px dashed #e9ebec;
-        display: none;
-        margin-top: 0.5rem;
-    }
-
-    .tree-children.show {
-        display: block;
-        animation: slideDown 0.2s ease-out;
-    }
-
-    @keyframes slideDown {
-        from { opacity: 0; transform: translateY(-5px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Importer des Catégories de Dépense</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="importForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted">Sélectionnez un fichier Excel (.xlsx) ou JSON (.json).</p>
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="importFile" name="file" accept=".xlsx, .xls, .json" required>
+                    </div>
+                    <div id="importProgress" class="d-none">
+                        <div class="progress progress-sm mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-center text-primary mb-0">Importation en cours...</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="importSubmitBtn">Démarrer l'import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
     let categoryModal;
+    let importModal;
     let form;
     let saveBtn;
     let syncBtn;
     
-    // Data from Django
-    const rawCategories = {{ categories_json|safe }};
+    const rawCategories = JSON.parse('{{ categories_json|escapejs }}' || '[]');
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Bootstrap/UI elements
+        console.log("Depenses Tree: Initializing...");
         const modalElement = document.getElementById('categoryModal');
         if (modalElement) categoryModal = new bootstrap.Modal(modalElement);
+
+        const importModalElement = document.getElementById('importModal');
+        if (importModalElement) importModal = new bootstrap.Modal(importModalElement);
+
         form = document.getElementById('categoryForm');
         saveBtn = document.getElementById('saveBtn');
         syncBtn = document.getElementById('syncBtn');
 
-        // Render Tree
-        renderTree(rawCategories);
+        try {
+            renderTree(rawCategories);
+            console.log("Depenses Tree: Initial render complete.");
+        } catch (err) {
+            console.error("Depenses Tree: Render error:", err);
+        }
 
-        // Form Submission Handler
         if (form) {
             form.onsubmit = function(e) {
                 e.preventDefault();
                 saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enregistrement...';
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
                 $.ajax({
                     url: form.action,
@@ -222,12 +440,56 @@
                     data: $(form).serialize(),
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
+                        console.log("Depenses AJAX Success:", response);
                         if (response.status === 'success') {
-                            alertify.success(response.message);
-                            location.reload(); 
+                            alertify.set('notifier','position', 'top-right');
+                            alertify.success('<i class="ri-checkbox-circle-line me-2"></i>' + response.message);
+                            if (response.categories) {
+                                try {
+                                    const expandedIds = getExpandedIds();
+                                    renderTree(response.categories);
+                                    updateParentSelect(response.categories);
+                                    
+                                    // Restore expanded states
+                                    expandedIds.forEach(id => {
+                                        const childrenContainer = document.getElementById(`children-${id}`);
+                                        const icon = document.getElementById(`icon-${id}`);
+                                        if (childrenContainer) {
+                                            childrenContainer.classList.add('show');
+                                            if (icon) icon.className = 'ri-subtract-line';
+                                        }
+                                    });
+
+                                    // Auto-expand parent of new node
+                                    if (response.parent_id) {
+                                        expandAncestor(response.parent_id, response.categories);
+                                    }
+                                    
+                                    if (categoryModal) categoryModal.hide();
+                                    console.log("Depenses Tree: Real-time update success.");
+                                } catch (err) {
+                                    console.error("Depenses Tree: Real-time update error:", err);
+                                    setTimeout(() => location.reload(), 500);
+                                }
+                            } else {
+                                console.warn("No categories in response, reloading...");
+                                setTimeout(() => location.reload(), 800);
+                            }
                         } else {
-                            alertify.error('Veuillez vérifier les erreurs.');
+                            if (response.errors) {
+                                let errorMsgs = "";
+                                for (let field in response.errors) {
+                                    errorMsgs += `${field}: ${response.errors[field].join(', ')}<br>`;
+                                }
+                                alertify.error('Erreur de validation:<br>' + errorMsgs);
+                            } else {
+                                alertify.error('Veuillez vérifier les champs.');
+                            }
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Depenses AJAX Error:", status, error);
+                        alertify.error("Erreur réseau: Impossible d'enregistrer.");
                     },
                     complete: function() {
                         saveBtn.disabled = false;
@@ -237,12 +499,9 @@
             };
         }
 
-        // Sync Handler
         if (syncBtn) {
             syncBtn.onclick = function() {
-                syncBtn.disabled = true;
-                syncBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Synchronisation...';
-                
+                syncBtn.classList.add('btn-spin');
                 $.ajax({
                     url: "{% url 'sync_categories_view' %}",
                     type: 'GET',
@@ -250,77 +509,96 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                        } else {
-                            alertify.error(response.message);
+                            setTimeout(() => location.reload(), 800);
                         }
                     },
-                    error: function() {
-                        alertify.error('Une erreur est survenue lors de la synchronisation.');
-                    },
                     complete: function() {
-                        syncBtn.disabled = false;
-                        syncBtn.innerHTML = '<i class="ri-refresh-line label-icon align-middle fs-16 me-2"></i> Synchroniser';
+                        syncBtn.classList.remove('btn-spin');
                     }
                 });
             }
         }
-    });
 
-    // --- Tree Logic ---
+        const importForm = document.getElementById('importForm');
+        if (importForm) {
+            importForm.onsubmit = function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('importSubmitBtn');
+                const progress = document.getElementById('importProgress');
+                const formData = new FormData(importForm);
+
+                btn.disabled = true;
+                progress.classList.remove('d-none');
+
+                $.ajax({
+                    url: "{% url 'import_depenses_categories' %}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            if (response.categories) {
+                                renderTree(response.categories);
+                                updateParentSelect(response.categories);
+                            }
+                            if (importModal) importModal.hide();
+                            importForm.reset();
+                        } else {
+                            alertify.error(response.message || 'Erreur lors de l\'import');
+                        }
+                    },
+                    error: function() {
+                        alertify.error('Erreur réseau.');
+                    },
+                    complete: function() {
+                        btn.disabled = false;
+                        progress.classList.add('d-none');
+                    }
+                });
+            };
+        }
+    });
 
     function buildHierarchy(items) {
         const root = [];
         const map = {};
-
-        // Index items by ID
+        items.forEach(item => { item.children = []; map[item.id] = item; });
         items.forEach(item => {
-            item.children = [];
-            map[item.id] = item;
+            if (item.parent_id && map[item.parent_id]) map[item.parent_id].children.push(item);
+            else root.push(item);
         });
-
-        // Build hierarchy
-        items.forEach(item => {
-            if (item.parent_id && map[item.parent_id]) {
-                map[item.parent_id].children.push(item);
-            } else {
-                root.push(item);
-            }
-        });
-
         return root;
     }
 
     function createNodeElement(node) {
         const hasChildren = node.children && node.children.length > 0;
-        
-        // Custom badge for Payment Category
         let paymentBadge = '';
         if (node.payment_category && node.payment_category !== '-') {
-            paymentBadge = `<span class="node-badge badge-soft-info"><i class="ri-bank-card-line me-1"></i>${node.payment_category}</span>`;
-        } else {
-            paymentBadge = `<span class="text-muted fs-11 fst-italic">Non associé</span>`;
+            paymentBadge = `<span class="node-badge badge-primary me-3"><i class="ri-links-line me-1"></i>${node.payment_category}</span>`;
         }
 
-        const nodeHtml = `
+        return `
             <div class="tree-node" id="node-${node.id}">
                 <div class="tree-content">
                     <div class="tree-toggle ${hasChildren ? '' : 'empty'}" onclick="${hasChildren ? `toggleNode(${node.id})` : ''}">
-                        ${hasChildren ? '<i class="ri-arrow-right-s-line" id="icon-' + node.id + '"></i>' : '<i class="ri-checkbox-blank-circle-fill" style="font-size: 6px;"></i>'}
+                        ${hasChildren ? `<i class="ri-add-line" id="icon-${node.id}"></i>` : '<i class="ri-subtract-line"></i>'}
                     </div>
                     <div class="node-icon">
-                        <i class="ri-folder-line"></i>
+                        <i class="${hasChildren ? 'ri-folder-open-fill' : 'ri-folder-check-line'}"></i>
                     </div>
                     <div class="node-label">
                         ${node.name}
                     </div>
-                    <div class="node-meta">
+                    <div class="node-meta d-flex align-items-center">
                         ${paymentBadge}
                         <div class="node-actions">
-                            <button class="btn btn-sm btn-ghost-secondary btn-icon" onclick="openEditModal(${node.id})" title="Modifier">
-                                <i class="ri-pencil-fill"></i>
+                            <button class="action-circle-btn edit" onclick="openEditModal(${node.id})" title="Modifier">
+                                <i class="ri-pencil-line"></i>
                             </button>
-                            <button class="btn btn-sm btn-ghost-danger btn-icon" onclick="deleteCategory(${node.id})" title="Supprimer">
-                                <i class="ri-delete-bin-fill"></i>
+                            <button class="action-circle-btn delete" onclick="deleteCategory(${node.id})" title="Supprimer">
+                                <i class="ri-delete-bin-line"></i>
                             </button>
                         </div>
                     </div>
@@ -328,15 +606,13 @@
                 ${hasChildren ? `<div class="tree-children" id="children-${node.id}"></div>` : ''}
             </div>
         `;
-        return nodeHtml;
     }
 
     function renderTreeNodes(nodes, container) {
         nodes.forEach(node => {
             container.insertAdjacentHTML('beforeend', createNodeElement(node));
             if (node.children && node.children.length > 0) {
-                const childContainer = container.querySelector(`#children-${node.id}`);
-                renderTreeNodes(node.children, childContainer);
+                renderTreeNodes(node.children, container.querySelector(`#children-${node.id}`));
             }
         });
     }
@@ -344,37 +620,69 @@
     function renderTree(data) {
         const container = document.getElementById('category-tree');
         const emptyState = document.getElementById('empty-state');
-        
         container.innerHTML = '';
-        
         if (!data || data.length === 0) {
             container.classList.add('d-none');
             emptyState.classList.remove('d-none');
             return;
         }
+        renderTreeNodes(buildHierarchy(data), container);
+    }
 
-        const hierarchy = buildHierarchy(data);
-        renderTreeNodes(hierarchy, container);
+    function updateParentSelect(categories) {
+        const select = document.getElementById('id_parent');
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">---------</option>';
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        });
+        select.value = currentValue;
+    }
+
+    function getExpandedIds() {
+        const expandedIds = [];
+        document.querySelectorAll('.tree-children.show').forEach(container => {
+            const id = container.id.replace('children-', '');
+            expandedIds.push(id);
+        });
+        return expandedIds;
+    }
+
+    function expandAncestor(parentId, categories) {
+        let currentParentId = parentId;
+        const maxDepth = 20;
+        let depth = 0;
+        while (currentParentId && depth < maxDepth) {
+            depth++;
+            const container = document.getElementById(`children-${currentParentId}`);
+            const icon = document.getElementById(`icon-${currentParentId}`);
+            if (container) {
+                container.classList.add('show');
+                if (icon) icon.className = 'ri-subtract-line';
+            }
+            // Find parent of currentParentId to continue upwards
+            const parentNode = categories.find(c => String(c.id) === String(currentParentId));
+            if (parentNode && parentNode.parent_id) {
+                currentParentId = parentNode.parent_id;
+            } else {
+                currentParentId = null;
+            }
+        }
     }
 
     function toggleNode(id) {
         const childrenContainer = document.getElementById(`children-${id}`);
         const icon = document.getElementById(`icon-${id}`);
-        
         if (childrenContainer) {
-            if (childrenContainer.classList.contains('show')) {
-                childrenContainer.classList.remove('show');
-                icon.classList.remove('ri-arrow-down-s-line');
-                icon.classList.add('ri-arrow-right-s-line');
-            } else {
-                childrenContainer.classList.add('show');
-                icon.classList.remove('ri-arrow-right-s-line');
-                icon.classList.add('ri-arrow-down-s-line');
-            }
+            const isShowing = childrenContainer.classList.contains('show');
+            childrenContainer.classList.toggle('show');
+            icon.className = isShowing ? 'ri-add-line' : 'ri-subtract-line';
         }
     }
-
-    // --- Modal Logic ---
 
     function openCreateModal() {
         if (!form) form = document.getElementById('categoryForm');
@@ -383,7 +691,6 @@
         document.getElementById('categoryModalLabel').innerText = 'Nouvelle Catégorie';
         form.action = "{% url 'global_depenses_category_create' %}";
         if (categoryModal) categoryModal.show();
-        else $('#categoryModal').modal('show');
     }
 
     function openEditModal(id) {
@@ -392,7 +699,6 @@
         document.getElementById('categoryId').value = id;
         document.getElementById('categoryModalLabel').innerText = 'Modifier la Catégorie';
         form.action = "{% url 'global_depenses_category_edit' 0 %}".replace('0', id);
-        
         $.ajax({
             url: form.action,
             type: 'GET',
@@ -402,13 +708,12 @@
                 document.getElementById('id_parent').value = data.parent;
                 document.getElementById('id_payment_category').value = data.payment_category;
                 if (categoryModal) categoryModal.show();
-                else $('#categoryModal').modal('show');
             }
         });
     }
 
     function deleteCategory(id) {
-        alertify.confirm('Supprimer la catégorie', 'Êtes-vous sûr de vouloir supprimer cette catégorie ?', 
+        alertify.confirm('Supprimer', 'Cette action supprimera également toutes les sous-catégories de dépense. Continuer ?', 
             function() {
                 $.ajax({
                     url: "{% url 'global_depenses_category_delete' 0 %}".replace('0', id),
@@ -417,14 +722,29 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                            $(`#node-${id}`).fadeOut(300, function() { $(this).remove(); });
+                            if (response.categories) {
+                                const expandedIds = getExpandedIds();
+                                renderTree(response.categories);
+                                updateParentSelect(response.categories);
+                                expandedIds.forEach(id => {
+                                    const container = document.getElementById(`children-${id}`);
+                                    const icon = document.getElementById(`icon-${id}`);
+                                    if (container) {
+                                        container.classList.add('show');
+                                        if (icon) icon.className = 'ri-subtract-line';
+                                    }
+                                });
+                                // Optional: remove from DOM immediately for smoother feel
+                                // $(`#node-${id}`).addClass('animate__animated animate__fadeOutLeft').fadeOut(400);
+                            } else {
+                                $(`#node-${id}`).addClass('animate__animated animate__fadeOutLeft').fadeOut(400);
+                            }
                         }
                     }
                 });
             }, function() {}
-        );
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
     }
 </script>
 
 {% endblock %}
-

@@ -30,7 +30,7 @@ def liste_derogations(request):
 
 @login_required(login_url='institut_app:login')
 def LoadDerogations(request):
-    liste = Derogations.objects.all().values('id','motif','date_de_demande','statut', 'type','demandeur','demandeur__nom','demandeur__prenom','updated_at')
+    liste = Derogations.objects.all().order_by('-created_at').values('id','motif','date_de_demande','statut', 'type','demandeur','demandeur__nom','demandeur__prenom','updated_at')
     for i in liste:
         i_obj  = Derogations.objects.get(id = i['id'])
         i['updated_at'] = format(i_obj.updated_at, "Y-m-d H:i")

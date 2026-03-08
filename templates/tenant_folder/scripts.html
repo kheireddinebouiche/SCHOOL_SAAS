@@ -41,9 +41,13 @@
         socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             const message = data.message;
+            const link = data.link || '#';
+            const notif_id = data.id;
             
-            // Show toast using Alertify
-            if (typeof alertify !== 'undefined') {
+            // Show toast using Alertify or showAlert if available
+            if (typeof showAlert === 'function') {
+                showAlert('success', message);
+            } else if (typeof alertify !== 'undefined') {
                 alertify.set('notifier','position', 'top-right');
                 alertify.success(message);
             }
@@ -66,39 +70,45 @@
                 }
             }
             
-            // Append to all-noti-tab (which is where we list all notifications now)
+            // Append to all-noti-tab
             const allNotiTab = document.getElementById('all-noti-tab');
             if (allNotiTab) {
-                 const container = allNotiTab.querySelector('[data-simplebar] .simplebar-content') || allNotiTab.querySelector('[data-simplebar]');
-                 // Note: simplebar structure might differ slightly, usually .mCSB_container or similar if using custom scrollbar, 
-                 // but checking the header.html structure it's a div with data-simplebar.
-                 // If simplebar is initialized, it wraps content. We might need to prepend to the internal container.
-                 
-                const alertHtml = `
-                    <div class="text-reset notification-item d-block dropdown-item cursor-pointer bg-light-info fw-bold" onclick="location.reload()">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-xs me-3 flex-shrink-0">
-                                <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-16">
-                                    <i class="bx bx-bell"></i>
-                                </span>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mt-0 mb-1 fs-13 fw-semibold">Nouvelle Notification <span class="badge bg-danger rounded-pill float-end">New</span></h6>
-                                <div class="fs-13 text-muted">
-                                    <p class="mb-1">${message}</p>
+                // Find the actual list container (the one inside .pe-2)
+                const container = allNotiTab.querySelector('.pe-2');
+                if (container) {
+                    // Check if "Pas de notifications" placeholder exists and remove it
+                    const emptyPlaceholder = container.querySelector('.text-center.p-4');
+                    if (emptyPlaceholder) {
+                        emptyPlaceholder.remove();
+                    }
+
+                    const alertHtml = `
+                        <div class="text-reset notification-item d-block dropdown-item cursor-pointer bg-light-info fw-bold">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-xs me-3 flex-shrink-0" onclick="markAsRead('${notif_id}', '${link}')">
+                                    <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-16">
+                                        <i class="bx bx-bell"></i>
+                                    </span>
                                 </div>
-                                <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
-                                    <span>Juste maintenant</span>
-                                </p>
+                                <div class="flex-grow-1" onclick="markAsRead('${notif_id}', '${link}')">
+                                    <h6 class="mt-0 mb-1 fs-13 fw-semibold">Nouvelle Notification <span class="badge bg-danger rounded-pill float-end">New</span></h6>
+                                    <div class="fs-13 text-muted">
+                                        <p class="mb-1">${message}</p>
+                                    </div>
+                                    <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
+                                        <span>Juste maintenant</span>
+                                    </p>
+                                </div>
+                                <div class="flex-shrink-0 ms-2">
+                                     <button type="button" class="btn btn-icon btn-sm btn-ghost-danger remove-notif" 
+                                             onclick="event.stopPropagation();"
+                                             data-bs-toggle="modal" data-bs-target="#removeNotificationModal" data-id="${notif_id}">
+                                         <i class="bx bx-trash fs-16"></i>
+                                     </button>
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
-                
-                // Try to prepend to simplebar content if available, else direct container
-                const contentWrapper = container.querySelector('.simplebar-content');
-                if (contentWrapper) {
-                    contentWrapper.insertAdjacentHTML('afterbegin', alertHtml);
-                } else {
+                        </div>`;
+                    
                     container.insertAdjacentHTML('afterbegin', alertHtml);
                 }
             }

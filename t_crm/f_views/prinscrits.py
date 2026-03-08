@@ -12,8 +12,11 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.utils.dateformat import format
+from django.utils.translation import gettext_lazy as _
 from .generate_paiements import ApiGeneratePaiementRequest
 from django.db.models import Q, Sum
+from django.urls import reverse
+from institut_app.utils_notifications import send_notification_to_module_level
 
 
 @login_required(login_url='institut_app:login')
@@ -797,10 +800,14 @@ def ApiValidatePreinscrit(request):
         
         preinscrit.statut = "instance"
         preinscrit.instance_date = now()
-
         preinscrit.save()
 
-        return JsonResponse({"status": "success"})
+        # Envoi de notification au module Trésorerie (utilisateur, superviseur, manager)
+        message = _("Une nouvelle demande de paiement a été créée pour {} {}").format(preinscrit.nom, preinscrit.prenom)
+        link = reverse('t_tresorerie:attentes_de_paiements')
+        send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
+
+        return JsonResponse({'status' : "success", "message" : "La validation a été effectuée avec succès"})
     except Exception as e:
         return JsonResponse({"status":"error",'message' : str(e)})
 

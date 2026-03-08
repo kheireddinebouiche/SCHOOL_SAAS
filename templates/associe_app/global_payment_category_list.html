@@ -184,6 +184,96 @@
         color: #475569;
         margin-bottom: 0.5rem;
     }
+
+    /* Premium Action Buttons */
+    .btn-premium-sync {
+        background: rgba(255, 193, 7, 0.1) !important;
+        border: 1px solid rgba(255, 193, 7, 0.2) !important;
+        color: #b8860b !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-sync:hover {
+        background: #ffc107 !important;
+        color: #fff !important;
+        transform: rotate(180deg) scale(1.1);
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+
+    .btn-premium-add {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%) !important;
+        border: none !important;
+        color: white !important;
+        padding: 0.6rem 1.5rem !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+    }
+
+    .btn-premium-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(15, 118, 110, 0.3);
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
+    }
+
+    .btn-premium-add i {
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+    }
+
+    .btn-premium-add:hover i {
+        transform: rotate(90deg);
+    }
+    .btn-premium-export {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border: 1px solid rgba(16, 185, 129, 0.2) !important;
+        color: #059669 !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-export:hover {
+        background: #10b981 !important;
+        color: #fff !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-premium-import {
+        background: rgba(99, 102, 241, 0.1) !important;
+        border: 1px solid rgba(99, 102, 241, 0.2) !important;
+        color: #4f46e5 !important;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        backdrop-filter: blur(4px);
+    }
+
+    .btn-premium-import:hover {
+        background: #6366f1 !important;
+        color: #fff !important;
+        transform: translateY(-2px);
+    }
 </style>
 
 <div class="main-content">
@@ -197,12 +287,18 @@
                             <h4 class="mb-1 text-primary">Structure des Catégories</h4>
                             <p class="text-muted mb-0">Organisez vos modes de paiement dans une hiérarchie logique.</p>
                         </div>
-                        <div class="page-title-right d-flex gap-2">
-                            <button type="button" id="syncBtn" class="btn btn-soft-warning btn-icon waves-effect waves-light" title="Synchroniser">
-                                <i class="ri-refresh-line fs-18"></i>
+                        <div class="page-title-right d-flex align-items-center gap-3">
+                            <button type="button" id="syncBtn" class="btn-premium-sync" title="Synchroniser">
+                                <i class="ri-refresh-line fs-20"></i>
                             </button>
-                            <button type="button" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
-                                <i class="ri-add-circle-line fs-18"></i> Ajouter une catégorie
+                            <a href="{% url 'export_payment_categories' %}" class="btn-premium-export" title="Exporter vers Excel">
+                                <i class="ri-file-excel-2-line fs-20"></i>
+                            </a>
+                            <button type="button" class="btn-premium-import" title="Importer" data-bs-toggle="modal" data-bs-target="#importModal">
+                                <i class="ri-upload-2-line fs-20"></i>
+                            </button>
+                            <button type="button" class="btn-premium-add" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
+                                <i class="ri-add-line"></i> Ajouter
                             </button>
                         </div>
                     </div>
@@ -279,22 +375,64 @@
     </div>
 </div>
 
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Importer des Catégories</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="importForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted">Sélectionnez un fichier Excel (.xlsx) ou JSON (.json) exporté précédemment.</p>
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="importFile" name="file" accept=".xlsx, .xls, .json" required>
+                    </div>
+                    <div id="importProgress" class="d-none">
+                        <div class="progress progress-sm mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-center text-primary mb-0">Importation en cours...</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="importSubmitBtn">Démarrer l'import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     let categoryModal;
+    let importModal;
     let form;
     let saveBtn;
     let syncBtn;
     
-    const rawCategories = {{ categories_json|safe }};
+    const rawCategories = JSON.parse('{{ categories_json|escapejs }}' || '[]');
 
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("Tree Initialization: Starting...");
         const modalElement = document.getElementById('categoryModal');
         if (modalElement) categoryModal = new bootstrap.Modal(modalElement);
+        
+        const importModalElement = document.getElementById('importModal');
+        if (importModalElement) importModal = new bootstrap.Modal(importModalElement);
+
         form = document.getElementById('categoryForm');
         saveBtn = document.getElementById('saveBtn');
         syncBtn = document.getElementById('syncBtn');
 
-        renderTree(rawCategories);
+        try {
+            renderTree(rawCategories);
+            console.log("Tree Initialization: Rendered successfully.");
+        } catch (e) {
+            console.error("Tree Initialization Error:", e);
+        }
 
         if (form) {
             form.onsubmit = function(e) {
@@ -308,13 +446,56 @@
                     data: $(form).serialize(),
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
+                        console.log("AJAX Success Response:", response);
                         if (response.status === 'success') {
                             alertify.set('notifier','position', 'top-right');
                             alertify.success('<i class="ri-checkbox-circle-line me-2"></i>' + response.message);
-                            setTimeout(() => location.reload(), 800);
+                            if (response.categories) {
+                                try {
+                                    const expandedIds = getExpandedIds();
+                                    renderTree(response.categories);
+                                    updateParentSelect(response.categories);
+
+                                    // Restore expanded states
+                                    expandedIds.forEach(id => {
+                                        const childrenContainer = document.getElementById(`children-${id}`);
+                                        const icon = document.getElementById(`icon-${id}`);
+                                        if (childrenContainer) {
+                                            childrenContainer.classList.add('show');
+                                            if (icon) icon.className = 'ri-subtract-line';
+                                        }
+                                    });
+
+                                    // Auto-expand parent of new node or the new node itself if it has children
+                                    if (response.parent_id) {
+                                        expandAncestor(response.parent_id, response.categories);
+                                    }
+                                    
+                                    if (categoryModal) categoryModal.hide();
+                                    console.log("Real-time update complete.");
+                                } catch (err) {
+                                    console.error("Error during real-time update:", err);
+                                    setTimeout(() => location.reload(), 500);
+                                }
+                            } else {
+                                console.warn("No categories in response, falling back to reload.");
+                                setTimeout(() => location.reload(), 800);
+                            }
                         } else {
-                            alertify.error('Erreur de validation.');
+                            if (response.errors) {
+                                let errorMsgs = "";
+                                for (let field in response.errors) {
+                                    errorMsgs += `${field}: ${response.errors[field].join(', ')}<br>`;
+                                }
+                                alertify.error('Erreur de validation:<br>' + errorMsgs);
+                            } else {
+                                alertify.error('Erreur de validation.');
+                            }
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("AJAX Error:", status, error);
+                        alertify.error("Erreur réseau: Impossible d'enregistrer.");
                     },
                     complete: function() {
                         saveBtn.disabled = false;
@@ -342,6 +523,47 @@
                     }
                 });
             }
+        }
+
+        const importForm = document.getElementById('importForm');
+        if (importForm) {
+            importForm.onsubmit = function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('importSubmitBtn');
+                const progress = document.getElementById('importProgress');
+                const formData = new FormData(importForm);
+
+                btn.disabled = true;
+                progress.classList.remove('d-none');
+
+                $.ajax({
+                    url: "{% url 'import_payment_categories' %}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            if (response.categories) {
+                                renderTree(response.categories);
+                                updateParentSelect(response.categories);
+                            }
+                            if (importModal) importModal.hide();
+                            importForm.reset();
+                        } else {
+                            alertify.error(response.message || 'Erreur lors de l\'import');
+                        }
+                    },
+                    error: function() {
+                        alertify.error('Erreur réseau.');
+                    },
+                    complete: function() {
+                        btn.disabled = false;
+                        progress.classList.add('d-none');
+                    }
+                });
+            };
         }
     });
 
@@ -412,6 +634,52 @@
         renderTreeNodes(buildHierarchy(data), container);
     }
 
+    function updateParentSelect(categories) {
+        const select = document.getElementById('id_parent');
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">---------</option>';
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        });
+        select.value = currentValue;
+    }
+
+    function getExpandedIds() {
+        const expandedIds = [];
+        document.querySelectorAll('.tree-children.show').forEach(container => {
+            const id = container.id.replace('children-', '');
+            expandedIds.push(id);
+        });
+        return expandedIds;
+    }
+
+    function expandAncestor(parentId, categories) {
+        let currentParentId = parentId;
+        const maxDepth = 20; // Safety
+        let depth = 0;
+        
+        while (currentParentId && depth < maxDepth) {
+            depth++;
+            const container = document.getElementById(`children-${currentParentId}`);
+            const icon = document.getElementById(`icon-${currentParentId}`);
+            if (container) {
+                container.classList.add('show');
+                if (icon) icon.className = 'ri-subtract-line';
+            }
+            // Find parent of currentParentId to continue upwards
+            const parentNode = categories.find(c => String(c.id) === String(currentParentId));
+            if (parentNode && parentNode.parent_id) {
+                currentParentId = parentNode.parent_id;
+            } else {
+                currentParentId = null;
+            }
+        }
+    }
+
     function toggleNode(id) {
         const childrenContainer = document.getElementById(`children-${id}`);
         const icon = document.getElementById(`icon-${id}`);
@@ -460,7 +728,21 @@
                     success: function(response) {
                         if (response.status === 'success') {
                             alertify.success(response.message);
-                            $(`#node-${id}`).addClass('animate__animated animate__fadeOutLeft').fadeOut(400);
+                            if (response.categories) {
+                                const expandedIds = getExpandedIds();
+                                renderTree(response.categories);
+                                updateParentSelect(response.categories);
+                                expandedIds.forEach(id => {
+                                    const container = document.getElementById(`children-${id}`);
+                                    const icon = document.getElementById(`icon-${id}`);
+                                    if (container) {
+                                        container.classList.add('show');
+                                        if (icon) icon.className = 'ri-subtract-line';
+                                    }
+                                });
+                            } else {
+                                $(`#node-${id}`).addClass('animate__animated animate__fadeOutLeft').fadeOut(400);
+                            }
                         }
                     }
                 });

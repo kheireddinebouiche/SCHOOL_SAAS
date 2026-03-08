@@ -123,6 +123,7 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
             promo_id = promo,
             type = "frais_f",
             ref_echeancier_id = echeancier,
+            entite = EcheancierPaiement.objects.get(id=echeancier).entite if echeancier else None,
         )
         return JsonResponse({"status": "success"})
     except Exception as e:
@@ -205,7 +206,7 @@ def ApiStoreClientPaiement(request):
                 return JsonResponse({"status": "error","message": "Le paiement précédent n'est pas encore effectué."})
     
         paiement = Paiements.objects.create(
-            due_paiements = DuePaiements.objects.get(id = id_due_paiement),
+            due_paiements = due_paiement,
             prospect = Prospets.objects.get(id = clientId),
             montant_paye = montant,
             date_paiement = datePaiement,
@@ -216,6 +217,7 @@ def ApiStoreClientPaiement(request):
             paiement_label = echeance,
             promo = Promos.objects.get(code = promo) if promo else None,
             payment_type_id = paymentType if paymentType else None,
+            entite = due_paiement.entite,
         )
 
         if(montant == DuePaiements.objects.get(id = id_due_paiement).montant_restant):

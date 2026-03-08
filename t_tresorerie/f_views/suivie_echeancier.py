@@ -261,7 +261,7 @@ def ApiGetClientEcheancier(request):
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
-                    'is_refund' : i.is_refund,
+                    'is_refund' : i.is_refund, 'facture_num' : i.facture.num_facture if i.facture else None, 'facture_id' : i.facture.id if i.facture else None, 'entite_id': i.entite.id if i.entite else None,
                 })
 
         else:
@@ -467,7 +467,7 @@ def ApiGetClientEcheancierDouble(request):
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
-                    'is_refund' : i.is_refund,
+                    'is_refund' : i.is_refund, 'facture_num' : i.facture.num_facture if i.facture else None, 'facture_id' : i.facture.id if i.facture else None, 'entite_id': i.entite.id if i.entite else None,
                 })
 
         else:
@@ -618,6 +618,7 @@ def ApiSaveRefundOperation(request):
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
         entite_select = request.POST.get('entite_select')
+        category_id = request.POST.get('category_select')
 
         if not entite_select:
             return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
@@ -657,6 +658,7 @@ def ApiSaveRefundOperation(request):
             montant_ht = amount,
             mode_paiement = mode_rembourssement,
             entite_id = entite_select,
+            category_id = category_id,
         )
 
         # Update or create cumulative refund for the promo

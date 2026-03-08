@@ -8,7 +8,7 @@ def send_notification_to_user(user, message, link=None):
     """
     Sends a notification to a specific user.
     """
-    Notification.objects.create(user=user, message=message, link=link)
+    notif = Notification.objects.create(user=user, message=message, link=link)
     channel_layer = get_channel_layer()
     if channel_layer:
         async_to_sync(channel_layer.group_send)(
@@ -16,6 +16,8 @@ def send_notification_to_user(user, message, link=None):
             {
                 "type": "send_notification",
                 "message": message,
+                "link": link,
+                "id": notif.id,
             }
         )
 

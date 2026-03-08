@@ -899,29 +899,20 @@
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" id="modalPaiementId">
-                <div class="mb-4">
+                
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" role="switch" id="invoiceHTSwitch">
+                    <label class="form-check-label fw-semibold text-muted" for="invoiceHTSwitch">
+                        Facture Hors Taxe (Sans TVA)
+                    </label>
+                </div>
+
+                <div id="tvaSelectionWrapper" class="mb-4">
                     <label class="form-label fw-semibold text-muted mb-2">Sélectionner le taux de TVA</label>
-                    <div class="row g-3">
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="tvaRate" id="tva0" value="0">
-                            <label class="btn btn-outline-success w-100 py-3" for="tva0">
-                                <span class="d-block fw-bold fs-5">0%</span>
-                                <small>Sans TVA</small>
-                            </label>
-                        </div>
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="tvaRate" id="tva9" value="9">
-                            <label class="btn btn-outline-success w-100 py-3" for="tva9">
-                                <span class="d-block fw-bold fs-5">9%</span>
-                                <small>Taux réduit</small>
-                            </label>
-                        </div>
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="tvaRate" id="tva19" value="19" checked>
-                            <label class="btn btn-outline-success w-100 py-3" for="tva19">
-                                <span class="d-block fw-bold fs-5">19%</span>
-                                <small>Taux normal</small>
-                            </label>
+                    <div class="row g-3" id="tvaOptionsContainer">
+                        <div class="col-12 text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            <span class="ms-2 text-muted">Chargement des taux...</span>
                         </div>
                     </div>
                 </div>
@@ -1959,6 +1950,14 @@
                         </div>
                     </div>
                 </div>
+                <label for="entite_select">Entité :</label>
+                <select id="entite_select" class="form-control mb-3">
+                    
+                </select>
+                <label for="category_select">Catégorie de dépense :</label>
+                <select id="category_select" class="form-control">
+                    
+                </select>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
@@ -3159,7 +3158,8 @@
                                 date_paiement: item.date_paiement,
                                 mode_paiement: item.mode_paiement || 'Non spécifié',
                                 reference_paiement: item.reference_paiement || 'Non spécifié',
-                                label_paiements : item.label_paiements,                               
+                                label_paiements : item.label_paiements,
+                                entite_id: item.entite_id,
                             };
                             
                             row += "<tr>";
@@ -3206,9 +3206,13 @@
                             row += "<button class='btn btn-sm btn-outline-primary dropdown-toggle' type='button' id='dropdownMenuButton"+item.num+"' data-bs-toggle='dropdown' aria-expanded='false'>";
                             row += "<i class='ri-more-2-fill'></i>";
                             row += "</button>";
-                            row += "<div class='dropdown-menu dropdown-menu-end' aria-labelledby='dropdownMenuButton"+item.num+"'>";
-                            row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
-                            row += "<button class='dropdown-item print-facture-btn' type='button' data-id='"+item.num+"'><i class='ri-printer-line me-2'></i>Facture</button>";
+                             row += "<div class='dropdown-menu dropdown-menu-end' aria-labelledby='dropdownMenuButton"+item.num+"'>";
+                             row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
+                             if (item.facture_num) {
+                                 row += "<a class='dropdown-item' href='/t_tresorerie/details-facture/" + item.facture_id + "/' target='_blank'><i class='ri-eye-line me-2'></i>Voir Facture (" + item.facture_num + ")</a>";
+                             } else {
+                                 row += "<button class='dropdown-item print-facture-btn' type='button' data-id='"+item.num+"'><i class='ri-printer-line me-2'></i>Facture</button>";
+                             }
                             //row += "<div class='dropdown-divider'></div>";
                             //row += "<button class='dropdown-item delete-btn' type='button' data-id='"+item.num+"'><i class='ri-delete-bin-line me-2'></i>Supprimer</button>";
                             row += "</div>";
@@ -3378,6 +3382,8 @@
         }
 
         $(document).on("click", '#btnShowRefundResult', function(){
+            loadEntites();
+            loadDepensesCategories();
             if(RefundState === "acp"){
                 $('#remboursementTraiteDetailsModal').modal('show');
             }else{
@@ -3385,10 +3391,47 @@
             }            
         });
 
+        function loadEntites(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiGetEntite' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner une entité</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.designation+"</option>";
+                    });
+                    $('#entite_select').html(option);
+                }
+            });
+        }
+
+        function loadDepensesCategories(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner une catégorie</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value='"+p.id+"'>"+p.name+"</option>";
+                    });
+                    $('#category_select').html(option);
+                }
+            });
+        }
+
         $(document).on('click', '#confirmerRemboursementBtn', function(){
             var amount = $('#confirmationRemboursementModal').data('amount');
             var mode_rembourssement = $('#confirmationRemboursementModal').data('mode_paiement');
             var id_refund = $('#confirmationRemboursementModal').data('id_refund');
+            var entite_select = $('#entite_select').val();
+            var category_select = $('#category_select').val();
+
+            if (!category_select) {
+                alertify.error("Veuillez sélectionner une catégorie de dépense");
+                return;
+            }
 
             $.ajax({
                 url : "{% url 't_tresorerie:ApiSaveRefundOperation' %}",
@@ -3399,6 +3442,8 @@
                     'refund_amount' : amount,
                     'mode_rembourssement' : mode_rembourssement,
                     'id_refund' : id_refund,
+                    'entite_select' :entite_select,
+                    'category_select' : category_select,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){
@@ -4311,14 +4356,66 @@
         $(document).on('click', '.print-facture-btn', function(e){
             e.preventDefault();
             var id = $(this).data('id');
+            var payment = paymentData[id];
+            var entiteId = payment ? payment.entite_id : null;
+            
             $('#modalPaiementId').val(id);
+            
+            // Populate TVA options
+            var container = $('#tvaOptionsContainer');
+            container.html('<div class="col-12 text-center py-3"><div class="spinner-border spinner-border-sm text-success" role="status"></div><span class="ms-2 text-muted">Chargement des taux...</span></div>');
+            
+            if (entiteId) {
+                $.ajax({
+                    url: "{% url 't_conseil:ApiFetchEnterpriseTvas' %}",
+                    type: "GET",
+                    data: { 'enterprise_id': entiteId },
+                    success: function(response) {
+                        if (response.status === 'success' && response.tvas.length > 0) {
+                            var html = '';
+                            $.each(response.tvas, function(i, tva) {
+                                var isChecked = tva.is_default ? 'checked' : (i === 0 ? 'checked' : '');
+                                html += '<div class="col-4">';
+                                html += '    <input type="radio" class="btn-check" name="tvaRate" id="tva'+tva.valeur+'" value="'+tva.valeur+'" '+isChecked+'>';
+                                html += '    <label class="btn btn-outline-success w-100 py-3 rounded-3" for="tva'+tva.valeur+'">';
+                                html += '        <span class="d-block fw-bold fs-5">'+tva.valeur+'%</span>';
+                                html += '        <small>'+tva.label+'</small>';
+                                html += '    </label>';
+                                html += '</div>';
+                            });
+                            container.html(html);
+                        } else {
+                            container.html('<div class="col-12 py-3"><div class="alert alert-warning mb-0">Aucun taux de TVA configuré pour cette entité. Utilisation du taux par défaut (19%).</div><input type="radio" name="tvaRate" value="19" checked style="display:none;"></div>');
+                        }
+                    },
+                    error: function() {
+                        container.html('<div class="col-12 py-3"><div class="alert alert-danger mb-0">Erreur lors du chargement des taux de TVA. Utilisation du taux par défaut (19%).</div><input type="radio" name="tvaRate" value="19" checked style="display:none;"></div>');
+                    }
+                });
+            } else {
+                container.html('<div class="col-12 py-3"><div class="alert alert-info mb-0">Entité non spécifiée. Utilisation du taux par défaut (19%).</div><input type="radio" name="tvaRate" value="19" checked style="display:none;"></div>');
+            }
+            
+            $('#invoiceHTSwitch').prop('checked', false);
+            $('#tvaSelectionWrapper').show();
+            
             var modal = new bootstrap.Modal(document.getElementById('invoiceConfigModal'));
             modal.show();
         });
 
+        // Toggle HT Switch
+        $(document).on('change', '#invoiceHTSwitch', function() {
+            if ($(this).is(':checked')) {
+                $('#tvaSelectionWrapper').slideUp();
+            } else {
+                $('#tvaSelectionWrapper').slideDown();
+            }
+        });
+
         $(document).on('click', '#confirmGenerateInvoice', function(){
             var id = $('#modalPaiementId').val();
-            var tva = $('input[name="tvaRate"]:checked').val();
+            var showTva = !$('#invoiceHTSwitch').is(':checked');
+            var tva = showTva ? $('input[name="tvaRate"]:checked').val() : 0;
             var btn = $(this);
             
             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Génération...');
@@ -4329,6 +4426,7 @@
                 data: {
                     'paiement_id': id,
                     'tva_percent': tva,
+                    'show_tva': showTva,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success: function(response) {

@@ -40,6 +40,8 @@ def ApiListePaiements(request):
             'mode_paiement': i.get_mode_paiement_display(),
             'context': i.get_context_display(),
             'context_key': i.context,
+            'facture_num' : i.facture.num_facture if i.facture else None,
+            'facture_id' : i.facture.id if i.facture else None,
         })
 
     return JsonResponse(data, safe=False)

@@ -1,8 +1,12 @@
+import json
+import io
+import openpyxl
+from openpyxl import Workbook
 from django.shortcuts import render, redirect, get_object_or_404
 from datetime import date
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType
+from django.http import JsonResponse, FileResponse
+from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType, PostesBudgetaire
 from .forms import GlobalPaymentCategoryForm, GlobalDepensesCategoryForm, GlobalPaymentTypeForm
 from .utils import sync_global_categories
 from django.contrib import messages
@@ -76,7 +80,7 @@ def global_payment_type_create(request):
             return redirect('global_payment_type_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     return redirect('global_payment_type_list')
 
 @login_required(login_url='login')
@@ -91,7 +95,7 @@ def global_payment_type_edit(request, pk):
             return redirect('global_payment_type_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     
     # For loading form data via AJAX
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -110,10 +114,9 @@ def global_payment_type_delete(request, pk):
             return JsonResponse({'status': 'success', 'message': 'Type de paiement supprimé avec succès.'})
     return redirect('global_payment_type_list')
 
-# --- Global Payment Category Views ---
+# --- Helper Functions for Real-Time Serialization ---
 
-@login_required(login_url='login')
-def global_payment_category_list(request):
+def _get_payment_categories_list():
     categories = GlobalPaymentCategory.objects.all().order_by('name')
     categories_list = []
     for cat in categories:
@@ -124,13 +127,30 @@ def global_payment_category_list(request):
             'type': cat.category_type,
             'type_display': cat.get_category_type_display()
         })
-    
+    return categories_list
+
+def _get_depenses_categories_list():
+    categories = GlobalDepensesCategory.objects.all().order_by('name')
+    categories_list = []
+    for cat in categories:
+        categories_list.append({
+            'id': cat.id,
+            'name': cat.name,
+            'parent_id': cat.parent.id if cat.parent else None,
+            'payment_category': cat.payment_category.name if cat.payment_category else '-',
+            'payment_category_id': cat.payment_category.id if cat.payment_category else None
+        })
+    return categories_list
+
+# --- Global Payment Category Views ---
+
+@login_required(login_url='login')
+def global_payment_category_list(request):
+    categories_list = _get_payment_categories_list()
     import json
     categories_json = json.dumps(categories_list)
-    
     form = GlobalPaymentCategoryForm()
     return render(request, 'associe_app/global_payment_category_list.html', {
-        'categories': categories, 
         'categories_json': categories_json,
         'form': form
     })
@@ -142,11 +162,17 @@ def global_payment_category_create(request):
         if form.is_valid():
             category = form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': 'Catégorie de paiement créée avec succès.'})
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Catégorie de paiement créée avec succès.',
+                    'categories': _get_payment_categories_list(),
+                    'new_id': category.id,
+                    'parent_id': category.parent.id if category.parent else None
+                })
             return redirect('global_payment_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     return redirect('global_payment_category_list')
 
 @login_required(login_url='login')
@@ -157,11 +183,15 @@ def global_payment_category_edit(request, pk):
         if form.is_valid():
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': 'Catégorie de paiement modifiée avec succès.'})
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Catégorie de paiement modifiée avec succès.',
+                    'categories': _get_payment_categories_list()
+                })
             return redirect('global_payment_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     
     # For loading form data via AJAX
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -178,30 +208,99 @@ def global_payment_category_delete(request, pk):
     if request.method == 'POST':
         category.delete()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success', 'message': 'Catégorie de paiement supprimée avec succès.'})
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Catégorie de paiement supprimée avec succès.',
+                'categories': _get_payment_categories_list()
+            })
     return redirect('global_payment_category_list')
+
+@login_required(login_url='login')
+def export_payment_categories(request):
+    categories = GlobalPaymentCategory.objects.all().order_by('id')
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Payment Categories"
+    
+    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Type']
+    ws.append(headers)
+    
+    for cat in categories:
+        ws.append([
+            cat.id,
+            cat.name,
+            cat.parent.id if cat.parent else '',
+            cat.parent.name if cat.parent else '',
+            cat.category_type
+        ])
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = FileResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="categories_paiement.xlsx"'
+    return response
+
+@login_required(login_url='login')
+def import_payment_categories(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        filename = file.name.lower()
+        data = []
+        
+        try:
+            if filename.endswith('.xlsx') or filename.endswith('.xls'):
+                wb = openpyxl.load_workbook(file)
+                ws = wb.active
+                headers = [cell.value for cell in ws[1]]
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not any(row): continue
+                    data.append(dict(zip(headers, row)))
+            elif filename.endswith('.json'):
+                data = json.load(file)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Format non supporté.'})
+            
+            # Hierarchical Import Logic (Simple multi-pass)
+            success_count = 0
+            # Pass 1: Roots and updates
+            for row in data:
+                parent_id = row.get('Parent_ID') or row.get('parent_id')
+                # If no parent or parent exists, we can create/update
+                parent = None
+                if parent_id:
+                    parent = GlobalPaymentCategory.objects.filter(id=parent_id).first()
+                
+                GlobalPaymentCategory.objects.update_or_create(
+                    id=row.get('ID') or row.get('id'),
+                    defaults={
+                        'name': row.get('Nom') or row.get('name'),
+                        'parent': parent,
+                        'category_type': row.get('Type') or row.get('category_type') or 'standard'
+                    }
+                )
+                success_count += 1
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'{success_count} catégories importées.',
+                'categories': _get_payment_categories_list()
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur: {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})
 
 # --- Global Depenses Category Views ---
 
 @login_required(login_url='login')
 def global_depenses_category_list(request):
-    categories = GlobalDepensesCategory.objects.all().order_by('name')
-    categories_list = []
-    for cat in categories:
-        categories_list.append({
-            'id': cat.id,
-            'name': cat.name,
-            'parent_id': cat.parent.id if cat.parent else None,
-            'payment_category': cat.payment_category.name if cat.payment_category else '-',
-            'payment_category_id': cat.payment_category.id if cat.payment_category else None
-        })
-    
+    categories_list = _get_depenses_categories_list()
     import json
     categories_json = json.dumps(categories_list)
-
     form = GlobalDepensesCategoryForm()
     return render(request, 'associe_app/global_depenses_category_list.html', {
-        'categories': categories, 
         'categories_json': categories_json,
         'form': form
     })
@@ -211,14 +310,101 @@ def global_depenses_category_create(request):
     if request.method == 'POST':
         form = GlobalDepensesCategoryForm(request.POST)
         if form.is_valid():
-            form.save()
+            category = form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': 'Catégorie de dépense créée avec succès.'})
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Catégorie de dépense créée avec succès.',
+                    'categories': _get_depenses_categories_list(),
+                    'new_id': category.id,
+                    'parent_id': category.parent.id if category.parent else None
+                })
             return redirect('global_depenses_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     return redirect('global_depenses_category_list')
+
+@login_required(login_url='login')
+def export_depenses_categories(request):
+    categories = GlobalDepensesCategory.objects.all().order_by('id')
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Depenses Categories"
+    
+    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Payment_Category_ID', 'Payment_Category_Nom']
+    ws.append(headers)
+    
+    for cat in categories:
+        ws.append([
+            cat.id,
+            cat.name,
+            cat.parent.id if cat.parent else '',
+            cat.parent.name if cat.parent else '',
+            cat.payment_category.id if cat.payment_category else '',
+            cat.payment_category.name if cat.payment_category else ''
+        ])
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = FileResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="categories_depenses.xlsx"'
+    return response
+
+@login_required(login_url='login')
+def import_depenses_categories(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        filename = file.name.lower()
+        data = []
+        
+        try:
+            if filename.endswith('.xlsx') or filename.endswith('.xls'):
+                wb = openpyxl.load_workbook(file)
+                ws = wb.active
+                headers = [cell.value for cell in ws[1]]
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not any(row): continue
+                    data.append(dict(zip(headers, row)))
+            elif filename.endswith('.json'):
+                data = json.load(file)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Format non supporté.'})
+            
+            success_count = 0
+            for row in data:
+                parent_id = row.get('Parent_ID') or row.get('parent_id')
+                pay_cat_id = row.get('Payment_Category_ID') or row.get('payment_category_id')
+                
+                parent = None
+                if parent_id:
+                    parent = GlobalDepensesCategory.objects.filter(id=parent_id).first()
+                
+                pay_cat = None
+                if pay_cat_id:
+                    pay_cat = GlobalPaymentCategory.objects.filter(id=pay_cat_id).first()
+
+                GlobalDepensesCategory.objects.update_or_create(
+                    id=row.get('ID') or row.get('id'),
+                    defaults={
+                        'name': row.get('Nom') or row.get('name'),
+                        'parent': parent,
+                        'payment_category': pay_cat
+                    }
+                )
+                success_count += 1
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'{success_count} catégories importées.',
+                'categories': _get_depenses_categories_list()
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur: {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})
 
 @login_required(login_url='login')
 def global_depenses_category_edit(request, pk):
@@ -228,11 +414,15 @@ def global_depenses_category_edit(request, pk):
         if form.is_valid():
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': 'Catégorie de dépense modifiée avec succès.'})
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Catégorie de dépense modifiée avec succès.',
+                    'categories': _get_depenses_categories_list()
+                })
             return redirect('global_depenses_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     
     # For loading form data via AJAX
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -249,7 +439,11 @@ def global_depenses_category_delete(request, pk):
     if request.method == 'POST':
         category.delete()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success', 'message': 'Catégorie de dépense supprimée avec succès.'})
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Catégorie de dépense supprimée avec succès.',
+                'categories': _get_depenses_categories_list()
+            })
     return redirect('global_depenses_category_list')
 
 @login_required(login_url='login')
@@ -472,7 +666,7 @@ def postes_budgetaire_create(request):
             return redirect('postes_budgetaires_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     return redirect('postes_budgetaires_list')
 
 @login_required(login_url='login')
@@ -487,7 +681,7 @@ def postes_budgetaire_edit(request, pk):
             return redirect('postes_budgetaires_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'errors': form.errors.as_json()})
+                return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
     
     # For loading form data via AJAX
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
