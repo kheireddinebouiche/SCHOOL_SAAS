@@ -146,6 +146,7 @@ class BudgetLineDetail(models.Model):
     institut = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='budget_details')
     poste = models.ForeignKey(PostesBudgetaire, on_delete=models.CASCADE, related_name='budget_details')
     payment_category = models.ForeignKey(GlobalPaymentCategory, on_delete=models.CASCADE, related_name='budget_details', null=True, blank=True)
+    depense_category = models.ForeignKey(GlobalDepensesCategory, on_delete=models.CASCADE, related_name='budget_details', null=True, blank=True)
     entreprise_id = models.IntegerField()  # ID of the Entreprise in tenant schema
     montant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
@@ -161,7 +162,7 @@ class BudgetLineDetail(models.Model):
     class Meta:
         verbose_name = "Détail Budget"
         verbose_name_plural = "Détails Budget"
-        unique_together = ('campaign', 'institut', 'poste', 'payment_category', 'entreprise_id')
+        unique_together = ('campaign', 'institut', 'poste', 'payment_category', 'depense_category', 'entreprise_id')
 
     def __str__(self):
         return f"{self.campaign} - {self.poste} - E{self.entreprise_id}"
@@ -192,6 +193,7 @@ class BudgetExtensionItem(models.Model):
     request = models.ForeignKey(BudgetExtensionRequest, on_delete=models.CASCADE, related_name='items')
     poste = models.ForeignKey(PostesBudgetaire, on_delete=models.CASCADE)
     payment_category = models.ForeignKey(GlobalPaymentCategory, on_delete=models.CASCADE, null=True, blank=True)
+    depense_category = models.ForeignKey(GlobalDepensesCategory, on_delete=models.CASCADE, null=True, blank=True)
     entreprise_id = models.IntegerField(help_text="ID of the Entreprise in tenant schema")
     
     old_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant Actuel")

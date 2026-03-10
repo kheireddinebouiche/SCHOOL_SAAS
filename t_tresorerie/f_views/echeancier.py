@@ -75,6 +75,7 @@ def ApiSaveEcheancier(request):
             tranches_data = request.POST.get('tranches')
             is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
             frais_inscription = request.POST.get('frais_inscription')
+            entite_id = request.POST.get('entite')
 
             # Convertir les données JSON en objet Python
             import json
@@ -92,7 +93,14 @@ def ApiSaveEcheancier(request):
                 return JsonResponse({"status": "error-head-already"})
 
             # Créer l'échéancier principal
-            echeancier = EcheancierPaiement.objects.create(model=ModelEcheancier.objects.get(id=modele_id),is_active=True, frais_inscription=frais_inscription)
+            echeancier = EcheancierPaiement.objects.create(
+                model=ModelEcheancier.objects.get(id=modele_id),
+                is_active=True, 
+                frais_inscription=frais_inscription,
+            )
+
+            if entite_id:
+                echeancier.entite = Entreprise.objects.get(id=entite_id)
 
             # Set formation or specialites based on mode
             if is_double_diplomation :

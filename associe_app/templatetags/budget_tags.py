@@ -7,13 +7,17 @@ def get_item(dictionary, key):
     return dictionary.get(str(key))
 
 @register.simple_tag
-def get_allocation(dictionary, poste_id, cat_id, entreprise_id):
-    """Returns the value from dictionary using (poste_id, cat_id, entreprise_id) tuple."""
+def get_allocation(dictionary, poste_id, cat_type, cat_id, entreprise_id):
+    """Returns the value from dictionary using string key."""
     if not dictionary:
-        return 0
-    # cat_id can be 0 or None for direct poste assignment (legacy)
-    c_id = int(cat_id) if cat_id else None
-    return dictionary.get((int(poste_id), c_id, int(entreprise_id)))
+        return ""
+    c_id = int(cat_id) if cat_id else 0
+    key = f"{poste_id}_{cat_type}_{c_id}_{entreprise_id}"
+    return dictionary.get(key)
+
+@register.simple_tag
+def get_cat_type(poste_type):
+    return 'pay' if poste_type == 'recette' else 'dep'
 
 @register.filter
 def sub(value, arg):

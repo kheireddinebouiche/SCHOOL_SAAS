@@ -245,7 +245,11 @@ class EcheancierPaiement(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.formation.nom
+        if self.formation:
+            return self.formation.nom
+        elif self.formation_double:
+            return self.formation_double.label
+        return f"Échéancier {self.id}"
 
 class EcheancierPaiementLine(models.Model):
     echeancier = models.ForeignKey(EcheancierPaiement, null=True, blank=True, on_delete=models.CASCADE)

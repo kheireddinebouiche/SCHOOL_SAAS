@@ -42,3 +42,22 @@ class PostesBudgetaireForm(forms.ModelForm):
             'depense_categories': forms.SelectMultiple(attrs={'class': 'form-control select2'}),
             'payment_categories': forms.SelectMultiple(attrs={'class': 'form-control select2'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        poste_type = cleaned_data.get('type')
+        depense_cats = cleaned_data.get('depense_categories')
+        payment_cats = cleaned_data.get('payment_categories')
+        parent = cleaned_data.get('parent')
+
+        if poste_type == 'depense':
+            if payment_cats:
+                self.add_error('payment_categories', "Un poste de dépense ne peut pas avoir de catégories de recettes.")
+        elif poste_type == 'recette':
+            if depense_cats:
+                self.add_error('depense_categories', "Un poste de recette ne peut pas avoir de catégories de dépenses.")
+
+        if parent and parent.type != poste_type:
+            self.add_error('parent', f"Le parent doit être de même type ({poste_type}).")
+
+        return cleaned_data

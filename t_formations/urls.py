@@ -35,6 +35,7 @@ urlpatterns = [
     path('specialites/details-specialite/<int:pk>/', detailSpecialite, name="detailSpecialite"),
     path('formations/details-formations/<int:pk>/', detailFormation, name="detailFormation"),
     path('supprimer-specialite/<int:pk>/', deleteSpecialite, name="deleteSpecialite"),
+    path('formations/supprimer-formation/<int:pk>/', deleteFormation, name="deleteFormation"),
     path('specilaites/modification-specialite/<int:pk>/', updateSpecialite, name="updateSpecialite"),
 
 

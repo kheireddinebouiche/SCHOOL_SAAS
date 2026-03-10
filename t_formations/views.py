@@ -4,6 +4,7 @@ from .models import *
 from .forms import *
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
+from django.db.models.deletion import ProtectedError
 from django_tenants.utils import get_tenant_model, schema_context
 from django.http import JsonResponse, HttpResponse
 import csv
@@ -512,28 +513,39 @@ def updateSpecialite(request,pk):
 def updateFraisInscription(request):
     pass
 
-def deleteFormation(request):
-    pass
+@login_required(login_url="institut_app:login")
+def deleteFormation(request, pk):
+    try:
+        formation = Formation.objects.get(id=pk)
+        
+        if request.tenant.tenant_type != 'master' and formation.type_formation == 'etrangere':
+            return JsonResponse({'success': False, 'message': "Vous ne pouvez pas supprimer une formation étrangère."})
+            
+        formation.delete()
+        return JsonResponse({'success': True, 'message': "La formation a été supprimée avec succès."})
+    except Formation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': "Formation introuvable."})
+    except ProtectedError:
+        return JsonResponse({'success': False, 'message': "Cette formation ne peut pas être supprimée car elle est liée à d'autres données (ex: inscriptions, promos)."})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f"Une erreur est survenue: {str(e)}"})
 
+@login_required(login_url="institut_app:login")
 def deleteSpecialite(request, pk):
-    specialite = Specialites.objects.get(id = pk)
+    try:
+        specialite = Specialites.objects.get(id=pk)
 
-    if request.tenant.tenant_type == 'master':
-
+        if request.tenant.tenant_type != 'master' and specialite.formation.type_formation == 'etranger':
+            return JsonResponse({'success': False, 'message': "Vous ne pouvez pas supprimer cette spécialité."})
+        
         specialite.delete()
-        messages.success(request, 'Spécialité supprimée avec succès')
-        return redirect('t_formations:listSpecialites')
-
-    elif specialite.formaton.type_formation == 'etranger':
-
-        messages.error(request, 'Vous ne pouvez pas supprimer cette spécialité')
-        return redirect('t_formations:listSpecialites')
-    
-    else:
-
-        specialite.delete()
-        messages.success(request, 'Spécialité supprimée avec succès')
-        return redirect('t_formations:listSpecialites')
+        return JsonResponse({'success': True, 'message': "Spécialité supprimée avec succès."})
+    except Specialites.DoesNotExist:
+        return JsonResponse({'success': False, 'message': "Spécialité introuvable."})
+    except ProtectedError:
+        return JsonResponse({'success': False, 'message': "Cette spécialité ne peut pas être supprimée car elle est liée à d'autres données (ex: promotions, étudiants)."})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f"Une erreur est survenue: {str(e)}"})
     
 def deleteFraisInscription(request):
     pass
@@ -581,17 +593,21 @@ def ApiGetRepartitionModule(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiDeleteCoursRepartition(request):
-    if request.method == 'GET':
-        id=request.GET.get('id')
+    try:
+        id = request.GET.get('id')
         if not id:
-            return JsonResponse({"status" : "error",'message':"Informations manquantes"})
+            return JsonResponse({"success": False, "message": "Informations manquantes"})
         
-        obj = ProgrammeFormation.objects.get(id = id)
-        obj.delete()
-        return JsonResponse({"status":"success"})
-    else:
-        return JsonResponse({"status":"error"})
+        ProgrammeFormation.objects.get(id=id).delete()
+        return JsonResponse({"success": True, "message": "L'affectation a été supprimée avec succès."})
+    except ProgrammeFormation.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Affectation introuvable."})
+    except ProtectedError:
+        return JsonResponse({"success": False, "message": "Cette affectation ne peut pas être supprimée car elle est protégée."})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Erreur: {str(e)}"})
 
+@login_required(login_url="institut_app:login")
 def ApiAffectModuleSemestre(request):
     id_module = request.POST.get('id_module')
     semestre = request.POST.get('semestre')
@@ -635,16 +651,18 @@ def ApiAddModule(request):
     except IntegrityError:
         return JsonResponse({'success' : False, 'message' : "Le module existe déjà"})
 
-@login_required(login_url='insitut_app:login')
+@login_required(login_url='institut_app:login')
 def deleteModule(request):
-    id = request.GET.get('id')
-    
-    obj = Modules.objects.get(id = id)
-    obj.is_archived = True
-    # obj.updated_by = request.user,
-    obj.save()
-   
-    return JsonResponse({'success' : True, 'message' : "Le module a été supprimé avec succès"})
+    try:
+        id = request.GET.get('id')
+        obj = Modules.objects.get(id=id)
+        obj.is_archived = True
+        obj.save()
+        return JsonResponse({'success': True, 'message': "Le module a été archivé avec succès."})
+    except Modules.DoesNotExist:
+        return JsonResponse({'success': False, 'message': "Module introuvable."})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f"Erreur: {str(e)}"})
 
 @login_required(login_url="institut_app:login")
 def archiveModule(request):

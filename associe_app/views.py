@@ -883,13 +883,30 @@ def budget_campaign_review(request, campaign_id, institut_id):
     if is_visible_to_admin:
         # 1. Global Items (Public)
         postes = PostesBudgetaire.objects.prefetch_related('payment_categories').order_by('type', 'label')
-        details = BudgetLineDetail.objects.filter(campaign=campaign, institut=institut)
-        # Map: (poste_id, cat_id, ent_id) -> BudgetLineDetail
+        # Map: {poste_id}_{cat_type}_{cat_id}_0 -> BudgetLineDetail
         allocations = {}
         for d in details:
-            # tag uses None for empty category
-            key = (d.poste_id, d.payment_category_id if d.payment_category_id else None, d.entreprise_id)
-            allocations[key] = d
+            c_type = 'none'
+            c_id = 0
+            if d.payment_category_id:
+                c_type = 'pay'
+                c_id = d.payment_category_id
+            elif d.depense_category_id:
+                c_type = 'dep'
+                c_id = d.depense_category_id
+            
+            # Key format: {poste_id}_{cat_type}_{cat_id}_{ent_id}
+            # Since we simplified to global, we map everything to ent_id=0 for display
+            key = f"{d.poste_id}_{c_type}_{c_id}_0"
+            
+            if key not in allocations:
+                allocations[key] = d
+            else:
+                # If there were multiple entries, we sum them for the global view
+                # Note: BudgetLineDetail object won't be perfectly representative if summed, 
+                # but for 'montant' display it works.
+                allocations[key].montant += d.montant
+        
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
 
         # 2. Tenant Specific Entities
@@ -1084,7 +1101,7 @@ def review_extension(request, request_id):
             return redirect('associe_app:extension_requests_list')
 
     # Fetch enterprise names mapping
-    entreprise_map = {}
+    entreprise_map = {0: 'Global'}
     try:
         with schema_context(ext_request.institut.schema_name):
             ents = Entreprise.objects.all()

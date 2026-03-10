@@ -283,9 +283,7 @@
                                 <thead>
                                     <tr>
                                         <th class="sticky-col matrix-header" style="min-width: 280px;">Poste & Catégorie</th>
-                                        {% for ent in entreprises %}
-                                        <th class="text-end matrix-header" style="min-width: 180px;">{{ ent.designation }}</th>
-                                        {% endfor %}
+                                        <th class="text-end matrix-header" style="min-width: 180px;">Montant Global</th>
                                         <th class="text-end matrix-header bg-light" style="min-width: 140px;">Total</th>
                                         <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T1%</th>
                                         <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T2%</th>
@@ -306,11 +304,9 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        {% for ent in entreprises %}
                                         <td class="text-end">
-                                            <span class="poste-total-display" id="total_poste_{{ poste.id }}_{{ ent.id }}">0,00</span>
+                                            <span class="poste-total-display" id="total_poste_{{ poste.id }}_0">0,00</span>
                                         </td>
-                                        {% endfor %}
                                         <td class="text-end bg-light border-start">
                                             <span class="grand-total-display" id="grand_total_poste_{{ poste.id }}">0,00</span>
                                         </td>
@@ -321,49 +317,80 @@
                                         <td class="bg-light"></td>
                                     </tr>
 
-                                    <!-- Payment Categories -->
-                                    {% for cat in poste.payment_categories.all %}
-                                    <tr class="category-row">
-                                        <td class="sticky-col ps-4">
-                                            <div class="category-label">{{ cat.name }}</div>
-                                        </td>
-                                        {% for ent in entreprises %}
-                                        <td class="text-end">
-                                            {% get_allocation allocations poste.id cat.id ent.id as detail %}
-                                            <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
-                                                <span class="amount-value fw-bold d-block mb-1" 
-                                                      data-poste="{{ poste.id }}" 
-                                                      data-ent="{{ ent.id }}" 
-                                                      data-val="{{ detail.montant|default:0 }}">
-                                                      {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
-                                                </span>
-                                            </div>
-                                        </td>
+                                    <!-- Categories -->
+                                    {% if poste.type == 'recette' %}
+                                        {% for cat in poste.payment_categories.all %}
+                                        <tr class="category-row">
+                                            <td class="sticky-col ps-4">
+                                                <div class="category-label">{{ cat.name }}</div>
+                                            </td>
+                                            <td class="text-end">
+                                                {% get_allocation allocations poste.id 'pay' cat.id 0 as detail %}
+                                                <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
+                                                    <span class="amount-value fw-bold d-block mb-1" 
+                                                          data-poste="{{ poste.id }}" 
+                                                          data-ent="0" 
+                                                          data-cat="{{ cat.id }}"
+                                                          data-val="{{ detail.montant|default:0 }}">
+                                                          {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end bg-light border-start">
+                                                <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
+                                            </td>
+                                            
+                                            <!-- Quarterly Percentages -->
+                                            {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
+                                            {% with row_key=pid|add:"_"|add:cid %}
+                                            {% get_dict_value row_quarters row_key as quarters %}
+                                            
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4"></td>
+                                            <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
+                                            {% endwith %}
+                                            {% endwith %}
+                                        </tr>
                                         {% endfor %}
-                                        <td class="text-end bg-light border-start">
-                                            <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
-                                        </td>
-                                        
-                                        <!-- Quarterly Percentages (Row Level) -->
-                                        {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
-                                        {% with row_key=pid|add:"_"|add:cid %}
-                                        {% get_dict_value row_quarters row_key as quarters %}
-                                        
-                                        <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1"></td>
-                                        <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2"></td>
-                                        <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3"></td>
-                                        <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4"></td>
-                                        <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
-                                        {% endwith %}
-                                        {% endwith %}
-                                    </tr>
-                                    {% empty %}
-                                    <tr class="category-row">
-                                        <td colspan="{{ entreprises|length|add:2 }}" class="text-center text-muted fst-italic py-3 fs-11">
-                                            Aucune catégorie de paiement associée
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+                                    {% else %}
+                                        {% for cat in poste.depense_categories.all %}
+                                        <tr class="category-row">
+                                            <td class="sticky-col ps-4">
+                                                <div class="category-label">{{ cat.name }}</div>
+                                            </td>
+                                            <td class="text-end">
+                                                {% get_allocation allocations poste.id 'dep' cat.id 0 as detail %}
+                                                <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
+                                                    <span class="amount-value fw-bold d-block mb-1" 
+                                                          data-poste="{{ poste.id }}" 
+                                                          data-ent="0" 
+                                                          data-cat="{{ cat.id }}"
+                                                          data-val="{{ detail.montant|default:0 }}">
+                                                          {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end bg-light border-start">
+                                                <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
+                                            </td>
+                                            
+                                            <!-- Quarterly Percentages -->
+                                            {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
+                                            {% with row_key=pid|add:"_"|add:cid %}
+                                            {% get_dict_value row_quarters row_key as quarters %}
+                                            
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3"></td>
+                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4"></td>
+                                            <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
+                                            {% endwith %}
+                                            {% endwith %}
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>

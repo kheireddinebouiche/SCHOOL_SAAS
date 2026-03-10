@@ -1103,7 +1103,7 @@ $(document).ready(function () {
     }
 
 
-    function loadEntiteLegal(){
+    function loadEntiteLegal(callback){
       $.ajax({
         url : '{% url "t_tresorerie:ApiLoadEntiteLegal" %}',
         dataTyep : "GET",
@@ -1114,6 +1114,10 @@ $(document).ready(function () {
             option += "<option value="+p.id+">"+p.designation+"</option>";
           });
           $('#editEcheancierEntite').html(option);
+          
+          if (callback && typeof callback === "function") {
+            callback();
+          }
         }
       })
     }
@@ -1375,52 +1379,61 @@ $(document).ready(function () {
     
     // Function to load echeancier data for editing
     function loadEcheancierForEdit(echeancierId) {
-        $.ajax({
-            url: "{% url 't_tresorerie:ApiLoadEcheancierDetails' %}",
-            type: 'GET',
-            data: { 'id': echeancierId },
-            dataType: 'JSON',
-            success: function(response) {
-                if(response.status === 'success') {
-                    var data = response.data;
-                    
-                    // Fill the form with data
-                    $('#editEcheancierId').val(data.id);
-                    $('#editEcheancierStatus').val(data.is_active ? 1 : 0);
-                    
-                    // Display model and formation as read-only
-                    $('#editModelLabel').text(data.model_label);
-                    $('#editFormationLabel').text(data.formation_label);
-                    $('#editEcheancierEntite').val(data.entite);
-                    
-                    // Fill the tranches - allow editing libellé and dates
-                    var tranchesHtml = '';
-                    if(data.tranches.length > 0) {
-                        $.each(data.tranches, function(index, tranche) {
-                            var dateEcheance = tranche.date_echeancier ? new Date(tranche.date_echeancier).toISOString().split('T')[0] : '';
-                            
-                            tranchesHtml += '<tr class="tranche-row" data-index="' + index + '">';
-                            tranchesHtml += '<td><input type="text" class="form-control tranche-libelle" value="' + tranche.value + '" data-id="' + (tranche.id || '') + '"></td>';
-                            tranchesHtml += '<td>' + parseFloat(tranche.taux) + ' %</td>';
-                            tranchesHtml += '<td>' + parseFloat(tranche.montant_tranche) + ' DZD</td>';
-                            tranchesHtml += '<td><input type="date" class="form-control tranche-date" value="' + dateEcheance + '" data-id="' + (tranche.id || '') + '"></td>';
-                            tranchesHtml += '</tr>';
-                        });
+        // First load entities, then load echeancier details
+        loadEntiteLegal(function() {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadEcheancierDetails' %}",
+                type: 'GET',
+                data: { 'id': echeancierId },
+                dataType: 'JSON',
+                success: function(response) {
+                    if(response.status === 'success') {
+                        var data = response.data;
+                        
+                        // Fill the form with data
+                        $('#editEcheancierId').val(data.id);
+                        $('#editEcheancierStatus').val(data.is_active ? 1 : 0);
+                        
+                        // Display model and formation as read-only
+                        $('#editModelLabel').text(data.model_label);
+                        $('#editFormationLabel').text(data.formation_label);
+                        
+                        // Set the entity value (now that options are loaded)
+                        if (data.entite) {
+                            $('#editEcheancierEntite').val(data.entite);
+                        } else {
+                            $('#editEcheancierEntite').val(0);
+                        }
+                        
+                        // Fill the tranches - allow editing libellé and dates
+                        var tranchesHtml = '';
+                        if(data.tranches.length > 0) {
+                            $.each(data.tranches, function(index, tranche) {
+                                var dateEcheance = tranche.date_echeancier ? new Date(tranche.date_echeancier).toISOString().split('T')[0] : '';
+                                
+                                tranchesHtml += '<tr class="tranche-row" data-index="' + index + '">';
+                                tranchesHtml += '<td><input type="text" class="form-control tranche-libelle" value="' + tranche.value + '" data-id="' + (tranche.id || '') + '"></td>';
+                                tranchesHtml += '<td>' + parseFloat(tranche.taux) + ' %</td>';
+                                tranchesHtml += '<td>' + parseFloat(tranche.montant_tranche) + ' DZD</td>';
+                                tranchesHtml += '<td><input type="date" class="form-control tranche-date" value="' + dateEcheance + '" data-id="' + (tranche.id || '') + '"></td>';
+                                tranchesHtml += '</tr>';
+                            });
+                        } else {
+                            tranchesHtml += '<tr class="tranche-row"><td colspan="4" class="text-center text-muted py-3">Aucune tranche définie</td></tr>';
+                        }
+                        
+                        $('#editTranchesList').html(tranchesHtml);
+                        
+                        // Show the modal
+                        $('#editEcheancierModal').modal('show');
                     } else {
-                        tranchesHtml += '<tr class="tranche-row"><td colspan="4" class="text-center text-muted py-3">Aucune tranche définie</td></tr>';
+                        alertify.error("Erreur lors du chargement des données de l'échéancier");
                     }
-                    
-                    $('#editTranchesList').html(tranchesHtml);
-                    
-                    // Show the modal
-                    $('#editEcheancierModal').modal('show');
-                } else {
-                    alertify.error("Erreur lors du chargement des données de l'échéancier");
+                },
+                error: function() {
+                    alertify.error("Erreur lors de la communication avec le serveur");
                 }
-            },
-            error: function() {
-                alertify.error("Erreur lors de la communication avec le serveur");
-            }
+            });
         });
     }
     
