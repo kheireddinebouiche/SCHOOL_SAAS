@@ -461,6 +461,88 @@
         const progressBar = document.getElementById('disp-progress-bar');
         const globalObj = parseFloat(document.getElementById('disp-global-obj').dataset.value) || 0;
 
+        window.confirmSubmission = function() {
+            // Validate Quarterly Percentages
+            let invalidRows = false;
+            
+            // Check each row that has a budget amount
+            let rowAmounts = {};
+            document.querySelectorAll('.amount-input').forEach(input => {
+                let val = cleanValue(input.value);
+                if (val > 0) {
+                     let parts = input.name.split('_'); // amount_{poste}_{cat_type}_{cat}_{ent}
+                     let rowKey = `${parts[1]}_${parts[2]}_${parts[3]}`;
+                     rowAmounts[rowKey] = (rowAmounts[rowKey] || 0) + val;
+                }
+            });
+            
+            // Now check their quarterly totals
+            for (let [key, amount] of Object.entries(rowAmounts)) {
+                if (amount > 0) {
+                     // Check total percent
+                     let display = document.getElementById(`t_total_${key}`);
+                     if (display) {
+                         let percent = parseFloat(display.textContent) || 0;
+                         if (Math.abs(percent - 100) > 0.1) {
+                             invalidRows = true;
+                             break;
+                         }
+                     }
+                }
+            }
+            
+            if (invalidRows) {
+                Swal.fire({
+                    title: 'Erreur de validation',
+                    text: "Certaines lignes budgétaires n'ont pas une répartition trimestrielle égale à 100%. Veuillez corriger avant de soumettre.",
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            if (globalObj > 0) {
+                const grandTotal = cleanValue(grandTotalElem.innerHTML);
+                if (Math.abs(grandTotal - globalObj) > 0.01) {
+                    Swal.fire({
+                        title: 'Attention',
+                        text: "Le montant total réparti ne correspond pas à l'objectif global. Voulez-vous quand même soumettre ?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Oui, soumettre',
+                        cancelButtonText: 'Annuler'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            submitForm();
+                        }
+                    });
+                    return;
+                }
+            }
+
+            Swal.fire({
+                title: 'Soumettre pour validation ?',
+                text: "Une fois soumis, vous ne pourrez plus modifier la répartition jusqu'à ce qu'elle soit validée ou rejetée.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmer la soumission',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    submitForm();
+                }
+            });
+        };
+
+        function submitForm() {
+            const formAction = document.getElementById('form-action');
+            const dispatchForm = document.getElementById('dispatch-form');
+            if (formAction && dispatchForm) {
+                formAction.value = 'submit';
+                dispatchForm.submit();
+            }
+        }
+
         function formatCurrency(val) {
             return new Intl.NumberFormat('fr-FR', {
                 minimumFractionDigits: 2,
@@ -676,10 +758,15 @@
             
             // Update Poste Quarterly Totals UI
             for (let [posteId, quarters] of Object.entries(posteQuarterTotals)) {
-                document.getElementById(`total_t1_poste_${posteId}`).textContent = formatCurrency(quarters.t1);
-                document.getElementById(`total_t2_poste_${posteId}`).textContent = formatCurrency(quarters.t2);
-                document.getElementById(`total_t3_poste_${posteId}`).textContent = formatCurrency(quarters.t3);
-                document.getElementById(`total_t4_poste_${posteId}`).textContent = formatCurrency(quarters.t4);
+                let t1 = document.getElementById(`total_t1_poste_${posteId}`);
+                let t2 = document.getElementById(`total_t2_poste_${posteId}`);
+                let t3 = document.getElementById(`total_t3_poste_${posteId}`);
+                let t4 = document.getElementById(`total_t4_poste_${posteId}`);
+                
+                if (t1) t1.textContent = formatCurrency(quarters.t1);
+                if (t2) t2.textContent = formatCurrency(quarters.t2);
+                if (t3) t3.textContent = formatCurrency(quarters.t3);
+                if (t4) t4.textContent = formatCurrency(quarters.t4);
             }
         }
         
@@ -690,85 +777,6 @@
         
         updateQuarterlyTotals(); // Initial run
 
-        window.confirmSubmission = function() {
-            // Validate Quarterly Percentages
-            let invalidRows = false;
-            
-            // Check each row that has a budget amount
-            // We need to know if a row has amount > 0
-            // Let's iterate over rows again
-            let rowAmounts = {};
-            document.querySelectorAll('.amount-input').forEach(input => {
-                let val = cleanValue(input.value);
-                if (val > 0) {
-                     let parts = input.name.split('_'); // amount_{poste}_{cat_type}_{cat}_{ent}
-                     let rowKey = `${parts[1]}_${parts[2]}_${parts[3]}`;
-                     rowAmounts[rowKey] = (rowAmounts[rowKey] || 0) + val;
-                }
-            });
-            
-            // Now check their quarterly totals
-            for (let [key, amount] of Object.entries(rowAmounts)) {
-                if (amount > 0) {
-                     // Check total percent
-                     let display = document.getElementById(`t_total_${key}`);
-                     if (display) {
-                         let percent = parseFloat(display.textContent) || 0;
-                         if (Math.abs(percent - 100) > 0.1) {
-                             invalidRows = true;
-                             break;
-                         }
-                     }
-                }
-            }
-            
-            if (invalidRows) {
-                Swal.fire({
-                    title: 'Erreur de validation',
-                    text: "Certaines lignes budgétaires n'ont pas une répartition trimestrielle égale à 100%. Veuillez corriger avant de soumettre.",
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-
-            if (globalObj > 0) {
-                const grandTotal = cleanValue(grandTotalElem.innerHTML);
-                if (Math.abs(grandTotal - globalObj) > 0.01) {
-                    Swal.fire({
-                        title: 'Attention',
-                        text: "Le montant total réparti ne correspond pas à l'objectif global. Voulez-vous quand même soumettre ?",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Oui, soumettre',
-                        cancelButtonText: 'Annuler'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            submitForm();
-                        }
-                    });
-                    return;
-                }
-            }
-
-            Swal.fire({
-                title: 'Soumettre pour validation ?',
-                text: "Une fois soumis, vous ne pourrez plus modifier la répartition jusqu'à ce qu'elle soit validée ou rejetée.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Confirmer la soumission',
-                cancelButtonText: 'Annuler'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    submitForm();
-                }
-            });
-        };
-
-        function submitForm() {
-            document.getElementById('form-action').value = 'submit';
-            document.getElementById('dispatch-form').submit();
-        }
 
         // Initialize tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

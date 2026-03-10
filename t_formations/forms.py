@@ -4,19 +4,16 @@ from .models import *
 class NewFormationForm(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree','frais_inscription','prix_formation']
+        fields = ['entite_legal','code','nom', 'partenaire','description','type_formation','duree']
 
         widgets = {
             'nom' : forms.TextInput(attrs={'class':'form-control'}),
             'description': forms.Textarea(attrs={'class':'form-control'}),
             'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée totale de la formation stage inclus (en mois)"}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
-            'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'partenaire' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'type_formation' : forms.Select(attrs={'class' : 'form-control'}),
-            'prix_formation' : forms.TextInput(attrs={'class' : 'form-control'}),
         }
 
         labels = {
@@ -25,16 +22,13 @@ class NewFormationForm(forms.ModelForm):
             'duree' : "Durée de la formation",
             'partenaire' : "Partenaire",
             'type_formation' : "Type de formation",
-            'frais_inscription' : "Frais d'inscription",
             'code' : 'Code de la formation',
-            'type_formation' : "Type de formation",
-            'prix_formation' : "Prix de la formation",
         }
         
 class NewFormationFormMaster(forms.ModelForm):
     class Meta:
         model = Formation
-        fields = ['qualification','entite_legal','code','nom', 'description', 'duree','partenaire','type_formation','frais_inscription','prix_formation']
+        fields = ['qualification','entite_legal','code','nom', 'description', 'duree','partenaire','type_formation']
         widgets = {
             'entite_legal' : forms.Select(attrs={'class' : 'form-control'}),
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'formationId'}),
@@ -43,8 +37,6 @@ class NewFormationFormMaster(forms.ModelForm):
             'duree' : forms.TextInput(attrs={'class':'form-control', 'type' : 'number', 'placeholder' : "Durée totale de la formation stage inclus (en mois)"}),
             'partenaire' : forms.Select(attrs={'class':'form-control'}),
             'type_formation': forms.Select(attrs={'class': 'form-control'}),
-            'frais_inscription' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'prix_formation' : forms.TextInput(attrs={'class':'form-control','placeholder' : "EX : 1200,00"}),
             'qualification' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'qualificationId'}),
             
         }
@@ -56,8 +48,6 @@ class NewFormationFormMaster(forms.ModelForm):
             'duree' : "Durée de la formation :",
             'partenaire' : "Partenaire :",
             'type_formation' : "Type de formation :",
-            'frais_inscription' : "Frais d'inscription :",
-            'prix_formation' : "Prix de la formation :",
             'qualification' : "Qualification :",
             'entite_legal' : "Entité légale :"
         }
@@ -126,13 +116,11 @@ class NewPartenaireForm(forms.ModelForm):
 class NewSpecialiteForm(forms.ModelForm):
     class Meta:
         model = Specialites
-        fields = ['abr','code', 'label', 'prix','branche', 'formation','duree','responsable','nb_semestre','version','condition_access','prix_double_diplomation']
+        fields = ['abr','code', 'label', 'branche', 'formation','duree','responsable','nb_semestre','version','condition_access']
 
         widgets = {
             'code' : forms.TextInput(attrs={'class' : 'form-control', 'id' : 'specialiteId'}),
             'label' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'prix' : forms.TextInput(attrs={'class' : 'form-control'}),
-            'prix_double_diplomation' : forms.TextInput(attrs={'class' : 'form-control'}),
             'formation' : forms.Select(attrs={'class' : 'form-control'}),
             'duree' : forms.TextInput(attrs={'class' : 'form-control'}),
             'responsable' : forms.Select(attrs={'class':'form-control'}),
@@ -155,8 +143,6 @@ class NewSpecialiteForm(forms.ModelForm):
             'condition_access' : "Conditions d'accès :",
             'dossier_inscription' : "Dossier d'inscription :",
             'abr' : "Abréviation :",
-            'prix' : "Prix (Prix standard de la formation) :",
-            'prix_double_diplomation' : "Prix de la formation en double diplomation :"
         }
 
         def clean_name(self):

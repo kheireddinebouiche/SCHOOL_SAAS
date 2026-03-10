@@ -221,10 +221,17 @@ def ApiUpdateDoubleDiplomation(request):
                 combinaison.specialite1 = specialite1
                 combinaison.specialite2 = specialite2
                 combinaison.label = label
-                combinaison.prix = montant
-                combinaison.frais_inscription = frais
-                combinaison.prix_spec1 = prixSpec1Modif
-                combinaison.prix_spec2 = prixSpec2Modif
+                
+                # Update pricing only if explicitly provided (preserved for now, but hidden in UI)
+                if montant:
+                    combinaison.prix = montant
+                if frais:
+                    combinaison.frais_inscription = frais
+                if prixSpec1Modif:
+                    combinaison.prix_spec1 = prixSpec1Modif
+                if prixSpec2Modif:
+                    combinaison.prix_spec2 = prixSpec2Modif
+                
                 # Note: We don't update description in the model since it's not in the model yet
                 combinaison.save()
 

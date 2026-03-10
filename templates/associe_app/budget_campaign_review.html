@@ -81,7 +81,7 @@
     .badge-depense { background-color: #fee2e2; color: #991b1b; }
     .badge-recette { background-color: #d1fae5; color: #065f46; }
 
-    /* Category Rows */
+    /* Categories */
     .category-row td {
         padding: 8px 16px !important;
         border-bottom: 1px solid #f1f5f9;
@@ -148,10 +148,31 @@
     .poste-total-display {
         font-weight: 600;
         color: var(--muted-text);
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .grand-total-display {
         font-weight: 700;
+        color: var(--dark-text);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .q-amount {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: var(--muted-text);
+        display: block;
+        margin-top: 2px;
+    }
+
+    .parent-total {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+    }
+
+    .parent-q-total {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
         color: var(--dark-text);
     }
 </style>
@@ -240,7 +261,7 @@
                                         <span class="fs-14 fw-bold text-primary">{{ percent_dispatched|floatformat:1 }}%</span>
                                     </div>
                                     <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ percent_dispatched }}%"></div>
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ percent_dispatched|default:0 }}%;"></div>
                                     </div>
                                 </div>
                             </div>
@@ -273,9 +294,6 @@
                 <div class="card modern-card">
                     <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0 fs-15 fw-bold">Détail de la Répartition & Prévisions Trimestrielles (%)</h5>
-                        <button type="submit" class="btn btn-sm btn-primary shadow-sm">
-                            <i class="ri-save-line me-1"></i> Enregistrer les prévisions
-                        </button>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -284,7 +302,6 @@
                                     <tr>
                                         <th class="sticky-col matrix-header" style="min-width: 280px;">Poste & Catégorie</th>
                                         <th class="text-end matrix-header" style="min-width: 180px;">Montant Global</th>
-                                        <th class="text-end matrix-header bg-light" style="min-width: 140px;">Total</th>
                                         <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T1%</th>
                                         <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T2%</th>
                                         <th class="text-center matrix-header" style="min-width: 80px; width: 80px;">T3%</th>
@@ -293,104 +310,96 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for poste in postes %}
-                                    <!-- Poste Quote-part Header -->
+                                    {% for group in structured_postes %}
+                                    
+                                    <!-- Parent Poste Header -->
+                                    {% if not group.is_standalone %}
+                                    <tr class="poste-parent-row" style="background-color: #f1f5f9; border-top: 2px solid #e2e8f0;">
+                                        <td class="sticky-col p-3 border-bottom-0" style="background-color: #f1f5f9 !important; border-left: 4px solid #3b82f6;">
+                                            <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
+                                                <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
+                                                {{ group.parent_poste.label }}
+                                                <span class="badge bg-white text-dark border ms-2 fw-normal" style="font-size: 10px;">{{ group.parent_poste.get_type_display }}</span>
+                                            </h6>
+                                        </td>
+                                        <td class="text-end fw-bold bg-light border-start">
+                                            <span class="parent-total text-dark" id="parent_total_{{ group.parent_poste.id }}">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center bg-light">
+                                            <span class="parent-q-total" id="parent_amt_t1_{{ group.parent_poste.id }}">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center bg-light">
+                                            <span class="parent-q-total" id="parent_amt_t2_{{ group.parent_poste.id }}">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center bg-light">
+                                            <span class="parent-q-total" id="parent_amt_t3_{{ group.parent_poste.id }}">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center bg-light">
+                                            <span class="parent-q-total" id="parent_amt_t4_{{ group.parent_poste.id }}">0,00</span>
+                                        </td>
+                                        <td class="bg-light border-start"></td>
+                                    </tr>
+                                    {% endif %}
+
+                                    {% for poste in group.display_postes %}
+                                    <!-- Poste Row -->
                                     <tr class="poste-row">
-                                        <td class="sticky-col" style="background-color: #f8fafc !important;">
+                                        <td class="sticky-col" style="background-color: #f8fafc !important; {% if not group.is_standalone %}padding-left: 2.5rem !important; border-left: 4px solid #94a3b8;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
                                             <div class="d-flex align-items-center justify-content-between">
-                                                <span class="poste-label">{{ poste.label }}</span>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="poste-label">{{ poste.label }}</span>
+                                                    {% if poste.type == 'recette' and poste.payment_categories.all %}
+                                                        <i class="ri-information-fill text-muted ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Canaux : {% for cat in poste.payment_categories.all %}{{ cat.name }}{% if not forloop.last %}, {% endif %}{% endfor %}" style="cursor: help; font-size: 14px;"></i>
+                                                    {% elif poste.type == 'depense' and poste.depense_categories.all %}
+                                                        <i class="ri-information-fill text-muted ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Canaux : {% for cat in poste.depense_categories.all %}{{ cat.name }}{% if not forloop.last %}, {% endif %}{% endfor %}" style="cursor: help; font-size: 14px;"></i>
+                                                    {% endif %}
+                                                </div>
+                                                {% if group.is_standalone %}
                                                 <span class="poste-type-badge {% if poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
                                                     {{ poste.get_type_display }}
                                                 </span>
+                                                {% endif %}
                                             </div>
                                         </td>
                                         <td class="text-end">
-                                            <span class="poste-total-display" id="total_poste_{{ poste.id }}_0">0,00</span>
+                                            {% get_allocation allocations poste.id 'none' 0 0 as detail %}
+                                            <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
+                                                <span class="amount-value fw-bold d-block mb-1" 
+                                                      data-poste="{{ poste.id }}" 
+                                                      data-ent="0" 
+                                                      data-cat="0"
+                                                      data-val="{{ detail.montant|default:0 }}">
+                                                      {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td class="text-end bg-light border-start">
-                                            <span class="grand-total-display" id="grand_total_poste_{{ poste.id }}">0,00</span>
+                                        
+                                        <!-- Quarterly Percentages -->
+                                        {% with pid=poste.id|stringformat:"i" %}
+                                        {% with row_key=pid|add:"_None" %}
+                                        {% get_dict_value row_quarters row_key as quarters %}
+                                        
+                                        <td class="p-1 text-center">
+                                            <input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 mb-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_none_0" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1">
+                                            <span class="q-amount" id="amt_t1_{{ poste.id }}_none_0">0,00</span>
                                         </td>
-                                        <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t1_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
-                                        <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t2_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
-                                        <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t3_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
-                                        <td class="text-end bg-light border-start"><span class="poste-total-display" id="total_t4_poste_{{ poste.id }}" style="font-size: 0.75rem;">0,00</span></td>
-                                        <td class="bg-light"></td>
+                                        <td class="p-1 text-center">
+                                            <input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 mb-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_none_0" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2">
+                                            <span class="q-amount" id="amt_t2_{{ poste.id }}_none_0">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center">
+                                            <input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 mb-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_none_0" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3">
+                                            <span class="q-amount" id="amt_t3_{{ poste.id }}_none_0">0,00</span>
+                                        </td>
+                                        <td class="p-1 text-center">
+                                            <input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 mb-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_none_0" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4">
+                                            <span class="q-amount" id="amt_t4_{{ poste.id }}_none_0">0,00</span>
+                                        </td>
+                                        <td class="text-center fw-bold text-muted ps-1 pe-2 border-start bg-light" id="t_total_{{ poste.id }}_none_0" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
+                                        {% endwith %}
+                                        {% endwith %}
                                     </tr>
-
-                                    <!-- Categories -->
-                                    {% if poste.type == 'recette' %}
-                                        {% for cat in poste.payment_categories.all %}
-                                        <tr class="category-row">
-                                            <td class="sticky-col ps-4">
-                                                <div class="category-label">{{ cat.name }}</div>
-                                            </td>
-                                            <td class="text-end">
-                                                {% get_allocation allocations poste.id 'pay' cat.id 0 as detail %}
-                                                <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
-                                                    <span class="amount-value fw-bold d-block mb-1" 
-                                                          data-poste="{{ poste.id }}" 
-                                                          data-ent="0" 
-                                                          data-cat="{{ cat.id }}"
-                                                          data-val="{{ detail.montant|default:0 }}">
-                                                          {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td class="text-end bg-light border-start">
-                                                <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
-                                            </td>
-                                            
-                                            <!-- Quarterly Percentages -->
-                                            {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
-                                            {% with row_key=pid|add:"_"|add:cid %}
-                                            {% get_dict_value row_quarters row_key as quarters %}
-                                            
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4"></td>
-                                            <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
-                                            {% endwith %}
-                                            {% endwith %}
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        {% for cat in poste.depense_categories.all %}
-                                        <tr class="category-row">
-                                            <td class="sticky-col ps-4">
-                                                <div class="category-label">{{ cat.name }}</div>
-                                            </td>
-                                            <td class="text-end">
-                                                {% get_allocation allocations poste.id 'dep' cat.id 0 as detail %}
-                                                <div class="value-cell {% if not detail or detail.montant == 0 %}value-zero{% endif %}">
-                                                    <span class="amount-value fw-bold d-block mb-1" 
-                                                          data-poste="{{ poste.id }}" 
-                                                          data-ent="0" 
-                                                          data-cat="{{ cat.id }}"
-                                                          data-val="{{ detail.montant|default:0 }}">
-                                                          {% if detail and detail.montant > 0 %}{{ detail.montant|floatformat:2|intcomma }}{% else %}-{% endif %}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td class="text-end bg-light border-start">
-                                                <span class="total-cell" id="row_total_{{ poste.id }}_{{ cat.id }}">0,00</span>
-                                            </td>
-                                            
-                                            <!-- Quarterly Percentages -->
-                                            {% with pid=poste.id|stringformat:"i" cid=cat.id|stringformat:"i" %}
-                                            {% with row_key=pid|add:"_"|add:cid %}
-                                            {% get_dict_value row_quarters row_key as quarters %}
-                                            
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t1_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t1|default:0|floatformat:0 }}" placeholder="T1"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t2_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t2|default:0|floatformat:0 }}" placeholder="T2"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t3_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t3|default:0|floatformat:0 }}" placeholder="T3"></td>
-                                            <td class="p-1"><input type="number" step="0.01" min="0" max="100" class="form-control text-center p-1 quarterly-input" style="font-size: 0.75rem;" name="t4_{{ poste.id }}_{{ cat.id }}" value="{{ quarters.t4|default:0|floatformat:0 }}" placeholder="T4"></td>
-                                            <td class="text-center fw-bold text-muted ps-1 pe-2" id="t_total_{{ poste.id }}_{{ cat.id }}" style="vertical-align: middle; font-size: 0.8rem;">0%</td>
-                                            {% endwith %}
-                                            {% endwith %}
-                                        </tr>
-                                        {% endfor %}
-                                    {% endif %}
+                                    {% endfor %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -468,84 +477,55 @@
         };
 
         const calculateTotals = () => {
-            let posteTotals = {};
-            let posteGrandTotals = {};
-            let rowAmounts = {}; // Key: "poste_cat", Value: Total Amount for row
+            let rowAmounts = {}; // Key: "posteId", Value: Total Amount for row
+            let globalTotal = 0;
             
-            // Iterate over all value cells
+            // Iterate over all value cells (one per poste row now)
             document.querySelectorAll('.amount-value').forEach(span => {
                 let val = cleanValue(span.dataset.val);
                 let posteId = span.dataset.poste;
-                let entId = span.dataset.ent;
                 
-                // Poste-Enterprise Total
-                let peKey = `${posteId}_${entId}`;
-                posteTotals[peKey] = (posteTotals[peKey] || 0) + val;
-                
-                // Poste Grand Total
-                posteGrandTotals[posteId] = (posteGrandTotals[posteId] || 0) + val;
-                
-                // Row Total Detection (we don't have inputs here, but spans)
-                // We need to identify the row. The span is inside a td inside a tr.
-                
-                let row = span.closest('tr');
-                let input = row.querySelector('input[name^="t1_"]');
-                if (input) {
-                    let parts = input.name.split('_');
-                    let catId = parts[2];
-                    let rowKey = `${posteId}_${catId}`;
-                    rowAmounts[rowKey] = (rowAmounts[rowKey] || 0) + val;
-                }
+                rowAmounts[posteId] = val;
+                globalTotal += val;
             });
             
-            // Update UI
-            for (let [key, val] of Object.entries(posteTotals)) {
-                let display = document.getElementById(`total_poste_${key}`);
-                if (display) display.textContent = formatCurrency(val);
-            }
+            // Update Grand Total Footer
+            const grandTotalDisplay = document.getElementById('grand-total-display');
+            if (grandTotalDisplay) grandTotalDisplay.textContent = formatCurrency(globalTotal);
             
-            for (let [pid, val] of Object.entries(posteGrandTotals)) {
-                let display = document.getElementById(`grand_total_poste_${pid}`);
-                if (display) display.innerText = formatCurrency(val);
-            }
-            
-            // Row totals (Category totals)
-            for (let [key, val] of Object.entries(rowAmounts)) {
-                let display = document.getElementById(`row_total_${key}`);
-                if (display) display.textContent = formatCurrency(val);
-            }
-            
-            // Return rowAmounts for use in quarterly calculation
             return rowAmounts; 
         };
 
         const quarterlyInputs = document.querySelectorAll('.quarterly-input');
         
-        function updateQuarterlyTotals() {
-             // We need row amounts to calculate monetary quarterly totals
-            let rowAmounts = calculateTotals(); // This refreshes standard totals and returns map
-            
-            // Group by row (poste_cat) for percentage totals
+        const updateQuarterlyTotals = () => {
+            let rowAmounts = calculateTotals();
             let rowPercentTotals = {};
-            
-            // Group by Poste for monetary totals per quarter
-            let posteQuarterTotals = {}; // { posteId: {t1: 0, t2: 0, t3: 0, t4: 0} }
+            let posteQuarterTotals = {}; 
+            let parentGrandTotals = {};
+            let parentQuarterTotals = {};
 
+            // Group by poste for percentage and monetary totals
             quarterlyInputs.forEach(input => {
-                let parts = input.name.split('_'); // tN_{poste}_{cat}
+                let parts = input.name.split('_'); // tN_{poste}_none_0
                 let quarter = parts[0]; // t1, t2, t3, t4
                 let posteId = parts[1];
-                let catId = parts[2];
-                let rowKey = `${posteId}_${catId}`;
+                let rowKey = posteId; 
                 let percentVal = parseFloat(input.value) || 0;
                 
                 // 1. Percentage Check per Row
                 rowPercentTotals[rowKey] = (rowPercentTotals[rowKey] || 0) + percentVal;
 
-                // 2. Monetary Calculation per Quarter per Poste
+                // 2. Monetary Calculation per Quarter per Row
                 let rowTotalAmount = rowAmounts[rowKey] || 0;
                 let quarterAmount = rowTotalAmount * (percentVal / 100);
                 
+                // Update Row Quarterly Monetary Display
+                // ID in template: amt_t1_{{ poste.id }}_none_0
+                let amtDisplay = document.getElementById(`amt_${quarter}_${posteId}_none_0`);
+                if (amtDisplay) amtDisplay.textContent = formatCurrency(quarterAmount);
+
+                // 3. Aggregate for parent totals (poste and row are same here)
                 if (!posteQuarterTotals[posteId]) {
                     posteQuarterTotals[posteId] = {t1: 0, t2: 0, t3: 0, t4: 0};
                 }
@@ -553,33 +533,67 @@
             });
             
             // Update Row Percentage UI
-            for (let [key, total] of Object.entries(rowPercentTotals)) {
-                let display = document.getElementById(`t_total_${key}`);
+            for (let [posteId, total] of Object.entries(rowPercentTotals)) {
+                let display = document.getElementById(`t_total_${posteId}_none_0`);
                 if (display) {
                     display.textContent = Math.round(total) + '%';
-                    
-                    if ((rowAmounts[key] || 0) > 0) {
-                         if (Math.abs(total - 100) < 0.1) {
-                            display.className = 'text-center fw-bold text-success ps-1 pe-2';
-                        } else {
-                            display.className = 'text-center fw-bold text-danger ps-1 pe-2';
-                        }
+                    if ((rowAmounts[posteId] || 0) > 0) {
+                        display.className = Math.abs(total - 100) < 0.1 ? 'text-center fw-bold text-success border-start bg-light ps-1 pe-2' : 'text-center fw-bold text-danger border-start bg-light ps-1 pe-2';
                     } else {
-                         if (total === 0) display.className = 'text-center fw-bold text-muted ps-1 pe-2';
-                         else if (Math.abs(total - 100) < 0.1) display.className = 'text-center fw-bold text-success opacity-50 ps-1 pe-2';
-                         else display.className = 'text-center fw-bold text-warning ps-1 pe-2';
+                        display.className = 'text-center fw-bold text-muted border-start bg-light ps-1 pe-2';
                     }
                 }
             }
             
-            // Update Poste Quarterly Totals UI
-            for (let [posteId, quarters] of Object.entries(posteQuarterTotals)) {
-                document.getElementById(`total_t1_poste_${posteId}`).textContent = formatCurrency(quarters.t1);
-                document.getElementById(`total_t2_poste_${posteId}`).textContent = formatCurrency(quarters.t2);
-                document.getElementById(`total_t3_poste_${posteId}`).textContent = formatCurrency(quarters.t3);
-                document.getElementById(`total_t4_poste_${posteId}`).textContent = formatCurrency(quarters.t4);
+            // Aggregate Poste Totals into Parent Totals
+            document.querySelectorAll('.poste-row').forEach(row => {
+                let amountSpan = row.querySelector('.amount-value');
+                if (!amountSpan) return;
+                
+                let posteId = amountSpan.dataset.poste;
+                let posteVal = cleanValue(amountSpan.dataset.val);
+                
+                // Find nearest preceding parent row
+                let parentRow = null;
+                let prev = row.previousElementSibling;
+                while (prev) {
+                    if (prev.classList.contains('poste-parent-row')) {
+                        parentRow = prev;
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+                
+                if (parentRow) {
+                    let parentId = parentRow.querySelector('[id^="parent_total_"]').id.replace('parent_total_', '');
+                    
+                    // Add to parent grand total
+                    parentGrandTotals[parentId] = (parentGrandTotals[parentId] || 0) + posteVal;
+                    
+                    // Add to parent quarterly totals
+                    if (!parentQuarterTotals[parentId]) parentQuarterTotals[parentId] = {t1: 0, t2: 0, t3: 0, t4: 0};
+                    let qts = posteQuarterTotals[posteId] || {t1: 0, t2: 0, t3: 0, t4: 0};
+                    parentQuarterTotals[parentId].t1 += qts.t1;
+                    parentQuarterTotals[parentId].t2 += qts.t2;
+                    parentQuarterTotals[parentId].t3 += qts.t3;
+                    parentQuarterTotals[parentId].t4 += qts.t4;
+                }
+            });
+
+            // Update Parent Totals UI
+            for (let [parentId, total] of Object.entries(parentGrandTotals)) {
+                let display = document.getElementById(`parent_total_${parentId}`);
+                if (display) display.textContent = formatCurrency(total);
+                
+                let qts = parentQuarterTotals[parentId];
+                if (qts) {
+                    document.getElementById(`parent_amt_t1_${parentId}`).textContent = formatCurrency(qts.t1);
+                    document.getElementById(`parent_amt_t2_${parentId}`).textContent = formatCurrency(qts.t2);
+                    document.getElementById(`parent_amt_t3_${parentId}`).textContent = formatCurrency(qts.t3);
+                    document.getElementById(`parent_amt_t4_${parentId}`).textContent = formatCurrency(qts.t4);
+                }
             }
-        }
+        };
 
         quarterlyInputs.forEach(input => {
             input.addEventListener('input', updateQuarterlyTotals);

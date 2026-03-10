@@ -1386,7 +1386,7 @@ def request_extension(request, campaign_id):
             messages.warning(request, "Vous avez déjà une demande de rallonge en attente. Veuillez patienter.")
             return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
 
-        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('type', 'label')
+        all_postes = PostesBudgetaire.objects.filter(type='depense').prefetch_related('payment_categories', 'depense_categories').order_by('label')
         
         structured_postes = []
         for p in all_postes:

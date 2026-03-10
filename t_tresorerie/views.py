@@ -838,3 +838,93 @@ def ApiGetEntite(request):
     else:
         return JsonResponse({"status":"error","message":"methode non autoriser"})
 
+@login_required(login_url="institut_app:login")
+def ApiListeFormationsPrices(request):
+    from t_formations.models import Formation
+    formations = Formation.objects.all().values('id', 'nom', 'code', 'frais_inscription', 'prix_formation')
+    return JsonResponse(list(formations), safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateFormationPrice(request):
+    from t_formations.models import Formation
+    if request.method == "POST":
+        id = request.POST.get('id')
+        frais = request.POST.get('frais_inscription')
+        prix = request.POST.get('prix_formation')
+        
+        try:
+            obj = Formation.objects.get(id=id)
+            if frais is not None:
+                obj.frais_inscription = frais
+            if prix is not None:
+                obj.prix_formation = prix
+            obj.save()
+            return JsonResponse({'status': 'success', 'message': 'Prix mis à jour avec succès'})
+        except Formation.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Formation non trouvée'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+def ApiListeSpecialitesPrices(request):
+    from t_formations.models import Specialites
+    specialites = Specialites.objects.all().values('id', 'label', 'code', 'prix', 'prix_double_diplomation', 'formation__nom')
+    return JsonResponse(list(specialites), safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateSpecialitePrice(request):
+    from t_formations.models import Specialites
+    if request.method == "POST":
+        id = request.POST.get('id')
+        prix = request.POST.get('prix')
+        prix_double = request.POST.get('prix_double_diplomation')
+        
+        try:
+            obj = Specialites.objects.get(id=id)
+            if prix is not None:
+                obj.prix = prix
+            if prix_double is not None:
+                obj.prix_double_diplomation = prix_double
+            obj.save()
+            return JsonResponse({'status': 'success', 'message': 'Prix mis à jour avec succès'})
+        except Specialites.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Spécialité non trouvée'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+def ApiListeDoubleDiplomationPrices(request):
+    from t_formations.models import DoubleDiplomation
+    combinaisons = DoubleDiplomation.objects.all().values(
+        'id', 'label', 'prix', 'frais_inscription', 'prix_spec1', 'prix_spec2',
+        'specialite1__label', 'specialite2__label'
+    )
+    return JsonResponse(list(combinaisons), safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateDoubleDiplomationPrice(request):
+    from t_formations.models import DoubleDiplomation
+    if request.method == "POST":
+        id = request.POST.get('id')
+        prix = request.POST.get('prix')
+        frais = request.POST.get('frais_inscription')
+        prix1 = request.POST.get('prix_spec1')
+        prix2 = request.POST.get('prix_spec2')
+        
+        try:
+            obj = DoubleDiplomation.objects.get(id=id)
+            if prix is not None:
+                obj.prix = prix
+            if frais is not None:
+                obj.frais_inscription = frais
+            if prix1 is not None:
+                obj.prix_spec1 = prix1
+            if prix2 is not None:
+                obj.prix_spec2 = prix2
+            obj.save()
+            return JsonResponse({'status': 'success', 'message': 'Prix mis à jour avec succès'})
+        except DoubleDiplomation.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Combinaison non trouvée'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+

@@ -255,4 +255,11 @@ urlpatterns = [
     path('api/list-recouvrement-paiements/', ApiListRecouvrementPaiements, name='ApiListRecouvrementPaiements'),
     path('api/recouvrement-stats/', ApiRecouvrementStats, name='ApiRecouvrementStats'),
     path('payment-types/', payment_type_list, name='payment_type_list'),
+
+    path('api/liste-formations-prices/', ApiListeFormationsPrices, name="ApiListeFormationsPrices"),
+    path('api/update-formation-price/', ApiUpdateFormationPrice, name="ApiUpdateFormationPrice"),
+    path('api/liste-specialites-prices/', ApiListeSpecialitesPrices, name="ApiListeSpecialitesPrices"),
+    path('api/update-specialite-price/', ApiUpdateSpecialitePrice, name="ApiUpdateSpecialitePrice"),
+    path('api/liste-double-diplomation-prices/', ApiListeDoubleDiplomationPrices, name="ApiListeDoubleDiplomationPrices"),
+    path('api/update-double-diplomation-price/', ApiUpdateDoubleDiplomationPrice, name="ApiUpdateDoubleDiplomationPrice"),
 ]

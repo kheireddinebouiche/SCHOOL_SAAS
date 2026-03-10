@@ -873,38 +873,48 @@ def budget_campaign_review(request, campaign_id, institut_id):
     # Restriction: Admin cannot see details until submitted
     is_visible_to_admin = budget_line.statut in ['submitted', 'validated', 'rejected']
     
-    postes = []
-    details = []
-    allocations = {}
-    row_quarters = {}
+    details = BudgetLineDetail.objects.none()
+    structured_postes = []
     total_dispatched = 0
     entreprises = []
+    row_quarters = {}
+    allocations = {}
 
     if is_visible_to_admin:
         # 1. Global Items (Public)
-        postes = PostesBudgetaire.objects.prefetch_related('payment_categories').order_by('type', 'label')
-        # Map: {poste_id}_{cat_type}_{cat_id}_0 -> BudgetLineDetail
+        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('type', 'label')
+        
+        structured_postes = []
+        for p in all_postes:
+            if p.parent is None:
+                children = [child for child in all_postes if child.parent_id == p.id]
+                display_postes = []
+                # If parent has direct categories or no children, add it to display
+                if p.payment_categories.exists() or p.depense_categories.exists() or not children:
+                    display_postes.append(p)
+                display_postes.extend(children)
+                
+                structured_postes.append({
+                    'parent_poste': p,
+                    'is_standalone': not children,
+                    'display_postes': display_postes
+                })
+
+        details = BudgetLineDetail.objects.filter(campaign=campaign, institut=institut)
+        # Map: {poste_id}_none_0_0 -> BudgetLineDetail (Aggregated)
         allocations = {}
         for d in details:
-            c_type = 'none'
-            c_id = 0
-            if d.payment_category_id:
-                c_type = 'pay'
-                c_id = d.payment_category_id
-            elif d.depense_category_id:
-                c_type = 'dep'
-                c_id = d.depense_category_id
-            
-            # Key format: {poste_id}_{cat_type}_{cat_id}_{ent_id}
-            # Since we simplified to global, we map everything to ent_id=0 for display
-            key = f"{d.poste_id}_{c_type}_{c_id}_0"
+            # Aggregate everything at the poste level to match dispatch view
+            key = f"{d.poste_id}_none_0_0"
             
             if key not in allocations:
-                allocations[key] = d
+                # We need a copy because we might modify montant
+                import copy
+                allocations[key] = copy.copy(d)
+                # Ensure the copy reflects 'none' category for display logic match
+                allocations[key].payment_category_id = None
+                allocations[key].depense_category_id = None
             else:
-                # If there were multiple entries, we sum them for the global view
-                # Note: BudgetLineDetail object won't be perfectly representative if summed, 
-                # but for 'montant' display it works.
                 allocations[key].montant += d.montant
         
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
@@ -922,10 +932,10 @@ def budget_campaign_review(request, campaign_id, institut_id):
             # Input format: tX_POSTE_CAT
             updated_details = []
             
-            # Create a map of existing details for quick lookup: (poste_id, cat_id) -> list of details
+            # Create a map of existing details for quick lookup: (poste_id, pay_cat_id, dep_cat_id) -> list of details
             details_map = {}
             for d in details:
-                key = (d.poste_id, d.payment_category_id)
+                key = (d.poste_id, d.payment_category_id, d.depense_category_id)
                 if key not in details_map:
                     details_map[key] = []
                 details_map[key].append(d)
@@ -944,11 +954,21 @@ def budget_campaign_review(request, campaign_id, institut_id):
                             val = float(value.replace(',', '.')) if value else 0.0
                             val = min(max(val, 0), 100) # Clamp 0-100
                             
-                            real_cat_id = int(cat_id_str) if cat_id_str != 'None' and cat_id_str != '' else None
+                            real_cat_id = int(cat_id_str) if cat_id_str.lower() != 'none' and cat_id_str != '' else None
                             
                             # Update ALL details for this row (Poste + Category)
-                            # We want to apply the percentage to all entreprises in this row
-                            row_details = details_map.get((int(poste_id), real_cat_id), [])
+                            # In this simplified view, we check both payment and depense categories
+                            row_details = []
+                            if real_cat_id:
+                                # Try both payment and depense since we don't know the type from the key alone here
+                                row_details.extend(details_map.get((int(poste_id), real_cat_id, None), []))
+                                row_details.extend(details_map.get((int(poste_id), None, real_cat_id), []))
+                            else:
+                                # Get ALL details for this poste, regardless of category
+                                # because 'none' means all categories for this poste in the single-row UI
+                                for d_key, d_list in details_map.items():
+                                    if d_key[0] == int(poste_id):
+                                        row_details.extend(d_list)
                             
                             for detail in row_details:
                                 if quarter == 't1': detail.t1_percent = val
@@ -986,15 +1006,13 @@ def budget_campaign_review(request, campaign_id, institut_id):
         budget_line.save()
         return redirect('budget_campaign_instituts', campaign_id=campaign.id)
 
-    # Prepare row_quarters for template
+    # Prepare row_quarters for template (Collective for all categories of a poste)
     if is_visible_to_admin:
         for d in details:
-            # Key: "poste_id_cat_id" (string for template)
-            cat_key = d.payment_category_id if d.payment_category_id else 'None'
-            row_key = f"{d.poste_id}_{cat_key}"
+            # Key: "poste_id_None" (to match template with row_key=pid|add:"_None")
+            row_key = f"{d.poste_id}_None"
             
-            # We assume all details in the same row have the same percentages
-            # So we just take the first one we see
+            # We assume all details for the same poste have the same percentages
             if row_key not in row_quarters:
                 row_quarters[row_key] = {
                     't1': d.t1_percent,
@@ -1007,7 +1025,7 @@ def budget_campaign_review(request, campaign_id, institut_id):
         'campaign': campaign,
         'institut': institut,
         'budget_line': budget_line,
-        'postes': postes,
+        'structured_postes': structured_postes,
         'entreprises': entreprises,
         'allocations': allocations,
         'total_dispatched': total_dispatched,
