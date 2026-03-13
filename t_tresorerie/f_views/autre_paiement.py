@@ -25,7 +25,7 @@ def PageNouveauAutrePaiement(request):
 def ApiListeAutresPaiements(request):
     if request.method == "GET":
         entite_id = request.GET.get('entite_id')
-        paiements = AutreProduit.objects.all().select_related('client', 'compte').order_by('-date_paiement')
+        paiements = AutreProduit.objects.all().select_related('client', 'payment_type').order_by('-date_paiement')
         
         if entite_id:
             paiements = paiements.filter(entite_id=entite_id)
@@ -40,7 +40,7 @@ def ApiListeAutresPaiements(request):
                 'description': p.label,
                 'num': p.num if p.num else f"AUT-{p.id}",  # Use p.num here!
                 'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
-                'context': p.compte.name if p.compte else "Autre",
+                'context': p.payment_type.name if p.payment_type else "Autre",
                 'context_key': 'autre',
                 'mode_paiement': p.get_mode_paiement_display(),
                 'date_operation': p.date_operation.strftime('%Y-%m-%d') if p.date_operation else "-",

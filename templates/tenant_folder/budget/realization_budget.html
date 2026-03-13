@@ -1,0 +1,931 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% load humanize %}
+{% load budget_tags %}
+
+{% block title %}Suivi de Réalisation - {{ campaign.name }} | {{ tenant.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --info-color: #3b82f6;
+        --light-bg: #f8fafc;
+        --dark-text: #1e293b;
+        --muted-text: #64748b;
+        --border-color: #e2e8f0;
+    }
+
+    .modern-card {
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .matrix-table {
+        font-size: 0.85rem;
+    }
+
+    .matrix-header {
+        background-color: #f1f5f9 !important;
+        font-weight: 600 !important;
+        color: var(--dark-text) !important;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--border-color) !important;
+        vertical-align: middle !important;
+        padding: 12px 16px !important;
+    }
+
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: white !important;
+        z-index: 10;
+        border-right: 1px solid var(--border-color) !important;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+    }
+
+    /* Poste Rows */
+    .poste-row {
+        background-color: #f8fafc;
+    }
+    
+    .poste-row td {
+         border-top: 1px solid var(--border-color);
+         border-bottom: 1px solid var(--border-color);
+         padding: 12px 16px !important;
+         vertical-align: middle;
+    }
+
+    .poste-label {
+        font-weight: 600;
+        color: var(--dark-text);
+        font-size: 0.9rem;
+    }
+
+    .poste-type-badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-depense { background-color: #fee2e2; color: #991b1b; }
+    .badge-recette { background-color: #d1fae5; color: #065f46; }
+
+    /* Values */
+    .val-prevu {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--muted-text);
+        font-weight: 500;
+    }
+    
+    .val-realise {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--dark-text);
+        font-weight: 700;
+    }
+    
+    .val-ecart {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    
+    .ecart-pos { color: var(--success-color); }
+    .ecart-neg { color: var(--danger-color); }
+
+    /* Totals */
+    .footer-total {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 800;
+        color: var(--dark-text);
+        font-size: 0.95rem;
+    }
+
+    /* Column spacing logic */
+    .table-responsive {
+        max-height: 70vh;
+    }
+    
+    /* Premium Look & Feel Foundations */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .matrix-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .matrix-header {
+        background: #f8fafc !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.05em;
+        padding: 12px 8px !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+    }
+
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: white !important;
+        z-index: 10;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.03);
+    }
+
+    /* Premium Tooltip Styling */
+    .premium-tooltip .tooltip-inner {
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 280px;
+        text-align: left;
+    }
+    
+    .premium-tooltip .tooltip-arrow::before {
+        border-top-color: rgba(15, 23, 42, 0.95);
+    }
+
+    .tooltip-header {
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #94a3b8;
+    }
+
+    .channel-tag {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        margin: 2px;
+        color: #e2e8f0;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Premium Header Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3 text-primary">
+                                <i class="ri-line-chart-fill fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Matrice de Réalisation Budgétaire</h4>
+                                <p class="text-muted mb-0">Suivi des réalisations et écarts par rapport aux prévisions</p>
+                            </div>
+                            
+                            <!-- Global Objective in Header (Red Zone) -->
+                            <div class="ms-5 ps-5 border-start border-2 border-primary border-opacity-25 d-none d-lg-block">
+                                <p class="text-uppercase fw-bold text-primary mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Objectif Recettes Annuel</p>
+                                <h3 class="fw-black mb-0 text-dark d-flex align-items-center">
+                                    {{ global_objective.montant|intcomma }} <span class="ms-1 text-muted fw-normal fs-5">DA</span>
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0 text-end">
+                            <nav aria-label="breadcrumb" class="mb-2">
+                                <ol class="breadcrumb m-0 justify-content-sm-end">
+                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:my_budget_campaigns' %}">Mes Campagnes</a></li>
+                                    <li class="breadcrumb-item active">Suivi Réalisation</li>
+                                </ol>
+                            </nav>
+                            <div class="d-flex gap-2 justify-content-sm-end">
+                                {% if approved_extensions %}
+                                <button type="button" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm position-relative" data-bs-toggle="modal" data-bs-target="#rallongesModal">
+                                    <i class="ri-exchange-dollar-line me-1"></i> Rallonges
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">{{ approved_extensions|length }}</span>
+                                </button>
+                                {% endif %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
+                                    <i class="ri-calendar-event-line me-1"></i> {{ campaign.name }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="row align-items-center">
+                            <!-- Card 1: Recettes -->
+                            <div class="col-md-4 border-end position-relative group-hover">
+                                <div class="d-flex align-items-center mb-4">
+                                    <div class="bg-success bg-gradient bg-opacity-10 rounded-3 p-2 me-3 shadow-sm">
+                                        <i class="ri-arrow-right-up-line text-success fs-4"></i>
+                                    </div>
+                                    <p class="text-secondary mb-0 fs-12 text-uppercase fw-bold letter-spacing-1">Objectifs Recettes</p>
+                                </div>
+                                <div class="row align-items-center position-relative">
+                                    <div class="col-5">
+                                        <p class="mb-1 fs-11 text-muted text-uppercase fw-semibold letter-spacing-05">Prévu</p>
+                                        <h3 class="fw-bold mb-0 text-dark opacity-75 fs-5">
+                                            {{ total_dispatched_recette|intcomma }} <small class="text-muted fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                    <!-- Progress Connector -->
+                                    <div class="col-2 d-flex justify-content-center align-items-center px-0">
+                                        <div class="w-100 bg-success bg-opacity-25 rounded-pill overflow-hidden" style="height: 6px;">
+                                            <div class="bg-success h-100" style="width: {{ percent_realized_recette|floatformat:0 }}%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-5 text-end">
+                                        <div class="d-flex justify-content-end align-items-center mb-1">
+                                            <p class="mb-0 fs-11 text-success text-uppercase fw-bold letter-spacing-05 me-2">Réalisé</p>
+                                            <span class="badge bg-success-subtle text-success fs-10 px-2 py-1 rounded-pill">{{ percent_realized_recette|floatformat:1 }}%</span>
+                                        </div>
+                                        <h3 class="fw-black mb-0 text-success fs-4">
+                                            {{ total_realized_recette|intcomma }} <small class="text-success text-opacity-75 fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Card 2: Dépenses -->
+                            <div class="col-md-4 border-end position-relative group-hover">
+                                <div class="d-flex align-items-center mb-4 ps-md-3">
+                                    <div class="bg-danger bg-gradient bg-opacity-10 rounded-3 p-2 me-3 shadow-sm">
+                                        <i class="ri-arrow-left-down-line text-danger fs-4"></i>
+                                    </div>
+                                    <p class="text-secondary mb-0 fs-12 text-uppercase fw-bold letter-spacing-1">Limites Dépenses</p>
+                                </div>
+                                <div class="row align-items-center position-relative ps-md-3">
+                                    <div class="col-5">
+                                        <p class="mb-1 fs-11 text-muted text-uppercase fw-semibold letter-spacing-05">Prévu</p>
+                                        <h3 class="fw-bold mb-0 text-dark opacity-75 fs-5">
+                                            {{ total_dispatched_depense|intcomma }} <small class="text-muted fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                    <!-- Progress Connector -->
+                                    <div class="col-2 d-flex justify-content-center align-items-center px-0">
+                                        <div class="w-100 bg-danger bg-opacity-25 rounded-pill overflow-hidden" style="height: 6px;">
+                                            <div class="bg-danger h-100" style="width: {{ percent_realized_depense|floatformat:0 }}%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-5 text-end">
+                                        <div class="d-flex justify-content-end align-items-center mb-1">
+                                            <p class="mb-0 fs-11 text-danger text-uppercase fw-bold letter-spacing-05 me-2">Réalisé</p>
+                                            <span class="badge bg-danger-subtle text-danger fs-10 px-2 py-1 rounded-pill">{{ percent_realized_depense|floatformat:1 }}%</span>
+                                        </div>
+                                        <h3 class="fw-black mb-0 text-danger fs-4">
+                                            {{ total_realized_depense|intcomma }} <small class="text-danger text-opacity-75 fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Card 3: Résultat & Rentabilité -->
+                            <div class="col-md-4 position-relative group-hover">
+                                <div class="d-flex align-items-center justify-content-between mb-4 ps-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-gradient bg-opacity-10 rounded-3 p-2 me-3 shadow-sm">
+                                            <i class="ri-scales-3-line text-primary fs-4"></i>
+                                        </div>
+                                        <p class="text-secondary mb-0 fs-12 text-uppercase fw-bold letter-spacing-1">Résultat Net</p>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center position-relative ps-md-3">
+                                    <div class="col-5">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <p class="mb-0 fs-11 text-muted text-uppercase fw-semibold letter-spacing-05 me-2">Attendu</p>
+                                            <span class="badge bg-light text-secondary border border-secondary border-opacity-25 fs-10 px-2 py-1 rounded-pill">
+                                                <i class="ri-funds-line me-1"></i>{% if request.tenant.schema_name == 'public' %}0{% else %}{{ rentabilite|floatformat:1 }}{% endif %}%
+                                            </span>
+                                        </div>
+                                        <h3 class="fw-bold mb-0 text-dark opacity-75 fs-5">
+                                            {% if request.tenant.schema_name == 'public' %}0{% else %}{{ resultat_attendu|intcomma }}{% endif %} <small class="text-muted fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                    <!-- Progress Connector (Decorative arrow) -->
+                                    <div class="col-2 d-flex justify-content-center align-items-center px-0 text-muted opacity-50">
+                                        <i class="ri-arrow-right-line fs-3"></i>
+                                    </div>
+                                    <div class="col-5 text-end">
+                                        <div class="d-flex justify-content-end align-items-center mb-1">
+                                            <p class="mb-0 fs-11 text-primary text-uppercase fw-bold letter-spacing-05 me-2">Effectif</p>
+                                            <span class="badge bg-primary bg-gradient text-white fs-10 px-2 py-1 rounded-pill shadow-sm">
+                                                <i class="ri-funds-line me-1"></i>{% if request.tenant.schema_name == 'public' %}0{% else %}{{ rentabilite_realise|floatformat:1 }}{% endif %}%
+                                            </span>
+                                        </div>
+                                        <h3 class="fw-black mb-0 text-primary fs-4">
+                                            {% if request.tenant.schema_name == 'public' %}0{% else %}{{ resultat_realise|intcomma }}{% endif %} <small class="text-primary text-opacity-75 fs-12 fw-normal">DA</small>
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rallonges Modal (Same as before but with glass style) -->
+            {% if approved_extensions %}
+            <div class="modal fade" id="rallongesModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content glass-card border-0">
+                        <div class="modal-header bg-warning-subtle border-bottom border-warning border-opacity-10">
+                            <h5 class="modal-title fw-bold" id="rallongesModalLabel"><i class="ri-exchange-dollar-line me-2 text-warning"></i>Historique des Demandes de Rallonge</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            {% for ext in approved_extensions %}
+                            <div class="p-4 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <span class="fw-semibold text-dark">{{ ext.created_at|date:"d M Y" }}</span>
+                                        {% if ext.motif %}<p class="text-muted fs-13 mb-0 mt-1"><i class="ri-chat-1-line me-1"></i>{{ ext.motif }}</p>{% endif %}
+                                    </div>
+                                    {% if ext.status == 'approved' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-12 px-3 py-2"><i class="ri-checkbox-circle-line me-1"></i>Approuvée</span>
+                                    {% elif ext.status == 'pending' %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-12 px-3 py-2"><i class="ri-time-line me-1"></i>En attente</span>
+                                    {% elif ext.status == 'rejected' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-12 px-3 py-2"><i class="ri-close-circle-line me-1"></i>Rejetée</span>
+                                    {% endif %}
+                                </div>
+                                {% if ext.admin_comment %}
+                                <div class="alert alert-light border mb-3 py-2 px-3 fs-13"><i class="ri-admin-line me-1 text-muted"></i><strong>Avis admin :</strong> {{ ext.admin_comment }}</div>
+                                {% endif %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0 align-middle">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="fs-11 text-uppercase text-muted fw-semibold">Poste / Catégorie</th>
+                                                <th class="text-end fs-11 text-uppercase text-muted fw-semibold">Montant Avant</th>
+                                                <th class="text-end fs-11 text-uppercase text-primary fw-semibold">Montant Ajouté</th>
+                                                <th class="text-end fs-11 text-uppercase text-success fw-semibold">Nouveau Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in ext.items.all %}
+                                            <tr>
+                                                <td>
+                                                    <span class="fw-medium">{{ item.poste.label }}</span>
+                                                    {% if item.payment_category %}<span class="text-muted fs-12 ms-1">({{ item.payment_category.name }})</span>{% endif %}
+                                                </td>
+                                                <td class="text-end text-muted">{{ item.old_amount|intcomma }} DA</td>
+                                                <td class="text-end fw-bold text-primary">+{{ item.requested_amount|intcomma }} DA</td>
+                                                <td class="text-end fw-bold text-success">{% with total=item.old_amount|add:item.requested_amount %}{{ total|intcomma }}{% endwith %} DA</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Matrix Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card border-0 mb-4 p-4">
+                        <!-- Filters & Tools Bar -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <select class="form-select border-0 bg-light rounded-pill px-4 py-2 fw-semibold" id="quarterFilter" style="min-width: 220px; cursor: pointer;">
+                                    <option value="all">Vue Globale Annuelle</option>
+                                    <option value="t1">Trimestre 1 (Aoû-Oct)</option>
+                                    <option value="t2">Trimestre 2 (Nov-Jan)</option>
+                                    <option value="t3">Trimestre 3 (Fév-Avr)</option>
+                                    <option value="t4">Trimestre 4 (Mai-Juil)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary rounded-pill px-4 d-flex align-items-center shadow-sm" onclick="window.print()">
+                                    <i class="ri-printer-line me-2"></i> Imprimer
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabs Navigation -->
+                        <ul class="nav nav-pills nav-justified mb-4 gap-2 bg-light p-2 rounded-4" id="budgetTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active rounded-pill fw-bold px-4 py-2" id="recettes-tab" data-bs-toggle="pill" data-bs-target="#recettes-pane" type="button" role="tab" aria-controls="recettes-pane" aria-selected="true">
+                                    <i class="ri-arrow-right-up-line me-2"></i>Recettes
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-pill fw-bold px-4 py-2" id="depenses-tab" data-bs-toggle="pill" data-bs-target="#depenses-pane" type="button" role="tab" aria-controls="depenses-pane" aria-selected="false">
+                                    <i class="ri-arrow-left-down-line me-2"></i>Dépenses
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="budgetTabsContent">
+                            <!-- Recettes Pane -->
+                            <div class="tab-pane fade show active" id="recettes-pane" role="tabpanel" aria-labelledby="recettes-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 matrix-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="sticky-col matrix-header" style="width: 300px; min-width: 300px;" rowspan="2">Poste & Catégorie</th>
+                                                <th class="text-center matrix-header" style="width: 100px;" rowspan="2">Type</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t1" colspan="3">Trimestre 1 (Aoû-Oct)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t2" colspan="3">Trimestre 2 (Nov-Jan)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t3" colspan="3">Trimestre 3 (Fév-Avr)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t4" colspan="3">Trimestre 4 (Mai-Jui)</th>
+                                                <th class="text-center matrix-header bg-primary text-white" colspan="4">Global <br><span style="font-size: 0.75rem; font-weight: normal; opacity: 0.8;">(Objectif Annuel)</span></th>
+                                            </tr>
+                                            <tr>
+                                                <!-- T1 -->
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Écart</th>
+                                                <!-- T2 -->
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Écart</th>
+                                                <!-- T3 -->
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Écart</th>
+                                                <!-- T4 -->
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Écart</th>
+                                                <!-- Global -->
+                                                <th class="text-end matrix-header bg-soft-light" style="width: 130px;">T. Prévu</th>
+                                                <th class="text-end matrix-header bg-soft-success" style="width: 130px;">T. Réalisé</th>
+                                                <th class="text-end matrix-header" style="width: 130px;">T. Écart</th>
+                                                <th class="text-center matrix-header" style="width: 90px;">Taux</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for group in combined_postes %}
+                                                {% if group.parent_poste.type == 'recette' %}
+                                                    <!-- Parent Poste Header -->
+                                                    {% if not group.is_standalone %}
+                                                    <tr class="poste-parent-row" style="background-color: #f1f5f9; border-top: 2px solid #e2e8f0;">
+                                                        <td class="sticky-col p-3 border-bottom-0" style="background-color: #f1f5f9 !important; border-left: 4px solid #3b82f6;">
+                                                            <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
+                                                                <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
+                                                                {{ group.parent_poste.label }}
+                                                            </h6>
+                                                        </td>
+                                                        <td class="text-center bg-light">
+                                                            <span class="badge bg-white text-dark border fw-normal">{{ group.parent_poste.get_type_display }}</span>
+                                                        </td>
+                                                        <td colspan="16" class="bg-light dyn-colspan"></td>
+                                                    </tr>
+                                                    {% endif %}
+
+                                                    {% for item in group.display_postes %}
+                                                    <tr class="poste-row {% if item.category %}category-row{% endif %}" style="{% if item.category %}background-color: #ffffff;{% endif %}">
+                                                        <td class="sticky-col" style="width: 300px; min-width: 300px; {% if item.category %}padding-left: 3.5rem !important; background-color: #ffffff !important; border-left: 4px solid #cbd5e1;{% else %}background-color: #f8fafc !important; {% if not group.is_standalone %}padding-left: 2.5rem !important; border-left: 4px solid #94a3b8;{% else %}border-left: 4px solid #3b82f6;{% endif %}{% endif %}">
+                                                            <div class="d-flex align-items-center">
+                                                                {% if item.category %}
+                                                                    <i class="ri-subtract-line me-2 text-muted"></i>
+                                                                    <span class="poste-label text-muted" style="font-size: 13px;">{{ item.category.name }}</span>
+                                                                {% else %}
+                                                                    <span class="poste-label fw-bold text-dark">{{ item.poste.label }}</span>
+                                                                {% endif %}
+                                                                
+                                                                {% if not item.category %}
+                                                                    {% if item.poste.type == 'recette' and item.poste.payment_categories.all %}
+                                                                        <i class="ri-information-fill text-primary ms-2" 
+                                                                        data-bs-toggle="tooltip" 
+                                                                        data-bs-placement="top" 
+                                                                        data-bs-html="true"
+                                                                        data-bs-custom-class="premium-tooltip"
+                                                                        title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in item.poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                        style="cursor: help; font-size: 15px;"></i>
+                                                                    {% elif item.poste.type == 'depense' and item.poste.depense_categories.all %}
+                                                                        <i class="ri-information-fill text-primary ms-2" 
+                                                                        data-bs-toggle="tooltip" 
+                                                                        data-bs-placement="top" 
+                                                                        data-bs-html="true"
+                                                                        data-bs-custom-class="premium-tooltip"
+                                                                        title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in item.poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                        style="cursor: help; font-size: 15px;"></i>
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {% if not item.category %}
+                                                            <span class="poste-type-badge {% if item.poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
+                                                                {{ item.poste.get_type_display }}
+                                                            </span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <!-- T1 -->
+                                                        <td class="text-end col-t1"><span class="val-prevu">{{ item.t1.prevu|intcomma }}</span></td>
+                                                        <td class="text-end col-t1"><span class="val-realise">{{ item.t1.realise|intcomma }}</span></td>
+                                                        <td class="text-end col-t1">
+                                                            {% if item.poste.type == 'depense' %}
+                                                                {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t1.ecart|intcomma }}</span>
+                                                                {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t1.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% else %}
+                                                                {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t1.ecart|intcomma }}</span>
+                                                                {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t1.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <!-- T2 -->
+                                                        <td class="text-end col-t2"><span class="val-prevu">{{ item.t2.prevu|intcomma }}</span></td>
+                                                        <td class="text-end col-t2"><span class="val-realise">{{ item.t2.realise|intcomma }}</span></td>
+                                                        <td class="text-end col-t2">
+                                                            {% if item.poste.type == 'depense' %}
+                                                                {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t2.ecart|intcomma }}</span>
+                                                                {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t2.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% else %}
+                                                                {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t2.ecart|intcomma }}</span>
+                                                                {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t2.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <!-- T3 -->
+                                                        <td class="text-end col-t3"><span class="val-prevu">{{ item.t3.prevu|intcomma }}</span></td>
+                                                        <td class="text-end col-t3"><span class="val-realise">{{ item.t3.realise|intcomma }}</span></td>
+                                                        <td class="text-end col-t3">
+                                                            {% if item.poste.type == 'depense' %}
+                                                                {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t3.ecart|intcomma }}</span>
+                                                                {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t3.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% else %}
+                                                                {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t3.ecart|intcomma }}</span>
+                                                                {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t3.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <!-- T4 -->
+                                                        <td class="text-end col-t4"><span class="val-prevu">{{ item.t4.prevu|intcomma }}</span></td>
+                                                        <td class="text-end col-t4"><span class="val-realise">{{ item.t4.realise|intcomma }}</span></td>
+                                                        <td class="text-end col-t4">
+                                                            {% if item.poste.type == 'depense' %}
+                                                                {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t4.ecart|intcomma }}</span>
+                                                                {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t4.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% else %}
+                                                                {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t4.ecart|intcomma }}</span>
+                                                                {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t4.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <!-- Global -->
+                                                        <td class="text-end bg-soft-light fw-bold"><span class="val-prevu">{{ item.global.prevu|intcomma }}</span></td>
+                                                        <td class="text-end bg-soft-success fw-bold"><span class="val-realise">{{ item.global.realise|intcomma }}</span></td>
+                                                        <td class="text-end fw-bold">
+                                                            {% if item.poste.type == 'depense' %}
+                                                                {% if item.global.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.global.ecart|intcomma }}</span>
+                                                                {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.global.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% else %}
+                                                                {% if item.global.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.global.ecart|intcomma }}</span>
+                                                                {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.global.ecart|intcomma }}</span>
+                                                                {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="progress" style="height: 6px; border-radius: 10px;">
+                                                                <div class="progress-bar {% if item.poste.type == 'depense' %}{% if item.global.taux > 100 %}bg-danger{% else %}bg-primary{% endif %}{% else %}{% if item.global.taux >= 100 %}bg-success{% else %}bg-warning{% endif %}{% endif %}" 
+                                                                    role="progressbar" 
+                                                                    style="width: {{ item.global.taux|floatformat:0 }}%"
+                                                                    aria-valuenow="{{ item.global.taux }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                            <small class="fw-bold mt-1 d-block">{{ item.global.taux|floatformat:1 }}%</small>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="bg-light border-top">
+                                            <tr style="height: 50px;">
+                                                <th colspan="2" class="sticky-col footer-total text-uppercase text-end pe-4">TOTAL RECETTES</th>
+                                                <th colspan="12" class="bg-light dyn-colspan-footer"></th>
+                                                <th class="text-end footer-total text-muted bg-soft-light border-start">{{ total_dispatched_recette|intcomma|default:"0" }} DA</th>
+                                                <th class="text-end footer-total text-success bg-soft-success border-start border-end border-success">{{ total_realized_recette|intcomma|default:"0" }} DA</th>
+                                                <th class="text-end footer-total text-dark">
+                                                    {{ recette_ecart|intcomma|default:"0" }} DA
+                                                </th>
+                                                <th class="text-center footer-total">
+                                                    <span class="text-primary">{{ percent_realized_recette|floatformat:1|default:"0" }}%</span>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Dépenses Pane -->
+                            <div class="tab-pane fade" id="depenses-pane" role="tabpanel" aria-labelledby="depenses-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 matrix-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="sticky-col matrix-header" style="width: 300px; min-width: 300px;" rowspan="2">Poste & Catégorie</th>
+                                                <th class="text-center matrix-header" style="width: 100px;" rowspan="2">Type</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t1" colspan="3">Trimestre 1 (Aoû-Oct)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t2" colspan="3">Trimestre 2 (Nov-Jan)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t3" colspan="3">Trimestre 3 (Fév-Avr)</th>
+                                                <th class="text-center matrix-header bg-primary bg-opacity-10 col-t4" colspan="3">Trimestre 4 (Mai-Jui)</th>
+                                                <th class="text-center matrix-header bg-primary text-white" colspan="4">Global <br><span style="font-size: 0.75rem; font-weight: normal; opacity: 0.8;">(Objectif Annuel)</span></th>
+                                            </tr>
+                                            <tr>
+                                                <!-- T1 -->
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t1" style="width: 110px;">Écart</th>
+                                                <!-- T2 -->
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t2" style="width: 110px;">Écart</th>
+                                                <!-- T3 -->
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t3" style="width: 110px;">Écart</th>
+                                                <!-- T4 -->
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Prévu</th>
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Réalisé</th>
+                                                <th class="text-end matrix-header col-t4" style="width: 110px;">Écart</th>
+                                                <!-- Global -->
+                                                <th class="text-end matrix-header bg-soft-light" style="width: 130px;">T. Prévu</th>
+                                                <th class="text-end matrix-header bg-soft-success" style="width: 130px;">T. Réalisé</th>
+                                                <th class="text-end matrix-header" style="width: 130px;">T. Écart</th>
+                                                <th class="text-center matrix-header" style="width: 90px;">Taux</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for group in combined_postes %}
+                                                {% if group.parent_poste.type == 'depense' %}
+                                                    <!-- Parent Poste Header -->
+                                                    {% if not group.is_standalone %}
+                                                    <tr class="poste-parent-row" style="background-color: #f1f5f9; border-top: 2px solid #e2e8f0;">
+                                                        <td class="sticky-col p-3 border-bottom-0" style="background-color: #f1f5f9 !important; border-left: 4px solid #3b82f6;">
+                                                            <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
+                                                                <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
+                                                                {{ group.parent_poste.label }}
+                                                            </h6>
+                                                        </td>
+                                                        <td class="text-center bg-light">
+                                                            <span class="badge bg-white text-dark border fw-normal">{{ group.parent_poste.get_type_display }}</span>
+                                                        </td>
+                                                        <td colspan="16" class="bg-light dyn-colspan"></td>
+                                                    </tr>
+                                                    {% endif %}
+
+                                                    {% for item in group.display_postes %}
+                                                    <tr class="poste-row {% if item.category %}category-row{% endif %}" style="{% if item.category %}background-color: #ffffff;{% endif %}">
+                                                        <td class="sticky-col" style="width: 300px; min-width: 300px; {% if item.category %}padding-left: 3.5rem !important; background-color: #ffffff !important; border-left: 4px solid #cbd5e1;{% else %}background-color: #f8fafc !important; {% if not group.is_standalone %}padding-left: 2.5rem !important; border-left: 4px solid #94a3b8;{% else %}border-left: 4px solid #3b82f6;{% endif %}{% endif %}">
+                                                            <div class="d-flex align-items-center">
+                                                                {% if item.category %}
+                                                                    <i class="ri-subtract-line me-2 text-muted"></i>
+                                                                    <span class="poste-label text-muted" style="font-size: 13px;">{{ item.category.name }}</span>
+                                                                {% else %}
+                                                                    <span class="poste-label fw-bold text-dark">{{ item.poste.label }}</span>
+                                                                {% endif %}
+                                                                    {% if not item.category %}
+                                                                        {% if item.poste.type == 'recette' and item.poste.payment_categories.all %}
+                                                                            <i class="ri-information-fill text-primary ms-2" 
+                                                                            data-bs-toggle="tooltip" 
+                                                                            data-bs-placement="top" 
+                                                                            data-bs-html="true"
+                                                                            data-bs-custom-class="premium-tooltip"
+                                                                            title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in item.poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                            style="cursor: help; font-size: 15px;"></i>
+                                                                        {% elif item.poste.type == 'depense' and item.poste.depense_categories.all %}
+                                                                            <i class="ri-information-fill text-primary ms-2" 
+                                                                            data-bs-toggle="tooltip" 
+                                                                            data-bs-placement="top" 
+                                                                            data-bs-html="true"
+                                                                            data-bs-custom-class="premium-tooltip"
+                                                                            title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in item.poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                            style="cursor: help; font-size: 15px;"></i>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                {% if not item.category %}
+                                                                <span class="poste-type-badge {% if item.poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
+                                                                    {{ item.poste.get_type_display }}
+                                                                </span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <!-- T1 -->
+                                                            <td class="text-end col-t1"><span class="val-prevu">{{ item.t1.prevu|intcomma }}</span></td>
+                                                            <td class="text-end col-t1"><span class="val-realise">{{ item.t1.realise|intcomma }}</span></td>
+                                                            <td class="text-end col-t1">
+                                                                {% if item.poste.type == 'depense' %}
+                                                                    {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t1.ecart|intcomma }}</span>
+                                                                    {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t1.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% else %}
+                                                                    {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t1.ecart|intcomma }}</span>
+                                                                    {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t1.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% endif %}
+                                                            </td>
+                                                            <!-- T2 -->
+                                                            <td class="text-end col-t2"><span class="val-prevu">{{ item.t2.prevu|intcomma }}</span></td>
+                                                            <td class="text-end col-t2"><span class="val-realise">{{ item.t2.realise|intcomma }}</span></td>
+                                                            <td class="text-end col-t2">
+                                                                {% if item.poste.type == 'depense' %}
+                                                                    {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t2.ecart|intcomma }}</span>
+                                                                    {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t2.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% else %}
+                                                                    {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t2.ecart|intcomma }}</span>
+                                                                    {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t2.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% endif %}
+                                                            </td>
+                                                            <!-- T3 -->
+                                                            <td class="text-end col-t3"><span class="val-prevu">{{ item.t3.prevu|intcomma }}</span></td>
+                                                            <td class="text-end col-t3"><span class="val-realise">{{ item.t3.realise|intcomma }}</span></td>
+                                                            <td class="text-end col-t3">
+                                                                {% if item.poste.type == 'depense' %}
+                                                                    {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t3.ecart|intcomma }}</span>
+                                                                    {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t3.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% else %}
+                                                                    {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t3.ecart|intcomma }}</span>
+                                                                    {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t3.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% endif %}
+                                                            </td>
+                                                            <!-- T4 -->
+                                                            <td class="text-end col-t4"><span class="val-prevu">{{ item.t4.prevu|intcomma }}</span></td>
+                                                            <td class="text-end col-t4"><span class="val-realise">{{ item.t4.realise|intcomma }}</span></td>
+                                                            <td class="text-end col-t4">
+                                                                {% if item.poste.type == 'depense' %}
+                                                                    {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t4.ecart|intcomma }}</span>
+                                                                    {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t4.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% else %}
+                                                                    {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t4.ecart|intcomma }}</span>
+                                                                    {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t4.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% endif %}
+                                                            </td>
+                                                            <!-- Global -->
+                                                            <td class="text-end bg-soft-light fw-bold"><span class="val-prevu">{{ item.global.prevu|intcomma }}</span></td>
+                                                            <td class="text-end bg-soft-success fw-bold"><span class="val-realise">{{ item.global.realise|intcomma }}</span></td>
+                                                            <td class="text-end fw-bold">
+                                                                {% if item.poste.type == 'depense' %}
+                                                                    {% if item.global.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.global.ecart|intcomma }}</span>
+                                                                    {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.global.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% else %}
+                                                                    {% if item.global.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.global.ecart|intcomma }}</span>
+                                                                    {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.global.ecart|intcomma }}</span>
+                                                                    {% else %}<span class="val-ecart text-muted">0</span>{% endif %}
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div class="progress" style="height: 6px; border-radius: 10px;">
+                                                                    <div class="progress-bar {% if item.poste.type == 'depense' %}{% if item.global.taux > 100 %}bg-danger{% else %}bg-primary{% endif %}{% else %}{% if item.global.taux >= 100 %}bg-success{% else %}bg-warning{% endif %}{% endif %}" 
+                                                                        role="progressbar" 
+                                                                        style="width: {{ item.global.taux|floatformat:0 }}%"
+                                                                        aria-valuenow="{{ item.global.taux }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                                </div>
+                                                                <small class="fw-bold mt-1 d-block">{{ item.global.taux|floatformat:1 }}%</small>
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="bg-light border-top">
+                                            <tr style="height: 50px;">
+                                                <th colspan="2" class="sticky-col footer-total text-uppercase text-end pe-4">TOTAL DÉPENSES</th>
+                                                <th colspan="12" class="bg-light dyn-colspan-footer"></th>
+                                                <th class="text-end footer-total text-muted bg-soft-light border-start">{{ total_dispatched_depense|intcomma|default:"0" }} DA</th>
+                                                <th class="text-end footer-total text-success bg-soft-success border-start border-end border-success">{{ total_realized_depense|intcomma|default:"0" }} DA</th>
+                                                <th class="text-end footer-total text-dark">
+                                                    {{ depense_ecart|intcomma|default:"0" }} DA
+                                                </th>
+                                                <th class="text-center footer-total">
+                                                    <span class="text-primary">{{ percent_realized_depense|floatformat:1|default:"0" }}%</span>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterSelect = document.getElementById('quarterFilter');
+        
+        function updateQuarterVisibility() {
+            const selected = filterSelect.value;
+            
+            // Get all quarter columns
+            const t1Cols = document.querySelectorAll('.col-t1');
+            const t2Cols = document.querySelectorAll('.col-t2');
+            const t3Cols = document.querySelectorAll('.col-t3');
+            const t4Cols = document.querySelectorAll('.col-t4');
+            
+            // Adjust the dynamic colspan for parent rows
+            const dynColspans = document.querySelectorAll('.dyn-colspan');
+            const dynColspansFooter = document.querySelectorAll('.dyn-colspan-footer');
+            
+            if (selected === 'all') {
+                t1Cols.forEach(col => col.style.display = '');
+                t2Cols.forEach(col => col.style.display = '');
+                t3Cols.forEach(col => col.style.display = '');
+                t4Cols.forEach(col => col.style.display = '');
+                dynColspans.forEach(col => col.setAttribute('colspan', '16'));
+                dynColspansFooter.forEach(col => col.setAttribute('colspan', '12'));
+            } else {
+                // Hide all first
+                t1Cols.forEach(col => col.style.display = 'none');
+                t2Cols.forEach(col => col.style.display = 'none');
+                t3Cols.forEach(col => col.style.display = 'none');
+                t4Cols.forEach(col => col.style.display = 'none');
+                
+                // Show only the selected
+                if (selected === 't1') t1Cols.forEach(col => col.style.display = '');
+                if (selected === 't2') t2Cols.forEach(col => col.style.display = '');
+                if (selected === 't3') t3Cols.forEach(col => col.style.display = '');
+                if (selected === 't4') t4Cols.forEach(col => col.style.display = '');
+                
+                // 3 visible columns per quarter + 'Global' which has 4 columns = 7 columns dynamically
+                dynColspans.forEach(col => col.setAttribute('colspan', '7'));
+                dynColspansFooter.forEach(col => col.setAttribute('colspan', '3'));
+            }
+        }
+        
+        // Auto-select current quarter based on date
+        function setDefaultQuarter() {
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+            
+            // T1: Aug-Oct (8, 9, 10)
+            // T2: Nov-Jan (11, 12, 1)
+            // T3: Feb-Apr (2, 3, 4)
+            // T4: May-Jul (5, 6, 7)
+            
+            let defaultQ = 'all';
+            if ([8, 9, 10].includes(currentMonth)) defaultQ = 't1';
+            else if ([11, 12, 1].includes(currentMonth)) defaultQ = 't2';
+            else if ([2, 3, 4].includes(currentMonth)) defaultQ = 't3';
+            else if ([5, 6, 7].includes(currentMonth)) defaultQ = 't4';
+            
+            filterSelect.value = defaultQ;
+            updateQuarterVisibility();
+        }
+        
+        filterSelect.addEventListener('change', updateQuarterVisibility);
+        
+        // Initialize
+        setDefaultQuarter();
+    });
+</script>
+{% endblock %}

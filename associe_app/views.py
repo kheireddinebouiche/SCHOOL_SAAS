@@ -77,11 +77,11 @@ def global_payment_type_create(request):
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'success', 'message': 'Type de paiement créé avec succès.'})
-            return redirect('global_payment_type_list')
+            return redirect('associe_app:global_payment_type_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
-    return redirect('global_payment_type_list')
+    return redirect('associe_app:global_payment_type_list')
 
 @login_required(login_url='login')
 def global_payment_type_edit(request, pk):
@@ -92,7 +92,7 @@ def global_payment_type_edit(request, pk):
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'success', 'message': 'Type de paiement modifié avec succès.'})
-            return redirect('global_payment_type_list')
+            return redirect('associe_app:global_payment_type_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
@@ -103,7 +103,7 @@ def global_payment_type_edit(request, pk):
             'name': payment_type.name,
             'payment_categories': list(payment_type.payment_categories.values_list('id', flat=True))
         })
-    return redirect('global_payment_type_list')
+    return redirect('associe_app:global_payment_type_list')
 
 @login_required(login_url='login')
 def global_payment_type_delete(request, pk):
@@ -112,7 +112,7 @@ def global_payment_type_delete(request, pk):
         payment_type.delete()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'success', 'message': 'Type de paiement supprimé avec succès.'})
-    return redirect('global_payment_type_list')
+    return redirect('associe_app:global_payment_type_list')
 
 # --- Helper Functions for Real-Time Serialization ---
 
@@ -169,11 +169,11 @@ def global_payment_category_create(request):
                     'new_id': category.id,
                     'parent_id': category.parent.id if category.parent else None
                 })
-            return redirect('global_payment_category_list')
+            return redirect('associe_app:global_payment_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
-    return redirect('global_payment_category_list')
+    return redirect('associe_app:global_payment_category_list')
 
 @login_required(login_url='login')
 def global_payment_category_edit(request, pk):
@@ -188,7 +188,7 @@ def global_payment_category_edit(request, pk):
                     'message': 'Catégorie de paiement modifiée avec succès.',
                     'categories': _get_payment_categories_list()
                 })
-            return redirect('global_payment_category_list')
+            return redirect('associe_app:global_payment_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
@@ -200,7 +200,7 @@ def global_payment_category_edit(request, pk):
             'parent': category.parent.id if category.parent else '',
             'category_type': category.category_type
         })
-    return redirect('global_payment_category_list')
+    return redirect('associe_app:global_payment_category_list')
 
 @login_required(login_url='login')
 def global_payment_category_delete(request, pk):
@@ -213,7 +213,7 @@ def global_payment_category_delete(request, pk):
                 'message': 'Catégorie de paiement supprimée avec succès.',
                 'categories': _get_payment_categories_list()
             })
-    return redirect('global_payment_category_list')
+    return redirect('associe_app:global_payment_category_list')
 
 @login_required(login_url='login')
 def export_payment_categories(request):
@@ -319,11 +319,11 @@ def global_depenses_category_create(request):
                     'new_id': category.id,
                     'parent_id': category.parent.id if category.parent else None
                 })
-            return redirect('global_depenses_category_list')
+            return redirect('associe_app:global_depenses_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
-    return redirect('global_depenses_category_list')
+    return redirect('associe_app:global_depenses_category_list')
 
 @login_required(login_url='login')
 def export_depenses_categories(request):
@@ -419,7 +419,7 @@ def global_depenses_category_edit(request, pk):
                     'message': 'Catégorie de dépense modifiée avec succès.',
                     'categories': _get_depenses_categories_list()
                 })
-            return redirect('global_depenses_category_list')
+            return redirect('associe_app:global_depenses_category_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
@@ -431,7 +431,7 @@ def global_depenses_category_edit(request, pk):
             'parent': category.parent.id if category.parent else '',
             'payment_category': category.payment_category.id if category.payment_category else ''
         })
-    return redirect('global_depenses_category_list')
+    return redirect('associe_app:global_depenses_category_list')
 
 @login_required(login_url='login')
 def global_depenses_category_delete(request, pk):
@@ -444,7 +444,7 @@ def global_depenses_category_delete(request, pk):
                 'message': 'Catégorie de dépense supprimée avec succès.',
                 'categories': _get_depenses_categories_list()
             })
-    return redirect('global_depenses_category_list')
+    return redirect('associe_app:global_depenses_category_list')
 
 @login_required(login_url='login')
 def sync_categories_view(request):
@@ -460,7 +460,7 @@ def sync_categories_view(request):
             return JsonResponse({'status': 'error', 'message': msg})
         messages.error(request, msg)
     
-    return redirect(request.META.get('HTTP_REFERER', 'configuration_index'))
+    return redirect(request.META.get('HTTP_REFERER', 'associe_app:configuration_index'))
 
 @login_required(login_url='login')
 def tenant_data_list(request):
@@ -642,8 +642,10 @@ def postes_budgetaires_list(request):
             'type_display': poste.get_type_display(),
             'parent_id': poste.parent.id if poste.parent else None,
             'description': poste.description,
-            'depense_categories': [c.name for c in poste.depense_categories.all()],
-            'payment_categories': [c.name for c in poste.payment_categories.all()]
+            'depense_categories': [c.id for c in poste.depense_categories.all()],
+            'depense_categories_labels': [c.name for c in poste.depense_categories.all()],
+            'payment_categories': [c.id for c in poste.payment_categories.all()],
+            'payment_categories_labels': [c.name for c in poste.payment_categories.all()]
         })
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -663,11 +665,11 @@ def postes_budgetaire_create(request):
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'success', 'message': 'Poste budgétaire créé avec succès.'})
-            return redirect('postes_budgetaires_list')
+            return redirect('associe_app:postes_budgetaires_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
-    return redirect('postes_budgetaires_list')
+    return redirect('associe_app:postes_budgetaires_list')
 
 @login_required(login_url='login')
 def postes_budgetaire_edit(request, pk):
@@ -678,7 +680,7 @@ def postes_budgetaire_edit(request, pk):
             form.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'success', 'message': 'Poste budgétaire modifié avec succès.'})
-            return redirect('postes_budgetaires_list')
+            return redirect('associe_app:postes_budgetaires_list')
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'errors': form.errors.get_json_data()})
@@ -693,7 +695,7 @@ def postes_budgetaire_edit(request, pk):
             'depense_categories': list(poste.depense_categories.values_list('id', flat=True)),
             'payment_categories': list(poste.payment_categories.values_list('id', flat=True))
         })
-    return redirect('postes_budgetaires_list')
+    return redirect('associe_app:postes_budgetaires_list')
 
 @login_required(login_url='login')
 def postes_budgetaire_delete(request, pk):
@@ -702,7 +704,7 @@ def postes_budgetaire_delete(request, pk):
         poste.delete()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'success', 'message': 'Poste budgétaire supprimé avec succès.'})
-    return redirect('postes_budgetaires_list')
+    return redirect('associe_app:postes_budgetaires_list')
 
 # --- Budget Campaign Views ---
 
@@ -717,8 +719,8 @@ def budget_campaign_list(request):
 
 
 @login_required(login_url='login')
-def budget_campaign_activate(request, campaign_id):
-    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+def budget_campaign_activate(request, campaign_slug):
+    campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
     if request.method == 'POST':
         try:
             # Toggle the active status
@@ -736,19 +738,19 @@ def budget_campaign_activate(request, campaign_id):
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'message': f"Erreur lors de la modification du statut de la campagne: {e}"})
                 
-    return redirect('budget_campaign_list')
+    return redirect('associe_app:budget_campaign_list')
 
 @login_required(login_url='login')
-def budget_campaign_delete(request, campaign_id):
-    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+def budget_campaign_delete(request, campaign_slug):
+    campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
     if request.method == 'POST':
         campaign.delete()
         messages.success(request, f"Campagne '{campaign.name}' supprimée avec succès.")
-    return redirect('budget_campaign_list')
+    return redirect('associe_app:budget_campaign_list')
 
 @login_required(login_url='login')
-def budget_campaign_instituts(request, campaign_id):
-    campaign = get_object_or_404(BudgetCampaign, pk=campaign_id)
+def budget_campaign_instituts(request, campaign_slug):
+    campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
     instituts = Institut.objects.exclude(schema_name='public')
     
     # 1. Process Form Submission (Bulk Save)
@@ -783,7 +785,7 @@ def budget_campaign_instituts(request, campaign_id):
             messages.success(request, "Objectifs globaux enregistrés avec succès.")
         except Exception as e:
              messages.error(request, f"Erreur lors de l'enregistrement: {e}")
-        return redirect('budget_campaign_instituts', campaign_id=campaign.id)
+        return redirect('associe_app:budget_campaign_instituts', campaign_slug=campaign.slug)
 
     # 2. Build Data for Display
     instituts_data = []
@@ -859,14 +861,14 @@ def budget_campaign_create(request):
         else:
             messages.info(request, f"La campagne '{name}' existe déjà.")
             
-    return redirect('budget_campaign_list')
+    return redirect('associe_app:budget_campaign_list')
 
 @login_required(login_url='login')
-def budget_campaign_review(request, campaign_id, institut_id):
+def budget_campaign_review(request, campaign_slug, institut_id):
     """
     Review and Validate/Reject a tenant's budget dispatch proposal.
     """
-    campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+    campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
     institut = get_object_or_404(Institut, id=institut_id)
     budget_line = get_object_or_404(BudgetLine, campaign=campaign, institut=institut)
     
@@ -986,7 +988,7 @@ def budget_campaign_review(request, campaign_id, institut_id):
                 BudgetLineDetail.objects.bulk_update(updated_details, ['t1_percent', 't2_percent', 't3_percent', 't4_percent'])
                 
             messages.success(request, "Les pourcentages trimestriels ont été enregistrés.")
-            return redirect('budget_campaign_review', campaign_id=campaign.id, institut_id=institut.id)
+            return redirect('associe_app:budget_campaign_review', campaign_slug=campaign.slug, institut_id=institut.id)
 
         elif action == 'validate':
             budget_line.statut = 'validated'
@@ -995,16 +997,15 @@ def budget_campaign_review(request, campaign_id, institut_id):
         elif action == 'reject':
             budget_line.statut = 'rejected'
             budget_line.commentaire = commentaire
-            messages.warning(request, f"Le budget pour {institut.nom} a été rejeté.")
         elif action == 'reset':
              # Reset Logic
             BudgetLineDetail.objects.filter(campaign=campaign, institut=institut).delete()
-            budget_line.statut = 'none' # Or 'draft' if you prefer, but 'none' indicates fresh start
+            budget_line.statut = 'draft' # Or whatever starting status is appropriate
             budget_line.commentaire = ''
             messages.info(request, f"La proposition de budget pour {institut.nom} a été réinitialisée.")
         
         budget_line.save()
-        return redirect('budget_campaign_instituts', campaign_id=campaign.id)
+        return redirect('associe_app:budget_campaign_instituts', campaign_slug=campaign.slug)
 
     # Prepare row_quarters for template (Collective for all categories of a poste)
     if is_visible_to_admin:
@@ -1038,7 +1039,7 @@ def budget_campaign_review(request, campaign_id, institut_id):
     }
     return render(request, 'associe_app/budget_campaign_review.html', context)
 
-@login_required(login_url="associe_app:login")
+@login_required(login_url="login")
 def extension_requests_list(request):
     from .models import BudgetExtensionRequest
     
@@ -1049,7 +1050,7 @@ def extension_requests_list(request):
     }
     return render(request, 'associe_app/extension_requests_list.html', context)
 
-@login_required(login_url="associe_app:login")
+@login_required(login_url="login")
 def review_extension(request, request_id):
     from .models import BudgetExtensionRequest, BudgetExtensionItem, BudgetLine, BudgetLineDetail
     from django.db import transaction
@@ -1088,18 +1089,9 @@ def review_extension(request, request_id):
                             poste=item.poste,
                             payment_category=item.payment_category,
                             entreprise_id=item.entreprise_id,
-                            defaults={'montant': item.requested_amount}
+                            defaults={'montant': item.old_amount + item.requested_amount}
                         )
                     
-                    # Recalculate Global Objective
-                    total_budget = BudgetLineDetail.objects.filter(
-                        campaign=ext_request.campaign, 
-                        institut=ext_request.institut
-                    ).aggregate(Sum('montant'))['montant__sum'] or 0
-                    
-                    budget_line = BudgetLine.objects.get(campaign=ext_request.campaign, institut=ext_request.institut)
-                    budget_line.montant = total_budget
-                    budget_line.save()
                     
                     ext_request.status = 'approved'
                     ext_request.admin_comment = comment

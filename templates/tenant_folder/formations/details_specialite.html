@@ -185,17 +185,6 @@
                                         
                                         <div class="col-lg-3">
                                             <div class="d-flex align-items-center">
-                                                <div class="icon-box warning me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
-                                                    <i class="ri-money-dollar-circle-line"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="text-muted d-block mb-0">Prix</small>
-                                                    <span class="fw-bold text-dark fs-16">{{object.prix|default:"0"}} DA</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-3">
-                                            <div class="d-flex align-items-center">
                                                 <div class="icon-box info me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
                                                     <i class="ri-time-line"></i>
                                                 </div>
@@ -1395,6 +1384,64 @@
                                 'error'
                             );
                         }
+                    });
+                }
+            });
+        });
+
+        // Handle specialty duplication
+        $(document).on('click', '#confirmDuplicateBtn', function() {
+            var id_specialite = document.getElementById('_specialite').value;
+            var version = $('#version_programme').val();
+            
+            if (!version) {
+                alertify.error("Veuillez spécifier une version pour la nouvelle spécialité");
+                return;
+            }
+
+            Swal.fire({
+                title: 'Duplication en cours...',
+                html: 'Veuillez patienter pendant que nous préparons la nouvelle spécialité...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: "{% url 't_formations:ApiDuplicateSpecialite' %}",
+                type: "POST",
+                data: {
+                    'id_specialite': id_specialite,
+                    'version': version,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Redirect to the new specialty details page
+                            window.location.href = "{% url 't_formations:detailSpecialite' pk=0 %}".replace('0', response.new_id);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error duplicating specialty:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: 'Une erreur est survenue lors de la duplication de la spécialité.'
                     });
                 }
             });

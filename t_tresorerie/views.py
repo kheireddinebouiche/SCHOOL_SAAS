@@ -186,6 +186,7 @@ def ApiGetDetailsDemandePaiement(request):
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
                 paiements_done_data.append({
+                    'id': i.id,
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
                     'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
@@ -397,6 +398,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
                 paiements_done_data.append({
+                    'id': i.id,
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
                     'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
@@ -740,10 +742,12 @@ def ApiDetailsReceivedPaiement(request):
     paiement_obj = Paiements.objects.get(id = id)
 
     data = {
+        'num': paiement_obj.num,
+        'label_paiements': paiement_obj.due_paiements.label if paiement_obj.due_paiements and paiement_obj.due_paiements.label else paiement_obj.paiement_label,
         'montant_paye' : paiement_obj.montant_paye,
         'date_paiement' : paiement_obj.date_paiement,
         'observation' :  paiement_obj.observation,
-        'mode_paiement' : paiement_obj.mode_paiement,
+        'mode_paiement' : paiement_obj.get_mode_paiement_display(),
         'reference_paiement' : paiement_obj.reference_paiement,
     }
 

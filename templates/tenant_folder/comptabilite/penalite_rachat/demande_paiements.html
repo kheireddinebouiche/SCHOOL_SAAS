@@ -4,20 +4,90 @@
 {% block title %}Demandes de Paiement{% endblock title %}
 
 {% block content %}
+<style>
+    /* Premium Look & Feel - Strictly Harmonized */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #0891b2; }
+    .badge-soft-secondary { background-color: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        border-top: none;
+        padding: 1rem;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-rounded { border-radius: 0.75rem; }
+
+    .btn-edit-premium {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        color: #64748b;
+        background: transparent;
+    }
+
+    .btn-edit-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background: #f8fafc;
+        color: #3b82f6;
+    }
+    
+    .table-responsive { overflow: visible !important; }
+</style>
 <div class="main-content">
   <div class="page-content">
     <div class="container-fluid">
       
-      <!-- Page Title -->
-      <div class="row">
+      <!-- Header Section - Harmonized -->
+      <div class="row mb-4">
         <div class="col-12">
-          <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0 text-uppercase">Demandes de Paiement</h4>
-             <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="javascript: void(0);">Comptabilité</a></li>
-                    <li class="breadcrumb-item active">Pénalités & Rachat</li>
+          <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-money-dollar-circle-line text-primary fs-3"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold">Demandes de Paiement</h4>
+                <p class="text-muted mb-0">Suivi des paiements dus (Dettes, Rachats, Autres)</p>
+              </div>
+            </div>
+            <div class="mt-3 mt-sm-0 d-flex align-items-center gap-3">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 shadow-none">
+                  <li class="breadcrumb-item"><a href="javascript: void(0);">Trésorerie</a></li>
+                  <li class="breadcrumb-item active">Pénalités & Rachat</li>
                 </ol>
+              </nav>
+              <button class="btn btn-primary btn-rounded px-4" onclick="loadDuePaiements()">
+                <i class="ri-refresh-line me-1"></i> Actualiser
+              </button>
             </div>
           </div>
         </div>
@@ -25,28 +95,28 @@
 
       <div class="row">
         <div class="col-12">
-          <div class="card">
-            <div class="card-header align-items-center d-flex">
-              <h4 class="card-title mb-0 flex-grow-1">Liste des paiements dus (Dettes, Rachats, Autres)</h4>
-              <div class="flex-shrink-0">
-                  <button type="button" class="btn btn-soft-primary btn-sm" onclick="loadDuePaiements()">
-                      <i class="ri-refresh-line align-middle me-1"></i> Actualiser
-                  </button>
+          <div class="glass-card border-0 overflow-hidden">
+            <div class="card-header bg-transparent border-0 p-4">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="ri-list-settings-line text-primary"></i>
+                </div>
+                <h5 class="fw-bold mb-0">Liste des paiements dus</h5>
               </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
               <div class="table-responsive">
-                <table class="table table-hover align-middle table-nowrap mb-0" id="duePaiementsTable">
-                  <thead class="table-light">
+                <table class="table table-hover align-middle mb-0" id="duePaiementsTable">
+                  <thead>
                     <tr>
-                      <th scope="col">Client</th>
-                      <th scope="col">Libellé</th>
-                      <th scope="col">Type</th>
-                      <th scope="col">Date due</th>
-                      <th scope="col">Date Paiement</th>
-                      <th scope="col">Montant Dû</th>
-                      <th scope="col" class="text-center">Statut</th>
-                      <th scope="col" class="text-center">Actions</th>
+                      <th class="ps-4">Client</th>
+                      <th>Libellé</th>
+                      <th>Type</th>
+                      <th>Date due</th>
+                      <th>Date Paiement</th>
+                      <th>Montant Dû</th>
+                      <th class="text-center">Statut</th>
+                      <th class="text-center pe-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="duePaiementsList">
@@ -314,34 +384,31 @@
         } else {
           data.forEach(item => {
             var statusBadge = item.is_done 
-              ? '<span class="badge bg-success-subtle text-success">Payé</span>' 
-              : '<span class="badge bg-warning-subtle text-warning">En attente</span>';
+              ? '<span class="badge badge-soft-success">Payé</span>' 
+              : '<span class="badge badge-soft-warning">En attente</span>';
             
-            var typeBadgeClass = 'bg-info-subtle text-info';
-            if (item.type === 'Rachât de crédit') typeBadgeClass = 'bg-danger-subtle text-danger';
-            else if (item.type === 'Module en dette') typeBadgeClass = 'bg-secondary-subtle text-secondary';
+            var typeBadgeClass = 'badge-soft-info';
+            if (item.type === 'Rachât de crédit') typeBadgeClass = 'badge-soft-danger';
+            else if (item.type === 'Module en dette') typeBadgeClass = 'badge-soft-secondary';
             
             var actionButtons = '';
             if(!item.is_done){
                 actionButtons = `
-                    <button class="btn btn-sm btn-soft-success me-1" onclick="payDuePaiement(${item.id}, '${item.montant_due}')">
+                    <button class="btn btn-edit-premium text-success" onclick="payDuePaiement(${item.id}, '${item.montant_due}')" title="Payer">
                         <i class="ri-money-dollar-circle-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-danger" onclick="deleteDuePaiement(${item.id})">
+                    <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
                         <i class="ri-delete-bin-line"></i>
                     </button>
                 `;
             } else {
-                 var printUrl = "{% url 't_tresorerie:PrintReceipt' 0 %}".replace('0', item.paiement_id || 0); // Handle null case temporarily
+                 var printUrl = "{% url 't_tresorerie:PrintReceipt' 0 %}".replace('0', item.paiement_id || 0);
                  
                 actionButtons = `
-                     <button class="btn btn-sm btn-soft-secondary me-1" disabled>
-                        <i class="ri-check-double-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-soft-primary me-1" onclick="openReceiptModal('${printUrl}')" title="Imprimer le reçu">
+                    <button class="btn btn-edit-premium text-info" onclick="openReceiptModal('${printUrl}')" title="Imprimer le reçu">
                         <i class="ri-printer-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-danger" onclick="deleteDuePaiement(${item.id})">
+                    <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
                         <i class="ri-delete-bin-line"></i>
                     </button>
                 `;
@@ -349,15 +416,17 @@
 
             rows += `
               <tr>
-                <td class="fw-medium">${item.client}</td>
-                <td>${item.label || '-'}</td>
+                <td class="ps-4 fw-semibold text-dark">${item.client}</td>
+                <td class="fw-medium">${item.label || '-'}</td>
                 <td><span class="badge ${typeBadgeClass}">${item.type || '-'}</span></td>
-                <td>${item.date_echeance || '-'}</td>
-                <td>${item.date_paiement || '-'}</td>
-                <td>${parseFloat(item.montant_due).toFixed(2)} DZD</td>
+                <td class="text-muted small">${item.date_echeance || '-'}</td>
+                <td class="text-muted small">${item.date_paiement || '-'}</td>
+                <td class="fw-bold text-dark">${parseFloat(item.montant_due).toFixed(2)} DZD</td>
                 <td class="text-center">${statusBadge}</td>
-                <td class="text-center">
-                    ${actionButtons}
+                <td class="text-center pe-4">
+                    <div class="d-flex justify-content-center gap-1">
+                        ${actionButtons}
+                    </div>
                 </td>
               </tr>
             `;

@@ -18,7 +18,7 @@ def export_formateurs(request):
     format_type = request.GET.get('format', 'csv')
     formateurs = Formateurs.objects.all()
 
-    headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme']
+    headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme', 'NIN']
 
     if format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -78,6 +78,7 @@ def create_formateur(request):
         telephone = request.POST.get('telephone')
         email = request.POST.get('email')
         diplome = request.POST.get('diplome')
+        nin = request.POST.get('nin')
 
         Formateurs.objects.create(
             nom = nom,
@@ -85,6 +86,7 @@ def create_formateur(request):
             telephone = telephone,
             email = email,
             diplome = diplome,
+            nin = nin,
         )
         messages.success(request,'Les données du formateur ont été sauvegarder avec succès.')
         return JsonResponse({'status': 'success'})
@@ -102,6 +104,7 @@ def update_formateur(request):
         telephone = request.POST.get('telephone')
         email = request.POST.get('email')
         diplome = request.POST.get('diplome')
+        nin = request.POST.get('nin')
 
         try:
             formateur = Formateurs.objects.get(id=formateur_id)
@@ -110,6 +113,7 @@ def update_formateur(request):
             formateur.telephone = telephone
             formateur.email = email
             formateur.diplome = diplome
+            formateur.nin = nin
 
             formateur.save()
             messages.success(request,'Les données du formateur ont été mises à jour avec succès.')
@@ -153,6 +157,7 @@ def ApiGetFormateurs(request):
                 'telephone': formateur.telephone,
                 'email': formateur.email,
                 'diplome': formateur.diplome,
+                'nin': formateur.nin,
             })
         
         return JsonResponse(formateurs_data, safe=False)

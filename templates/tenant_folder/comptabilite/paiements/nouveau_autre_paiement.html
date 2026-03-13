@@ -353,36 +353,24 @@
             loadClients(type);
         });
 
-        // Load payment categories
-        function loadPaymentCategories(){
+        // Load payment types
+        function loadPaymentTypes(){
             $.ajax({
-                url: "{% url 't_tresorerie:ApiListeCategoriesProduits' %}",
+                url: "{% url 't_tresorerie:ApiListePaymentTypes' %}",
                 type: "GET",
                 success: function(response) {
                     var select = $('#compte');
                     select.empty();
                     select.append('<option value="">Veuillez sélectionner une catégorie</option>');
 
-                    // Recursive function to render categories at any depth
-                    function renderCategory(categories, depth) {
-                        categories.forEach(function(category) {
-                            var prefix = "";
-                            for(var i=0; i < depth; i++) prefix += "-- ";
-                            
-                            select.append('<option value="'+category.id+'">' + prefix + category.name + '</option>');
-
-                            if(category.children && category.children.length > 0) {
-                                renderCategory(category.children, depth + 1);
-                            }
+                    if(response && response.length > 0) {
+                        response.forEach(function(type) {
+                            select.append('<option value="'+type.id+'">' + type.name + '</option>');
                         });
-                    }
-
-                    if(response.data && response.data.length > 0) {
-                        renderCategory(response.data, 0);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.log("Erreur lors du chargement des catégories: " + error);
+                    console.log("Erreur lors du chargement des types: " + error);
                 }
             });
         }
@@ -390,7 +378,7 @@
 
         // Load clients and categories on page load
         loadClients();
-        loadPaymentCategories();
+        loadPaymentTypes();
 
         // New Client Modal Handling
         $('#btnNewClient').click(function(){
@@ -496,7 +484,7 @@
             var date_operation = $('#date_operation').val();
             var reference = $('#reference').val();
             var date_paiement = $('#date_paiement').val();
-            var compte = $('#compte').val();
+            var payment_type = $('#compte').val();
             var client = $('#client').val();
             var entite = $('#entite').val();
 
@@ -524,7 +512,7 @@
                     date_operation: date_operation,
                     reference: reference,
                     date_paiement: date_paiement,
-                    compte: compte,
+                    compte: payment_type, // Backend still expects 'compte' as key or I should change it there too
                     client: client,
                     entite: entite
                 }),

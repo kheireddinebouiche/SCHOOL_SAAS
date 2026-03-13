@@ -55,6 +55,7 @@ urlpatterns = [
 
     path('archive-modules/' , archiveModule, name="archiveModule"),
     path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
+    path('ApiDuplicateSpecialite', ApiDuplicateSpecialite, name="ApiDuplicateSpecialite"),
     path('archiveFormation' , archiveFormation, name="archiveFormation"),
     
     path('promos/nouvelle-promotion/',AddPromo, name="AddPromo"),

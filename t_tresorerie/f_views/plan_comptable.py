@@ -29,6 +29,21 @@ def PagePlanComptable(request):
 
 
 @login_required
+def PagePlanComptableRecetteDepense(request):
+    """
+    Page consolidée pour gérer les catégories de recettes (PaymentCategory) 
+    et les types de dépenses (DepensesCategory).
+    """
+    context = {
+        'titre_page': 'Plan Comptable - Recettes & Dépenses',
+        'titre_section': 'Comptabilité',
+        'sous_titre': 'Paramètres financiers',
+        'tenant': request.tenant
+    }
+    return render(request, 'tenant_folder/comptabilite/parametres/plan_comptable_recette_depense.html', context)
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def CreateCompteModal(request):
     """

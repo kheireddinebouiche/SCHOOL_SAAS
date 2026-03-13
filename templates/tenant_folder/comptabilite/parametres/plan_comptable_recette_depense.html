@@ -1,0 +1,706 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Plan Comptable - Recettes & Dépenses {% endblock title %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/alertify.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/themes/bootstrap.min.css"/>
+
+<style>
+    /* Premium Look & Feel */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .nav-pills .nav-link {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        margin-right: 0.5rem;
+    }
+
+    .nav-pills .nav-link.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .nav-pills .nav-link:hover:not(.active) {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        border-top: none;
+    }
+
+    .expand-icon {
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        margin-right: 0.5rem;
+    }
+
+    .expand-icon:hover {
+        background: #f1f5f9;
+        color: #3b82f6;
+    }
+
+    .category-row:hover {
+        background-color: #f8fafc;
+    }
+
+    .search-input-group {
+        position: relative;
+    }
+
+    .search-input-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .search-input-group .form-control {
+        padding-left: 2.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .modal-content {
+        border-radius: 1.5rem;
+        border: none;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+    }
+    
+    .tree-line-v {
+        position: absolute;
+        width: 1px;
+        background-color: #e2e8f0;
+        z-index: 1;
+    }
+    
+    .tree-line-h {
+        position: absolute;
+        height: 1px;
+        background-color: #e2e8f0;
+        z-index: 1;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Header Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="ri-book-open-line text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Plan Comptable - Recettes & Dépenses</h4>
+                                <p class="text-muted mb-0">Gestion centralisée des catégories de flux financiers</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Comptabilité</a></li>
+                                    <li class="breadcrumb-item active">Plan Comptable</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card glass-card border-0 mb-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                                <ul class="nav nav-pills" id="pills-tab" role="tablist">
+                                    <li class="nav-item " role="presentation">
+                                        <button class="nav-link active d-flex align-items-center" id="pills-recettes-tab" data-bs-toggle="pill" data-bs-target="#pills-recettes" type="button" role="tab">
+                                            <i class="ri-arrow-left-down-line me-2"></i> Catégories de Recettes
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link d-flex align-items-center" id="pills-depenses-tab" data-bs-toggle="pill" data-bs-target="#pills-depenses" type="button" role="tab">
+                                            <i class="ri-arrow-right-up-line me-2"></i> Types de Dépenses
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="search-input-group d-none d-sm-block">
+                                        <i class="ri-search-line"></i>
+                                        <input type="text" id="global-search" class="form-control" placeholder="Rechercher..." style="width: 250px;">
+                                    </div>
+                                    <button class="btn btn-primary d-flex align-items-center py-2 px-3 btn-rounded" id="addNewBtn">
+                                        <i class="ri-add-line me-1 fs-5"></i> <span id="addBtnLabel">Nouvelle Catégorie</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="tab-content" id="pills-tabContent">
+                                <!-- Recettes Tab -->
+                                <div class="tab-pane fade show active" id="pills-recettes" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-nowrap mb-0" id="recettesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 40%;">Libellé de la catégorie</th>
+                                                    <th>Type</th>
+                                                    <th>Sous-catégories</th>
+                                                    <th>Date de création</th>
+                                                    <th class="text-center">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recettesList">
+                                                <!-- Content loaded via AJAX -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Depenses Tab -->
+                                <div class="tab-pane fade" id="pills-depenses" role="tabpanel">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-nowrap mb-0" id="depensesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 40%;">Type de dépense</th>
+                                                    <th>Catégorie Parente</th>
+                                                    <th>Date de création</th>
+                                                    <th class="text-center">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="depensesList">
+                                                <!-- Content loaded via AJAX -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Revenue Category -->
+<div class="modal fade" id="recetteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary bg-opacity-5">
+                <h5 class="modal-title fw-bold" id="recetteModalLabel">Nouvelle Catégorie de Recette</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="recetteForm">
+                    <input type="hidden" id="recetteId">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Nom de la catégorie <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg btn-rounded" id="recetteName" placeholder="Ex: Frais d'inscription" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Catégorie Parente</label>
+                        <select class="form-select form-control-lg btn-rounded" id="recetteParent">
+                            <option value="">Aucune (Principal)</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Type de catégorie</label>
+                        <select class="form-select form-control-lg btn-rounded" id="recetteType">
+                            <option value="standard">Standard</option>
+                            <option value="rachat_credit">Rachat de Crédit</option>
+                        </select>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-primary btn-lg btn-rounded py-3" id="saveRecette">
+                            <span class="fw-bold">Enregistrer</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Expense Type -->
+<div class="modal fade" id="depenseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-danger bg-opacity-5">
+                <h5 class="modal-title fw-bold" id="depenseModalLabel">Nouveau Type de Dépense</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="depenseForm">
+                    <input type="hidden" id="depenseId">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Nom du type <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg btn-rounded" id="depenseName" placeholder="Ex: Fournitures de bureau" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Catégorie Parente</label>
+                        <select class="form-select form-control-lg btn-rounded" id="depenseParent">
+                            <option value="">Aucune (Principal)</option>
+                        </select>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-danger btn-lg btn-rounded py-3" id="saveDepense">
+                            <span class="fw-bold">Enregistrer</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg">
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-1 p-3">
+                        <i class="ri-delete-bin-line"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold">Supprimer ?</h4>
+                <p class="text-muted mb-4">Cette action est irréversible et supprimera également toutes les sous-catégories.</p>
+                <div class="hstack gap-2 justify-content-center">
+                    <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger btn-rounded px-4" id="confirmDelete">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/alertify.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        let currentTab = 'recettes';
+        let currentDeleteId = null;
+        let currentDeleteType = null;
+
+        // Initialize display
+        loadData();
+
+        // Switch Tab Logic
+        $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function (e) {
+            currentTab = e.target.id === 'pills-recettes-tab' ? 'recettes' : 'depenses';
+            $('#addBtnLabel').text(currentTab === 'recettes' ? 'Nouvelle Catégorie' : 'Nouveau Type');
+            $('#addNewBtn').removeClass('btn-primary btn-danger').addClass(currentTab === 'recettes' ? 'btn-primary' : 'btn-danger');
+            loadData();
+        });
+
+        // Search logic
+        $('#global-search').on('keyup', function() {
+            let value = $(this).val().toLowerCase();
+            let table = currentTab === 'recettes' ? '#recettesList tr' : '#depensesList tr';
+            $(table).filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        $('#addNewBtn').click(function() {
+            if (currentTab === 'recettes') {
+                resetRecetteForm();
+                $('#recetteModal').modal('show');
+            } else {
+                resetDepenseForm();
+                $('#depenseModal').modal('show');
+            }
+        });
+
+        // Load Data from APIs
+        function loadData() {
+            if (currentTab === 'recettes') {
+                loadRecettes();
+            } else {
+                loadDepenses();
+            }
+        }
+
+        function loadRecettes() {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiListeCategoriesProduits' %}",
+                type: 'GET',
+                success: function(response) {
+                    renderRecettes(response.data || []);
+                    populateRecetteParents(response.data || []);
+                }
+            });
+        }
+
+        function renderRecettes(data) {
+            let html = '';
+            if (data.length === 0) {
+                html = '<tr><td colspan="5" class="text-center py-4">Aucune donnée trouvée</td></tr>';
+            } else {
+                function buildTreeHtml(items, level = 0, parentIsLast = []) {
+                    items.forEach((item, index) => {
+                        const isLast = index === items.length - 1;
+                        const hasChildren = item.children && item.children.length > 0;
+                        const date = item.created_at ? new Date(item.created_at).toLocaleDateString() : '-';
+                        let indent = '';
+                        
+                        // Draw lines for tree
+                        for(let i = 0; i < level; i++) {
+                            let left = i * 24 + 12;
+                            if(!parentIsLast[i]) {
+                                indent += `<div class="tree-line-v" style="left:${left}px; top:0; bottom:0;"></div>`;
+                            }
+                        }
+                        if(level > 0) {
+                            let left = (level - 1) * 24 + 12;
+                            let height = isLast ? '50%' : '100%';
+                            indent += `<div class="tree-line-v" style="left:${left}px; top:0; height:${height};"></div>`;
+                            indent += `<div class="tree-line-h" style="left:${left}px; top:50%; width:12px;"></div>`;
+                        }
+
+                        let paddingLeft = level * 24 + 15;
+                        let expandIconClass = hasChildren ? 'ri-arrow-down-s-line' : 'ri-subtract-line';
+
+                        html += `<tr class="category-row" data-id="${item.id}" data-parent="${item.parent_id || ''}" data-level="${level}" data-expanded="true">
+                            <td style="padding-left: ${paddingLeft + 10}px; position: relative;">
+                                ${indent}
+                                <span class="expand-icon ${hasChildren ? 'has-children' : ''}">
+                                    <i class="${expandIconClass} text-muted"></i>
+                                </span>
+                                <span class="fw-bold">${item.name}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-soft-${item.category_type === 'rachat_credit' ? 'warning' : 'primary'} text-uppercase">
+                                    ${item.category_type === 'rachat_credit' ? 'Rachat' : 'Standard'}
+                                </span>
+                            </td>
+                            <td><span class="badge bg-light text-dark fw-normal">${item.children_count}</span></td>
+                            <td class="text-muted small">${date}</td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-ghost-secondary btn-sm rounded-circle" data-bs-toggle="dropdown">
+                                        <i class="ri-more-2-fill"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li><a class="dropdown-item edit-recette" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}" data-type="${item.category_type}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger delete-btn" href="#" data-id="${item.id}" data-type="recette"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>`;
+
+                        if (hasChildren) {
+                            buildTreeHtml(item.children, level + 1, [...parentIsLast, isLast]);
+                        }
+                    });
+                }
+                buildTreeHtml(data);
+            }
+            $('#recettesList').html(html);
+        }
+
+        function loadDepenses() {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
+                type: 'GET',
+                success: function(response) {
+                    renderDepenses(response || []);
+                    populateDepenseParents(response || []);
+                }
+            });
+        }
+
+        function renderDepenses(data) {
+            // Depenses API returns a flat list with parent_id, needs tree conversion
+            const tree = {};
+            const roots = [];
+            data.forEach(item => tree[item.id] = { ...item, children: [] });
+            data.forEach(item => {
+                if (item.parent_id && tree[item.parent_id]) tree[item.parent_id].children.push(tree[item.id]);
+                else roots.push(tree[item.id]);
+            });
+
+            let html = '';
+            if (roots.length === 0) {
+                html = '<tr><td colspan="4" class="text-center py-4">Aucune donnée trouvée</td></tr>';
+            } else {
+                function buildTreeHtml(items, level = 0, parentIsLast = []) {
+                    items.forEach((item, index) => {
+                        const isLast = index === items.length - 1;
+                        const hasChildren = item.children && item.children.length > 0;
+                        const date = item.created_at || '-';
+                        let indent = '';
+                        
+                        for(let i = 0; i < level; i++) {
+                            let left = i * 24 + 12;
+                            if(!parentIsLast[i]) indent += `<div class="tree-line-v" style="left:${left}px; top:0; bottom:0;"></div>`;
+                        }
+                        if(level > 0) {
+                            let left = (level - 1) * 24 + 12;
+                            let height = isLast ? '50%' : '100%';
+                            indent += `<div class="tree-line-v" style="left:${left}px; top:0; height:${height};"></div>`;
+                            indent += `<div class="tree-line-h" style="left:${left}px; top:50%; width:12px;"></div>`;
+                        }
+                        let paddingLeft = level * 24 + 15;
+                        let expandIconClass = hasChildren ? 'ri-arrow-down-s-line' : 'ri-subtract-line';
+
+                        html += `<tr class="category-row" data-id="${item.id}" data-parent="${item.parent_id || ''}" data-level="${level}" data-expanded="true">
+                            <td style="padding-left: ${paddingLeft + 10}px; position: relative;">
+                                ${indent}
+                                <span class="expand-icon ${hasChildren ? 'has-children' : ''}">
+                                    <i class="${expandIconClass} text-muted"></i>
+                                </span>
+                                <span class="fw-bold">${item.name}</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark fw-normal">${item.parent_name || 'Principal'}</span></td>
+                            <td class="text-muted small">${date}</td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-ghost-secondary btn-sm rounded-circle" data-bs-toggle="dropdown">
+                                        <i class="ri-more-2-fill"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li><a class="dropdown-item edit-depense" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger delete-btn" href="#" data-id="${item.id}" data-type="depense"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>`;
+                        if (hasChildren) buildTreeHtml(item.children, level + 1, [...parentIsLast, isLast]);
+                    });
+                }
+                buildTreeHtml(roots);
+            }
+            $('#depensesList').html(html);
+        }
+
+        // Expand/Collapse Toggle Logic
+        $(document).on('click', '.expand-icon.has-children', function(e) {
+            e.stopPropagation();
+            const row = $(this).closest('tr');
+            const id = row.data('id');
+            const tbody = row.closest('tbody');
+            const isExpanded = row.attr('data-expanded') === 'true';
+
+            if (isExpanded) {
+                // Collapse
+                collapseDescendants(id, tbody);
+                $(this).find('i').removeClass('ri-arrow-down-s-line').addClass('ri-arrow-right-s-line');
+                row.attr('data-expanded', 'false');
+            } else {
+                // Expand
+                expandImmediateChildren(id, tbody);
+                $(this).find('i').removeClass('ri-arrow-right-s-line').addClass('ri-arrow-down-s-line');
+                row.attr('data-expanded', 'true');
+            }
+        });
+
+        function collapseDescendants(parentId, tbody) {
+            const children = tbody.find(`tr[data-parent="${parentId}"]`);
+            children.each(function() {
+                const childId = $(this).data('id');
+                $(this).hide();
+                // Recursively hide descendants of descendants
+                collapseDescendants(childId, tbody);
+                // Reset expanded status to false for descendants
+                $(this).attr('data-expanded', 'false');
+                $(this).find('.expand-icon.has-children i').removeClass('ri-arrow-down-s-line').addClass('ri-arrow-right-s-line');
+            });
+        }
+
+        function expandImmediateChildren(parentId, tbody) {
+            const children = tbody.find(`tr[data-parent="${parentId}"]`);
+            children.show();
+            // We only show immediate children. Their children remain hidden until expanded.
+            children.each(function(){
+                $(this).attr('data-expanded', 'false');
+                $(this).find('.expand-icon.has-children i').removeClass('ri-arrow-down-s-line').addClass('ri-arrow-right-s-line');
+            });
+        }
+
+        // Parent Dropdown Populators
+        function populateRecetteParents(data) {
+            let select = $('#recetteParent');
+            select.html('<option value="">Aucune (Principal)</option>');
+            function flatten(items, level = 0) {
+                items.forEach(item => {
+                    select.append(`<option value="${item.id}">${'&nbsp;'.repeat(level*2)}${item.name}</option>`);
+                    if (item.children) flatten(item.children, level + 1);
+                });
+            }
+            flatten(data);
+        }
+
+        function populateDepenseParents(data) {
+            let select = $('#depenseParent');
+            select.html('<option value="">Aucune (Principal)</option>');
+            data.forEach(item => {
+                 let name = (item.parent_name ? item.parent_name + ' > ' : '') + item.name;
+                 select.append(`<option value="${item.id}">${name}</option>`);
+            });
+        }
+
+        // CRUD AJAX Handlers
+        $('#saveRecette').click(function() {
+            let id = $('#recetteId').val();
+            let name = $('#recetteName').val();
+            let parentId = $('#recetteParent').val();
+            let type = $('#recetteType').val();
+
+            if (!name) return alertify.error("Le nom est requis");
+
+            let url = id ? "{% url 't_tresorerie:ApiModifierCategorieProduit' %}" : "{% url 't_tresorerie:ApiCreerCategorieProduit' %}";
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                contentType: 'application/json',
+                data: JSON.stringify({id: id, name: name, parent_id: parentId, category_type: type}),
+                success: function(resp) {
+                    if (resp.success) {
+                        alertify.success(resp.message);
+                        $('#recetteModal').modal('hide');
+                        loadRecettes();
+                    } else alertify.error(resp.error);
+                }
+            });
+        });
+
+        $('#saveDepense').click(function() {
+            let id = $('#depenseId').val();
+            let name = $('#depenseName').val();
+            let parentId = $('#depenseParent').val();
+
+            if (!name) return alertify.error("Le nom est requis");
+
+            let url = id ? "{% url 't_tresorerie:ApiUpdateDepenseCategory' %}" : "{% url 't_tresorerie:ApiStoreDepenseCategory' %}";
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {id: id, name: name, parent_id: parentId, csrfmiddlewaretoken: '{{ csrf_token }}'},
+                success: function(resp) {
+                    if (resp.status === 'success') {
+                        alertify.success(resp.message);
+                        $('#depenseModal').modal('hide');
+                        loadDepenses();
+                    } else alertify.error(resp.message);
+                }
+            });
+        });
+
+        $(document).on('click', '.edit-recette', function(e) {
+            e.preventDefault();
+            $('#recetteId').val($(this).data('id'));
+            $('#recetteName').val($(this).data('name'));
+            $('#recetteParent').val($(this).data('parent'));
+            $('#recetteType').val($(this).data('type'));
+            $('#recetteModalLabel').text("Modifier la Catégorie");
+            $('#recetteModal').modal('show');
+        });
+
+        $(document).on('click', '.edit-depense', function(e) {
+            e.preventDefault();
+            $('#depenseId').val($(this).data('id'));
+            $('#depenseName').val($(this).data('name'));
+            $('#depenseParent').val($(this).data('parent'));
+            $('#depenseModalLabel').text("Modifier le Type");
+            $('#depenseModal').modal('show');
+        });
+
+        $(document).on('click', '.delete-btn', function(e) {
+            e.preventDefault();
+            currentDeleteId = $(this).data('id');
+            currentDeleteType = $(this).data('type');
+            $('#deleteModal').modal('show');
+        });
+
+        $('#confirmDelete').click(function() {
+            if (!currentDeleteId) return;
+            let url = currentDeleteType === 'recette' ? "{% url 't_tresorerie:ApiSupprimerCategorieProduit' %}" : "{% url 't_tresorerie:ApiDeleteDepenseCategory' %}";
+            let data = currentDeleteType === 'recette' ? JSON.stringify({id: currentDeleteId}) : {id: currentDeleteId};
+            let config = {
+                url: url,
+                type: currentDeleteType === 'recette' ? 'DELETE' : 'GET',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                data: data,
+                success: function(resp) {
+                    if (resp.success || resp.status === 'success') {
+                        alertify.success("Supprimé avec succès");
+                        $('#deleteModal').modal('hide');
+                        loadData();
+                    } else alertify.error("Erreur");
+                }
+            };
+            if (currentDeleteType === 'recette') config.contentType = 'application/json';
+            $.ajax(config);
+        });
+
+        function resetRecetteForm() {
+            $('#recetteForm')[0].reset();
+            $('#recetteId').val('');
+            $('#recetteModalLabel').text("Nouvelle Catégorie de Recette");
+        }
+
+        function resetDepenseForm() {
+            $('#depenseForm')[0].reset();
+            $('#depenseId').val('');
+            $('#depenseModalLabel').text("Nouveau Type de Dépense");
+        }
+    });
+</script>
+{% endblock content %}

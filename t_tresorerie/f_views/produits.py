@@ -199,12 +199,12 @@ def ApiStoreAutrePaiement(request):
     if mode_paiement == 'esp' and not date_paiement:
          return JsonResponse({'error': 'La date de règlement est obligatoire pour les paiements en espèces.'}, status=400)
 
-    # Get the PaymentCategory if provided
-    compte = None
+    # Get the PaymentType if provided
+    payment_type = None
     if compte_id:
         try:
-            compte = PaymentCategory.objects.get(id=compte_id)
-        except PaymentCategory.DoesNotExist:
+            payment_type = PaymentType.objects.get(id=compte_id)
+        except PaymentType.DoesNotExist:
             pass # Or handle error appropriately
 
     # Get the Client if provided
@@ -231,7 +231,7 @@ def ApiStoreAutrePaiement(request):
         date_operation=date_operation,
         reference=reference,
         date_paiement=date_paiement if date_paiement else None,
-        compte=compte,
+        payment_type=payment_type,
         client=client,
         entite=entite
     )
@@ -256,7 +256,7 @@ def ApiStoreAutrePaiement(request):
 def ApiListeAutrePaiements(request):
     """API endpoint to list all other payments"""
     
-    paiements = AutreProduit.objects.all().select_related('client', 'compte').order_by('-date_paiement')
+    paiements = AutreProduit.objects.all().select_related('client', 'payment_type').order_by('-date_paiement')
     data = []
 
     for p in paiements:
@@ -267,7 +267,7 @@ def ApiListeAutrePaiements(request):
             'description': p.label,
             'num': p.reference if p.reference else f"AUT-{p.id}",
             'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
-            'context': p.compte.name if p.compte else "Autre",
+            'context': p.payment_type.name if p.payment_type else "Autre",
             'context_key': 'autre',
             'mode_paiement': p.get_mode_paiement_display(),
             'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else "-"
@@ -290,7 +290,7 @@ def ApiGetAutrePaiement(request, pk):
             'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
             'reference': paiement.reference or '-',
             'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
-            'compte_id': paiement.compte.id if paiement.compte else None
+            'compte_id': paiement.payment_type.id if paiement.payment_type else None
         })
     except AutreProduit.DoesNotExist:
         return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
@@ -315,10 +315,10 @@ def ApiUpdateAutrePaiement(request):
 
             paiement = AutreProduit.objects.get(id=paiement_id)
 
-            # Get the PaymentCategory if provided
-            compte = None
+            # Get the PaymentType if provided
+            payment_type = None
             if compte_id:
-                compte = PaymentCategory.objects.get(id=compte_id)
+                payment_type = PaymentType.objects.get(id=compte_id)
 
             # Update the AutreProduit instance
             paiement.label = label
@@ -327,7 +327,7 @@ def ApiUpdateAutrePaiement(request):
             paiement.date_operation = date_operation
             paiement.reference = reference
             paiement.date_paiement = date_paiement
-            paiement.compte = compte
+            paiement.payment_type = payment_type
             paiement.save()
 
             # Handle OperationsBancaire for banking modes

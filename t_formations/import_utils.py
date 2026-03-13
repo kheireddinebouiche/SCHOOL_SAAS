@@ -182,6 +182,7 @@ def verify_data(data, data_type):
                 email = row.get('Email') or row.get('email')
                 nom = row.get('Nom') or row.get('nom')
                 prenom = row.get('Prénom') or row.get('prenom')
+                nin = row.get('NIN') or row.get('nin')
                 
                 if not email:
                      error_msg.append("Email manquant")
@@ -335,15 +336,17 @@ def import_data(data, data_type, user=None):
                 prenom = row.get('Prénom') or row.get('prenom')
                 telephone = row.get('Téléphone') or row.get('telephone')
                 diplome = row.get('Diplôme') or row.get('diplome')
+                nin = row.get('NIN') or row.get('nin')
+                nin = row.get('NIN') or row.get('nin')
                 
                 if email:
                     Formateurs.objects.update_or_create(
                         email=email,
                         defaults={
-                            'nom': nom,
                             'prenom': prenom,
                             'telephone': telephone,
-                            'diplome': diplome
+                            'diplome': diplome,
+                            'nin': nin
                         }
                     )
             

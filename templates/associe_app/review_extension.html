@@ -3,72 +3,150 @@
 {% load budget_tags %}
 
 {% block content %}
+<style>
+    :root {
+        --primary-teal: #0f766e;
+        --secondary-teal: #0d9488;
+        --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%);
+        --primary-soft: rgba(15, 118, 110, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .main-content {
+        background: #f1f5f9;
+        min-height: 100vh;
+    }
+
+    .dashboard-header {
+        background: var(--primary-gradient) !important;
+        border-radius: 1.5rem !important;
+        padding: 2rem !important;
+        margin-bottom: 2rem !important;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(15, 118, 110, 0.2);
+    }
+
+    .glass-card {
+        background: #ffffff !important;
+        border: none !important;
+        border-radius: 1.5rem !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .card-header-custom {
+        padding: 1.25rem 1.5rem !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .table thead th {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 0.75rem !important;
+        letter-spacing: 0.05em !important;
+        padding: 1.25rem 1.5rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .table tbody td {
+        padding: 1.25rem 1.5rem !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        vertical-align: middle !important;
+    }
+
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-soft-success { background: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; }
+    .badge-soft-warning { background: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; }
+    .badge-soft-danger { background: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; }
+
+    .motif-box {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-teal) !important;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1) !important;
+    }
+</style>
+
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- Page Header -->
-            <div class="row mb-4">
-                <div class="col-12">
-                     <div class="d-flex justify-content-between align-items-center bg-white px-4 py-3 rounded-3 shadow-sm border border-light">
-                        <div>
-                            <h4 class="fs-18 fw-bold text-dark mb-1">Examen de la demande de rallonge</h4>
-                            <p class="text-muted mb-0 fs-13">
-                                Institut: <span class="fw-semibold text-primary">{{ ext_request.institut.nom }}</span> | 
-                                Campagne: <span class="fw-semibold text-primary">{{ ext_request.campaign.name }}</span>
-                            </p>
-                        </div>
-                        <div>
-                            <a href="{% url 'extension_requests_list' %}" class="btn btn-light btn-sm shadow-sm">
-                                <i class="ri-arrow-left-line align-middle me-1"></i> Retour à la liste
+            <!-- Modern Header -->
+            <div class="dashboard-header">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <div class="d-flex align-items-center">
+                            <a href="{% url 'associe_app:extension_requests_list' %}" class="btn btn-sm btn-light btn-icon me-3 bg-white text-primary rounded-circle border-0 shadow-sm">
+                                <i class="ri-arrow-left-line"></i>
                             </a>
+                            <div>
+                                <h4 class="mb-0 text-white fw-bold">Examen de la rallonge</h4>
+                                <p class="text-white-50 mb-0 small opacity-75">Réf: #EXT-{{ ext_request.id }} | {{ ext_request.institut.nom }}</p>
+                            </div>
                         </div>
+                    </div>
+                    <div class="col-md-5 text-md-end">
+                        <span class="text-white-50 small text-uppercase ls-1">Campagne</span>
+                        <h5 class="text-white fw-bold mb-0">{{ ext_request.campaign.name }}</h5>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <!-- Request Details -->
+            <div class="row g-4">
+                <!-- Request Summary -->
                 <div class="col-lg-4">
-                    <div class="card h-100">
-                        <div class="card-header bg-soft-primary border-bottom-dashed">
-                            <h5 class="card-title mb-0">Détails de la demande</h5>
+                    <div class="glass-card mb-4">
+                        <div class="card-header-custom">
+                            <h5 class="card-title mb-0 fw-bold text-dark">Détails de la demande</h5>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-borderless mb-0">
-                                    <tbody>
-                                        <tr>
-                                            <td class="fw-medium">Date</td>
-                                            <td class="text-end">{{ ext_request.created_at|date:"d M Y, H:i" }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-medium">Statut</td>
-                                            <td class="text-end">
-                                                {% if ext_request.status == 'pending' %}
-                                                    <span class="badge badge-soft-warning text-uppercase">En attente</span>
-                                                {% elif ext_request.status == 'approved' %}
-                                                    <span class="badge badge-soft-success text-uppercase">Approuvée</span>
-                                                {% elif ext_request.status == 'rejected' %}
-                                                    <span class="badge badge-soft-danger text-uppercase">Rejetée</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                <span class="text-muted">Date soumission</span>
+                                <span class="fw-bold text-dark">{{ ext_request.created_at|date:"d M Y, H:i" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-4 border-bottom pb-2">
+                                <span class="text-muted">Statut Actuel</span>
+                                <div>
+                                    {% if ext_request.status == 'pending' %}
+                                        <span class="status-badge badge-soft-warning">En attente</span>
+                                    {% elif ext_request.status == 'approved' %}
+                                        <span class="status-badge badge-soft-success">Approuvée</span>
+                                    {% elif ext_request.status == 'rejected' %}
+                                        <span class="status-badge badge-soft-danger">Rejetée</span>
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             <div class="mt-4">
-                                <h6 class="text-muted text-uppercase fs-12 fw-bold">Motif de la demande</h6>
-                                <div class="p-3 bg-light rounded border border-light mt-2">
-                                    <p class="mb-0 text-dark">{{ ext_request.motif }}</p>
+                                <label class="text-muted small text-uppercase fw-bold ls-1 mb-2">Motif de la demande</label>
+                                <div class="motif-box">
+                                    <p class="mb-0 text-dark fs-14 fw-medium">{{ ext_request.motif }}</p>
                                 </div>
                             </div>
                             
                             {% if ext_request.status != 'pending' and ext_request.admin_comment %}
                             <div class="mt-4">
-                                <h6 class="text-muted text-uppercase fs-12 fw-bold">Commentaire Admin</h6>
-                                <div class="p-3 bg-light rounded border border-light mt-2">
-                                    <p class="mb-0 text-dark">{{ ext_request.admin_comment }}</p>
+                                <label class="text-muted small text-uppercase fw-bold ls-1 mb-2">Commentaire Administrateur</label>
+                                <div class="motif-box bg-soft-info border-info border-opacity-10">
+                                    <p class="mb-0 text-dark fs-14">{{ ext_request.admin_comment }}</p>
                                 </div>
                             </div>
                             {% endif %}
@@ -76,65 +154,58 @@
                     </div>
                 </div>
 
-                <!-- Comparisons Table -->
+                <!-- Modifications Table -->
                 <div class="col-lg-8">
-                     <div class="card h-100">
-                        <div class="card-header bg-white border-bottom">
-                            <h5 class="card-title mb-0">Modifications demandées</h5>
+                     <div class="glass-card">
+                        <div class="card-header-custom">
+                            <h5 class="card-title mb-0 fw-bold text-dark">Modifications demandées</h5>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light text-muted text-uppercase fs-12">
+                                <table class="table mb-0">
+                                    <thead>
                                         <tr>
                                             <th class="ps-4">Poste Budgétaire</th>
-                                            <th>Détail</th>
-                                            <th class="text-end">Montant Actuel</th>
-                                            <th class="text-end">Nouveau Montant</th>
-                                            <th class="text-end pe-4">Différence</th>
+                                            <th>Entité / Catégorie</th>
+                                            <th class="text-end">Actuel</th>
+                                            <th class="text-end text-primary">Rallonge</th>
+                                            <th class="text-end pe-4 text-success">Nouveau</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for item in items %}
                                         <tr>
                                             <td class="ps-4">
-                                                <div class="fw-medium text-dark">{{ item.poste.label }}</div>
-                                                <div class="text-muted fs-11">{{ item.poste.get_type_display }}</div>
+                                                <div class="fw-bold text-dark">{{ item.poste.label }}</div>
+                                                <div class="text-muted fs-11 text-uppercase">{{ item.poste.get_type_display }}</div>
                                             </td>
                                             <td>
-                                                <div class="d-flex flex-column">
+                                                <div class="d-flex flex-column gap-1">
                                                     {% if item.payment_category %}
-                                                    <span class="badge badge-soft-info mb-1 w-fit">{{ item.payment_category.name }}</span>
+                                                    <span class="badge bg-soft-info text-info border-0 rounded-pill w-fit fs-10">{{ item.payment_category.name }}</span>
                                                     {% endif %}
-                                                    <span class="text-muted fs-12">
-                                                        {# Resolve entreprise name using map from view #}
+                                                    <span class="text-dark fw-medium fs-12">
                                                         {% with ent_name=entreprise_map|get_item:item.entreprise_id %}
-                                                            {{ ent_name|default:"Entreprise inconnue" }}
+                                                            {{ ent_name|default:"Entreprise" }}
                                                         {% endwith %}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td class="text-end fw-medium text-muted">
-                                                {{ item.old_amount|intcomma }} DA
+                                            <td class="text-end fw-bold text-muted">
+                                                {{ item.old_amount|intcomma }}
                                             </td>
                                             <td class="text-end fw-bold text-primary">
-                                                {{ item.requested_amount|intcomma }} DA
+                                                +{{ item.requested_amount|intcomma }}
                                             </td>
-                                            <td class="text-end pe-4">
-                                                {% with diff=item.requested_amount|sub:item.old_amount %}
-                                                    {% if diff > 0 %}
-                                                    <span class="text-success fw-bold">+{{ diff|intcomma }}</span>
-                                                    {% elif diff < 0 %}
-                                                    <span class="text-danger fw-bold">{{ diff|intcomma }}</span>
-                                                    {% else %}
-                                                    <span class="text-muted">-</span>
-                                                    {% endif %}
+                                            <td class="text-end pe-4 text-success fw-bold">
+                                                {% with total=item.old_amount|add:item.requested_amount %}
+                                                    {{ total|intcomma }}
                                                 {% endwith %}
                                             </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="5" class="text-center py-4 text-muted">Aucun détail trouvé.</td>
+                                            <td colspan="5" class="text-center py-5 text-muted">Aucun détail trouvé.</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -143,19 +214,19 @@
                         </div>
                         
                         {% if ext_request.status == 'pending' %}
-                        <div class="card-footer bg-white border-top p-3">
+                        <div class="card-footer bg-light bg-opacity-50 border-top p-4">
                             <form method="POST">
                                 {% csrf_token %}
-                                <div class="mb-3">
-                                    <label for="admin_comment" class="form-label text-muted fs-13">Commentaire (optionnel)</label>
-                                    <textarea class="form-control" name="admin_comment" rows="2" placeholder="Ajouter un commentaire sur la décision..."></textarea>
+                                <div class="mb-4">
+                                    <label for="admin_comment" class="form-label fw-bold text-muted small text-uppercase">Votre décision / Commentaire</label>
+                                    <textarea class="form-control border-light shadow-sm" name="admin_comment" rows="3" placeholder="Expliquez brièvement votre décision..."></textarea>
                                 </div>
-                                <div class="d-flex justify-content-end gap-2">
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-label shadow-sm">
-                                        <i class="ri-close-circle-line label-icon align-middle fs-16 me-2"></i> Rejeter
+                                <div class="d-flex justify-content-end gap-3">
+                                    <button type="submit" name="action" value="reject" class="btn btn-soft-danger px-4 py-2 fw-bold">
+                                        <i class="ri-close-circle-line me-2"></i> Rejeter
                                     </button>
-                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-label shadow-sm">
-                                        <i class="ri-checkbox-circle-line label-icon align-middle fs-16 me-2"></i> Approuver la demande
+                                    <button type="submit" name="action" value="approve" class="btn btn-primary-teal px-4 py-2 fw-bold">
+                                        <i class="ri-checkbox-circle-line me-2"></i> Approuver la demande
                                     </button>
                                 </div>
                             </form>

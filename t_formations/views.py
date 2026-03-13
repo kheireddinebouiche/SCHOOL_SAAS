@@ -26,7 +26,7 @@ def listModules(request):
     return render(request, 't_formations/modules.html', {'modules': modules})
 
 def listSpecialites(request):
-    specialites = Specialites.objects.all()
+    specialites = Specialites.objects.all().order_by('formation')
     context = {
         'liste' : specialites,
         'tenant' : request.tenant
@@ -582,6 +582,89 @@ def ApiGetSpecialiteModule(request):
     }
 
     return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDuplicateSpecialite(request):
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
+
+    id_specialite = request.POST.get('id_specialite')
+    version = request.POST.get('version')
+
+    if not id_specialite:
+        return JsonResponse({'success': False, 'message': 'ID de spécialité manquant'})
+
+    try:
+        source_spec = Specialites.objects.get(id=id_specialite)
+    except Specialites.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Spécialité source introuvable'})
+
+    # Generate new code
+    new_version = version if version else "Copy"
+    new_code = f"{source_spec.code}-{new_version}"
+    
+    # Check if code already exists
+    if Specialites.objects.filter(code=new_code).exists():
+        # Add a suffix if it exists
+        count = 1
+        while Specialites.objects.filter(code=f"{new_code}-{count}").exists():
+            count += 1
+        new_code = f"{new_code}-{count}"
+
+    # Create new specialty
+    new_spec = Specialites.objects.create(
+        code=new_code,
+        label=source_spec.label,
+        prix=source_spec.prix,
+        prix_double_diplomation=source_spec.prix_double_diplomation,
+        duree=source_spec.duree,
+        nb_semestre=source_spec.nb_semestre,
+        branche=source_spec.branche,
+        abr=source_spec.abr,
+        formation=source_spec.formation,
+        nb_tranche=source_spec.nb_tranche,
+        responsable=source_spec.responsable,
+        version=version,
+        condition_access=source_spec.condition_access,
+        updated_by=request.user
+    )
+
+    # Copy Modules
+    source_modules = Modules.objects.filter(specialite=source_spec, is_archived=False)
+    module_mapping = {} # To map old module ID to new module object for repartition copy
+
+    for module in source_modules:
+        old_id = module.id
+        # Create new module
+        new_module = Modules.objects.create(
+            specialite=new_spec,
+            code_interne=module.code_interne,
+            label=module.label,
+            duree=module.duree,
+            coef=module.coef,
+            n_elimate=module.n_elimate,
+            systeme_eval=module.systeme_eval,
+            created_by=request.user
+        )
+        module_mapping[old_id] = new_module
+
+    # Copy ProgrammeFormation (Repartition)
+    source_repartitions = ProgrammeFormation.objects.filter(specialite=source_spec)
+    for repart in source_repartitions:
+        if repart.module_id in module_mapping:
+            ProgrammeFormation.objects.create(
+                module=module_mapping[repart.module_id],
+                specialite=new_spec,
+                semestre=repart.semestre,
+                created_by=request.user
+            )
+
+    return JsonResponse({
+        'success': True, 
+        'message': 'Spécialité dupliquée avec succès',
+        'new_id': new_spec.id
+    })
 
 @login_required(login_url="institut_app:login")
 def ApiGetRepartitionModule(request):

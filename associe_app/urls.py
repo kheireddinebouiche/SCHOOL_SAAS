@@ -42,6 +42,8 @@ from .views import (
     import_depenses_categories
 )
 
+app_name = 'associe_app'
+
 urlpatterns = [
     path('', index, name='configuration_index'),
     path('budget/', configuration_budget, name='configuration_budget'),
@@ -86,10 +88,10 @@ urlpatterns = [
     # Budget Campaigns
     path('budget-campaigns/', budget_campaign_list, name='budget_campaign_list'),
     path('budget-campaigns/create/', budget_campaign_create, name='budget_campaign_create'),
-    path('budget-campaigns/<int:campaign_id>/instituts/', budget_campaign_instituts, name='budget_campaign_instituts'),
-    path('budget-campaigns/<int:campaign_id>/activate/', budget_campaign_activate, name='budget_campaign_activate'),
-    path('budget-campaigns/<int:campaign_id>/delete/', budget_campaign_delete, name='budget_campaign_delete'),
-    path('budget-campaigns/<int:campaign_id>/review/<int:institut_id>/', budget_campaign_review, name='budget_campaign_review'),
+    path('budget-campaigns/<slug:campaign_slug>/instituts/', budget_campaign_instituts, name='budget_campaign_instituts'),
+    path('budget-campaigns/<slug:campaign_slug>/activate/', budget_campaign_activate, name='budget_campaign_activate'),
+    path('budget-campaigns/<slug:campaign_slug>/delete/', budget_campaign_delete, name='budget_campaign_delete'),
+    path('budget-campaigns/<slug:campaign_slug>/review/<int:institut_id>/', budget_campaign_review, name='budget_campaign_review'),
     
     # Extension Requests
     path('extension-requests/', extension_requests_list, name='extension_requests_list'),

@@ -3,142 +3,240 @@
 {% block title %}Formations - Liste des formations{% endblock title %}
 
 {% block content %}
+<style>
+    /* Premium Design System */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .formation-card {
+        background: #fff;
+        border-radius: 1.25rem;
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .formation-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+    }
+
+    .formation-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+        position: relative;
+    }
+
+    .formation-body {
+        padding: 1.5rem;
+        flex-grow: 1;
+    }
+
+    .formation-footer {
+        padding: 1.25rem 1.5rem;
+        border-top: 1px solid #f1f5f9;
+        background: #fafafa;
+    }
+
+    .search-input-group {
+        position: relative;
+    }
+
+    .search-input-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .search-input-group .form-control {
+        padding-left: 2.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+    }
+
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    
+    .avatar-sm-custom {
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem;
+        font-size: 1.4rem;
+    }
+</style>
+
 <div class="main-content">
-  <div class="page-content">
-    <div class="container-fluid">
-      <!-- start page title -->
-      <div class="row mb-3">
-        <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
-            <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="ri-book-open-line text-info"></i>
-              </div>
-              <h4 class="mb-0 text-info">Liste des formations</h4>
-            </div>
-            <div class="page-title-right">
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);" class="text-muted">
-                      <i class="ri-home-line me-1"></i>Pédagogie
-                    </a>
-                  </li>
-                  <li class="breadcrumb-item active text-info">Formations</li>
-                </ol>
-              </nav>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- end page title -->
-
-      <div class="row g-3 mb-4 align-items-center justify-content-between">
-        <div class="col-auto">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <div class="search-box" style="width: 250px;">
-                    <input type="text" class="form-control search" placeholder="Rechercher une formation...">
-                    <i class="ri-search-line search-icon"></i>
-                </div>
-                <select class="form-select" style="width: 200px;">
-                    <option value="0">Filtrer par partenaire</option>
-                    <option value="avec_partenaire">Avec partenaire</option>
-                    <option value="sans_partenaire">Sans partenaire</option>
-                </select>
-                <select class="form-select" style="width: 180px;">
-                    <option value="0">Trier par durée</option>
-                    <option value="courte">Courte durée</option>
-                    <option value="longue">Longue durée</option>
-                </select>
-            </div>
-        </div>
-        <div class="col-auto">
-            <div class="d-flex gap-2">
-                <a href="{% url 't_formations:import_data_view' %}" class="btn btn-soft-primary">
-                    <i class="ri-upload-2-line align-bottom me-1"></i> Importer
-                </a>
-                <div class="dropdown">
-                    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="ri-download-2-line align-bottom me-1"></i> Exporter
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                        <li><a class="dropdown-item" href="{% url 't_formations:export_formations' %}?format=csv"><i class="ri-file-text-line me-2 text-muted"></i>Exporter en CSV</a></li>
-                        <li><a class="dropdown-item" href="{% url 't_formations:export_formations' %}?format=excel"><i class="ri-file-excel-2-line me-2 text-muted"></i>Exporter en Excel</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-      </div>
-
-      <div class="row">
-        {% if liste.count != 0 %}
-          {% for i in liste %}
-            <div class="col-xxl-3 col-xl-3 col-lg-4 col-sm-6">
-              <div class="card shadow-sm border-0 h-100 overflow-hidden" style="transition: transform 0.2s, box-shadow 0.2s;">
-                  <div class="card-body p-2 d-flex flex-column">
-                      <div class="d-flex justify-content-between align-items-start mb-2">
-                          <!-- New Icon Design avoiding avatar-title -->
-                          <div class="d-inline-flex align-items-center justify-content-center p-2 rounded" style="background-color: #f3f6fa;">
-                              <i class="ri-book-read-line fs-3" style="color: #4b38b3;"></i>
-                          </div>
-                          <div class="dropdown">
-                              <button class="btn btn-ghost-secondary btn-icon btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                  <i class="ri-more-2-fill fs-16"></i>
-                              </button>
-                              <ul class="dropdown-menu dropdown-menu-end">
-                                  <li><a class="dropdown-item" href="{% url 't_formations:detailFormation' pk=i.id %}"><i class="ri-eye-line me-2 align-bottom text-muted"></i>Consulter</a></li>
-                                  <li><a class="dropdown-item" href="#"><i class="ri-pencil-line me-2 align-bottom text-muted"></i>Modifier</a></li>
-                                  <li><a class="dropdown-item" href="#"><i class="ri-delete-bin-line me-2 align-bottom text-muted"></i>Supprimer</a></li>
-                              </ul>
-                          </div>
-                      </div>
-                      
-                      <h5 class="fs-14 mb-1 fw-semibold">
-                          <a href="{% url 't_formations:detailFormation' pk=i.id %}" class="text-dark text-decoration-none">{{ i.nom }}</a>
-                      </h5>
-                      
-                      {% if i.partenaire %}
-                        <div class="text-muted small mb-2">
-                             <i class="ri-building-4-line me-1 text-primary"></i> <span class="fw-medium text-dark">{{ i.partenaire }}</span>
-                        </div>
-                      {% else %}
-                        <div class="text-muted small mb-2">
-                             <i class="ri-building-4-line me-1 text-muted"></i> <span class="fw-medium text-muted">Aucun</span>
-                        </div>
-                      {% endif %}
-
-                      <div class="mt-auto pt-2 border-top border-light d-flex align-items-center justify-content-between">
-                          <span class="badge badge-soft-primary fs-12 px-2 py-1">
-                              <i class="ri-time-line me-1 align-bottom"></i> {{ i.duree }} mois
-                          </span>
-                      </div>
-                  </div>
-                  <div class="card-footer bg-transparent border-top-0 pt-0 pb-2">
-                     <a href="{% url 't_formations:detailFormation' pk=i.id %}" class="btn btn-soft-info w-100 btn-sm">
-                         Voir les détails <i class="ri-arrow-right-line ms-1 align-bottom"></i>
-                     </a>
-                  </div>
-              </div>
-            </div>
-          {% endfor %}
-        {% else %}
-          <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="noresult">
-                            <div class="text-center py-5">
-                                <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:75px;height:75px"></lord-icon>
-                                <h5 class="mt-2">Aucun résultat trouvé</h5>
-                                <p class="text-muted mb-0">Il n'y a aucune formation enregistrée pour le moment.</p>
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <!-- Header Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="ri-book-open-line text-info fs-2"></i>
                             </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Catalogue des Formations</h4>
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Pédagogie</a></li>
+                                        <li class="breadcrumb-item active">Formations</li>
+                                    </ol>
+                                </nav>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0 d-flex gap-2">
+                             <div class="search-input-group">
+                                <i class="ri-search-line"></i>
+                                <input type="text" id="formation-search" class="form-control" placeholder="Rechercher une formation..." style="width: 250px;">
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-soft-info btn-rounded px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="ri-download-2-line me-1"></i> Exporter
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                    <li><a class="dropdown-item" href="{% url 't_formations:export_formations' %}?format=csv"><i class="ri-file-text-line me-2 text-muted"></i>CSV</a></li>
+                                    <li><a class="dropdown-item" href="{% url 't_formations:export_formations' %}?format=excel"><i class="ri-file-excel-2-line me-2 text-muted"></i>Excel</a></li>
+                                </ul>
+                            </div>
+                            <a href="{% url 't_formations:addFormation' %}" class="btn btn-primary btn-rounded px-4">
+                                <i class="ri-add-line me-1"></i> Nouveau
+                            </a>
                         </div>
                     </div>
                 </div>
-           </div>
-        {% endif %}
-      </div>
+            </div>
 
+            <!-- Content Grid -->
+            <div class="row g-4" id="formations-grid">
+                {% if liste %}
+                    {% for i in liste %}
+                    <div class="col-xxl-3 col-xl-4 col-md-6 formation-item">
+                        <div class="formation-card">
+                            <div class="formation-header d-flex justify-content-between align-items-start">
+                                <div class="avatar-sm-custom bg-info bg-opacity-10 text-info">
+                                    <i class="ri-book-read-line"></i>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-ghost-secondary btn-sm rounded-circle" data-bs-toggle="dropdown">
+                                        <i class="ri-more-2-fill"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li><a class="dropdown-item text-primary" href="{% url 't_formations:detailFormation' pk=i.id %}"><i class="ri-eye-line me-2"></i>Consulter</a></li>
+                                        <li><a class="dropdown-item text-info" href="{% url 't_formations:updateFormation' pk=i.id %}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete('{{ i.id }}')"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="formation-body">
+                                <div class="mb-3">
+                                    <span class="badge badge-soft-primary px-3 py-2 mb-2">Code: {{ i.code }}</span>
+                                    <h5 class="fw-bold text-dark mb-1 h6">{{ i.nom }}</h5>
+                                    {% if i.partenaire %}
+                                        <p class="text-muted small mb-0"><i class="ri-building-line me-1 text-info"></i> {{ i.partenaire.nom }}</p>
+                                    {% else %}
+                                        <p class="text-muted small mb-0"><i class="ri-building-line me-1 opacity-50"></i> Aucun partenaire</p>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-4 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="ri-time-line text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-muted small mb-0 lh-1">Durée</p>
+                                            <span class="fw-bold text-dark">{{ i.duree }} mois</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <p class="text-muted small mb-0 lh-1">Type</p>
+                                        <span class="badge {% if i.type_formation == 'etranger' %}badge-soft-warning{% else %}badge-soft-info{% endif %} text-uppercase small">
+                                            {{ i.get_type_formation_display|default:i.type_formation }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="formation-footer">
+                                <a href="{% url 't_formations:detailFormation' pk=i.id %}" class="btn btn-soft-info w-100 btn-rounded border-0">
+                                    Détails du programme <i class="ri-arrow-right-line ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <div class="bg-white glass-card p-5 d-inline-block">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                                <i class="ri-book-open-line text-muted fs-1"></i>
+                            </div>
+                            <h4 class="fw-bold mb-2">Aucune formation trouvée</h4>
+                            <p class="text-muted mb-4">Commencez par créer votre catalogue de formations pédagogiques.</p>
+                            <a href="{% url 't_formations:addFormation' %}" class="btn btn-primary btn-rounded px-4">
+                                <i class="ri-add-line me-1"></i> Créer une formation
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
     </div>
-  </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        // Quick Search Filter
+        $('#formation-search').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $(".formation-item").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+
+    function confirmDelete(id) {
+        alertify.confirm("Supprimer la formation", "Êtes-vous sûr de vouloir supprimer cette formation ? Cette action est irréversible.",
+            function() {
+                $.ajax({
+                    url: "{% url 't_formations:deleteFormation' pk=0 %}".replace('0', id),
+                    type: 'POST',
+                    data: { 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if (response.success) {
+                            alertify.success(response.message);
+                            location.reload();
+                        } else {
+                            alertify.error(response.message);
+                        }
+                    }
+                });
+            },
+            function() {
+                // Dimiss
+            }
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+    }
+</script>
 {% endblock content %}

@@ -1,4 +1,4 @@
-﻿from django.urls import path
+from django.urls import path
 from .views import *
 from .f_views.echeancier import *
 from .f_views.preinscrit_paiements import *
@@ -188,6 +188,7 @@ urlpatterns = [
     path('plan-comptable/',PagePlanComptable, name="PagePlanComptable"),
     path('plan-comptable/create-modal/', CreateCompteModal, name="CreateCompteModal"),
     path('plan-comptable/api/', PlanComptableAPI, name="PlanComptableAPI"),
+    path('plan-comptable-recettes-depenses/', PagePlanComptableRecetteDepense, name="PagePlanComptableRecetteDepense"),
 
 
     path('ApiLoadEntrepises', ApiLoadEntrepises, name="ApiLoadEntrepises"),
@@ -262,4 +263,5 @@ urlpatterns = [
     path('api/update-specialite-price/', ApiUpdateSpecialitePrice, name="ApiUpdateSpecialitePrice"),
     path('api/liste-double-diplomation-prices/', ApiListeDoubleDiplomationPrices, name="ApiListeDoubleDiplomationPrices"),
     path('api/update-double-diplomation-price/', ApiUpdateDoubleDiplomationPrice, name="ApiUpdateDoubleDiplomationPrice"),
+    path('api/list-payment-types/', ApiListePaymentTypes, name='ApiListePaymentTypes'),
 ]

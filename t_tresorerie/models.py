@@ -417,7 +417,7 @@ class AutreProduit(models.Model):
     reference = models.CharField(null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     entite = models.ForeignKey(Entreprise, on_delete=models.DO_NOTHING, null=True, blank=True)
-    compte = models.ForeignKey(PaymentCategory, on_delete=models.SET_NULL, null=True, blank=True)
+    payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True)
     is_done = models.BooleanField(default=False)
 
     def __str__(self):

@@ -134,8 +134,9 @@ urlpatterns = [
     path('ApiDeleteNotification', ApiDeleteNotification, name="ApiDeleteNotification"),
     path('Toutes-les-notifications', AllNotificationsPage, name="AllNotificationsPage"),
     path('direction/mes-campagnes-budgetaires/', my_budget_campaigns, name="my_budget_campaigns"),
-    path('direction/dispatch-budget/<int:campaign_id>/', budget_campaign_dispatch, name="dispatch_budget"),
-    path('direction/extension-budget/<int:campaign_id>/', request_extension, name="request_extension"),
+    path('direction/dispatch-budget/<slug:campaign_slug>/', budget_campaign_dispatch, name="dispatch_budget"),
+    path('direction/extension-budget/<slug:campaign_slug>/', request_extension, name="request_extension"),
+    path('direction/suivi-realisation-budget/<slug:campaign_slug>/', budget_campaign_realization, name="budget_campaign_realization"),
 ]
 
 

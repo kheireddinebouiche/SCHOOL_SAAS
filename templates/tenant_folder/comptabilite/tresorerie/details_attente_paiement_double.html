@@ -2108,6 +2108,65 @@
     </div>
 </div>
 
+<!-- Modal Détails du Paiement -->
+<div class="modal fade" id="paymentDetailsModal" tabindex="-1" aria-labelledby="paymentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-information-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="paymentDetailsModalLabel">Détails du paiement</h5>
+                        <p class="text-muted small mb-0">Informations détaillées sur la transaction</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="vstack gap-3">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Numéro de paiement:</span>
+                            <span class="fw-medium text-primary" id="detailNumero">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Description:</span>
+                            <span class="fw-medium" id="detailLibelle">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Montant payé:</span>
+                            <span class="fw-bold text-dark" id="detailMontant">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Date de paiement:</span>
+                            <span class="fw-medium" id="detailDate">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Mode de paiement:</span>
+                            <span class="badge bg-info-subtle text-info" id="detailMode">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Référence:</span>
+                            <span class="fw-medium" id="detailReference">-</span>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-3 border border-dashed">
+                        <h6 class="fw-semibold mb-2">Observation:</h6>
+                        <p class="mb-0 text-muted small" id="detailObservation">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-primary px-4 py-2 rounded-pill" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Aide Traitement des Paiements -->
 <div class="modal fade" id="aideTraitementPaiementModal" tabindex="-1" aria-labelledby="aideTraitementPaiementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -3424,6 +3483,7 @@
                             row += "<i class='ri-more-2-fill'></i>";
                             row += "</button>";
                              row += "<div class='dropdown-menu dropdown-menu-end' aria-labelledby='dropdownMenuButton"+item.num+"'>";
+                             row += "<button class='dropdown-item show-payment-details-btn' type='button' data-id='"+item.id+"'><i class='ri-eye-line me-2'></i>Détails du paiement</button>";
                              row += "<button class='dropdown-item print-quittance-btn' type='button' data-id='"+item.num+"'><i class='ri-file-text-line me-2'></i>Quittance</button>";
                              if (item.facture_num) {
                                  row += "<a class='dropdown-item' href='/t_tresorerie/details-facture/" + item.facture_id + "/' target='_blank'><i class='ri-eye-line me-2'></i>Voir Facture (" + item.facture_num + ")</a>";
@@ -4901,6 +4961,26 @@
             
         });
         
+        // Afficher les détails du paiement
+        $(document).on('click', '.show-payment-details-btn', function(){
+            var id = $(this).data('id');
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiDetailsReceivedPaiement' %}",
+                type: 'GET',
+                data: { 'id': id },
+                success: function(data){
+                    $('#detailNumero').text(data.num);
+                    $('#detailLibelle').text(data.label_paiements);
+                    $('#detailMontant').text(data.montant_paye + ' DA');
+                    $('#detailDate').text(data.date_paiement);
+                    $('#detailMode').text(data.mode_paiement);
+                    $('#detailReference').text(data.reference_paiement || '-');
+                    $('#detailObservation').text(data.observation || 'Aucune observation');
+                    $('#paymentDetailsModal').modal('show');
+                }
+            });
+        });
+
         // Imprimer la quittance
         $(document).on('click', '.print-quittance-btn', function(){
             var id = $(this).data('id');

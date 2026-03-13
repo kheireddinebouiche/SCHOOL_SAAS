@@ -4,91 +4,106 @@
 
 {% block content %}
 <style>
+    /* Modern UI Variables */
     :root {
-        /* Clean Theme Overrides */
-        --primary-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
-        --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        --warning-gradient: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-        
-        --card-bg: #ffffff;
-        --card-border: #e2e8f0;
-        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        --primary-teal: #0f766e;
+        --secondary-teal: #0d9488;
+        --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%);
+        --primary-soft: rgba(15, 118, 110, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .main-content {
+        background: #f1f5f9;
+        min-height: 100vh;
     }
 
     .dashboard-header {
-        background: var(--primary-gradient);
-        border-radius: 20px;
-        padding: 2.5rem;
-        margin-bottom: 2rem;
+        background: var(--primary-gradient) !important;
+        border-radius: 1.5rem !important;
+        padding: 2.5rem !important;
+        margin-bottom: 2rem !important;
         color: white;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+        box-shadow: 0 10px 30px rgba(15, 118, 110, 0.2);
     }
 
-    .dashboard-header > .row {
-        position: relative;
-        z-index: 2;
-    }
-
-    .dashboard-header::after {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 400px;
-        height: 400px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        filter: blur(50px);
-    }
-
-    .stats-card {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        box-shadow: var(--card-shadow);
-        border-radius: 16px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(31, 38, 135, 0.12);
-    }
-
-    .institute-card {
-        border-radius: 16px;
-        border: 1px solid #eef2f6;
-        background: #ffffff;
-        transition: all 0.3s ease;
-        position: relative;
+    /* Matrix Card Styling */
+    .matrix-card {
+        border-radius: 20px !important;
+        border: none !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        background: #ffffff !important;
         overflow: hidden;
     }
 
-    .institute-card:hover {
-        border-color: #0d9488;
-        box-shadow: 0 10px 25px rgba(13, 148, 136, 0.08);
+    .matrix-table thead th {
+        background: #f8fafc !important;
+        color: #64748b !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 0.75rem !important;
+        letter-spacing: 0.05em !important;
+        padding: 1.25rem 1.5rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
     }
 
-    .institute-card.configured {
-        border-left: 4px solid #10b981;
+    .matrix-table tbody td {
+        padding: 1.25rem 1.5rem !important;
+        border-bottom: 1px solid #f1f5f9 !important;
     }
 
-    .institute-card.pending {
-        border-left: 4px solid #f59e0b;
+    .matrix-table tbody tr:hover {
+        background-color: rgba(15, 118, 110, 0.02) !important;
     }
 
+    .inst-avatar {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: var(--primary-soft);
+        color: var(--primary-teal);
+    }
+
+    .budget-input {
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+        font-weight: 700 !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1rem !important;
+        transition: all 0.2s;
+        background: #f8fafc !important;
+    }
+
+    .budget-input:focus {
+        background: white !important;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1) !important;
+        border-color: var(--primary-teal) !important;
+        outline: none;
+    }
+
+    /* Badges */
     .status-badge {
-        padding: 0.5rem 1rem;
-        border-radius: 30px;
-        font-weight: 600;
-        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.7rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
     }
+
+    .badge-soft-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
     .progress-minimal {
-        height: 10px;
+        height: 8px;
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.2);
     }
@@ -96,32 +111,6 @@
     .progress-minimal .progress-bar {
         background: white;
         border-radius: 10px;
-    }
-
-    .btn-configure {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        font-weight: 600;
-        padding: 0.6rem 1.2rem;
-        border-radius: 12px;
-        transition: all 0.2s;
-    }
-
-    .btn-configure:hover {
-        background: var(--primary-gradient);
-        color: white;
-        border-color: transparent;
-        transform: scale(1.05);
-    }
-
-    .avatar-icon {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
     }
 </style>
 
@@ -186,11 +175,11 @@
     <div class="page-content">
         <div class="container-fluid">
             <!-- Header -->
-            <div class="dashboard-header mb-4">
+            <div class="dashboard-header mb-4 glass-card">
                     <div class="row align-items-center">
                         <div class="col-md-7">
                             <div class="d-flex align-items-center">
-                                <a href="{% url 'budget_campaign_list' %}" class="btn btn-sm btn-light btn-icon me-3 bg-white text-primary rounded-circle border-0 shadow-sm">
+                                <a href="{% url 'associe_app:budget_campaign_list' %}" class="btn btn-sm btn-light btn-icon me-3 bg-white text-primary rounded-circle border-0 shadow-sm">
                                     <i class="ri-arrow-left-line"></i>
                                 </a>
                                 <nav aria-label="breadcrumb">
@@ -212,10 +201,10 @@
                                     <div class="progress progress-minimal mb-2" style="width: 200px;">
                                         <div class="progress-bar" role="progressbar" style="width: {{ progress|floatformat:0 }}%"></div>
                                     </div>
-                                    <div class="text-white-50 small">{{ configured_count }} / {{ instituts_data|length }} Instituts définis</div>
+                                    <div class="text-white-50 small text-uppercase" style="letter-spacing: 0.5px;">{{ configured_count }} / {{ instituts_data|length }} Instituts définis</div>
                                 </div>
                                 {% if not campaign.is_active %}
-                                <button type="button" class="btn btn-success btn-lg px-4 border-0 shadow-lg fw-bold rounded-3" data-bs-toggle="modal" data-bs-target="#startCampaignModal">
+                                <button type="button" class="btn btn-success btn-lg px-4 border-0 shadow-lg fw-bold rounded-pill" data-bs-toggle="modal" data-bs-target="#startCampaignModal">
                                     <i class="ri-play-circle-line me-2"></i> Démarrer la campagne
                                 </button>
                                 {% endif %}
@@ -246,64 +235,61 @@
                         <table class="table matrix-table mb-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 60px;" class="ps-4 text-center">#</th>
                                     <th>Institut / Entité</th>
-                                    <th>Statut</th>
-                                    <th class="text-end">Objectif Global (DA)</th>
+                                    <th class="text-center">Statut</th>
+                                    <th class="text-end pe-4">Objectif Global (DA)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for item in instituts_data %}
                                 <tr>
-                                    <td>
+                                    <td class="ps-4 text-center">
                                         <span class="text-muted fw-bold">{{ forloop.counter }}</span>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="inst-avatar me-3">
-                                                <i class="ri-government-line fs-18"></i>
+                                                <i class="ri-government-line fs-20"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-bold text-dark mb-0">{{ item.institut.nom }}</div>
-                                                <div class="text-muted small text-uppercase">{{ item.institut.schema_name }}</div>
+                                                <div class="fw-bold text-dark mb-0 fs-15">{{ item.institut.nom }}</div>
+                                                <div class="text-muted small text-uppercase ls-1" style="font-size: 10px;">{{ item.institut.schema_name }}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         {% if item.statut == 'draft' %}
-                                            <span class="badge bg-light text-muted border px-2 py-1">Brouillon</span>
+                                            <span class="status-badge badge-soft-warning">Brouillon</span>
                                         {% elif item.statut == 'submitted' %}
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">À Valider</span>
+                                            <span class="status-badge badge-soft-info">À Valider</span>
                                         {% elif item.statut == 'validated' %}
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Validé</span>
+                                            <span class="status-badge badge-soft-success">Validé</span>
                                         {% elif item.statut == 'rejected' %}
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Rejeté</span>
+                                            <span class="status-badge badge-soft-danger">Rejeté</span>
                                         {% else %}
-                                            <span class="badge bg-light text-muted border px-2 py-1">Non défini</span>
+                                            <span class="status-badge badge-soft-light text-muted">Non défini</span>
                                         {% endif %}
                                     </td>
-                                    <td>
+                                    <td class="pe-4">
                                         <div class="d-flex align-items-center justify-content-end gap-3">
                                             {% if item.pending_extension_id %}
-                                            <a href="{% url 'review_extension' item.pending_extension_id %}" class="btn btn-sm btn-ghost-warning btn-label waves-effect waves-light" title="Voir la demande de rallonge">
-                                                <i class="ri-exchange-dollar-line label-icon align-middle fs-13 me-2"></i> Rallonge
+                                            <a href="{% url 'associe_app:review_extension' item.pending_extension_id %}" class="btn btn-sm btn-soft-warning rounded-pill px-3 fw-bold" title="Voir la demande de rallonge">
+                                                <i class="ri-exchange-dollar-line me-1"></i> Rallonge
                                             </a>
                                             {% endif %}
                                             
                                             {% if item.statut != 'none' %}
-                                            <a href="{% url 'budget_campaign_review' campaign.id item.institut.id %}" class="btn btn-sm btn-ghost-primary btn-label waves-effect waves-light">
-                                                <i class="ri-search-eye-line label-icon align-middle fs-13 me-2"></i> Vérifier
+                                            <a href="{% url 'associe_app:budget_campaign_review' campaign.slug item.institut.id %}" class="btn btn-sm btn-soft-primary rounded-pill px-3 fw-bold">
+                                                <i class="ri-eye-line me-1"></i> Détails
                                             </a>
                                             {% endif %}
-                                            <div class="budget-input-group m-0">
-                                                <div class="input-group input-group-sm">
-                                                    <span class="input-group-text bg-light border-0"><i class="ri-money-dollar-circle-line"></i></span>
-                                                    <input type="text" 
-                                                           class="form-control text-end budget-input border-0 bg-light fw-bold" 
-                                                           name="budget_{{ item.institut.id }}"
-                                                           placeholder="0,00"
-                                                           value="{{ item.montant|intcomma }}">
-                                                </div>
+                                            <div class="budget-input-group m-0" style="width: 180px;">
+                                                <input type="text" 
+                                                       class="form-control text-end budget-input" 
+                                                       name="budget_{{ item.institut.id }}"
+                                                       placeholder="0,00"
+                                                       value="{{ item.montant|intcomma }}">
                                             </div>
                                         </div>
                                     </td>
@@ -311,9 +297,9 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
-                                        <div class="py-4">
-                                            <i class="ri-building-line display-1 text-muted opacity-25"></i>
-                                            <h4 class="mt-4 text-muted">Aucun institut trouvé</h4>
+                                        <div class="py-5">
+                                            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:80px;height:80px"></lord-icon>
+                                            <h4 class="mt-4 fw-bold">Aucun institut trouvé</h4>
                                             <p class="text-muted">Vérifiez la configuration de vos tenants.</p>
                                         </div>
                                     </td>
@@ -324,9 +310,9 @@
                     </div>
                     
                     {% if instituts_data %}
-                    <div class="p-4 bg-light border-top text-center">
-                        <button type="submit" class="btn btn-success btn-lg px-5 border-0 shadow-lg fw-bold rounded-3">
-                            <i class="ri-save-3-line me-2"></i> Enregistrer tous les objectifs
+                    <div class="p-4 bg-light bg-opacity-50 border-top text-center">
+                        <button type="submit" class="btn btn-primary-teal btn-lg px-5 py-3 rounded-3 shadow-lg fw-bold">
+                            <i class="ri-save-3-line me-2"></i> Enregistrer les objectifs
                         </button>
                     </div>
                     {% endif %}
@@ -360,7 +346,7 @@
             </div>
             <div class="modal-footer p-3 bg-light border-0">
                 <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none me-auto" data-bs-dismiss="modal">Annuler</button>
-                <form action="{% url 'budget_campaign_activate' campaign.id %}" method="POST">
+                <form action="{% url 'associe_app:budget_campaign_activate' campaign.slug %}" method="POST">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm fw-bold">Confirmer le démarrage</button>
                 </form>

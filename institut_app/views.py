@@ -21,6 +21,7 @@ from t_timetable.models import Timetable, TimetableEntry, Salle
 from .models import UserSession, Profile
 from django.contrib.sessions.models import Session
 from django.utils import timezone
+import datetime
 from django_otp.decorators import otp_required
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum
@@ -1114,17 +1115,20 @@ def my_budget_campaigns(request):
         ).select_related('campaign')
         
         # Build a list of campaigns with their specific objective for this institute
-        # Map campaign id to amount for easy lookup
-        objectives_map = {line.campaign_id: line.montant for line in budget_lines}
+        # Map campaign id to amount and statut for easy lookup
+        objectives_map = {line.campaign_id: {'montant': line.montant, 'statut': line.statut} for line in budget_lines}
         
         campaign_data = []
         for campaign in campaigns:
+            obj_data = objectives_map.get(campaign.id, {'montant': 0, 'statut': 'none'})
             campaign_data.append({
                 'id': campaign.id,
+                'slug': campaign.slug,
                 'name': campaign.name,
                 'date_debut': campaign.date_debut,
                 'date_fin': campaign.date_fin,
-                'objectif': objectives_map.get(campaign.id, 0),
+                'objectif': obj_data['montant'],
+                'statut': obj_data['statut'],
             })
 
     context = {
@@ -1133,7 +1137,7 @@ def my_budget_campaigns(request):
     }
     return render(request, 'tenant_folder/budget/my_campaigns.html', context)
 @login_required(login_url="institut_app:login")
-def budget_campaign_dispatch(request, campaign_id):
+def budget_campaign_dispatch(request, campaign_slug):
     """
     Matrix view for tenants to dispatch their global budget objective 
     across their entities (Entreprises) and budget items (Postes).
@@ -1143,7 +1147,7 @@ def budget_campaign_dispatch(request, campaign_id):
     
     # 1. Basic Info (from public schema)
     with schema_context('public'):
-        campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+        campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
         # Global objective for this tenant set by Associe
         global_objective = BudgetLine.objects.filter(campaign=campaign, institut=request.tenant).first()
         
@@ -1179,7 +1183,7 @@ def budget_campaign_dispatch(request, campaign_id):
     if request.method == "POST":
         if not can_edit:
             messages.error(request, "Ce budget est déjà soumis ou validé et ne peut plus être modifié.")
-            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+            return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
 
         action = request.POST.get('action', 'save')
         
@@ -1255,6 +1259,15 @@ def budget_campaign_dispatch(request, campaign_id):
                                     lookup_kwargs['depense_category_id'] = None
 
                                 if amount_val > 0:
+                                    # CONSOLIDATION: If saving at poste level (consolidated), clean up ANY existing
+                                    # entries for this poste to avoid double counting from legacy granular data.
+                                    if cat_type == 'none':
+                                        BudgetLineDetail.objects.filter(
+                                            campaign=campaign,
+                                            institut_id=request.tenant.id,
+                                            poste_id=poste_id
+                                        ).delete()
+
                                     obj, created = BudgetLineDetail.objects.update_or_create(
                                         **lookup_kwargs,
                                         defaults={'montant': amount_val}
@@ -1292,7 +1305,7 @@ def budget_campaign_dispatch(request, campaign_id):
         except Exception as e:
             messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
                 
-        return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+        return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
 
     # 3. Fetch existing allocations (from public schema)
     with schema_context('public'):
@@ -1304,18 +1317,17 @@ def budget_campaign_dispatch(request, campaign_id):
         row_quarters = {}
         
         for d in details:
+            # ONLY LOAD CONSOLIDATED RECORDS (ent_id = 0 and cat_type = 'none')
+            # Legacy records (ent_id > 0 or specific categories) are ignored for display
+            if d.entreprise_id != 0 or d.payment_category_id is not None or d.depense_category_id is not None:
+                continue
+
             c_type = 'none'
             c_id = 0
-            if d.payment_category_id:
-                c_id = d.payment_category_id
-                c_type = 'pay'
-            elif d.depense_category_id:
-                c_id = d.depense_category_id
-                c_type = 'dep'
-                
-            # Key format: {poste_id}_{cat_type}_{cat_id}_{ent_id}
-            # Since we use ent_id=0 for global amount, we map everything to that key
-            key = f"{d.poste_id}_{c_type}_{c_id}_0"
+            cat_type_key = 'none'
+
+            # Key format: {poste_id}_none_0_0 (Consolidated Poste Level)
+            key = f"{d.poste_id}_{cat_type_key}_{c_id}_0"
             
             if key not in allocations:
                 allocations[key] = {
@@ -1326,10 +1338,11 @@ def budget_campaign_dispatch(request, campaign_id):
                     't4_percent': d.t4_percent,
                 }
             else:
-                # Aggregate for global display
                 allocations[key]['montant'] += d.montant
+
+            # The record is already consolidated (none, 0, 0), so we don't need a second aggregation step.
             
-            row_key = f"{d.poste_id}_{c_type}_{c_id}"
+            row_key = f"{d.poste_id}_none_0"
             if row_key not in row_quarters:
                 row_quarters[row_key] = {
                     't1': d.t1_percent,
@@ -1339,9 +1352,18 @@ def budget_campaign_dispatch(request, campaign_id):
                 }
             
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+        total_dispatched_recette = details.filter(poste__type='recette').aggregate(Sum('montant'))['montant__sum'] or 0
+        total_dispatched_depense = details.filter(poste__type='depense').aggregate(Sum('montant'))['montant__sum'] or 0
+
+        from associe_app.models import BudgetExtensionRequest
+        all_extensions = BudgetExtensionRequest.objects.filter(
+            campaign=campaign, 
+            institut=request.tenant
+        ).prefetch_related('items', 'items__poste').order_by('-created_at')
 
     context = {
         'tenant': request.tenant,
+        'approved_extensions': all_extensions,
         'campaign': campaign,
         'global_objective': global_objective,
         'structured_postes': structured_postes,
@@ -1349,8 +1371,10 @@ def budget_campaign_dispatch(request, campaign_id):
         'allocations': allocations,
         'row_quarters': row_quarters,
         'total_dispatched': total_dispatched,
-        'remaining': global_objective.montant - total_dispatched,
-        'percent_dispatched': (total_dispatched / global_objective.montant * 100) if global_objective.montant > 0 else 0,
+        'total_dispatched_recette': total_dispatched_recette,
+        'total_dispatched_depense': total_dispatched_depense,
+        'remaining': global_objective.montant - total_dispatched_recette,
+        'percent_dispatched': (total_dispatched_recette / global_objective.montant * 100) if global_objective.montant > 0 else 0,
         'can_edit': can_edit,
         'statut': global_objective.statut,
         'commentaire': global_objective.commentaire,
@@ -1358,7 +1382,7 @@ def budget_campaign_dispatch(request, campaign_id):
     return render(request, 'tenant_folder/budget/dispatch_budget.html', context)
 
 @login_required(login_url="institut_app:login")
-def request_extension(request, campaign_id):
+def request_extension(request, campaign_slug):
     """
     View for institutes to request a budget extension (rallonge).
     Shows current validated budget and allows proposing new amounts.
@@ -1368,12 +1392,12 @@ def request_extension(request, campaign_id):
     
     # 1. Basic Info (from public schema)
     with schema_context('public'):
-        campaign = get_object_or_404(BudgetCampaign, id=campaign_id)
+        campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
         global_objective = BudgetLine.objects.filter(campaign=campaign, institut=request.tenant).first()
         
         if not global_objective or global_objective.statut != 'validated':
             messages.error(request, "Vous ne pouvez demander une rallonge que sur un budget validé.")
-            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+            return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
 
         # Check for pending requests
         pending_request = BudgetExtensionRequest.objects.filter(
@@ -1384,7 +1408,7 @@ def request_extension(request, campaign_id):
         
         if pending_request:
             messages.warning(request, "Vous avez déjà une demande de rallonge en attente. Veuillez patienter.")
-            return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+            return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
 
         all_postes = PostesBudgetaire.objects.filter(type='depense').prefetch_related('payment_categories', 'depense_categories').order_by('label')
         
@@ -1444,7 +1468,7 @@ def request_extension(request, campaign_id):
                                 else:
                                     continue
                                 
-                                new_amount = float(value) if value else 0
+                                increment_amount = float(value) if value else 0
                                 
                                 # Get current amount
                                 lookup_kwargs = {
@@ -1467,14 +1491,14 @@ def request_extension(request, campaign_id):
                                 
                                 current_amount = float(current_detail.montant) if current_detail else 0.0
                                 
-                                # Only save if there is a change or a non-zero request
-                                if new_amount != current_amount:
+                                # Only save if there is a non-zero requested extension
+                                if increment_amount > 0:
                                     item_kwargs = {
                                         'request': ext_request,
                                         'poste_id': poste_id,
                                         'entreprise_id': ent_id,
                                         'old_amount': current_amount,
-                                        'requested_amount': new_amount
+                                        'requested_amount': increment_amount
                                     }
                                     if cat_type == 'pay':
                                         item_kwargs['payment_category_id'] = cat_id
@@ -1495,7 +1519,7 @@ def request_extension(request, campaign_id):
                         messages.warning(request, "Aucune modification budgétaire détectée.")
                     else:
                         messages.success(request, f"Demande de rallonge envoyée avec succès ({saved_count} lignes modifiées).")
-                        return redirect('institut_app:dispatch_budget', campaign_id=campaign_id)
+                        return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
 
         except Exception as e:
             messages.error(request, f"Erreur: {str(e)}")
@@ -1506,17 +1530,14 @@ def request_extension(request, campaign_id):
         # Map poste_cat_0 to aggregated amount
         allocations = {}
         for d in details:
-            if d.payment_category_id:
-                cat_id = d.payment_category_id
-                cat_type = 'pay'
-            elif d.depense_category_id:
-                cat_id = d.depense_category_id
-                cat_type = 'dep'
-            else:
-                cat_id = 0
-                cat_type = 'none'
+            # ONLY LOAD CONSOLIDATED RECORDS (ent_id = 0 and cat_type = 'none')
+            if d.entreprise_id != 0 or d.payment_category_id is not None or d.depense_category_id is not None:
+                continue
+
+            c_type = 'none'
+            c_id = 0
                 
-            key = f"{d.poste_id}_{cat_type}_{cat_id}_0"
+            key = f"{d.poste_id}_{c_type}_{c_id}_0"
             allocations[key] = allocations.get(key, 0) + float(d.montant)
 
     context = {
@@ -1527,3 +1548,309 @@ def request_extension(request, campaign_id):
         'allocations': allocations,
     }
     return render(request, 'tenant_folder/budget/request_extension.html', context)
+
+@login_required(login_url="institut_app:login")
+def budget_campaign_realization(request, campaign_slug):
+    """
+    Matrix view for tracking budget realization: shows planned allocations vs realized expenses/payments.
+    """
+    from associe_app.models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
+    from django.db.models import Sum
+    from datetime import datetime
+    from django_tenants.utils import schema_context
+    
+    # 1. Basic Info (from public schema)
+    with schema_context('public'):
+        campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
+        # Global objective for this tenant set by Associe
+        global_objective = BudgetLine.objects.filter(campaign=campaign, institut=request.tenant).first()
+        
+        if not global_objective or global_objective.statut != 'validated':
+            messages.error(request, "Cette campagne n'est pas encore validée.")
+            return redirect('institut_app:my_budget_campaigns')
+
+        # Get all budget items (Postes) with pre-fetched payment & depense categories
+        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('type', 'label')
+        
+        structured_postes = []
+        for p in all_postes:
+            if p.parent is None:
+                children = [child for child in all_postes if child.parent_id == p.id]
+                display_postes = []
+                # If parent has direct categories or no children, add it to display
+                if len(p.payment_categories.all()) > 0 or len(p.depense_categories.all()) > 0 or len(children) == 0:
+                    display_postes.append(p)
+                display_postes.extend(children)
+                
+                structured_postes.append({
+                    'parent_poste': p,
+                    'is_standalone': len(children) == 0,
+                    'display_postes': display_postes
+                })
+
+    # 2. Entities (from tenant schema)
+    entreprises = list(Entreprise.objects.all().order_by('designation'))
+
+    # 3. Fetch existing allocations (from public schema)
+    with schema_context('public'):
+        details = BudgetLineDetail.objects.filter(campaign=campaign, institut=request.tenant)
+        # Map: (poste_id, cat_id, ent_id) -> montant (Prévu)
+        allocations = {}
+        row_quarters = {}
+        
+        for d in details:
+            # ONLY LOAD CONSOLIDATED RECORDS (ent_id = 0 and cat_type = 'none')
+            # Legacy records (ent_id > 0 or specific categories) are ignored for display
+            if d.entreprise_id != 0 or d.payment_category_id is not None or d.depense_category_id is not None:
+                continue
+
+            c_type = 'none'
+            c_id = 0
+            cat_type_key = 'none'
+
+            # Key format: {poste_id}_none_0_0 (Consolidated Poste Level)
+            key = f"{d.poste_id}_{cat_type_key}_{c_id}_0"
+            
+            if key not in allocations:
+                allocations[key] = {
+                    'montant': Decimal('0'),
+                    't1_montant': Decimal('0'),
+                    't2_montant': Decimal('0'),
+                    't3_montant': Decimal('0'),
+                    't4_montant': Decimal('0'),
+                }
+            
+            allocations[key]['montant'] += d.montant
+            allocations[key]['t1_montant'] += (d.montant * d.t1_percent) / 100 if d.t1_percent else 0
+            allocations[key]['t2_montant'] += (d.montant * d.t2_percent) / 100 if d.t2_percent else 0
+            allocations[key]['t3_montant'] += (d.montant * d.t3_percent) / 100 if d.t3_percent else 0
+            allocations[key]['t4_montant'] += (d.montant * d.t4_percent) / 100 if d.t4_percent else 0
+            
+            
+        total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+        total_dispatched_recette = details.filter(poste__type='recette').aggregate(Sum('montant'))['montant__sum'] or 0
+        total_dispatched_depense = details.filter(poste__type='depense').aggregate(Sum('montant'))['montant__sum'] or 0
+
+    # 4. Fetch realizations (from tenant schema)
+    realisations = {}
+    
+    # Revenue (Paiements) -> payment_categories
+    # Payment mapping
+    from t_tresorerie.models import Paiements, Depenses, AutreProduit
+    
+    # Helper to populate realisations
+    def add_real(p_id, c_type, c_id, ent_id, val, date_pay):
+        if val is None or val == 0: return
+        key = f"{p_id}_{c_type}_{c_id}_{ent_id}"
+        if key not in realisations:
+            realisations[key] = {
+                'montant': 0,
+                't1_montant': 0,
+                't2_montant': 0,
+                't3_montant': 0,
+                't4_montant': 0,
+            }
+        realisations[key]['montant'] += val
+        
+        # Determine quarter based on date
+        # T1: Aug, Sep, Oct (8, 9, 10)
+        # T2: Nov, Dec, Jan (11, 12, 1)
+        # T3: Feb, Mar, Apr (2, 3, 4)
+        # T4: May, Jun, Jul (5, 6, 7)
+        if date_pay:
+            m = date_pay.month
+            if m in [8, 9, 10]:
+                realisations[key]['t1_montant'] += val
+            elif m in [11, 12, 1]:
+                realisations[key]['t2_montant'] += val
+            elif m in [2, 3, 4]:
+                realisations[key]['t3_montant'] += val
+            elif m in [5, 6, 7]:
+                realisations[key]['t4_montant'] += val
+
+        # AGGREGATION: Also sum into the 'none' level (consolidated)
+        # We use ent_id=0 for the unified realization view
+        poste_key = f"{p_id}_none_0_0"
+        if poste_key not in realisations:
+            realisations[poste_key] = {
+                'montant': 0,
+                't1_montant': 0,
+                't2_montant': 0,
+                't3_montant': 0,
+                't4_montant': 0,
+            }
+        realisations[poste_key]['montant'] += val
+        if date_pay:
+            m = date_pay.month
+            if m in [8, 9, 10]: realisations[poste_key]['t1_montant'] += val
+            elif m in [11, 12, 1]: realisations[poste_key]['t2_montant'] += val
+            elif m in [2, 3, 4]: realisations[poste_key]['t3_montant'] += val
+            elif m in [5, 6, 7]: realisations[poste_key]['t4_montant'] += val
+
+    # Paiements
+    paiements = Paiements.objects.filter(
+        date_paiement__gte=campaign.date_debut,
+        date_paiement__lte=campaign.date_fin,
+        payment_type__isnull=False,
+        entite__isnull=False
+    ).prefetch_related('payment_type__payment_categories')
+    
+    for p in paiements:
+        # Avoid double counting if a payment type spans multiple, though usually 1-1
+        cat_count = p.payment_type.payment_categories.count()
+        if cat_count > 0:
+            val_per_cat = p.montant_paye / cat_count if p.montant_paye else 0
+            for cat in p.payment_type.payment_categories.all():
+                # find the poste for this cat
+                poste = None
+                with schema_context('public'):
+                    poste = PostesBudgetaire.objects.filter(payment_categories=cat.id).first()
+                if poste:
+                    add_real(poste.id, 'pay', cat.id, p.entite_id, val_per_cat, p.date_paiement)
+
+    # Autre Produits
+    autre_produits = AutreProduit.objects.filter(
+        date_paiement__gte=campaign.date_debut,
+        date_paiement__lte=campaign.date_fin,
+        payment_type__isnull=False,
+        entite__isnull=False
+    ).prefetch_related('payment_type__payment_categories')
+    
+    for ap in autre_produits:
+        categories = ap.payment_type.payment_categories.all()
+        cat_count = categories.count()
+        if cat_count > 0:
+            val_per_cat = ap.montant_paiement / cat_count if ap.montant_paiement else 0
+            for cat in categories:
+                with schema_context('public'):
+                    poste = PostesBudgetaire.objects.filter(payment_categories=cat.id).first()
+                if poste:
+                    add_real(poste.id, 'pay', cat.id, ap.entite_id, val_per_cat, ap.date_paiement)
+
+    # Depenses
+    depenses = Depenses.objects.filter(
+        date_paiement__gte=campaign.date_debut,
+        date_paiement__lte=campaign.date_fin,
+        category__isnull=False,
+        entite__isnull=False
+    )
+    for d in depenses:
+        with schema_context('public'):
+            poste = PostesBudgetaire.objects.filter(depense_categories=d.category_id).first()
+        if poste:
+            add_real(poste.id, 'dep', d.category_id, d.entite_id, d.montant_ttc, d.date_paiement)
+
+    # Global totals and per-type totals
+    total_realized = 0
+    total_realized_recette = 0
+    total_realized_depense = 0
+    
+    for k, v in realisations.items():
+        amount = v['montant']
+        total_realized += amount
+        if '_pay_' in k:
+            total_realized_recette += amount
+        elif '_dep_' in k:
+            total_realized_depense += amount
+    
+    # Pre-calculate the combined structured data for the template
+    combined_postes = []
+    
+    for group in structured_postes:
+        group_data = {
+            'parent_poste': group['parent_poste'],
+            'is_standalone': group['is_standalone'],
+            'display_postes': []
+        }
+        
+        for p in group['display_postes']:
+            # 1. Base Poste level summary (always include)
+            key = f"{p.id}_none_0_0"
+            prevu_raw = allocations.get(key, {}).get('montant', 0)
+            realise_raw = realisations.get(key, {}).get('montant', 0)
+            
+            prevu = float(prevu_raw) if prevu_raw is not None else 0.0
+            realise = float(realise_raw) if realise_raw is not None else 0.0
+            
+            ecart = realise - prevu
+            taux = (realise / prevu * 100) if prevu > 0 else (100 if realise > 0 else 0)
+            
+            t1_prevu = float(allocations.get(key, {}).get('t1_montant', 0))
+            t2_prevu = float(allocations.get(key, {}).get('t2_montant', 0))
+            t3_prevu = float(allocations.get(key, {}).get('t3_montant', 0))
+            t4_prevu = float(allocations.get(key, {}).get('t4_montant', 0))
+            
+            t1_realise = float(realisations.get(key, {}).get('t1_montant', 0))
+            t2_realise = float(realisations.get(key, {}).get('t2_montant', 0))
+            t3_realise = float(realisations.get(key, {}).get('t3_montant', 0))
+            t4_realise = float(realisations.get(key, {}).get('t4_montant', 0))
+                
+            group_data['display_postes'].append({
+                'poste': p,
+                'category': None,
+                'cat_type': 'none',
+                'cat_id': 0,
+                'global': {
+                    'prevu': prevu,
+                    'realise': realise,
+                    'ecart': ecart,
+                    'taux': taux,
+                },
+                't1': {'prevu': t1_prevu, 'realise': t1_realise, 'ecart': t1_realise - t1_prevu},
+                't2': {'prevu': t2_prevu, 'realise': t2_realise, 'ecart': t2_realise - t2_prevu},
+                't3': {'prevu': t3_prevu, 'realise': t3_realise, 'ecart': t3_realise - t3_prevu},
+                't4': {'prevu': t4_prevu, 'realise': t4_realise, 'ecart': t4_realise - t4_prevu},
+            })
+
+            # 2. Category level data (Simplified: Categorical rows are removed from combined_postes)
+            # We no longer append category loops here as they are now displayed in tooltips
+            
+        combined_postes.append(group_data)
+
+    today_date = timezone.now().date()
+    
+    from associe_app.models import BudgetExtensionRequest
+    all_extensions = BudgetExtensionRequest.objects.filter(
+        campaign=campaign, 
+        institut=request.tenant
+    ).prefetch_related('items', 'items__poste').order_by('-created_at')
+
+    context = {
+        'tenant': request.tenant,
+        'approved_extensions': all_extensions,
+        'campaign': campaign,
+        'global_objective': global_objective,
+        'combined_postes': combined_postes,
+        'total_dispatched': total_dispatched,
+        'total_realized': total_realized,
+        
+        'total_dispatched_recette': total_dispatched_recette,
+        'total_realized_recette': total_realized_recette,
+        'recette_ecart': total_realized_recette - float(total_dispatched_recette),
+        'percent_realized_recette': (total_realized_recette / total_dispatched_recette * 100) if total_dispatched_recette > 0 else 0,
+        
+        'total_dispatched_depense': total_dispatched_depense,
+        'total_realized_depense': total_realized_depense,
+        'depense_ecart': total_realized_depense - float(total_dispatched_depense),
+        'percent_realized_depense': (total_realized_depense / total_dispatched_depense * 100) if total_dispatched_depense > 0 else 0,
+        
+        'resultat_attendu': total_dispatched_recette - total_dispatched_depense,
+        'rentabilite': ((total_dispatched_recette - total_dispatched_depense) / total_dispatched_recette * 100) if total_dispatched_recette > 0 else 0,
+        
+        'resultat_realise': total_realized_recette - total_realized_depense,
+        'rentabilite_realise': ((total_realized_recette - total_realized_depense) / total_realized_recette * 100) if total_realized_recette > 0 else 0,
+
+        'percent_dispatched': (total_dispatched_recette / global_objective.montant * 100) if global_objective.montant > 0 else 0,
+        'percent_realized': (total_realized / total_dispatched * 100) if total_dispatched > 0 else 0,
+        'global_ecart': total_realized - float(total_dispatched),
+        'statut': global_objective.statut,
+        'commentaire': global_objective.commentaire,
+        'today': today_date,
+        'active_quarter': (
+            'T1 (Aoû-Oct)' if today_date.month in [8, 9, 10] else
+            'T2 (Nov-Jan)' if today_date.month in [11, 12, 1] else
+            'T3 (Fév-Avr)' if today_date.month in [2, 3, 4] else
+            'T4 (Mai-Jui)'
+        )
+    }
+    return render(request, 'tenant_folder/budget/realization_budget.html', context)
