@@ -1636,8 +1636,17 @@ def budget_campaign_realization(request, campaign_slug):
     
     # Revenue (Paiements) -> payment_categories
     # Payment mapping
-    from t_tresorerie.models import Paiements, Depenses, AutreProduit
+    from t_tresorerie.models import Paiements, Depenses, AutreProduit, SpecialiteCompte
+    from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
     
+    # Identify current quarter month range
+    today_date = timezone.now().date()
+    month = today_date.month
+    if month in [8, 9, 10]: current_q_months = [8, 9, 10]
+    elif month in [11, 12, 1]: current_q_months = [11, 12, 1]
+    elif month in [2, 3, 4]: current_q_months = [2, 3, 4]
+    else: current_q_months = [5, 6, 7]
+
     # Helper to populate realisations
     def add_real(p_id, c_type, c_id, ent_id, val, date_pay):
         if val is None or val == 0: return
@@ -1650,24 +1659,7 @@ def budget_campaign_realization(request, campaign_slug):
                 't3_montant': 0,
                 't4_montant': 0,
             }
-        realisations[key]['montant'] += val
         
-        # Determine quarter based on date
-        # T1: Aug, Sep, Oct (8, 9, 10)
-        # T2: Nov, Dec, Jan (11, 12, 1)
-        # T3: Feb, Mar, Apr (2, 3, 4)
-        # T4: May, Jun, Jul (5, 6, 7)
-        if date_pay:
-            m = date_pay.month
-            if m in [8, 9, 10]:
-                realisations[key]['t1_montant'] += val
-            elif m in [11, 12, 1]:
-                realisations[key]['t2_montant'] += val
-            elif m in [2, 3, 4]:
-                realisations[key]['t3_montant'] += val
-            elif m in [5, 6, 7]:
-                realisations[key]['t4_montant'] += val
-
         # AGGREGATION: Also sum into the 'none' level (consolidated)
         # We use ent_id=0 for the unified realization view
         poste_key = f"{p_id}_none_0_0"
@@ -1679,13 +1671,34 @@ def budget_campaign_realization(request, campaign_slug):
                 't3_montant': 0,
                 't4_montant': 0,
             }
-        realisations[poste_key]['montant'] += val
+
         if date_pay:
             m = date_pay.month
-            if m in [8, 9, 10]: realisations[poste_key]['t1_montant'] += val
-            elif m in [11, 12, 1]: realisations[poste_key]['t2_montant'] += val
-            elif m in [2, 3, 4]: realisations[poste_key]['t3_montant'] += val
-            elif m in [5, 6, 7]: realisations[poste_key]['t4_montant'] += val
+            # Assign to specific quarter for the matrix
+            if m in [8, 9, 10]:
+                realisations[key]['t1_montant'] += val
+                realisations[poste_key]['t1_montant'] += val
+            elif m in [11, 12, 1]:
+                realisations[key]['t2_montant'] += val
+                realisations[poste_key]['t2_montant'] += val
+            elif m in [2, 3, 4]:
+                realisations[key]['t3_montant'] += val
+                realisations[poste_key]['t3_montant'] += val
+            elif m in [5, 6, 7]:
+                realisations[key]['t4_montant'] += val
+                realisations[poste_key]['t4_montant'] += val
+            
+            # The global 'montant' (realized total) only reflects the current quarter as requested
+            if m in current_q_months:
+                realisations[key]['montant'] += val
+                realisations[poste_key]['montant'] += val
+        else:
+            # Fallback if no date
+            realisations[key]['montant'] += val
+            realisations[poste_key]['montant'] += val
+
+    # Identifiers for Global mapping
+    from associe_app.models import GlobalPaymentType, GlobalPaymentCategory, GlobalDepensesCategory
 
     # Paiements
     paiements = Paiements.objects.filter(
@@ -1693,20 +1706,54 @@ def budget_campaign_realization(request, campaign_slug):
         date_paiement__lte=campaign.date_fin,
         payment_type__isnull=False,
         entite__isnull=False
-    ).prefetch_related('payment_type__payment_categories')
+    ).prefetch_related('lettrages', 'payment_type')
     
     for p in paiements:
-        # Avoid double counting if a payment type spans multiple, though usually 1-1
-        cat_count = p.payment_type.payment_categories.count()
+        # Effective Received Logic: Mode Chèque or Virement must have a banking operation (lettrage)
+        if p.mode_paiement in ['che', 'vir']:
+            if not p.lettrages.exists():
+                continue
+
+        # 1. Determine Target Global Categories
+        g_categories = []
+        
+        # Priority A: Check Specialty Mapping via DuePaiements
+        if p.due_paiements:
+            client = p.due_paiements.client
+            promo = p.due_paiements.promo
+            if client and promo:
+                # Find confirmed specialty fiche
+                fiche = FicheDeVoeux.objects.filter(prospect=client, promo=promo, is_confirmed=True).first()
+                if not fiche:
+                    fiche = FicheVoeuxDouble.objects.filter(prospect=client, promo=promo, is_confirmed=True).first()
+                
+                if fiche and fiche.specialite_id:
+                    # Find mapped category in SpecialiteCompte (tenant schema)
+                    spec_compte = SpecialiteCompte.objects.filter(specialite_id=fiche.specialite_id).first()
+                    if spec_compte and spec_compte.compte:
+                        cat_name = spec_compte.compte.name
+                        with schema_context('public'):
+                            gc = GlobalPaymentCategory.objects.filter(name=cat_name).first()
+                            if gc:
+                                g_categories.append(gc)
+
+        # Priority B: Fallback to PaymentType Categories
+        if not g_categories and p.payment_type:
+            pt_name = p.payment_type.name
+            with schema_context('public'):
+                global_pt = GlobalPaymentType.objects.filter(name=pt_name).prefetch_related('payment_categories').first()
+                if global_pt:
+                    g_categories = list(global_pt.payment_categories.all())
+
+        # 2. Attribute amount to identified categories
+        cat_count = len(g_categories)
         if cat_count > 0:
             val_per_cat = p.montant_paye / cat_count if p.montant_paye else 0
-            for cat in p.payment_type.payment_categories.all():
-                # find the poste for this cat
-                poste = None
-                with schema_context('public'):
-                    poste = PostesBudgetaire.objects.filter(payment_categories=cat.id).first()
-                if poste:
-                    add_real(poste.id, 'pay', cat.id, p.entite_id, val_per_cat, p.date_paiement)
+            with schema_context('public'):
+                for g_cat in g_categories:
+                    poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
+                    if poste:
+                        add_real(poste.id, 'pay', g_cat.id, p.entite_id, val_per_cat, p.date_paiement)
 
     # Autre Produits
     autre_produits = AutreProduit.objects.filter(
@@ -1714,18 +1761,28 @@ def budget_campaign_realization(request, campaign_slug):
         date_paiement__lte=campaign.date_fin,
         payment_type__isnull=False,
         entite__isnull=False
-    ).prefetch_related('payment_type__payment_categories')
+    ).prefetch_related('lettrages', 'payment_type')
     
     for ap in autre_produits:
-        categories = ap.payment_type.payment_categories.all()
-        cat_count = categories.count()
-        if cat_count > 0:
-            val_per_cat = ap.montant_paiement / cat_count if ap.montant_paiement else 0
-            for cat in categories:
-                with schema_context('public'):
-                    poste = PostesBudgetaire.objects.filter(payment_categories=cat.id).first()
-                if poste:
-                    add_real(poste.id, 'pay', cat.id, ap.entite_id, val_per_cat, ap.date_paiement)
+        # Effective Received Logic: Mode Chèque or Virement must have a banking operation (lettrage)
+        if ap.mode_paiement in ['che', 'vir']:
+            if not ap.lettrages.exists():
+                continue
+
+        pt_name = ap.payment_type.name
+        with schema_context('public'):
+            global_pt = GlobalPaymentType.objects.filter(name=pt_name).prefetch_related('payment_categories').first()
+            if not global_pt:
+                continue
+                
+            categories = global_pt.payment_categories.all()
+            cat_count = categories.count()
+            if cat_count > 0:
+                val_per_cat = ap.montant_paiement / cat_count if ap.montant_paiement else 0
+                for g_cat in categories:
+                    poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
+                    if poste:
+                        add_real(poste.id, 'pay', g_cat.id, ap.entite_id, val_per_cat, ap.date_paiement)
 
     # Depenses
     depenses = Depenses.objects.filter(
@@ -1733,28 +1790,66 @@ def budget_campaign_realization(request, campaign_slug):
         date_paiement__lte=campaign.date_fin,
         category__isnull=False,
         entite__isnull=False
-    )
-    for d in depenses:
-        with schema_context('public'):
-            poste = PostesBudgetaire.objects.filter(depense_categories=d.category_id).first()
-        if poste:
-            add_real(poste.id, 'dep', d.category_id, d.entite_id, d.montant_ttc, d.date_paiement)
+    ).prefetch_related('category')
 
-    # Global totals and per-type totals
+    for d in depenses:
+        cat_name = d.category.name
+        with schema_context('public'):
+            g_cat = GlobalDepensesCategory.objects.filter(name=cat_name).first()
+            if g_cat:
+                poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
+                if poste:
+                    add_real(poste.id, 'dep', g_cat.id, d.entite_id, d.montant_ttc, d.date_paiement)
+
+    # Global totals (restricted to current quarter via add_real)
     total_realized = 0
     total_realized_recette = 0
     total_realized_depense = 0
     
     for k, v in realisations.items():
+        # Avoid double counting the consolidated '_none_0_0' entries in global totals
+        if '_none_0_0' in k:
+            continue
+            
         amount = v['montant']
-        total_realized += amount
         if '_pay_' in k:
             total_realized_recette += amount
         elif '_dep_' in k:
             total_realized_depense += amount
+            
+    total_realized = total_realized_recette - total_realized_depense
+    import datetime
+    c_year = campaign.date_debut.year
+    t1_start = datetime.date(c_year, 8, 1)
+    t1_end = datetime.date(c_year, 10, 31)
+    t2_start = datetime.date(c_year, 11, 1)
+    t2_end = datetime.date(c_year + 1, 1, 31)
+    t3_start = datetime.date(c_year + 1, 2, 1)
+    t3_end = datetime.date(c_year + 1, 4, 30)
+    t4_start = datetime.date(c_year + 1, 5, 1)
+    t4_end = datetime.date(c_year + 1, 7, 31)
     
+    today_date = timezone.now().date()
+    
+    def get_ratio(start, end, today):
+        if today < start: return Decimal('0')
+        if today > end: return Decimal('1')
+        total_days = (end - start).days + 1
+        elapsed = (today - start).days + 1
+        return Decimal(str(elapsed)) / Decimal(str(total_days))
+        
+    t1_ratio = get_ratio(t1_start, t1_end, today_date)
+    t2_ratio = get_ratio(t2_start, t2_end, today_date)
+    t3_ratio = get_ratio(t3_start, t3_end, today_date)
+    t4_ratio = get_ratio(t4_start, t4_end, today_date)
+
     # Pre-calculate the combined structured data for the template
     combined_postes = []
+    
+    prorated_total_dispatched_recette = Decimal('0')
+    prorated_total_dispatched_depense = Decimal('0')
+    total_dispatched_recette = Decimal('0')
+    total_dispatched_depense = Decimal('0')
     
     for group in structured_postes:
         group_data = {
@@ -1766,24 +1861,40 @@ def budget_campaign_realization(request, campaign_slug):
         for p in group['display_postes']:
             # 1. Base Poste level summary (always include)
             key = f"{p.id}_none_0_0"
-            prevu_raw = allocations.get(key, {}).get('montant', 0)
             realise_raw = realisations.get(key, {}).get('montant', 0)
+            realise = Decimal(str(realise_raw)) if realise_raw is not None else Decimal('0')
             
-            prevu = float(prevu_raw) if prevu_raw is not None else 0.0
-            realise = float(realise_raw) if realise_raw is not None else 0.0
+            full_t1 = Decimal(str(allocations.get(key, {}).get('t1_montant', 0)))
+            full_t2 = Decimal(str(allocations.get(key, {}).get('t2_montant', 0)))
+            full_t3 = Decimal(str(allocations.get(key, {}).get('t3_montant', 0)))
+            full_t4 = Decimal(str(allocations.get(key, {}).get('t4_montant', 0)))
+            
+            full_prevu = full_t1 + full_t2 + full_t3 + full_t4
+            
+            if p.type == 'recette':
+                total_dispatched_recette += full_prevu
+            elif p.type == 'depense':
+                total_dispatched_depense += full_prevu
+                
+            t1_prevu = round(full_t1 * t1_ratio, 2)
+            t2_prevu = round(full_t2 * t2_ratio, 2)
+            t3_prevu = round(full_t3 * t3_ratio, 2)
+            t4_prevu = round(full_t4 * t4_ratio, 2)
+            
+            prevu = t1_prevu + t2_prevu + t3_prevu + t4_prevu
             
             ecart = realise - prevu
-            taux = (realise / prevu * 100) if prevu > 0 else (100 if realise > 0 else 0)
+            taux = (realise / prevu * 100) if prevu > 0 else (Decimal('100') if realise > 0 else Decimal('0'))
             
-            t1_prevu = float(allocations.get(key, {}).get('t1_montant', 0))
-            t2_prevu = float(allocations.get(key, {}).get('t2_montant', 0))
-            t3_prevu = float(allocations.get(key, {}).get('t3_montant', 0))
-            t4_prevu = float(allocations.get(key, {}).get('t4_montant', 0))
+            if p.type == 'recette':
+                prorated_total_dispatched_recette += prevu
+            elif p.type == 'depense':
+                prorated_total_dispatched_depense += prevu
             
-            t1_realise = float(realisations.get(key, {}).get('t1_montant', 0))
-            t2_realise = float(realisations.get(key, {}).get('t2_montant', 0))
-            t3_realise = float(realisations.get(key, {}).get('t3_montant', 0))
-            t4_realise = float(realisations.get(key, {}).get('t4_montant', 0))
+            t1_realise = Decimal(str(realisations.get(key, {}).get('t1_montant', 0)))
+            t2_realise = Decimal(str(realisations.get(key, {}).get('t2_montant', 0)))
+            t3_realise = Decimal(str(realisations.get(key, {}).get('t3_montant', 0)))
+            t4_realise = Decimal(str(realisations.get(key, {}).get('t4_montant', 0)))
                 
             group_data['display_postes'].append({
                 'poste': p,
@@ -1815,6 +1926,9 @@ def budget_campaign_realization(request, campaign_slug):
         institut=request.tenant
     ).prefetch_related('items', 'items__poste').order_by('-created_at')
 
+    prorated_total_dispatched = prorated_total_dispatched_recette + prorated_total_dispatched_depense
+    total_dispatched = total_dispatched_recette + total_dispatched_depense
+
     context = {
         'tenant': request.tenant,
         'approved_extensions': all_extensions,
@@ -1826,12 +1940,12 @@ def budget_campaign_realization(request, campaign_slug):
         
         'total_dispatched_recette': total_dispatched_recette,
         'total_realized_recette': total_realized_recette,
-        'recette_ecart': total_realized_recette - float(total_dispatched_recette),
+        'recette_ecart': total_realized_recette - total_dispatched_recette,
         'percent_realized_recette': (total_realized_recette / total_dispatched_recette * 100) if total_dispatched_recette > 0 else 0,
         
         'total_dispatched_depense': total_dispatched_depense,
         'total_realized_depense': total_realized_depense,
-        'depense_ecart': total_realized_depense - float(total_dispatched_depense),
+        'depense_ecart': total_realized_depense - total_dispatched_depense,
         'percent_realized_depense': (total_realized_depense / total_dispatched_depense * 100) if total_dispatched_depense > 0 else 0,
         
         'resultat_attendu': total_dispatched_recette - total_dispatched_depense,
@@ -1842,7 +1956,7 @@ def budget_campaign_realization(request, campaign_slug):
 
         'percent_dispatched': (total_dispatched_recette / global_objective.montant * 100) if global_objective.montant > 0 else 0,
         'percent_realized': (total_realized / total_dispatched * 100) if total_dispatched > 0 else 0,
-        'global_ecart': total_realized - float(total_dispatched),
+        'global_ecart': total_realized - total_dispatched,
         'statut': global_objective.statut,
         'commentaire': global_objective.commentaire,
         'today': today_date,
