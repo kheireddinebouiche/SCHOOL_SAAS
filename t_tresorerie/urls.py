@@ -264,4 +264,5 @@ urlpatterns = [
     path('api/liste-double-diplomation-prices/', ApiListeDoubleDiplomationPrices, name="ApiListeDoubleDiplomationPrices"),
     path('api/update-double-diplomation-price/', ApiUpdateDoubleDiplomationPrice, name="ApiUpdateDoubleDiplomationPrice"),
     path('api/list-payment-types/', ApiListePaymentTypes, name='ApiListePaymentTypes'),
+    path('api/update-payment-type/', ApiUpdatePaymentType, name='ApiUpdatePaymentType'),
 ]

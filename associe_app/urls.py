@@ -19,6 +19,7 @@ from .views import (
     tenant_data_list,
     get_tenant_categories,
     purge_tenant_categories,
+    delete_tenant_payment_type,
     crm_statistics,
     get_crm_stats_api,
     postes_budgetaires_list,
@@ -55,6 +56,7 @@ urlpatterns = [
     path('tenants/', tenant_data_list, name='tenant_data_list'),
     path('tenants/categories/<int:tenant_id>/', get_tenant_categories, name='get_tenant_categories'),
     path('tenants/purge/<int:tenant_id>/', purge_tenant_categories, name='purge_tenant_categories'),
+    path('tenants/delete-payment-type/<int:tenant_id>/<int:payment_type_id>/', delete_tenant_payment_type, name='delete_tenant_payment_type'),
     path('crm-statistics/', crm_statistics, name='crm_statistics'),
     path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
 

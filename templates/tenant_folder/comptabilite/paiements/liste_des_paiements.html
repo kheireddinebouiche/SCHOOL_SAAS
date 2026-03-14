@@ -70,6 +70,41 @@
         justify-content: center;
         border-radius: 12px;
     }
+
+    .btn-ghost-primary {
+        background-color: transparent;
+        color: #3b82f6;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-ghost-primary:hover, .btn-ghost-primary:focus {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+    }
+
+    .btn-icon.btn-sm {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+
+    /* Prevent clipping in table-responsive */
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .dropdown-menu {
+        margin: 0;
+        transform: translate3d(0, 0, 0);
+    }
 </style>
 
 <!-- ============================================================== -->
@@ -235,7 +270,6 @@
                                 </table>
                             </div>
                         </div>
-v>
                     </div>
                 </div>
             </div>
@@ -245,23 +279,33 @@ v>
     </div>
     <!-- End Page-content -->
 </div>
-<div class="modal fade deleteModal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-5">
-                <lord-icon src="https://cdn.lordicon.com/hwjcdycb.json" trigger="loop" colors="primary:#121331,secondary:#08a88a" style="width:120px;height:120px">
-                </lord-icon>
-                <div class="mt-4">
-                    <h4 class="mb-3">Vous étes sur le point de supprimer le paiement</h4>
-                    <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir supprimer cet élément ? Cette action est irréversible. </p>
-                    <div class="hstack gap-2 justify-content-center">
-                        
-                    </div>
-                </div>
-            </div>
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<div class="modal fade" id="updatePaymentTypeModal" tabindex="-1" aria-labelledby="updatePaymentTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary bg-opacity-10 border-0 p-4">
+                <h5 class="modal-title fw-bold text-primary" id="updatePaymentTypeModalLabel">Modifier la nature du paiement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="updatePaymentTypeForm">
+                    <input type="hidden" id="edit_paiement_id">
+                    <div class="mb-4">
+                        <label for="edit_payment_type" class="form-label fw-semibold text-muted mb-2">Sélectionnez le nouveau type</label>
+                        <select class="form-select btn-rounded border-light shadow-sm" id="edit_payment_type" required>
+                            <option value="">Chargement...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary btn-rounded px-4" id="confirmUpdatePaymentType">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -290,12 +334,13 @@ v>
                             row += "<td><div class='text-muted small'>"+p.date_paiement+"</div></td>";
                             row += "<td class='text-center pe-4'>";
                             row += "<div class='dropdown'>";
-                            row += "<button class='btn btn-edit-premium dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                            row += "<i class='ri-more-2-fill'></i>";
+                            row += "<button class='btn btn-ghost-primary btn-icon btn-sm rounded-circle shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false' data-bs-display='static'>";
+                            row += "<i class='ri-more-fill fs-5'></i>";
                             row += "</button>";
-                            row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg'>";
-                            row += "<li><a class='dropdown-item edit-item-btn d-flex align-items-center py-2' href='#' data-id='"+p.id+"'><i class='ri-pencil-line text-warning me-2'></i> Modifier</a></li>";
-                            row += "<li><a class='dropdown-item remove-item-btn d-flex align-items-center py-2' href='#' data-id='"+p.id+"'><i class='ri-delete-bin-line text-danger me-2'></i> Supprimer</a></li>";
+                            row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg py-2' style='min-width: 140px; border-radius: 12px;'>";
+                            row += "<li><a class='dropdown-item edit-item-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2' href='#' data-id='"+p.id+"'><i class='ri-edit-2-line text-primary fs-5'></i> <span class='fw-medium'>Modifier</span></a></li>";
+                            row += "<li><a class='dropdown-item change-type-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2' href='#' data-id='"+p.id+"' data-type-id='"+p.payment_type_id+"'><i class='ri-refund-2-line text-warning fs-5'></i> <span class='fw-medium'>Modifier la nature</span></a></li>";
+                            row += "<li><a class='dropdown-item remove-item-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2 text-danger' href='#' data-id='"+p.id+"'><i class='ri-delete-bin-line fs-5'></i> <span class='fw-medium'>Supprimer</span></a></li>";
                             row += "</ul>";
                             row += "</div>";
                             row += "</td>";
@@ -379,14 +424,15 @@ v>
                                 row += "<td>"+p.montant_paye+" DA</td>";                         
                                 row += "<td data-contextkey='"+p.context_key+"'>"+p.context+"</td>";                               
                                 row += "<td>"+p.date_paiement+"</td>";
-                                row += "<td class='text-center'>";
+                                row += "<td class='text-center pe-4'>";
                                 row += "<div class='dropdown'>";
-                                row += "<button class='btn btn-soft-secondary btn-sm dropdown-toggle' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                                row += "<i class='ri-more-fill align-middle'></i>";
+                                row += "<button class='btn btn-ghost-primary btn-icon btn-sm rounded-circle shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false' data-bs-display='static'>";
+                                row += "<i class='ri-more-fill fs-5'></i>";
                                 row += "</button>";
-                                row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                row += "<li><a class='dropdown-item edit-item-btn' href='#' data-id='"+p.id+"'><i class='ri-pencil-fill align-bottom me-2 text-muted'></i> Modifier</a></li>";
-                                row += "<li><a class='dropdown-item remove-item-btn' href='#' data-id='"+p.id+"'><i class='ri-delete-bin-fill align-bottom me-2 text-muted'></i> Supprimer</a></li>";
+                                row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg py-2' style='min-width: 140px; border-radius: 12px;'>";
+                                row += "<li><a class='dropdown-item edit-item-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2' href='#' data-id='"+p.id+"'><i class='ri-edit-2-line text-primary fs-5'></i> <span class='fw-medium'>Modifier</span></a></li>";
+                                row += "<li><a class='dropdown-item change-type-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2' href='#' data-id='"+p.id+"' data-type-id='"+p.payment_type_id+"'><i class='ri-refund-2-line text-warning fs-5'></i> <span class='fw-medium'>Modifier la nature</span></a></li>";
+                                row += "<li><a class='dropdown-item remove-item-btn d-flex align-items-center gap-2 py-2 px-3 rounded-2 text-danger' href='#' data-id='"+p.id+"'><i class='ri-delete-bin-line fs-5'></i> <span class='fw-medium'>Supprimer</span></a></li>";
                                 row += "</ul>";
                                 row += "</div>";
                                 row += "</td>";
@@ -458,7 +504,67 @@ v>
 
         // Initialize statistics
         updateStatistics([]);
-     
+
+        // Handle Change Type button
+        $(document).on('click', '.change-type-btn', function(e) {
+            e.preventDefault();
+            var paiementId = $(this).data('id');
+            var currentTypeId = $(this).data('type-id');
+            
+            $('#edit_paiement_id').val(paiementId);
+            
+            // Load payment types
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiListePaymentTypes' %}",
+                type: 'GET',
+                success: function(data) {
+                    var options = '<option value="">Sélectionnez un type</option>';
+                    $.each(data, function(index, type) {
+                        var selected = (type.id == currentTypeId) ? 'selected' : '';
+                        options += '<option value="' + type.id + '" ' + selected + '>' + type.name + '</option>';
+                    });
+                    $('#edit_payment_type').html(options);
+                    $('#updatePaymentTypeModal').modal('show');
+                }
+            });
+        });
+
+        // Handle Confirm Update Payment Type
+        $('#confirmUpdatePaymentType').click(function() {
+            var paiementId = $('#edit_paiement_id').val();
+            var paymentTypeId = $('#edit_payment_type').val();
+            
+            if (!paymentTypeId) {
+                alert('Veuillez sélectionner un type de paiement');
+                return;
+            }
+            
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiUpdatePaymentType' %}",
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                data: JSON.stringify({
+                    paiement_id: paiementId,
+                    payment_type_id: paymentTypeId
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#updatePaymentTypeModal').modal('hide');
+                        // Show success message (optional, standard in this project seems to be refreshing)
+                        loadItems(); // Refresh the list
+                    } else {
+                        alert('Erreur: ' + response.message);
+                    }
+                },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON ? xhr.responseJSON.message : 'Une erreur est survenue';
+                    alert('Erreur: ' + msg);
+                }
+            });
+        });
     });
 </script>
 {% endblock content %}

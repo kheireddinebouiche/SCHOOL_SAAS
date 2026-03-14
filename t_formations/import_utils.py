@@ -4,6 +4,41 @@ import openpyxl
 from .models import Partenaires, Formation, Specialites, Modules, Formateurs
 from django.db.models import Q
 
+def parse_dispo_string(dispo_str):
+    if not dispo_str:
+        return {'disponibilites': []}
+    
+    # Check if it's already JSON
+    if isinstance(dispo_str, str) and dispo_str.strip().startswith('{'):
+        try:
+            data = json.loads(dispo_str)
+            if isinstance(data, dict) and 'disponibilites' in data:
+                return data
+        except:
+            pass
+
+    disponibilites = []
+    # Format: Jour:HH:mm-HH:mm, Jour2:HH:mm-HH:mm
+    parts = [p.strip() for p in str(dispo_str).split(',') if p.strip()]
+    for part in parts:
+        if ':' in part and '-' in part:
+            try:
+                # Part might be "Lundi:08:00-12:00"
+                first_colon = part.find(':')
+                jour = part[:first_colon].strip().lower()
+                times = part[first_colon+1:].strip()
+                if '-' in times:
+                    heure_debut, heure_fin = times.split('-', 1)
+                    disponibilites.append({
+                        'jour': jour,
+                        'heure_debut': heure_debut.strip(),
+                        'heure_fin': heure_fin.strip()
+                    })
+            except:
+                continue
+    return {'disponibilites': disponibilites}
+
+
 def handle_uploaded_file(file):
     """
     Parses the uploaded file (Excel or JSON) and returns a list of dictionaries.
@@ -192,6 +227,15 @@ def verify_data(data, data_type):
                 
                 if not nom: error_msg.append("Nom manquant")
                 if not prenom: error_msg.append("Prénom manquant")
+
+                # Availability check (optional but validate format if present)
+                dispo_val = row.get('Disponibilité') or row.get('disponibilite') or row.get('dispo')
+                if dispo_val:
+                    parsed = parse_dispo_string(dispo_val)
+                    if not parsed['disponibilites'] and str(dispo_val).strip() != '':
+                         # If there was something but we couldn't parse any entry
+                         pass # Could add warning, but let's be lenient for now
+
             
         except Exception as e:
             error_msg.append(f"Erreur inattendue: {str(e)}")
@@ -340,15 +384,21 @@ def import_data(data, data_type, user=None):
                 nin = row.get('NIN') or row.get('nin')
                 
                 if email:
+                    dispo_val = row.get('Disponibilité') or row.get('disponibilite') or row.get('dispo')
+                    dispo_data = parse_dispo_string(dispo_val) if dispo_val else None
+
                     Formateurs.objects.update_or_create(
                         email=email,
                         defaults={
                             'prenom': prenom,
+                            'nom': nom, # Also update nom if provided
                             'telephone': telephone,
                             'diplome': diplome,
-                            'nin': nin
+                            'nin': nin,
+                            'dispo': dispo_data
                         }
                     )
+
             
             success_count += 1
             

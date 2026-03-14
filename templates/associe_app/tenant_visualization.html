@@ -250,6 +250,9 @@
                         <a class="nav-link" data-bs-toggle="tab" href="#d-cats-tab">Catégories Dépense</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#p-types-tab">Types de Paiement</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="tab" href="#crm-stats-tab" onclick="renderCRMStats()">Statistiques CRM</a>
                     </li>
                 </ul>
@@ -283,6 +286,21 @@
                             </table>
                         </div>
                     </div>
+                    <div class="tab-pane p-4" id="p-types-tab">
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Catégories</th>
+                                        <th>Global ID</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="p-types-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
                     <div class="tab-pane p-4" id="crm-stats-tab">
                         <div class="row g-3 mb-4" id="crm-summary-cards"></div>
                         <div class="row g-4">
@@ -308,6 +326,7 @@
 <script>
     let inspectionModal;
     let currentCRMData = null;
+    let currentTenantId = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('inspectionModal');
@@ -315,8 +334,10 @@
     });
 
     function inspectTenant(id) {
-        $(`#p-cats-body, #d-cats-body`).html('<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
+        $(`#p-cats-body, #d-cats-body, #p-types-body`).html('<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
         $(`#crm-summary-cards, #crm-status-breakdown, #crm-etat-breakdown`).html('<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>');
+        
+        currentTenantId = id;
 
         $.ajax({
             url: "{% url 'associe_app:get_tenant_categories' 0 %}".replace('0', id),
@@ -343,13 +364,41 @@
                     `).join('') || '<tr><td colspan="3" class="text-center text-muted">Vide</td></tr>';
                     $('#d-cats-body').html(dRows);
 
+                    let ptRows = res.payment_types.map(pt => `
+                        <tr id="pt-row-${pt.id}">
+                            <td class="fw-bold text-dark">${pt.name}</td>
+                            <td>${pt.categories.map(c => `<span class="badge bg-soft-teal text-teal me-1">${c}</span>`).join('') || '-'}</td>
+                            <td><code class="small text-muted">${pt.global_id || 'ID Local'}</code></td>
+                            <td class="text-end">
+                                <button class="btn btn-soft-danger btn-icon btn-sm rounded-pill btn-delete-pt" 
+                                        data-id="${pt.id}" 
+                                        data-name="${pt.name.replace(/"/g, '&quot;')}"
+                                        onclick="handleDeleteClick(this)">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="4" class="text-center text-muted">Vide</td></tr>';
+                    $('#p-types-body').html(ptRows);
+
                     currentCRMData = res.crm_stats;
                     if ($('#crm-stats-tab').hasClass('active')) renderCRMStats();
                     inspectionModal.show();
+                    console.log("Tenant data loaded for ID:", id);
                 }
             },
-            error: () => alertify.error("Erreur de chargement")
+            error: () => {
+                console.error("Failed to load tenant categories for ID:", id);
+                alertify.error("Erreur de chargement");
+            }
         });
+    }
+
+    function handleDeleteClick(btn) {
+        const id = $(btn).data('id');
+        const name = $(btn).data('name');
+        console.log("Delete button clicked for PT:", id, name);
+        deleteTenantPT(id, name);
     }
 
     function renderCRMStats() {
@@ -405,6 +454,41 @@
                 .fail(() => alertify.error("Erreur réseau"));
             }
         );
+    }
+
+    function deleteTenantPT(ptId, name) {
+        if (!currentTenantId) {
+            alertify.error("ID de l'institut manquant");
+            return;
+        }
+
+        const url = "{% url 'associe_app:delete_tenant_payment_type' 999 888 %}"
+            .replace('999', currentTenantId)
+            .replace('888', ptId);
+        
+        alertify.confirm("Voulez-vous supprimer le type de paiement '" + name + "' ?", function() {
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                data: {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: (res) => {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        $(`#pt-row-${ptId}`).remove();
+                    } else {
+                        alertify.error(res.message);
+                        if (res.traceback) console.error("Traceback:", res.traceback);
+                    }
+                },
+                error: (xhr) => {
+                    console.error("PT Deletion AJAX Error:", xhr.status, xhr.responseText);
+                    alertify.error("Erreur serveur (" + xhr.status + "). Détails dans la console.");
+                }
+            });
+        });
     }
 </script>
 {% endblock %}

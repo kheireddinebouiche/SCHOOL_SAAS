@@ -13,12 +13,23 @@ import csv
 import openpyxl
 from django.http import HttpResponse
 
+def format_dispo(dispo):
+    if not dispo or 'disponibilites' not in dispo:
+        return ""
+    items = []
+    for d in dispo['disponibilites']:
+        jour = d.get('jour', '').capitalize()
+        debut = d.get('heure_debut', '')
+        fin = d.get('heure_fin', '')
+        items.append(f"{jour}:{debut}-{fin}")
+    return ", ".join(items)
+
 login_required(login_url="institut_app:login")
 def export_formateurs(request):
     format_type = request.GET.get('format', 'csv')
     formateurs = Formateurs.objects.all()
 
-    headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme', 'NIN']
+    headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme', 'NIN', 'Disponibilité']
 
     if format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -35,7 +46,9 @@ def export_formateurs(request):
                 f.nom,
                 f.prenom,
                 f.telephone,
-                f.diplome
+                f.diplome,
+                f.nin,
+                format_dispo(f.dispo)
             ])
 
         workbook.save(response)
@@ -56,10 +69,13 @@ def export_formateurs(request):
                 f.nom,
                 f.prenom,
                 f.telephone,
-                f.diplome
+                f.diplome,
+                f.nin,
+                format_dispo(f.dispo)
             ])
 
         return response
+
 
 login_required(login_url="institut_app:login")
 def PageFormateurs(request):

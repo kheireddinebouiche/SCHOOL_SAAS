@@ -12,7 +12,7 @@ from .utils import sync_global_categories
 from django.contrib import messages
 from app.models import Institut
 from django_tenants.utils import schema_context
-from t_tresorerie.models import PaymentCategory, DepensesCategory
+from t_tresorerie.models import PaymentCategory, DepensesCategory, PaymentType
 from t_crm.models import Prospets, Opportunite
 from django.db.models import Sum, Count
 from institut_app.models import Entreprise
@@ -496,6 +496,17 @@ def get_tenant_categories(request, tenant_id):
                 'payment_category': dc.payment_category.name if dc.payment_category else '-'
             })
 
+        # Fetch payment types
+        p_types_data = []
+        p_types = PaymentType.objects.all()
+        for pt in p_types:
+            p_types_data.append({
+                'id': pt.id,
+                'name': pt.name,
+                'global_id': pt.global_id,
+                'categories': [c.name for c in pt.payment_categories.all()]
+            })
+
         # CRM Statistics
         all_prospects = Prospets.objects.all()
         crm_stats = {
@@ -511,8 +522,35 @@ def get_tenant_categories(request, tenant_id):
         'tenant_name': tenant.nom,
         'payment_categories': payment_categories,
         'depenses_categories': depenses_categories,
+        'payment_types': p_types_data,
         'crm_stats': crm_stats
     })
+
+@login_required(login_url='login')
+def delete_tenant_payment_type(request, tenant_id, payment_type_id):
+    tenant = get_object_or_404(Institut, id=tenant_id)
+    print(f"Attempting to delete PT {payment_type_id} for tenant {tenant.nom} ({tenant.schema_name})")
+    if request.method == 'POST':
+        try:
+            with schema_context(tenant.schema_name):
+                p_type = get_object_or_404(PaymentType, id=payment_type_id)
+                name = p_type.name
+                p_type.delete()
+                print(f"Successfully deleted {name}")
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Type de paiement "{name}" supprimé du tenant "{tenant.nom}".'
+            })
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error during deletion for tenant {tenant.nom}: {error_trace}")
+            return JsonResponse({
+                'status': 'error', 
+                'message': str(e),
+                'traceback': error_trace
+            })
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
 
 @login_required(login_url='login')
 def crm_statistics(request):

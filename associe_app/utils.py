@@ -17,13 +17,27 @@ def sync_global_categories():
             
             # First pass: Create categories without parents
             for g_cat in global_payment_cats:
-                p_cat, created = PaymentCategory.objects.get_or_create(
-                    name=g_cat.name,
-                    defaults={'category_type': g_cat.category_type}
-                )
-                if not created:
+                # Try to find by global_id first
+                p_cat = PaymentCategory.objects.filter(global_id=g_cat.id).first()
+                
+                # Fallback to name if not found by global_id
+                if not p_cat:
+                    p_cat = PaymentCategory.objects.filter(name=g_cat.name).first()
+                
+                if p_cat:
+                    # Update existing
+                    p_cat.name = g_cat.name
                     p_cat.category_type = g_cat.category_type
+                    p_cat.global_id = g_cat.id
                     p_cat.save()
+                else:
+                    # Create new
+                    p_cat = PaymentCategory.objects.create(
+                        name=g_cat.name,
+                        category_type=g_cat.category_type,
+                        global_id=g_cat.id
+                    )
+                
                 payment_cat_map[g_cat.id] = p_cat
 
             # Second pass: Associate parents
@@ -40,18 +54,31 @@ def sync_global_categories():
             
             # First pass: Create without parents
             for g_dep in global_depenses_cats:
-                # Find corresponding payment category if linked
                 linked_payment_cat = None
                 if g_dep.payment_category:
                      linked_payment_cat = payment_cat_map.get(g_dep.payment_category.id)
                 
-                d_cat, created = DepensesCategory.objects.get_or_create(
-                    name=g_dep.name,
-                    defaults={'payment_category': linked_payment_cat}
-                )
-                if not created:
-                     d_cat.payment_category = linked_payment_cat
-                     d_cat.save()
+                # Try to find by global_id first
+                d_cat = DepensesCategory.objects.filter(global_id=g_dep.id).first()
+                
+                # Fallback to name if not found by global_id
+                if not d_cat:
+                    d_cat = DepensesCategory.objects.filter(name=g_dep.name).first()
+                
+                if d_cat:
+                    # Update existing
+                    d_cat.name = g_dep.name
+                    d_cat.payment_category = linked_payment_cat
+                    d_cat.global_id = g_dep.id
+                    d_cat.save()
+                else:
+                    # Create new
+                    d_cat = DepensesCategory.objects.create(
+                        name=g_dep.name,
+                        payment_category=linked_payment_cat,
+                        global_id=g_dep.id
+                    )
+                
                 depense_cat_map[g_dep.id] = d_cat
 
             # Second pass: Associate parents
@@ -65,9 +92,25 @@ def sync_global_categories():
 
             # 3. Sync Payment Types
             for g_type in global_payment_types:
-                p_type, created = PaymentType.objects.get_or_create(
-                    name=g_type.name
-                )
+                # Try to find by global_id first
+                p_type = PaymentType.objects.filter(global_id=g_type.id).first()
+                
+                # Fallback to name if not found by global_id
+                if not p_type:
+                    p_type = PaymentType.objects.filter(name=g_type.name).first()
+                
+                if p_type:
+                    # Update existing
+                    p_type.name = g_type.name
+                    p_type.global_id = g_type.id
+                    p_type.save()
+                else:
+                    # Create new
+                    p_type = PaymentType.objects.create(
+                        name=g_type.name,
+                        global_id=g_type.id
+                    )
+                
                 # Sync Many-to-Many categories
                 cats_to_set = []
                 for g_cat in g_type.payment_categories.all():
