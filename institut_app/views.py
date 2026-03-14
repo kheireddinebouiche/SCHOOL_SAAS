@@ -1101,11 +1101,29 @@ def my_budget_campaigns(request):
     Shows budget campaigns for the current tenant (Institute).
     Fetches data from the public schema (associe_app).
     """
-    from associe_app.models import BudgetCampaign, BudgetLine
+    from associe_app.models import BudgetCampaign, BudgetLine, PostesBudgetaire
     
     with schema_context('public'):
         # Fetch active campaigns
         campaigns = BudgetCampaign.objects.filter(is_active=True).order_by('-date_debut')
+        
+        # Fetch all budget items for the modal and structure them (recursive arborescence)
+        all_postes = list(PostesBudgetaire.objects.all().order_by('order', 'label'))
+        
+        def build_recursive_tree(nodes, parent_id=None):
+            tree = []
+            relevant_nodes = [n for n in nodes if n.parent_id == parent_id]
+            for node in relevant_nodes:
+                tree.append({
+                    'item': node,
+                    'children': build_recursive_tree(nodes, node.id)
+                })
+            return tree
+
+        postes_tree = {
+            'recette': build_recursive_tree([p for p in all_postes if p.type == 'recette']),
+            'depense': build_recursive_tree([p for p in all_postes if p.type == 'depense'])
+        }
         
         # Get budget lines for this specific institute
         institute = request.tenant
@@ -1134,6 +1152,7 @@ def my_budget_campaigns(request):
     context = {
         'tenant': request.tenant,
         'campaign_data': campaign_data,
+        'postes_tree': postes_tree,
     }
     return render(request, 'tenant_folder/budget/my_campaigns.html', context)
 @login_required(login_url="institut_app:login")

@@ -58,6 +58,80 @@
         color: #059669;
         border: 1px solid rgba(16, 185, 129, 0.2);
     }
+
+    /* Modal Tree Styles */
+    .tree-content {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: white;
+        border: 1px solid #f1f5f9;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+    }
+
+    .tree-content:hover {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        transform: translateX(4px);
+    }
+
+    .tree-toggle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: #f8fafc;
+        color: #64748b;
+        margin-right: 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .tree-toggle.empty {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+    .tree-children {
+        margin-left: 1.5rem;
+        padding-left: 1rem;
+        border-left: 1px dashed #e2e8f0;
+        display: none;
+    }
+
+    .tree-children.show {
+        display: block;
+    }
+
+    .node-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .icon-recette { background: rgba(16, 185, 129, 0.1); color: #059669; }
+    .icon-depense { background: rgba(244, 63, 94, 0.1); color: #e11d48; }
+
+    .node-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .node-desc {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: block;
+    }
 </style>
 
 <div class="main-content">
@@ -77,15 +151,22 @@
                             </div>
                         </div>
                         <div class="mt-3 mt-sm-0 text-end">
-                            <nav aria-label="breadcrumb" class="mb-2">
-                                <ol class="breadcrumb m-0 justify-content-sm-end">
-                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:directeur_dashboard' %}">Tableau de bord</a></li>
-                                    <li class="breadcrumb-item active">Mes Campagnes</li>
-                                </ol>
-                            </nav>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
-                                <i class="ri-building-line me-1"></i> {{ tenant.nom }}
-                            </span>
+                            <div class="d-flex flex-column align-items-sm-end gap-2">
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0 justify-content-sm-end">
+                                        <li class="breadcrumb-item"><a href="{% url 'institut_app:directeur_dashboard' %}">Tableau de bord</a></li>
+                                        <li class="breadcrumb-item active">Mes Campagnes</li>
+                                    </ol>
+                                </nav>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-soft-info btn-sm rounded-pill px-3 shadow-none fw-bold" data-bs-toggle="modal" data-bs-target="#postesModal">
+                                        <i class="ri-list-settings-line me-1"></i> Postes Budgétaires
+                                    </button>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
+                                        <i class="ri-building-line me-1"></i> {{ tenant.nom }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -156,4 +237,192 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal Postes Budgétaires -->
+    <div class="modal fade" id="postesModal" tabindex="-1" aria-labelledby="postesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-dashed p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3 text-info">
+                            <i class="ri-list-settings-line fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark" id="postesModalLabel">Référentiel des Postes Budgétaires</h5>
+                            <p class="text-muted mb-0 fs-12">Liste des centres de coûts et revenus configurés</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light bg-opacity-40">
+                <div class="row">
+                    <!-- Recettes Section -->
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold w-100 text-start">
+                                <i class="ri-funds-line me-2"></i> Arborescence des Recettes
+                            </span>
+                        </div>
+                        <div class="tree-container">
+                            {% for entry in postes_tree.recette %}
+                                <!-- Level 1 -->
+                                <div class="tree-node">
+                                    <div class="tree-content" onclick="toggleNode({{ entry.item.id }})">
+                                        <div class="tree-toggle {% if not entry.children %}empty{% endif %}">
+                                            {% if entry.children %}
+                                                <i class="ri-arrow-right-s-line" id="icon-{{ entry.item.id }}"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="node-icon icon-recette">
+                                            <i class="ri-funds-line"></i>
+                                        </div>
+                                        <div>
+                                            <span class="node-title">{{ entry.item.label }}</span>
+                                            {% if entry.item.description %}
+                                                <span class="node-desc">{{ entry.item.description|truncatechars:50 }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if entry.children %}
+                                        <div class="tree-children" id="children-{{ entry.item.id }}">
+                                            {% for child_entry in entry.children %}
+                                                <!-- Level 2 -->
+                                                <div class="tree-node">
+                                                    <div class="tree-content mb-2 py-2" onclick="toggleNode({{ child_entry.item.id }})">
+                                                        <div class="tree-toggle {% if not child_entry.children %}empty{% endif %}">
+                                                            {% if child_entry.children %}
+                                                                <i class="ri-arrow-right-s-line" id="icon-{{ child_entry.item.id }}"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="node-icon icon-recette" style="width:28px; height:28px; font-size:0.9rem;">
+                                                            <i class="ri-corner-down-right-line"></i>
+                                                        </div>
+                                                        <div>
+                                                            <span class="node-title fs-13">{{ child_entry.item.label }}</span>
+                                                        </div>
+                                                    </div>
+                                                    {% if child_entry.children %}
+                                                        <div class="tree-children" id="children-{{ child_entry.item.id }}">
+                                                            {% for grandchild_entry in child_entry.children %}
+                                                                <!-- Level 3 -->
+                                                                <div class="tree-content mb-2 py-1 ms-2" style="background: rgba(248, 250, 252, 0.5);">
+                                                                    <div class="tree-toggle empty"></div>
+                                                                    <div class="node-icon icon-recette" style="width:24px; height:24px; font-size:0.8rem;">
+                                                                        <i class="ri-subtract-line"></i>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span class="node-title fs-12 text-muted fw-medium">{{ grandchild_entry.item.label }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted">Aucune recette configurée.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Dépenses Section -->
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-bold w-100 text-start">
+                                <i class="ri-bill-line me-2"></i> Arborescence des Dépenses
+                            </span>
+                        </div>
+                        <div class="tree-container">
+                            {% for entry in postes_tree.depense %}
+                                <!-- Level 1 -->
+                                <div class="tree-node">
+                                    <div class="tree-content" onclick="toggleNode({{ entry.item.id }})">
+                                        <div class="tree-toggle {% if not entry.children %}empty{% endif %}">
+                                            {% if entry.children %}
+                                                <i class="ri-arrow-right-s-line" id="icon-{{ entry.item.id }}"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="node-icon icon-depense">
+                                            <i class="ri-bill-line"></i>
+                                        </div>
+                                        <div>
+                                            <span class="node-title">{{ entry.item.label }}</span>
+                                            {% if entry.item.description %}
+                                                <span class="node-desc">{{ entry.item.description|truncatechars:50 }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if entry.children %}
+                                        <div class="tree-children" id="children-{{ entry.item.id }}">
+                                            {% for child_entry in entry.children %}
+                                                <!-- Level 2 -->
+                                                <div class="tree-node">
+                                                    <div class="tree-content mb-2 py-2" onclick="toggleNode({{ child_entry.item.id }})">
+                                                        <div class="tree-toggle {% if not child_entry.children %}empty{% endif %}">
+                                                            {% if child_entry.children %}
+                                                                <i class="ri-arrow-right-s-line" id="icon-{{ child_entry.item.id }}"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="node-icon icon-depense" style="width:28px; height:28px; font-size:0.9rem;">
+                                                            <i class="ri-corner-down-right-line"></i>
+                                                        </div>
+                                                        <div>
+                                                            <span class="node-title fs-13">{{ child_entry.item.label }}</span>
+                                                        </div>
+                                                    </div>
+                                                    {% if child_entry.children %}
+                                                        <div class="tree-children" id="children-{{ child_entry.item.id }}">
+                                                            {% for grandchild_entry in child_entry.children %}
+                                                                <!-- Level 3 -->
+                                                                <div class="tree-content mb-2 py-1 ms-2" style="background: rgba(248, 250, 252, 0.5);">
+                                                                    <div class="tree-toggle empty"></div>
+                                                                    <div class="node-icon icon-depense" style="width:24px; height:24px; font-size:0.8rem;">
+                                                                        <i class="ri-subtract-line"></i>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span class="node-title fs-12 text-muted fw-medium">{{ grandchild_entry.item.label }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted">Aucune dépense configurée.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div class="modal-footer border-top-dashed p-4 bg-white rounded-bottom-4">
+                    <button type="button" class="btn btn-light btn-rounded fw-bold px-4" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleNode(id) {
+        const childrenContainer = document.getElementById('children-' + id);
+        const icon = document.getElementById('icon-' + id);
+        if (childrenContainer) {
+            if (childrenContainer.classList.contains('show')) {
+                childrenContainer.classList.remove('show');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                childrenContainer.classList.add('show');
+                icon.style.transform = 'rotate(90deg)';
+            }
+        }
+    }
+</script>
 {% endblock %}
