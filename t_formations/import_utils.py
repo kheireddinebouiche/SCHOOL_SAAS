@@ -96,7 +96,8 @@ def verify_data(data, data_type):
     
         try:
             if data_type == 'Partenaires':
-                code = row.get('code')
+                code = row.get('Code') or row.get('code')
+                nom = row.get('Nom') or row.get('nom')
                 if not code:
                     error_msg.append("Code manquant")
                 else:
@@ -117,7 +118,7 @@ def verify_data(data, data_type):
                         error_msg.append(f"Type de partenaire invalide: '{raw_type}'")
                 
                 # Basic validation
-                if not row.get('nom'): error_msg.append("Nom manquant")
+                if not nom: error_msg.append("Nom manquant")
 
             elif data_type == 'Formation':
                 # New hierarchical headers:
@@ -261,15 +262,23 @@ def import_data(data, data_type, user=None):
     for row in data:
         try:
             if data_type == 'Partenaires':
+                code = row.get('Code') or row.get('code')
+                nom = row.get('Nom') or row.get('nom')
+                adresse = row.get('Adresse') or row.get('adresse')
+                telephone = row.get('Téléphone') or row.get('telephone')
+                email = row.get('Email') or row.get('email')
+                site_web = row.get('Site Web') or row.get('site_web')
+                type_p = row.get('Type de partenaire') or row.get('type_partenaire')
+
                 Partenaires.objects.update_or_create(
-                    code=row['code'],
+                    code=code,
                     defaults={
-                        'nom': row.get('nom'),
-                        'adresse': row.get('adresse'),
-                        'telephone': row.get('telephone'),
-                        'email': row.get('email'),
-                        'site_web': row.get('site_web'),
-                        'type_partenaire': row.get('type_partenaire'),
+                        'nom': nom,
+                        'adresse': adresse,
+                        'telephone': telephone,
+                        'email': email,
+                        'site_web': site_web,
+                        'type_partenaire': type_p,
                         'created_by': user
                     }
                 )

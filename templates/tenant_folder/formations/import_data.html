@@ -72,6 +72,24 @@
         border-color: #3b82f6;
         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     }
+
+    /* Hide native file input but keep it clickable */
+    .hidden-file-input {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .upload-zone.dragover {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+        transform: scale(1.02);
+    }
 </style>
 
 <div class="main-content">
@@ -139,6 +157,10 @@
                                             <div class="position-relative">
                                                 {{ form.data_type }}
                                             </div>
+                                            {% if form.data_type.errors %}
+                                                <div class="text-danger small mt-1">{{ form.data_type.errors|striptags }}</div>
+                                            {% endif %}
+
                                             <p class="text-muted small mt-2 mb-0">
                                                 <i class="ri-information-line me-1"></i> 
                                                 Sélectionnez le module concerné pour charger les règles correspondantes.
@@ -150,16 +172,26 @@
                                         <label class="form-label">
                                             <i class="ri-file-upload-line me-2 opacity-50"></i>Fichier Source
                                         </label>
-                                        <div class="upload-zone shadow-sm" id="drop-zone">
+                                        <div class="upload-zone shadow-sm position-relative" id="drop-zone">
                                             <div class="upload-icon">
                                                 <i class="ri-file-excel-2-line"></i>
                                             </div>
                                             <h5 class="fw-bold mb-2">Glissez votre fichier ici</h5>
                                             <p class="text-muted mb-4 small">ou cliquez pour parcourir vos dossiers</p>
-                                            <div class="d-inline-block p-2 bg-white rounded-3 border">
-                                                {{ form.file }}
+                                            
+                                            <div class="hidden-input-container">
+                                                {% if form.file.field.widget.attrs.class %}
+                                                    {{ form.file }}
+                                                {% else %}
+                                                    {# Fallback if class not set in form #}
+                                                    <input type="file" name="file" class="hidden-file-input" id="id_file" accept=".xlsx, .xls, .json">
+                                                {% endif %}
                                             </div>
                                         </div>
+                                        {% if form.file.errors %}
+                                            <div class="text-danger small mt-1 text-center">{{ form.file.errors|striptags }}</div>
+                                        {% endif %}
+
                                     </div>
                                 </div>
                                 
@@ -188,14 +220,41 @@
         }
     });
 
-    // Drop zone visual feedback (no functional changes, just UI)
+    // Drop zone logic
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.querySelector('input[type="file"]');
 
     if (dropZone && fileInput) {
-        dropZone.onclick = () => fileInput.click();
+        // Ensure file input has the right class
+        fileInput.classList.add('hidden-file-input');
+
+        // Drag and Drop events
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            updateFileInfo();
+        }, false);
         
-        fileInput.onchange = () => {
+        fileInput.onchange = updateFileInfo;
+
+        function updateFileInfo() {
             if (fileInput.files.length > 0) {
                 const fileName = fileInput.files[0].name;
                 dropZone.querySelector('h5').textContent = fileName;
@@ -204,8 +263,9 @@
                 dropZone.style.backgroundColor = "#ecfdf5";
                 dropZone.querySelector('.upload-icon').style.backgroundColor = "rgba(16, 185, 129, 0.1)";
                 dropZone.querySelector('.upload-icon').style.color = "#10b981";
+                dropZone.querySelector('.upload-icon i').className = "ri-checkbox-circle-line";
             }
-        };
+        }
     }
 </script>
 {% endblock %}
