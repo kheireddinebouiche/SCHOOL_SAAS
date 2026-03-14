@@ -168,6 +168,7 @@
                                         <tr>
                                             <th class="ps-4" style="width: 80px;">#</th>
                                             <th>Institut</th>
+                                            <th>Type d'Institut</th>
                                             <th>Date de Création</th>
                                             <th class="text-end pe-4">Actions</th>
                                         </tr>
@@ -188,6 +189,16 @@
                                                 </div>
                                             </td>
                                             <td>
+                                                <select class="form-select form-select-sm rounded-pill fw-bold border-0 shadow-sm" 
+                                                        style="background-color: #f8fafc; color: #1e293b;"
+                                                        onchange="changeTenantType('{{ tenant.id }}', this.value)">
+                                                    <option value="associe" {% if tenant.tenant_type == 'associe' %}selected{% endif %}>Associe</option>
+                                                    <option value="master" {% if tenant.tenant_type == 'master' %}selected{% endif %}>Compte Maitre</option>
+                                                    <option value="second" {% if tenant.tenant_type == 'second' %}selected{% endif %}>Compte Standard</option>
+                                                </select>
+                                            </td>
+                                            <td>
+
                                                 <div class="text-dark fw-medium">{{ tenant.date_creation|date:"d M Y" }}</div>
                                                 <div class="text-muted small">{{ tenant.date_creation|date:"H:i" }}</div>
                                             </td>
@@ -488,6 +499,28 @@
                     alertify.error("Erreur serveur (" + xhr.status + "). Détails dans la console.");
                 }
             });
+        });
+    }
+
+    function changeTenantType(tenantId, newType) {
+        $.ajax({
+            url: "{% url 'associe_app:update_tenant_type' %}",
+            type: 'POST',
+            data: {
+                'tenant_id': tenantId,
+                'tenant_type': newType,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: (res) => {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                } else {
+                    alertify.error(res.message);
+                }
+            },
+            error: () => {
+                alertify.error("Erreur lors de la mise à jour du type.");
+            }
         });
     }
 </script>

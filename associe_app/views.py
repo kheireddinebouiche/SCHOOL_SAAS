@@ -12,6 +12,20 @@ from .utils import sync_global_categories
 from django.contrib import messages
 from app.models import Institut
 from django_tenants.utils import schema_context
+
+@login_required(login_url='login')
+def update_tenant_type(request):
+    if request.method == 'POST':
+        tenant_id = request.POST.get('tenant_id')
+        new_type = request.POST.get('tenant_type')
+        
+        tenant = get_object_or_404(Institut, id=tenant_id)
+        tenant.tenant_type = new_type
+        tenant.save()
+        
+        return JsonResponse({'status': 'success', 'message': f'Le type de l\'institut "{tenant.nom}" a été mis à jour.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
 from t_tresorerie.models import PaymentCategory, DepensesCategory, PaymentType
 from t_crm.models import Prospets, Opportunite
 from django.db.models import Sum, Count

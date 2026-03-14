@@ -42,8 +42,10 @@ from .views import (
     export_depenses_categories,
     import_depenses_categories,
     export_postes_budgetaires,
-    import_postes_budgetaires
+    import_postes_budgetaires,
+    update_tenant_type
 )
+
 
 app_name = 'associe_app'
 
@@ -59,6 +61,8 @@ urlpatterns = [
     path('tenants/delete-payment-type/<int:tenant_id>/<int:payment_type_id>/', delete_tenant_payment_type, name='delete_tenant_payment_type'),
     path('crm-statistics/', crm_statistics, name='crm_statistics'),
     path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
+    path('tenants/update-type/', update_tenant_type, name='update_tenant_type'),
+
 
     # Payment Types
     path('payment-types/', global_payment_type_list, name='global_payment_type_list'),
