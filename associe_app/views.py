@@ -17,6 +17,7 @@ from t_crm.models import Prospets, Opportunite
 from django.db.models import Sum, Count
 from institut_app.models import Entreprise
 from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
+from .budget_utils import get_campaign_realization_data
 
 @login_required
 def sync_payment_types(request):
@@ -631,7 +632,7 @@ from .forms import PostesBudgetaireForm
 
 @login_required(login_url='login')
 def postes_budgetaires_list(request):
-    postes = PostesBudgetaire.objects.all().order_by('label')
+    postes = PostesBudgetaire.objects.all().order_by('order', 'type', 'label')
     postes_list = []
     for poste in postes:
         postes_list.append({
@@ -642,6 +643,7 @@ def postes_budgetaires_list(request):
             'type_display': poste.get_type_display(),
             'parent_id': poste.parent.id if poste.parent else None,
             'description': poste.description,
+            'order': poste.order,
             'depense_categories': [c.id for c in poste.depense_categories.all()],
             'depense_categories_labels': [c.name for c in poste.depense_categories.all()],
             'payment_categories': [c.id for c in poste.payment_categories.all()],
@@ -691,6 +693,7 @@ def postes_budgetaire_edit(request, pk):
             'label': poste.label,
             'type': poste.type,
             'description': poste.description,
+            'order': poste.order,
             'parent': poste.parent.id if poste.parent else '',
             'depense_categories': list(poste.depense_categories.values_list('id', flat=True)),
             'payment_categories': list(poste.payment_categories.values_list('id', flat=True))
@@ -823,7 +826,7 @@ def budget_campaign_instituts(request, campaign_slug):
         'instituts_data': instituts_data,
         'configured_count': configured_instituts,
         'pending_count': total_inst - configured_instituts,
-        'progress': progress
+        'progress': progress,
     })
 
 @login_required(login_url='login')
@@ -884,7 +887,7 @@ def budget_campaign_review(request, campaign_slug, institut_id):
 
     if is_visible_to_admin:
         # 1. Global Items (Public)
-        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('type', 'label')
+        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('order', 'type', 'label')
         
         structured_postes = []
         for p in all_postes:
@@ -1022,6 +1025,9 @@ def budget_campaign_review(request, campaign_slug, institut_id):
                     't4': d.t4_percent
                 }
 
+    # 3. Realization Data for this specific institute
+    realization_data = get_campaign_realization_data(campaign, [institut])
+
     context = {
         'campaign': campaign,
         'institut': institut,
@@ -1035,7 +1041,11 @@ def budget_campaign_review(request, campaign_slug, institut_id):
         
         # Stats
         'remaining': budget_line.montant - total_dispatched,
-        'percent_dispatched': (total_dispatched / budget_line.montant * 100) if budget_line.montant > 0 else 0
+        'percent_dispatched': (total_dispatched / budget_line.montant * 100) if budget_line.montant > 0 else 0,
+
+        # Realization Data
+        'combined_postes': realization_data['combined_postes'],
+        'realization_totals': realization_data['totals']
     }
     return render(request, 'associe_app/budget_campaign_review.html', context)
 
@@ -1129,3 +1139,111 @@ def review_extension(request, request_id):
 
 
 
+@login_required(login_url='login')
+def export_postes_budgetaires(request):
+    postes = PostesBudgetaire.objects.all().order_by('order', 'type', 'label')
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Postes Budgetaires"
+    
+    headers = [
+        'ID', 'Label', 'Type', 'Order', 'Description', 'Parent_ID', 'Parent_Nom',
+        'Depense_Categories_IDs', 'Payment_Categories_IDs'
+    ]
+    ws.append(headers)
+    
+    for p in postes:
+        depense_cats = ",".join([str(c.id) for c in p.depense_categories.all()])
+        payment_cats = ",".join([str(c.id) for c in p.payment_categories.all()])
+        
+        ws.append([
+            p.id,
+            p.label,
+            p.type,
+            p.order,
+            p.description,
+            p.parent.id if p.parent else '',
+            p.parent.label if p.parent else '',
+            depense_cats,
+            payment_cats
+        ])
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = FileResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="postes_budgetaires.xlsx"'
+    return response
+
+@login_required(login_url='login')
+def import_postes_budgetaires(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        filename = file.name.lower()
+        data = []
+        
+        try:
+            if filename.endswith('.xlsx') or filename.endswith('.xls'):
+                wb = openpyxl.load_workbook(file)
+                ws = wb.active
+                headers = [cell.value for cell in ws[1]]
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not any(row): continue
+                    data.append(dict(zip(headers, row)))
+            elif filename.endswith('.json'):
+                data = json.load(file)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Format non supporté.'})
+            
+            # Pass 1: Create or Update items (without parent/categories for now)
+            item_map = {}
+            for row in data:
+                item_id = row.get('ID') or row.get('id')
+                label = row.get('Label') or row.get('label')
+                p_type = row.get('Type') or row.get('type')
+                order = row.get('Order') or row.get('order') or 0
+                desc = row.get('Description') or row.get('description') or ''
+                
+                poste, created = PostesBudgetaire.objects.update_or_create(
+                    id=item_id if item_id else None,
+                    defaults={
+                        'label': label,
+                        'type': p_type,
+                        'order': int(order),
+                        'description': desc
+                    }
+                )
+                item_map[item_id or poste.id] = (poste, row)
+
+            # Pass 2: Link Parents and Categories
+            for item_id, (poste, row) in item_map.items():
+                parent_id = row.get('Parent_ID') or row.get('parent_id')
+                depense_cats_str = str(row.get('Depense_Categories_IDs') or row.get('depense_categories_ids') or '')
+                payment_cats_str = str(row.get('Payment_Categories_IDs') or row.get('payment_categories_ids') or '')
+
+                if parent_id:
+                    poste.parent = PostesBudgetaire.objects.filter(id=parent_id).first()
+                else:
+                    poste.parent = None
+                
+                poste.save()
+
+                if depense_cats_str:
+                    ids = [int(i.strip()) for i in depense_cats_str.split(',') if i.strip().isdigit()]
+                    poste.depense_categories.set(GlobalDepensesCategory.objects.filter(id__in=ids))
+                else:
+                    poste.depense_categories.clear()
+
+                if payment_cats_str:
+                    ids = [int(i.strip()) for i in payment_cats_str.split(',') if i.strip().isdigit()]
+                    poste.payment_categories.set(GlobalPaymentCategory.objects.filter(id__in=ids))
+                else:
+                    poste.payment_categories.clear()
+
+            return JsonResponse({'status': 'success', 'message': f'{len(data)} postes budgétaires traités avec succès.'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f"Erreur lors de l'import : {str(e)}"})
+            
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})

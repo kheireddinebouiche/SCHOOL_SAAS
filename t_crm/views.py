@@ -341,6 +341,7 @@ def InscriptionParticulier(request):
         if form.is_valid():
             donnee = form.save()
             donnee.type_prospect = "particulier"
+            donnee.context = "acc"
             donnee.save()
 
             type_select = form.cleaned_data.get('select_type')
@@ -352,6 +353,7 @@ def InscriptionParticulier(request):
             if type_select == "0":
                 donnee = form.save()
                 donnee.type_prospect = "particulier"
+                donnee.context = "acc"
                 donnee.save()
 
                 voeux_specialite = request.POST.get('voeux_specialite')
@@ -367,6 +369,7 @@ def InscriptionParticulier(request):
             else:
 
                 donnee.is_double = True
+                donnee.context = "acc"
                 donnee.save()
 
                 promo = request.POST.get('promo_selection_double')
@@ -428,7 +431,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 @ajax_required
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.all().values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
+    prospects = Prospets.objects.filter(context="acc").values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
     for l in prospects:
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()

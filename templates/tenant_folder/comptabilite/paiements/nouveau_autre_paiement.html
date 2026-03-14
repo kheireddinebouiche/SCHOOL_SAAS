@@ -145,6 +145,22 @@
                                 <!-- Informations générales -->
                                 <div class="mb-5">
                                     <h6 class="section-title">Informations du Bénéficiaire</h6>
+                                    
+                                    <div class="alert alert-info border-0 rounded-4 mb-4">
+                                        <div class="d-flex">
+                                            <div class="flex-shrink-0">
+                                                <i class="ri-information-line fs-20"></i>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="alert-heading fs-14 mb-1">Filtrage par Contexte</h6>
+                                                <p class="mb-0 fs-12">Utilisez le filtre <strong>Contexte</strong> pour trouver rapidement des clients selon leur origine : 
+                                                    <span class="badge bg-light text-dark border ms-1">Accueil</span> pour le CRM, 
+                                                    <span class="badge bg-primary-subtle text-primary border ms-1">Conseil</span> pour le module conseil, 
+                                                    <span class="badge bg-success-subtle text-success border ms-1">Trésorerie</span> pour ceux créés ici même.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="row g-4">
                                         <div class="col-lg-4">
                                             <label class="form-label">Type de Prospect</label>
@@ -155,6 +171,18 @@
                                                     <option value="particulier">Particulier</option>
                                                     <option value="entreprise">Entreprise</option>
                                                     <option value="autre">Autre</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <label class="form-label">Contexte (Origine)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="ri-links-line text-muted"></i></span>
+                                                <select class="form-select" id="context_filter" name="context_filter">
+                                                    <option value="">Tous les contextes</option>
+                                                    <option value="acc">CRM / Accueil</option>
+                                                    <option value="con">Conseil</option>
+                                                    <option value="tre">Trésorerie</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -170,14 +198,14 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        <div class="col-lg-4">
+                                    </div>
+                                    <div class="row g-4 mt-1">
+                                         <div class="col-lg-6">
                                             <label class="form-label">Libellé de l'opération <span class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="label" name="label" placeholder="Ex: Paiement divers" required>
                                             <div class="invalid-feedback">Veuillez entrer le libellé du paiement</div>
                                         </div>
-                                    </div>
-                                    <div class="row g-4 mt-1">
-                                         <div class="col-lg-4">
+                                         <div class="col-lg-6">
                                             <label class="form-label">Date d'opération <span class="text-danger">*</span></label>
                                             <div class="input-group">
                                                  <span class="input-group-text"><i class="ri-calendar-event-line text-muted"></i></span>
@@ -319,12 +347,11 @@
 <script>
     $(document).ready(function(){
 
-        // Load clients
-        function loadClients(type = null){
+        // Load clients with filtering
+        function loadClients(type = null, context = null){
             var data = {};
-            if (type) {
-                data.type = type;
-            }
+            if (type) data.type = type;
+            if (context) data.context = context;
 
             $.ajax({
                 url: "{% url 't_tresorerie:api_liste_clients' %}",
@@ -347,10 +374,11 @@
             });
         }
 
-        // Handle Type Change
-        $('#type_prospect_filter').change(function(){
-            var type = $(this).val();
-            loadClients(type);
+        // Handle Filters Change
+        $('#type_prospect_filter, #context_filter').change(function(){
+            var type = $('#type_prospect_filter').val();
+            var context = $('#context_filter').val();
+            loadClients(type, context);
         });
 
         // Load payment types

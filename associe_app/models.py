@@ -77,6 +77,7 @@ class PostesBudgetaire(models.Model):
         ('recette', 'Recette'),
     )
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='depense')
+    order = models.IntegerField(default=0, verbose_name="Ordre d'affichage")
 
     depense_categories = models.ManyToManyField('GlobalDepensesCategory', blank=True, related_name='postes_budgetaires')
     payment_categories = models.ManyToManyField('GlobalPaymentCategory', blank=True, related_name='postes_budgetaires')

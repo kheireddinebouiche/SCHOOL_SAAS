@@ -395,11 +395,15 @@ def ApiDeleteAutrePaiement(request):
 def api_liste_clients(request):
     if request.method == "GET":
         type_prospect = request.GET.get('type', None)
+        context = request.GET.get('context', None)
         
-        query = Prospets.objects.all().values('id', 'nom', 'prenom', 'type_prospect')
+        query = Prospets.objects.all().values('id', 'nom', 'prenom', 'type_prospect', 'context')
         
         if type_prospect:
             query = query.filter(type_prospect=type_prospect)
+        
+        if context:
+            query = query.filter(context=context)
             
         return JsonResponse(list(query), safe=False)
     else:
@@ -427,7 +431,8 @@ def CreateClientFromTresorerie(request):
                 telephone=telephone if telephone else None,
                 type_prospect=type_prospect,
                 email=email if email else None,
-                is_client=True 
+                is_client=True,
+                context='tre'
             )
             return JsonResponse({
                 "status": "success", 

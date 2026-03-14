@@ -227,6 +227,29 @@
         transform: translateY(-2px);
         box-shadow: 0 8px 16px rgba(0,0,0,0.15);
     }
+    /* Realization Table Styles */
+    .col-t1 { background-color: rgba(59, 130, 246, 0.02); }
+    .col-t2 { background-color: rgba(16, 185, 129, 0.02); }
+    .col-t3 { background-color: rgba(245, 158, 11, 0.02); }
+    .col-t4 { background-color: rgba(139, 92, 246, 0.02); }
+    
+    .val-prevu { font-weight: 600; color: #64748b; }
+    .val-realise { font-weight: 700; color: #1e293b; }
+    .val-ecart { font-weight: 700; font-size: 0.85rem; }
+    .ecart-pos { color: #10b981; }
+    .ecart-neg { color: #ef4444; }
+    
+    .taux-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.75rem;
+    }
+    .taux-high { background: #dcfce7; color: #15803d; }
+    .taux-mid { background: #fef9c3; color: #854d0e; }
+    .taux-low { background: #fee2e2; color: #b91c1c; }
+
+    .cursor-help { cursor: help; border-bottom: 1px dotted #94a3b8; }
 </style>
 
 <div class="main-content">
@@ -355,12 +378,28 @@
             </div>
             {% endif %}
 
-            <!-- Matrix -->
-            {% if is_visible_to_admin %}
-            <form method="POST" action="">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="save_quartely">
-                <div class="matrix-card mt-5">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-pills nav-custom mb-4" id="budgetTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active d-flex align-items-center gap-2" id="dispatch-tab" data-bs-toggle="pill" data-bs-target="#dispatch-content" type="button" role="tab">
+                        <i class="ri-layout-grid-fill"></i> Répartition & Prévisions
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link d-flex align-items-center gap-2" id="realization-tab" data-bs-toggle="pill" data-bs-target="#realization-content" type="button" role="tab">
+                        <i class="ri-line-chart-fill"></i> Suivi des Réalisations
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="budgetTabsContent">
+                <!-- Tab 1: Dispatch -->
+                <div class="tab-pane fade show active" id="dispatch-content" role="tabpanel">
+                    {% if is_visible_to_admin %}
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_quartely">
+                        <div class="matrix-card">
                     <div class="card-header bg-white border-bottom py-4 px-4 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-3">
                             <i class="ri-list-check-2 fs-24 text-teal"></i>
@@ -484,6 +523,175 @@
                 </div>
             </form>
             {% endif %}
+                </div>
+
+                <!-- Tab 2: Realization Matrix -->
+                <div class="tab-pane fade" id="realization-content" role="tabpanel">
+                    <div class="matrix-card">
+                        <div class="card-header bg-white border-bottom py-4 px-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="ri-line-chart-line fs-24 text-teal"></i>
+                                <h5 class="card-title mb-0 fs-18 fw-bold">Matrice de Suivi (Réalisé vs Prévu)</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sticky-col matrix-header" rowspan="2" style="min-width: 280px; vertical-align: middle;">Poste</th>
+                                            <th class="text-center col-t1 matrix-header" colspan="3">Trimestre 1</th>
+                                            <th class="text-center col-t2 matrix-header" colspan="3">Trimestre 2</th>
+                                            <th class="text-center col-t3 matrix-header" colspan="3">Trimestre 3</th>
+                                            <th class="text-center col-t4 matrix-header" colspan="3">Trimestre 4</th>
+                                            <th class="text-center bg-light matrix-header" colspan="4">Global (Annuel)</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Prévu</th>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Réalisé</th>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Écart</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Prévu</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Réalisé</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Écart</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Prévu</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Réalisé</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Écart</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Prévu</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Réalisé</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Écart</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Prévu</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Réalisé</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Écart</th>
+                                            <th class="text-center bg-light matrix-header" style="font-size: 10px;">Taux</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for group in combined_postes %}
+                                        {% if not group.is_standalone %}
+                                        <tr class="poste-parent-row">
+                                            <td class="sticky-col fw-bold bg-light" colspan="17">
+                                                <i class="ri-folder-6-fill me-2 text-primary-teal"></i> {{ group.parent_poste.label }}
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        
+                                        {% for item in group.display_postes %}
+                                        <tr class="poste-row">
+                                            <td class="sticky-col" style="padding-left: {% if not group.is_standalone %}2.5rem{% else %}1.25rem{% endif %} !important;">
+                                                <span class="fw-bold">{{ item.poste.label }}</span>
+                                            </td>
+                                            
+                                            <!-- T1 -->
+                                            <td class="text-end col-t1"><span class="val-prevu cursor-help" data-bs-toggle="tooltip" title="Total initial : {{ item.t1.full_prevu|floatformat:2|intcomma }}">{{ item.t1.prevu|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t1"><span class="val-realise">{{ item.t1.realise|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t1">
+                                                {% if item.poste.type == 'depense' %}
+                                                    {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t1.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t1.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% else %}
+                                                    {% if item.t1.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t1.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t1.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t1.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% endif %}
+                                            </td>
+
+                                            <!-- T2 -->
+                                            <td class="text-end col-t2"><span class="val-prevu cursor-help" data-bs-toggle="tooltip" title="Total initial : {{ item.t2.full_prevu|floatformat:2|intcomma }}">{{ item.t2.prevu|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t2"><span class="val-realise">{{ item.t2.realise|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t2">
+                                                {% if item.poste.type == 'depense' %}
+                                                    {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t2.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t2.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% else %}
+                                                    {% if item.t2.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t2.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t2.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t2.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% endif %}
+                                            </td>
+
+                                            <!-- T3 -->
+                                            <td class="text-end col-t3"><span class="val-prevu cursor-help" data-bs-toggle="tooltip" title="Total initial : {{ item.t3.full_prevu|floatformat:2|intcomma }}">{{ item.t3.prevu|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t3"><span class="val-realise">{{ item.t3.realise|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t3">
+                                                {% if item.poste.type == 'depense' %}
+                                                    {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t3.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t3.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% else %}
+                                                    {% if item.t3.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t3.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t3.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t3.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% endif %}
+                                            </td>
+
+                                            <!-- T4 -->
+                                            <td class="text-end col-t4"><span class="val-prevu cursor-help" data-bs-toggle="tooltip" title="Total initial : {{ item.t4.full_prevu|floatformat:2|intcomma }}">{{ item.t4.prevu|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t4"><span class="val-realise">{{ item.t4.realise|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t4">
+                                                {% if item.poste.type == 'depense' %}
+                                                    {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.t4.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.t4.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% else %}
+                                                    {% if item.t4.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.t4.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.t4.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.t4.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% endif %}
+                                            </td>
+
+                                            <!-- Global -->
+                                            <td class="text-end bg-light"><span class="val-prevu cursor-help" data-bs-toggle="tooltip" title="Obj. Annuel : {{ item.global.full_prevu|floatformat:2|intcomma }}">{{ item.global.prevu|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end bg-light"><span class="val-realise">{{ item.global.realise|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end bg-light">
+                                                {% if item.poste.type == 'depense' %}
+                                                    {% if item.global.ecart > 0 %}<span class="val-ecart ecart-neg">+{{ item.global.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-pos">{{ item.global.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% else %}
+                                                    {% if item.global.ecart > 0 %}<span class="val-ecart ecart-pos">+{{ item.global.ecart|floatformat:2|intcomma }}</span>
+                                                    {% elif item.global.ecart < 0 %}<span class="val-ecart ecart-neg">{{ item.global.ecart|floatformat:2|intcomma }}</span>
+                                                    {% else %}<span class="text-muted">0</span>{% endif %}
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center bg-light">
+                                                <span class="taux-badge {% if item.global.taux >= 100 %}taux-high{% elif item.global.taux >= 50 %}taux-mid{% else %}taux-low{% endif %}">
+                                                    {{ item.global.taux|floatformat:1 }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm p-3" style="border-radius: 15px;">
+                                <small class="text-muted">Recettes Réalisées</small>
+                                <h4 class="mb-0 text-success fw-bold">{{ realization_totals.realized_recette|floatformat:2|intcomma }} DA</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm p-3" style="border-radius: 15px;">
+                                <small class="text-muted">Dépenses Réalisées</small>
+                                <h4 class="mb-0 text-danger fw-bold">{{ realization_totals.realized_depense|floatformat:2|intcomma }} DA</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm p-3" style="border-radius: 15px;">
+                                <small class="text-muted">Solde Réalisé</small>
+                                <h4 class="mb-0 text-teal fw-bold">{{ realization_totals.global_realized|floatformat:2|intcomma }} DA</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

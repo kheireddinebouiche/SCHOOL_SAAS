@@ -1284,58 +1284,7 @@
     // Handle search input - simplified version
     $(document).on('input', '#table-filter', function() {
         currentSearchTerm = $(this).val();
-        // Only apply the search filter part, without triggering all filters
-        try {
-            if (allProspectsData && allProspectsData.length > 0) {
-                let filteredData = [...allProspectsData];
-                
-                // Only apply the search filter
-                if (currentSearchTerm.trim() !== '') {
-                    const searchTerm = currentSearchTerm.toLowerCase();
-                    filteredData = filteredData.filter(function(item) {
-                        return (item.nom.toLowerCase().includes(searchTerm) || 
-                                item.prenom.toLowerCase().includes(searchTerm) || 
-                                item.email.toLowerCase().includes(searchTerm) || 
-                                (item.entreprise && item.entreprise.toLowerCase().includes(searchTerm)) ||
-                                item.telephone.includes(searchTerm));
-                    });
-                } else {
-                    // If search is empty, show all prospects that match other filters
-                    if (currentFilterType !== '0') {
-                        filteredData = filteredData.filter(function(item) {
-                            return item.type_prospect === currentFilterType;
-                        });
-                    }
-                    if (currentFilterDate !== '0') {
-                        filteredData.sort(function(a, b) {
-                            var dateA, dateB;
-
-                            if (a.created_at && !isNaN(Date.parse(a.created_at))) {
-                                dateA = new Date(a.created_at);
-                            } else {
-                                dateA = new Date(0);
-                            }
-
-                            if (b.created_at && !isNaN(Date.parse(b.created_at))) {
-                                dateB = new Date(b.created_at);
-                            } else {
-                                dateB = new Date(0);
-                            }
-
-                            if (currentFilterDate === '-created_at') {
-                                return dateB - dateA;
-                            } else if (currentFilterDate === 'created_at') {
-                                return dateA - dateB;
-                            }
-                        });
-                    }
-                }
-                
-                displayProspects(filteredData);
-            }
-        } catch (error) {
-            console.error('Error in search handler:', error);
-        }
+        applyFiltersAndSearch();
     });
 
     function loadProspectDetails(id_prospect){

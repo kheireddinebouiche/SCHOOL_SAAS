@@ -39,7 +39,9 @@ from .views import (
     export_payment_categories,
     import_payment_categories,
     export_depenses_categories,
-    import_depenses_categories
+    import_depenses_categories,
+    export_postes_budgetaires,
+    import_postes_budgetaires
 )
 
 app_name = 'associe_app'
@@ -84,6 +86,8 @@ urlpatterns = [
     path('postes-budgetaires/create/', postes_budgetaire_create, name='postes_budgetaire_create'),
     path('postes-budgetaires/edit/<int:pk>/', postes_budgetaire_edit, name='postes_budgetaire_edit'),
     path('postes-budgetaires/delete/<int:pk>/', postes_budgetaire_delete, name='postes_budgetaire_delete'),
+    path('postes-budgetaires/export/', export_postes_budgetaires, name='export_postes_budgetaires'),
+    path('postes-budgetaires/import/', import_postes_budgetaires, name='import_postes_budgetaires'),
 
     # Budget Campaigns
     path('budget-campaigns/', budget_campaign_list, name='budget_campaign_list'),

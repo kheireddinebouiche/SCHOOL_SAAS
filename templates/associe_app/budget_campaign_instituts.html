@@ -112,6 +112,49 @@
         background: white;
         border-radius: 10px;
     }
+
+    .nav-custom .nav-link {
+        border-radius: 12px;
+        padding: 10px 24px;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        margin-right: 10px;
+    }
+    .nav-custom .nav-link.active {
+        background: var(--primary-teal);
+        color: white;
+        box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+    }
+    .nav-custom .nav-link:hover:not(.active) {
+        background: var(--primary-soft);
+        color: var(--primary-teal);
+    }
+
+    /* Realization Table Styles */
+    .col-t1 { background-color: rgba(59, 130, 246, 0.02); }
+    .col-t2 { background-color: rgba(16, 185, 129, 0.02); }
+    .col-t3 { background-color: rgba(245, 158, 11, 0.02); }
+    .col-t4 { background-color: rgba(139, 92, 246, 0.02); }
+    
+    .val-prevu { font-weight: 600; color: #64748b; }
+    .val-realise { font-weight: 700; color: #1e293b; }
+    .val-ecart { font-weight: 700; font-size: 0.85rem; }
+    .ecart-pos { color: #10b981; }
+    .ecart-neg { color: #ef4444; }
+    
+    .taux-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.75rem;
+    }
+    .taux-high { background: #dcfce7; color: #15803d; }
+    .taux-mid { background: #fef9c3; color: #854d0e; }
+    .taux-low { background: #fee2e2; color: #b91c1c; }
+
+    .cursor-help { cursor: help; border-bottom: 1px dotted #94a3b8; }
 </style>
 
 <div class="main-content">
@@ -227,100 +270,102 @@
             </div>
             {% endif %}
 
-            <!-- Matrix Container -->
-            <div class="matrix-card">
-                <form id="mainBudgetForm" method="POST">
-                    {% csrf_token %}
-                    <div class="table-responsive">
-                        <table class="table matrix-table mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th style="width: 60px;" class="ps-4 text-center">#</th>
-                                    <th>Institut / Entité</th>
-                                    <th class="text-center">Statut</th>
-                                    <th class="text-end pe-4">Objectif Global (DA)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in instituts_data %}
-                                <tr>
-                                    <td class="ps-4 text-center">
-                                        <span class="text-muted fw-bold">{{ forloop.counter }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="inst-avatar me-3">
-                                                <i class="ri-government-line fs-20"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold text-dark mb-0 fs-15">{{ item.institut.nom }}</div>
-                                                <div class="text-muted small text-uppercase ls-1" style="font-size: 10px;">{{ item.institut.schema_name }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        {% if item.statut == 'draft' %}
-                                            <span class="status-badge badge-soft-warning">Brouillon</span>
-                                        {% elif item.statut == 'submitted' %}
-                                            <span class="status-badge badge-soft-info">À Valider</span>
-                                        {% elif item.statut == 'validated' %}
-                                            <span class="status-badge badge-soft-success">Validé</span>
-                                        {% elif item.statut == 'rejected' %}
-                                            <span class="status-badge badge-soft-danger">Rejeté</span>
-                                        {% else %}
-                                            <span class="status-badge badge-soft-light text-muted">Non défini</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="pe-4">
-                                        <div class="d-flex align-items-center justify-content-end gap-3">
-                                            {% if item.pending_extension_id %}
-                                            <a href="{% url 'associe_app:review_extension' item.pending_extension_id %}" class="btn btn-sm btn-soft-warning rounded-pill px-3 fw-bold" title="Voir la demande de rallonge">
-                                                <i class="ri-exchange-dollar-line me-1"></i> Rallonge
-                                            </a>
-                                            {% endif %}
-                                            
-                                            {% if item.statut != 'none' %}
-                                            <a href="{% url 'associe_app:budget_campaign_review' campaign.slug item.institut.id %}" class="btn btn-sm btn-soft-primary rounded-pill px-3 fw-bold">
-                                                <i class="ri-eye-line me-1"></i> Détails
-                                            </a>
-                                            {% endif %}
-                                            <div class="budget-input-group m-0" style="width: 180px;">
-                                                <input type="text" 
-                                                       class="form-control text-end budget-input" 
-                                                       name="budget_{{ item.institut.id }}"
-                                                       placeholder="0,00"
-                                                       value="{{ item.montant|intcomma }}">
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center py-5">
-                                        <div class="py-5">
-                                            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:80px;height:80px"></lord-icon>
-                                            <h4 class="mt-4 fw-bold">Aucun institut trouvé</h4>
-                                            <p class="text-muted">Vérifiez la configuration de vos tenants.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    {% if instituts_data %}
-                    <div class="p-4 bg-light bg-opacity-50 border-top text-center">
-                        <button type="submit" class="btn btn-primary-teal btn-lg px-5 py-3 rounded-3 shadow-lg fw-bold">
-                            <i class="ri-save-3-line me-2"></i> Enregistrer les objectifs
-                        </button>
-                    </div>
-                    {% endif %}
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+            <!-- List of Instituts -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="matrix-card">
+                        <form id="mainBudgetForm" method="POST">
+                            {% csrf_token %}
+                            <div class="table-responsive">
+                                <table class="table matrix-table mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 60px;" class="ps-4 text-center">#</th>
+                                            <th>Institut / Entité</th>
+                                            <th class="text-center">Statut</th>
+                                            <th class="text-end pe-4">Objectif Global (DA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in instituts_data %}
+                                        <tr>
+                                            <td class="ps-4 text-center">
+                                                <span class="text-muted fw-bold">{{ forloop.counter }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="inst-avatar me-3">
+                                                        <i class="ri-government-line fs-20"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark mb-0 fs-15">{{ item.institut.nom }}</div>
+                                                        <div class="text-muted small text-uppercase ls-1" style="font-size: 10px;">{{ item.institut.schema_name }}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if item.statut == 'draft' %}
+                                                    <span class="status-badge badge-soft-warning">Brouillon</span>
+                                                {% elif item.statut == 'submitted' %}
+                                                    <span class="status-badge badge-soft-info">À Valider</span>
+                                                {% elif item.statut == 'validated' %}
+                                                    <span class="status-badge badge-soft-success">Validé</span>
+                                                {% elif item.statut == 'rejected' %}
+                                                    <span class="status-badge badge-soft-danger">Rejeté</span>
+                                                {% else %}
+                                                    <span class="status-badge badge-soft-light text-muted">Non défini</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-4">
+                                                <div class="d-flex align-items-center justify-content-end gap-3">
+                                                    {% if item.pending_extension_id %}
+                                                    <a href="{% url 'associe_app:review_extension' item.pending_extension_id %}" class="btn btn-sm btn-soft-warning rounded-pill px-3 fw-bold" title="Voir la demande de rallonge">
+                                                        <i class="ri-exchange-dollar-line me-1"></i> Rallonge
+                                                    </a>
+                                                    {% endif %}
+                                                    
+                                                    {% if item.statut != 'none' %}
+                                                    <a href="{% url 'associe_app:budget_campaign_review' campaign.slug item.institut.id %}" class="btn btn-sm btn-soft-primary rounded-pill px-3 fw-bold">
+                                                        <i class="ri-eye-line me-1"></i> Détails
+                                                    </a>
+                                                    {% endif %}
+                                                    <div class="budget-input-group m-0" style="width: 180px;">
+                                                        <input type="text" 
+                                                               class="form-control text-end budget-input" 
+                                                               name="budget_{{ item.institut.id }}"
+                                                               placeholder="0,00"
+                                                               value="{{ item.montant|intcomma }}">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5">
+                                                <div class="py-5">
+                                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:80px;height:80px"></lord-icon>
+                                                    <h4 class="mt-4 fw-bold">Aucun institut trouvé</h4>
+                                                    <p class="text-muted">Vérifiez la configuration de vos tenants.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {% if instituts_data %}
+                            <div class="p-4 bg-light bg-opacity-50 border-top text-center">
+                                <button type="submit" class="btn btn-primary-teal btn-lg px-5 py-3 rounded-3 shadow-lg fw-bold">
+                                    <i class="ri-save-3-line me-2"></i> Enregistrer les objectifs
+                                </button>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div> <!-- matrix-card -->
+                </div> <!-- col-12 -->
+            </div> <!-- row -->
+        </div> <!-- container-fluid -->
 
 <!-- Start Campaign Modal -->
 <div class="modal fade" id="startCampaignModal" tabindex="-1" aria-hidden="true">
