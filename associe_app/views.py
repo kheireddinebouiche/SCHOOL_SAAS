@@ -483,6 +483,43 @@ def tenant_data_list(request):
     return render(request, 'associe_app/tenant_visualization.html', {'tenants': tenants})
 
 @login_required(login_url='login')
+def tenant_workspace(request, tenant_id):
+    tenant = get_object_or_404(Institut, id=tenant_id)
+    
+    from django.apps import apps
+    from django.conf import settings
+    
+    grouped_models = {}
+    for app_name in settings.TENANT_APPS:
+        if app_name.startswith('django.') or app_name in ['phonenumber_field', 'django_countries', 'taggit', 'pdf_editor']:
+            continue
+        try:
+            app_config = apps.get_app_config(app_name.split('.')[-1])
+            app_label_name = str(app_config.verbose_name).capitalize() if app_config.verbose_name else app_config.label.capitalize()
+            
+            for model in app_config.get_models():
+                if app_label_name not in grouped_models:
+                    grouped_models[app_label_name] = []
+                grouped_models[app_label_name].append({
+                    'id': f"{app_config.label}.{model.__name__}",
+                    'name': str(model._meta.verbose_name).capitalize()
+                })
+        except LookupError:
+            pass
+            
+    # Sort models within groups
+    for app_label_name in grouped_models:
+        grouped_models[app_label_name] = sorted(grouped_models[app_label_name], key=lambda x: x['name'])
+    
+    # Sort groups by name alphabetically
+    grouped_models = dict(sorted(grouped_models.items()))
+    
+    return render(request, 'associe_app/tenant_workspace.html', {
+        'tenant': tenant,
+        'grouped_models': grouped_models
+    })
+
+@login_required(login_url='login')
 def get_tenant_categories(request, tenant_id):
     tenant = get_object_or_404(Institut, id=tenant_id)
     payment_categories = []
@@ -674,6 +711,93 @@ def purge_tenant_categories(request, tenant_id):
                 'status': 'error', 
                 'message': f'Erreur lors de la purge: {str(e)}'
             })
+            
+            return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+from django.db.models import ProtectedError
+from django.apps import apps
+
+@login_required(login_url='login')
+def reset_tenant_table(request):
+    if request.method == 'POST':
+        tenant_id = request.POST.get('tenant_id')
+        model_identifier = request.POST.get('model_identifier')
+        
+        if not tenant_id or not model_identifier:
+             return JsonResponse({'status': 'error', 'message': 'Paramètres manquants.'})
+             
+        tenant = get_object_or_404(Institut, id=tenant_id)
+        
+        try:
+            app_label, model_name = model_identifier.split('.')
+            model = apps.get_model(app_label, model_name)
+        except (ValueError, LookupError):
+            return JsonResponse({'status': 'error', 'message': 'Modèle introuvable.'})
+            
+        try:
+            with schema_context(tenant.schema_name):
+                from django.db import connection
+                table_name = model._meta.db_table
+                with connection.cursor() as cursor:
+                    cursor.execute(f'TRUNCATE TABLE "{tenant.schema_name}"."{table_name}" CASCADE;')
+            return JsonResponse({'status': 'success', 'message': f'La table a été vidée avec succès, incluant toutes les données dépendantes (Cascade).'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors du vidage de la table: {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+@login_required(login_url='login')
+def preview_tenant_table_reset(request):
+    if request.method == 'GET':
+        tenant_id = request.GET.get('tenant_id')
+        model_identifier = request.GET.get('model_identifier')
+        
+        if not tenant_id or not model_identifier:
+            return JsonResponse({'status': 'error', 'message': 'Paramètres manquants.'})
+             
+        tenant = get_object_or_404(Institut, id=tenant_id)
+        
+        try:
+            app_label, model_name = model_identifier.split('.')
+            base_model = apps.get_model(app_label, model_name)
+        except (ValueError, LookupError):
+            return JsonResponse({'status': 'error', 'message': 'Modèle introuvable.'})
+
+        def get_dependent_models(model, seen=None):
+            from django.contrib.contenttypes.models import ContentType
+            if seen is None:
+                seen = set()
+            if model in seen:
+                return seen
+            seen.add(model)
+            for f in model._meta.get_fields():
+                if (f.one_to_many or f.one_to_one) and f.auto_created and not f.concrete:
+                    rel_model = f.related_model
+                    if rel_model and not rel_model._meta.proxy:
+                        get_dependent_models(rel_model, seen)
+            return seen
+
+        dependent_models = get_dependent_models(base_model)
+        
+        table_info = []
+        try:
+            with schema_context(tenant.schema_name):
+                for m in dependent_models:
+                    count = m.objects.all().count()
+                    if count > 0 or m == base_model:
+                        table_info.append({
+                            'name': str(m._meta.verbose_name).capitalize(),
+                            'table': m._meta.db_table,
+                            'count': count,
+                            'is_target': m == base_model
+                        })
+            
+            # Sort target first, then by count desc
+            table_info = sorted(table_info, key=lambda x: (not x['is_target'], -x['count']))
+            
+            return JsonResponse({'status': 'success', 'data': table_info})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors du calcul de la preview: {str(e)}'})
             
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
 

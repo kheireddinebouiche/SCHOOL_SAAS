@@ -1,0 +1,470 @@
+{% extends 'public_folder/base.html' %} 
+
+{% block content %}
+<style>
+    :root {
+        --primary-teal: #0f766e;
+        --secondary-teal: #0d9488;
+        --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%);
+        --primary-soft: rgba(15, 118, 110, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .main-content { background: #f1f5f9; min-height: 100vh; }
+    
+    .workspace-header {
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .sidebar-menu {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .sidebar-menu .nav-link {
+        color: #475569;
+        font-weight: 600;
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-menu .nav-link:hover {
+        background: #f8fafc;
+        color: var(--primary-teal);
+    }
+
+    .sidebar-menu .nav-link.active {
+        background: var(--primary-soft);
+        color: var(--primary-teal);
+    }
+
+    .content-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        min-height: 500px;
+    }
+
+    .avatar-inst {
+        width: 48px; height: 48px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 12px;
+        background: var(--primary-gradient);
+        color: white; font-weight: bold; font-size: 1.25rem;
+    }
+
+    /* CRM Stats implementation */
+    .crm-card {
+        background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease;
+    }
+    .crm-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+    .icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.5rem; }
+    .crm-progress { height: 6px; border-radius: 3px; background-color: #f1f5f9; margin-top: 0.5rem; overflow: hidden; }
+</style>
+
+<div class="main-content">
+    <div class="workspace-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'associe_app:tenant_data_list' %}" class="btn btn-light btn-icon rounded-circle me-3">
+                <i class="ri-arrow-left-line"></i>
+            </a>
+            <div class="avatar-inst me-3">{{ tenant.nom|slice:":1"|upper }}</div>
+            <div>
+                <h4 class="mb-0 fw-bold">{{ tenant.nom }}</h4>
+                <p class="text-muted small mb-0 ls-1 text-uppercase">{{ tenant.schema_name }} • Créé le {{ tenant.date_creation|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+        <div>
+            <select class="form-select rounded-pill fw-bold border-0 bg-light shadow-sm" style="min-width: 180px;" onchange="changeTenantType('{{ tenant.id }}', this.value)">
+                <option value="associe" {% if tenant.tenant_type == 'associe' %}selected{% endif %}>Type: Assoicé</option>
+                <option value="master" {% if tenant.tenant_type == 'master' %}selected{% endif %}>Type: Compte Maitre</option>
+                <option value="second" {% if tenant.tenant_type == 'second' %}selected{% endif %}>Type: Compte Standard</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4 pb-5">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 mb-4">
+                <div class="sidebar-menu">
+                    <ul class="nav flex-column" role="tablist">
+                        <li class="nav-item text-muted small text-uppercase fw-bold mb-2 ps-3 pt-2">Tableau de Bord</li>
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#overview-tab">
+                                <i class="ri-bar-chart-box-line me-2 fs-18 align-middle"></i> Vue d'ensemble (CRM)
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3 text-muted small text-uppercase fw-bold mb-2 ps-3">Configuration</li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#finance-tab">
+                                <i class="ri-wallet-3-line me-2 fs-18 align-middle"></i> Finances & Catégories
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3 text-muted small text-uppercase fw-bold mb-2 ps-3">Système</li>
+                        <li class="nav-item">
+                            <a class="nav-link text-danger bg-soft-danger" data-bs-toggle="tab" href="#admin-tab">
+                                <i class="ri-error-warning-line me-2 fs-18 align-middle"></i> Administration
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="col-lg-9">
+                <div class="content-card tab-content">
+                    
+                    <!-- Tab: Overview (CRM) -->
+                    <div class="tab-pane active" id="overview-tab">
+                        <h5 class="fw-bold mb-4">Vue d'ensemble et Statistiques CRM</h5>
+                        <div id="crm-loader" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="text-muted mt-2">Chargement des données...</p>
+                        </div>
+                        <div id="crm-content" style="display: none;">
+                            <div class="row g-3 mb-5" id="crm-summary-cards"></div>
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold mb-3">Prospects par Statut</h6>
+                                    <div id="crm-status-breakdown"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold mb-3">Opportunités par État</h6>
+                                    <div id="crm-etat-breakdown"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Finance Config -->
+                    <div class="tab-pane" id="finance-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Configuration Financière</h5>
+                            <button class="btn btn-soft-danger px-3 rounded-pill fw-bold btn-sm" onclick="purgeTenant()">
+                                <i class="ri-refresh-line me-1"></i> Purger les catégories
+                            </button>
+                        </div>
+                        
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <h6 class="fw-bold mb-3"><i class="ri-bank-card-line text-primary me-2"></i>Types de Paiement</h6>
+                                <div class="table-responsive border rounded-3 mb-4">
+                                    <table class="table table-borderless table-striped mb-0">
+                                        <thead class="table-light">
+                                            <tr><th>Nom</th><th>Catégories Liées</th><th>Global ID</th><th class="text-end">Actions</th></tr>
+                                        </thead>
+                                        <tbody id="p-types-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3"><i class="ri-arrow-right-down-line text-success me-2"></i>Catégories de Paiement</h6>
+                                <div class="table-responsive border rounded-3">
+                                    <table class="table table-borderless table-sm mb-0">
+                                        <thead class="table-light"><tr><th>Nom</th><th>Type</th></tr></thead>
+                                        <tbody id="p-cats-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3"><i class="ri-arrow-right-up-line text-danger me-2"></i>Catégories de Dépense</h6>
+                                <div class="table-responsive border rounded-3">
+                                    <table class="table table-borderless table-sm mb-0">
+                                        <thead class="table-light"><tr><th>Nom</th><th>Lien Paiement</th></tr></thead>
+                                        <tbody id="d-cats-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Administration (Reset) -->
+                    <div class="tab-pane" id="admin-tab">
+                        <h5 class="fw-bold mb-4 text-danger"><i class="ri-alarm-warning-fill me-2"></i> Zone de Danger</h5>
+                        
+                        <div class="card border-danger bg-soft-danger shadow-none">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-danger mb-2">Vider les tables de données</h6>
+                                <p class="text-danger opacity-75 small mb-4">Cette action est <strong>irréversible</strong>. Elle supprimera toutes les données de la table sélectionnée pour cet institut. Le système protégera les données si une contrainte l'interdit.</p>
+                                
+                                <div class="mb-4">
+                                    <label for="tenant-model-select" class="form-label fw-bold">Sélectionner une table (Regroupées par Module)</label>
+                                    <select class="form-select border-danger" id="tenant-model-select" onchange="loadTablePreview()">
+                                        <option value="">-- Choisir une table --</option>
+                                        {% for app_name, models in grouped_models.items %}
+                                            <optgroup label="{{ app_name }}">
+                                                {% for model in models %}
+                                                    <option value="{{ model.id }}">{{ model.name }}</option>
+                                                {% endfor %}
+                                            </optgroup>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div id="preview-container" class="mb-4" style="display: none;">
+                                    <h6 class="fw-bold mb-2 text-dark">Impact de la suppression (Cascade) :</h6>
+                                    <div id="preview-content" class="p-3 bg-white border border-warning rounded shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-danger" type="button" onclick="resetTenantTable()" id="btn-reset" disabled>
+                                    <i class="ri-delete-bin-fill align-middle me-1"></i> Purger les données de cette table
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tenantId = '{{ tenant.id }}';
+    const tenantName = '{{ tenant.nom|escapejs }}';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTenantData();
+    });
+
+    function loadTenantData() {
+        $.ajax({
+            url: "{% url 'associe_app:get_tenant_categories' tenant.id %}",
+            type: 'GET',
+            success: (res) => {
+                if (res.status === 'success') {
+                    // Populate Finance Config
+                    let ptRows = res.payment_types.map(pt => `
+                        <tr id="pt-row-${pt.id}">
+                            <td class="fw-bold text-dark">${pt.name}</td>
+                            <td>${pt.categories.map(c => `<span class="badge bg-soft-teal text-teal me-1">${c}</span>`).join('') || '-'}</td>
+                            <td><code class="small text-muted">${pt.global_id || 'ID Local'}</code></td>
+                            <td class="text-end">
+                                <button class="btn btn-soft-danger btn-icon btn-sm rounded-pill" onclick="deleteTenantPT(${pt.id}, '${pt.name.replace(/'/g, "\\'")}')">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="4" class="text-center text-muted">Aucun type trouvé</td></tr>';
+                    $('#p-types-body').html(ptRows);
+
+                    let pRows = res.payment_categories.map(pc => `
+                        <tr>
+                            <td class="fw-bold text-dark">${pc.name}</td>
+                            <td><span class="badge bg-info rounded-pill">${pc.type}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="2" class="text-center text-muted">Vide</td></tr>';
+                    $('#p-cats-body').html(pRows);
+
+                    let dRows = res.depenses_categories.map(dc => `
+                        <tr>
+                            <td class="fw-bold text-dark">${dc.name}</td>
+                            <td><span class="badge bg-soft-info text-info border-0 rounded-pill">${dc.payment_category || '-'}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="2" class="text-center text-muted">Vide</td></tr>';
+                    $('#d-cats-body').html(dRows);
+
+                    // Render CRM
+                    renderCRMStats(res.crm_stats);
+                }
+            },
+            error: () => {
+                $('#crm-loader').html('<p class="text-danger">Erreur de chargement des données. Veuillez réessayer.</p>');
+                alertify.error("Erreur de chargement des données");
+            }
+        });
+    }
+
+    function renderCRMStats(s) {
+        if (!s) return;
+        $('#crm-loader').hide();
+        $('#crm-content').fadeIn();
+        
+        $('#crm-summary-cards').html(`
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-primary text-primary"><i class="ri-user-line"></i></div>
+                    <div class="small fw-bold text-muted text-uppercase mb-1">Prospects</div>
+                    <div class="h4 fw-bold mb-0">${s.total_prospects}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-success text-success"><i class="ri-briefcase-line"></i></div>
+                    <div class="small fw-bold text-muted text-uppercase mb-1">Opportunités</div>
+                    <div class="h4 fw-bold mb-0">${s.active_opportunities}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="crm-card">
+                    <div class="icon-box bg-soft-warning text-warning"><i class="ri-money-dollar-circle-line"></i></div>
+                    <div class="small fw-bold text-muted text-uppercase mb-1">Budget Total Exigible</div>
+                    <div class="h5 fw-bold mb-0">${new Intl.NumberFormat('fr-FR').format(s.total_budget)} DZD</div>
+                </div>
+            </div>
+        `);
+
+        const renderBar = (list, map, total) => list.map(i => {
+            const p = total > 0 ? (i.count/total*100).toFixed(0) : 0;
+            return `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="fw-bold">${map[i.statut || i.etat] || i.statut || i.etat}</span>
+                        <span class="text-muted">${i.count} (${p}%)</span>
+                    </div>
+                    <div class="crm-progress"><div class="progress-bar bg-primary" style="width:${p}%"></div></div>
+                </div>
+            `;
+        }).join('');
+
+        $('#crm-status-breakdown').html(renderBar(s.by_status, {'visiteur':'Visiteur','prinscrit':'Pré-inscrit','instance':'Instance','convertit':'Convertit','annuler':'Annulé'}, s.total_prospects));
+        $('#crm-etat-breakdown').html(renderBar(s.by_etat, {'en_attente':'Attente','accepte':'Accepté','rejete':'Rejeté'}, s.total_prospects));
+    }
+
+    function changeTenantType(id, newType) {
+        $.post("{% url 'associe_app:update_tenant_type' %}", { 'tenant_id': id, 'tenant_type': newType, 'csrfmiddlewaretoken': '{{ csrf_token }}' }, 
+        res => res.status === 'success' ? alertify.success(res.message) : alertify.error(res.message))
+        .fail(() => alertify.error("Erreur serveur"));
+    }
+
+    function purgeTenant() {
+        alertify.confirm(`Purge de ${tenantName}`, "Voulez-vous vider toutes les catégories financières ? Cette action est irréversible.", 
+            () => {
+                $.post("{% url 'associe_app:purge_tenant_categories' tenant.id %}", {csrfmiddlewaretoken: '{{ csrf_token }}'}, 
+                (res) => {
+                    if(res.status === 'success') { alertify.success("Purge réussie"); loadTenantData(); } 
+                    else { alertify.error(res.message); }
+                }).fail(() => alertify.error("Erreur réseau"));
+            }
+        );
+    }
+
+    function deleteTenantPT(ptId, name) {
+        const url = "{% url 'associe_app:delete_tenant_payment_type' tenant.id 888 %}".replace('888', ptId);
+        alertify.confirm("Supprimer Type de Paiement", "Voulez-vous supprimer le type de paiement '" + name + "' ?", () => {
+            $.post(url, {csrfmiddlewaretoken: '{{ csrf_token }}'}, res => {
+                if(res.status === 'success') { alertify.success(res.message); $(`#pt-row-${ptId}`).remove(); }
+                else { alertify.error(res.message); }
+            }).fail(() => alertify.error("Erreur serveur"));
+        });
+    }
+
+    function resetTenantTable() {
+        const selector = $('#tenant-model-select option:selected');
+        const modelId = selector.val();
+        const modelName = selector.text();
+
+        if (!modelId) {
+            alertify.error("Veuillez sélectionner une table à vider.");
+            return;
+        }
+        
+        alertify.prompt("Confirmation Exigée", 
+            `Vous êtes sur le point de supprimer TOUTES les données de la table <b>${modelName}</b> pour cet institut.<br><br>Tapez exactement le nom de la table (<b>${modelName}</b>) pour confirmer:`, 
+            "",
+            function(evt, value) {
+                if (value.trim() === modelName.trim()) {
+                    const btn = $('#btn-reset');
+                    const originalText = btn.html();
+                    btn.html('<i class="spinner-border spinner-border-sm align-middle me-1"></i> Suppression...').prop('disabled', true);
+                    
+                    $.post("{% url 'associe_app:reset_tenant_table' %}", {
+                        'tenant_id': tenantId,
+                        'model_identifier': modelId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    }, res => {
+                        btn.html(originalText).prop('disabled', false);
+                        if (res.status === 'success') {
+                            alertify.success(res.message);
+                            $('#tenant-model-select').val('');
+                            loadTenantData(); // refresh stats
+                        } else {
+                            alertify.error(res.message);
+                        }
+                    }).fail(() => {
+                        btn.html(originalText).prop('disabled', false);
+                        alertify.error("Erreur réseau");
+                    });
+                } else {
+                    alertify.error("Le nom de confirmation ne correspond pas. Action annulée.");
+                }
+            },
+            function() { } // Cancel
+        ).set('labels', {ok:'Confirmer la Suppression', cancel:'Annuler'});
+    }
+
+    function loadTablePreview() {
+        const modelId = $('#tenant-model-select').val();
+        const previewContainer = $('#preview-container');
+        const previewContent = $('#preview-content');
+        const btnReset = $('#btn-reset');
+
+        if (!modelId) {
+            previewContainer.slideUp();
+            btnReset.prop('disabled', true);
+            return;
+        }
+
+        previewContainer.slideDown();
+        previewContent.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2">Calcul de l\'impact...</span></div>');
+        btnReset.prop('disabled', true);
+
+        $.ajax({
+            url: "{% url 'associe_app:preview_tenant_table_reset' %}",
+            type: 'GET',
+            data: {
+                'tenant_id': tenantId,
+                'model_identifier': modelId
+            },
+            success: (res) => {
+                if (res.status === 'success') {
+                    let html = '<ul class="list-group list-group-flush">';
+                    let totalAffectedRows = 0;
+                    
+                    res.data.forEach(item => {
+                        totalAffectedRows += item.count;
+                        let badgeClass = item.is_target ? 'bg-danger' : 'bg-warning text-dark';
+                        let icon = item.is_target ? '<i class="ri-focus-3-line me-1"></i>' : '<i class="ri-links-line me-1"></i>';
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                <div>
+                                    ${icon} <strong>${item.name}</strong> 
+                                    <br><small class="text-muted">Table: <code>${item.table}</code></small>
+                                </div>
+                                <span class="badge ${badgeClass} rounded-pill fs-12">${item.count} lignes</span>
+                            </li>
+                        `;
+                    });
+                    
+                    html += '</ul>';
+                    
+                    if (totalAffectedRows === 0) {
+                         $('#preview-content').html('<div class="alert alert-success mb-0"><i class="ri-check-line me-1"></i> Aucune donnée à supprimer (la table et ses dépendances sont déjà vides).</div>');
+                    } else {
+                         $('#preview-content').html(html);
+                    }
+                    
+                    // Always enable the button so they can clear it if they want
+                    btnReset.prop('disabled', false);
+                } else {
+                    previewContent.html(`<div class="text-danger"><i class="ri-error-warning-line me-1"></i> ${res.message}</div>`);
+                }
+            },
+            error: () => {
+                previewContent.html('<div class="text-danger"><i class="ri-error-warning-line me-1"></i> Erreur lors du chargement de l\'aperçu.</div>');
+            }
+        });
+    }
+</script>
+{% endblock %}

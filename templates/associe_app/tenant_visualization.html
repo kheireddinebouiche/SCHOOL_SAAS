@@ -162,69 +162,46 @@
                 <div class="col-12">
                      <div class="glass-card">
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th class="ps-4" style="width: 80px;">#</th>
-                                            <th>Institut</th>
-                                            <th>Type d'Institut</th>
-                                            <th>Date de Création</th>
-                                            <th class="text-end pe-4">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for tenant in tenants %}
-                                        <tr>
-                                            <td class="ps-4 text-muted fw-bold">{{ forloop.counter }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-inst me-3">
-                                                        {{ tenant.nom|slice:":1"|upper }}
-                                                    </div>
-                                                    <div>
-                                                        <h5 class="fs-15 fw-bold text-dark mb-1">{{ tenant.nom }}</h5>
-                                                        <p class="text-muted small mb-0 ls-1 text-uppercase" style="font-size: 10px;">{{ tenant.schema_name }}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <select class="form-select form-select-sm rounded-pill fw-bold border-0 shadow-sm" 
-                                                        style="background-color: #f8fafc; color: #1e293b;"
+                            <!-- Grid View -->
+                            <div class="row g-4 p-4">
+                                {% for tenant in tenants %}
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative hover-lift">
+                                        
+                                        <div class="card-body p-4 text-center">
+                                            <div class="avatar-inst mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.5rem;">
+                                                {{ tenant.nom|slice:":1"|upper }}
+                                            </div>
+                                            <h5 class="fs-16 fw-bold text-dark mb-1">{{ tenant.nom }}</h5>
+                                            <p class="text-muted small mb-3 ls-1 text-uppercase">{{ tenant.schema_name }}</p>
+                                            
+                                            <div class="mb-3">
+                                                <select class="form-select form-select-sm rounded-pill fw-bold border-0 bg-light text-center mx-auto" 
+                                                        style="max-width: 150px;"
                                                         onchange="changeTenantType('{{ tenant.id }}', this.value)">
                                                     <option value="associe" {% if tenant.tenant_type == 'associe' %}selected{% endif %}>Associe</option>
                                                     <option value="master" {% if tenant.tenant_type == 'master' %}selected{% endif %}>Compte Maitre</option>
                                                     <option value="second" {% if tenant.tenant_type == 'second' %}selected{% endif %}>Compte Standard</option>
                                                 </select>
-                                            </td>
-                                            <td>
-
-                                                <div class="text-dark fw-medium">{{ tenant.date_creation|date:"d M Y" }}</div>
-                                                <div class="text-muted small">{{ tenant.date_creation|date:"H:i" }}</div>
-                                            </td>
-                                            <td class="text-end pe-4">
-                                                <div class="d-flex justify-content-end gap-2">
-                                                    <button class="btn btn-soft-primary px-3 rounded-pill fw-bold btn-sm" onclick="inspectTenant('{{ tenant.id }}')">
-                                                        <i class="ri-search-eye-line me-1"></i> Inspecter
-                                                    </button>
-                                                    <button class="btn btn-soft-danger px-3 rounded-pill fw-bold btn-sm purge-btn-{{ tenant.id }}" onclick="purgeTenant('{{ tenant.id }}', '{{ tenant.nom|escapejs }}')">
-                                                        <i class="ri-refresh-line me-1"></i> Purger
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="4" class="text-center py-5">
-                                                <div class="py-5">
-                                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:80px;height:80px"></lord-icon>
-                                                    <h5 class="mt-4 fw-bold">Aucun institut trouvé</h5>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                                            </div>
+                                            
+                                            <div class="text-muted small mb-0">Créé le {{ tenant.date_creation|date:"d M Y" }}</div>
+                                        </div>
+                                        
+                                        <div class="card-footer bg-transparent border-top-0 p-3 pt-0 text-center">
+                                            <a href="{% url 'associe_app:tenant_workspace' tenant.id %}" class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm">
+                                                <i class="ri-dashboard-2-line me-1"></i> Ouvrir Workspace
+                                            </a>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12 py-5 text-center">
+                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:80px;height:80px"></lord-icon>
+                                    <h5 class="mt-4 fw-bold">Aucun institut trouvé</h5>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -234,274 +211,17 @@
     </div>
 </div>
 
-<!-- Inspection Modal -->
-<div class="modal fade" id="inspectionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <div class="avatar-title bg-white bg-opacity-25 text-white rounded-circle fs-18">
-                            <i class="ri-search-eye-line"></i>
-                        </div>
-                    </div>
-                    <div>
-                        <h5 class="modal-title text-white mb-0">Détails de l'Institut</h5>
-                        <p class="text-white text-opacity-75 mb-0 small" id="modalTenantName"></p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <ul class="nav nav-tabs nav-tabs-custom nav-justified" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#p-cats-tab">Catégories Paiement</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#d-cats-tab">Catégories Dépense</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#p-types-tab">Types de Paiement</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#crm-stats-tab" onclick="renderCRMStats()">Statistiques CRM</a>
-                    </li>
-                </ul>
-
-                <div class="tab-content">
-                    <div class="tab-pane active p-4" id="p-cats-tab">
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Nom</th>
-                                        <th>Parent</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="p-cats-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="tab-pane p-4" id="d-cats-tab">
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Nom</th>
-                                        <th>Parent</th>
-                                        <th>Lien Paiement</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="d-cats-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="tab-pane p-4" id="p-types-tab">
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Nom</th>
-                                        <th>Catégories</th>
-                                        <th>Global ID</th>
-                                        <th class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="p-types-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="tab-pane p-4" id="crm-stats-tab">
-                        <div class="row g-3 mb-4" id="crm-summary-cards"></div>
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <h6 class="fw-bold mb-3">Par Statut</h6>
-                                <div id="crm-status-breakdown"></div>
-                            </div>
-                            <div class="col-md-6">
-                                <h6 class="fw-bold mb-3">Par État</h6>
-                                <div id="crm-etat-breakdown"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Fermer</button>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+</style>
 
 <script>
-    let inspectionModal;
-    let currentCRMData = null;
-    let currentTenantId = null;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const el = document.getElementById('inspectionModal');
-        if (el) inspectionModal = new bootstrap.Modal(el);
-    });
-
-    function inspectTenant(id) {
-        $(`#p-cats-body, #d-cats-body, #p-types-body`).html('<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>');
-        $(`#crm-summary-cards, #crm-status-breakdown, #crm-etat-breakdown`).html('<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>');
-        
-        currentTenantId = id;
-
-        $.ajax({
-            url: "{% url 'associe_app:get_tenant_categories' 0 %}".replace('0', id),
-            type: 'GET',
-            success: (res) => {
-                if (res.status === 'success') {
-                    $('#modalTenantName').text(res.tenant_name);
-                    
-                    let pRows = res.payment_categories.map(pc => `
-                        <tr>
-                            <td class="fw-bold text-dark">${pc.name}</td>
-                            <td><span class="badge bg-soft-primary text-primary border-0 rounded-pill">${pc.parent || '-'}</span></td>
-                            <td><span class="badge bg-info rounded-pill">${pc.type}</span></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="3" class="text-center text-muted">Vide</td></tr>';
-                    $('#p-cats-body').html(pRows);
-
-                    let dRows = res.depenses_categories.map(dc => `
-                        <tr>
-                            <td class="fw-bold text-dark">${dc.name}</td>
-                            <td><span class="badge bg-soft-primary text-primary border-0 rounded-pill">${dc.parent || '-'}</span></td>
-                            <td><span class="badge bg-soft-info text-info border-0 rounded-pill">${dc.payment_category || '-'}</span></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="3" class="text-center text-muted">Vide</td></tr>';
-                    $('#d-cats-body').html(dRows);
-
-                    let ptRows = res.payment_types.map(pt => `
-                        <tr id="pt-row-${pt.id}">
-                            <td class="fw-bold text-dark">${pt.name}</td>
-                            <td>${pt.categories.map(c => `<span class="badge bg-soft-teal text-teal me-1">${c}</span>`).join('') || '-'}</td>
-                            <td><code class="small text-muted">${pt.global_id || 'ID Local'}</code></td>
-                            <td class="text-end">
-                                <button class="btn btn-soft-danger btn-icon btn-sm rounded-pill btn-delete-pt" 
-                                        data-id="${pt.id}" 
-                                        data-name="${pt.name.replace(/"/g, '&quot;')}"
-                                        onclick="handleDeleteClick(this)">
-                                    <i class="ri-delete-bin-line"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="4" class="text-center text-muted">Vide</td></tr>';
-                    $('#p-types-body').html(ptRows);
-
-                    currentCRMData = res.crm_stats;
-                    if ($('#crm-stats-tab').hasClass('active')) renderCRMStats();
-                    inspectionModal.show();
-                    console.log("Tenant data loaded for ID:", id);
-                }
-            },
-            error: () => {
-                console.error("Failed to load tenant categories for ID:", id);
-                alertify.error("Erreur de chargement");
-            }
-        });
-    }
-
-    function handleDeleteClick(btn) {
-        const id = $(btn).data('id');
-        const name = $(btn).data('name');
-        console.log("Delete button clicked for PT:", id, name);
-        deleteTenantPT(id, name);
-    }
-
-    function renderCRMStats() {
-        if (!currentCRMData) return;
-        const s = currentCRMData;
-        
-        $('#crm-summary-cards').html(`
-            <div class="col-md-4">
-                <div class="crm-card">
-                    <div class="icon-box bg-soft-primary text-primary"><i class="ri-user-line"></i></div>
-                    <div class="small fw-bold text-muted text-uppercase mb-1">Prospects</div>
-                    <div class="h4 fw-bold mb-0">${s.total_prospects}</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="crm-card">
-                    <div class="icon-box bg-soft-success text-success"><i class="ri-briefcase-line"></i></div>
-                    <div class="small fw-bold text-muted text-uppercase mb-1">Opportunités</div>
-                    <div class="h4 fw-bold mb-0">${s.active_opportunities}</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="crm-card">
-                    <div class="icon-box bg-soft-warning text-warning"><i class="ri-money-dollar-circle-line"></i></div>
-                    <div class="small fw-bold text-muted text-uppercase mb-1">Budget</div>
-                    <div class="h5 fw-bold mb-0">${new Intl.NumberFormat('fr-FR').format(s.total_budget)} DZD</div>
-                </div>
-            </div>
-        `);
-
-        const renderBar = (list, map, total) => list.map(i => {
-            const p = total > 0 ? (i.count/total*100).toFixed(0) : 0;
-            return `
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span class="fw-bold">${map[i.statut || i.etat] || i.statut || i.etat}</span>
-                        <span class="text-muted">${i.count} (${p}%)</span>
-                    </div>
-                    <div class="crm-progress"><div class="progress-bar bg-primary" style="width:${p}%"></div></div>
-                </div>
-            `;
-        }).join('');
-
-        $('#crm-status-breakdown').html(renderBar(s.by_status, {'visiteur':'Visiteur','prinscrit':'Pré-inscrit','instance':'Instance','convertit':'Convertit','annuler':'Annulé'}, s.total_prospects));
-        $('#crm-etat-breakdown').html(renderBar(s.by_etat, {'en_attente':'Attente','accepte':'Accepté','rejete':'Rejeté'}, s.total_prospects));
-    }
-
-    function purgeTenant(id, name) {
-        alertify.confirm(`Purge ${name}`, "Voulez-vous vider toutes les catégories ? Cette action est irréversible.", 
-            () => {
-                $.post("{% url 'associe_app:purge_tenant_categories' 0 %}".replace('0', id), {csrfmiddlewaretoken: '{{ csrf_token }}'}, 
-                (res) => res.status === 'success' ? alertify.success("Purge réussie") : alertify.error(res.message))
-                .fail(() => alertify.error("Erreur réseau"));
-            }
-        );
-    }
-
-    function deleteTenantPT(ptId, name) {
-        if (!currentTenantId) {
-            alertify.error("ID de l'institut manquant");
-            return;
-        }
-
-        const url = "{% url 'associe_app:delete_tenant_payment_type' 999 888 %}"
-            .replace('999', currentTenantId)
-            .replace('888', ptId);
-        
-        alertify.confirm("Voulez-vous supprimer le type de paiement '" + name + "' ?", function() {
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: {'X-CSRFToken': '{{ csrf_token }}'},
-                data: {
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                },
-                success: (res) => {
-                    if (res.status === 'success') {
-                        alertify.success(res.message);
-                        $(`#pt-row-${ptId}`).remove();
-                    } else {
-                        alertify.error(res.message);
-                        if (res.traceback) console.error("Traceback:", res.traceback);
-                    }
-                },
-                error: (xhr) => {
-                    console.error("PT Deletion AJAX Error:", xhr.status, xhr.responseText);
-                    alertify.error("Erreur serveur (" + xhr.status + "). Détails dans la console.");
-                }
-            });
-        });
-    }
-
     function changeTenantType(tenantId, newType) {
         $.ajax({
             url: "{% url 'associe_app:update_tenant_type' %}",
@@ -524,4 +244,5 @@
         });
     }
 </script>
+
 {% endblock %}

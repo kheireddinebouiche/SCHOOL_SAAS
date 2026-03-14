@@ -27,6 +27,8 @@ urlpatterns = [
     path('rubriques/ajouter/', views.RubriqueCreateView.as_view(), name='rubrique_create'),
     path('rubriques/<int:pk>/modifier/', views.RubriqueUpdateView.as_view(), name='rubrique_update'),
     path('rubriques/<int:pk>/supprimer/', views.RubriqueDeleteView.as_view(), name='rubrique_delete'),
+    path('rubriques/export/', views.export_rubriques, name='export_rubriques'),
+    path('rubriques/import/', views.import_rubriques, name='import_rubriques'),
 
     path('config/', views.config_paie, name='config_paie'),
     path('select-entreprise/', views.select_entreprise_paie, name='select_entreprise_paie'),

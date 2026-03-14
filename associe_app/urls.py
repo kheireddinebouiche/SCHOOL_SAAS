@@ -43,7 +43,10 @@ from .views import (
     import_depenses_categories,
     export_postes_budgetaires,
     import_postes_budgetaires,
-    update_tenant_type
+    update_tenant_type,
+    reset_tenant_table,
+    tenant_workspace,
+    preview_tenant_table_reset
 )
 
 
@@ -56,9 +59,12 @@ urlpatterns = [
 
     # Tenant Visualization
     path('tenants/', tenant_data_list, name='tenant_data_list'),
+    path('tenants/<int:tenant_id>/workspace/', tenant_workspace, name='tenant_workspace'),
     path('tenants/categories/<int:tenant_id>/', get_tenant_categories, name='get_tenant_categories'),
     path('tenants/purge/<int:tenant_id>/', purge_tenant_categories, name='purge_tenant_categories'),
     path('tenants/delete-payment-type/<int:tenant_id>/<int:payment_type_id>/', delete_tenant_payment_type, name='delete_tenant_payment_type'),
+    path('tenants/reset-table/', reset_tenant_table, name='reset_tenant_table'),
+    path('tenants/preview-reset/', preview_tenant_table_reset, name='preview_tenant_table_reset'),
     path('crm-statistics/', crm_statistics, name='crm_statistics'),
     path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
     path('tenants/update-type/', update_tenant_type, name='update_tenant_type'),

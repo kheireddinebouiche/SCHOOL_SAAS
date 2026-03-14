@@ -9,6 +9,10 @@ from django import forms
 from decimal import Decimal
 from t_formations.models import Formateurs
 from institut_app.models import Entreprise
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+import openpyxl
+from openpyxl import Workbook
 
 class ContratListView(LoginRequiredMixin, ListView):
     model = Contrat
@@ -651,4 +655,99 @@ def select_entreprise_paie(request):
             messages.warning(request, "Aucune entreprise sélectionnée.")
         return redirect(request.META.get('HTTP_REFERER', 't_ressource_humaine:contrat_list'))
     return redirect('t_ressource_humaine:contrat_list')
+
+# --- Import / Export Rubriques ---
+
+def export_rubriques(request):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rubriques"
+
+    # Define headers
+    headers = [
+        'ID', 'Libelle', 'Type', 'Mode de Calcul', 
+        'Cotisable (Oui/Non)', 'Imposable (Oui/Non)', 'Actif (Oui/Non)', 'Types Contrat (CDI, CDD, VACATION)'
+    ]
+    ws.append(headers)
+
+    rubriques = Rubrique.objects.all()
+    for r in rubriques:
+        ws.append([
+            r.id,
+            r.libelle,
+            r.type_rubrique,
+            r.mode_calcul,
+            'Oui' if r.est_cotisable else 'Non',
+            'Oui' if r.est_imposable else 'Non',
+            'Oui' if r.actif else 'Non',
+            ", ".join(r.types_contrat) if r.types_contrat else ""
+        ])
+
+    # Styling headers
+    from openpyxl.styles import Font
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="rubriques_paie.xlsx"'
+    wb.save(response)
+    return response
+
+def import_rubriques(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        excel_file = request.FILES['file']
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            ws = wb.active
+            
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            
+            count_created = 0
+            count_updated = 0
+            
+            for row in rows:
+                if not row[1]: # Libelle is mandatory
+                    continue
+                    
+                rubrique_id = row[0]
+                libelle = str(row[1])
+                type_rubrique = str(row[2]).upper() if row[2] else 'GAIN'
+                mode_calcul = str(row[3]).upper() if row[3] else 'FIXE'
+                cotisable = True if str(row[4]).lower() in ['oui', 'true', '1'] else False
+                imposable = True if str(row[5]).lower() in ['oui', 'true', '1'] else False
+                actif = True if str(row[6]).lower() in ['oui', 'true', '1', 'none'] else False # Default to true
+                
+                types_contrat_str = str(row[7]) if row[7] else ""
+                types_contrat = [t.strip().upper() for t in types_contrat_str.split(',') if t.strip()]
+                
+                # Validation of choices
+                if type_rubrique not in ['GAIN', 'RETENUE']: type_rubrique = 'GAIN'
+                if mode_calcul not in ['FIXE', 'PERCENT', 'HOURS']: mode_calcul = 'FIXE'
+                
+                defaults = {
+                    'libelle': libelle,
+                    'type_rubrique': type_rubrique,
+                    'mode_calcul': mode_calcul,
+                    'est_cotisable': cotisable,
+                    'est_imposable': imposable,
+                    'actif': actif,
+                    'types_contrat': types_contrat
+                }
+                
+                if rubrique_id and str(rubrique_id).isdigit():
+                    obj, created = Rubrique.objects.update_or_create(id=int(rubrique_id), defaults=defaults)
+                    if created: count_created += 1
+                    else: count_updated += 1
+                else:
+                    Rubrique.objects.create(**defaults)
+                    count_created += 1
+                    
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Importation réussie : {count_created} rubriques créées, {count_updated} mises à jour.'
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors de l\'importation : {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Fichier manquant ou méthode non autorisée.'})
 
