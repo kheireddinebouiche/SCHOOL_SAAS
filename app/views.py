@@ -150,7 +150,7 @@ def login_view(request):
                 return redirect(request.GET.get('next'))
             
             if request.tenant.schema_name == 'public':
-                return redirect('configuration_index')
+                return redirect('associe_app:configuration_index')
             return redirect('index') 
         else:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
