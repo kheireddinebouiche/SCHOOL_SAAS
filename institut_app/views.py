@@ -1108,14 +1108,33 @@ def my_budget_campaigns(request):
         campaigns = BudgetCampaign.objects.filter(is_active=True).order_by('-date_debut')
         
         # Fetch all budget items for the modal and structure them (recursive arborescence)
-        all_postes = list(PostesBudgetaire.objects.all().order_by('order', 'label'))
+        # Prefetch categories and payment types to avoid N+1
+        all_postes = list(PostesBudgetaire.objects.all().prefetch_related(
+            'payment_categories',
+            'depense_categories'
+        ).order_by('order', 'label'))
         
         def build_recursive_tree(nodes, parent_id=None):
             tree = []
             relevant_nodes = [n for n in nodes if n.parent_id == parent_id]
             for node in relevant_nodes:
+                # Gather channels
+                channels = set()
+                try:
+                    if node.type == 'recette':
+                        for cat in node.payment_categories.all():
+                            if cat.name:
+                                channels.add(cat.name)
+                    else:
+                        for cat in node.depense_categories.all():
+                            if cat.name:
+                                channels.add(cat.name)
+                except Exception:
+                    pass
+                
                 tree.append({
                     'item': node,
+                    'channels': sorted(list(channels)),
                     'children': build_recursive_tree(nodes, node.id)
                 })
             return tree
