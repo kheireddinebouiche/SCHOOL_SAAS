@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import *
 from .models import *
 from t_tresorerie.models import PaymentCategory, OperationsBancaire
-from t_crm.models import Opportunite
+from t_crm.models import Opportunite, Prospets
 from django.template.loader import render_to_string
 from django.http import HttpResponse, JsonResponse
 from weasyprint import HTML
@@ -63,6 +63,34 @@ def ApiLoadThematiqueDetails(request):
             'categorie': i.categorie
         }
     return JsonResponse(data, safe=False)
+
+@login_required(login_url='institut_app:login')
+def DetailsProspectConseil(request, slug):
+    prospect = get_object_or_404(Prospets, slug=slug)
+    
+    context = {
+        'tenant': request.tenant,
+        'prospect': prospect,
+        'pk': prospect.id,
+        'slug': prospect.slug,
+    }
+    
+    # Use dedicated template for Conseil/Executive Education
+    return render(request, 'tenant_folder/conseil/prospect/details_prospect.html', context)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadProspectDevis(request):
+    id_prospect = request.GET.get('id_prospect')
+    devis = Devis.objects.filter(client_id=id_prospect).values('id', 'num_devis', 'montant', 'date_emission', 'etat')
+    return JsonResponse(list(devis), safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadProspectFactures(request):
+    id_prospect = request.GET.get('id_prospect')
+    factures = Facture.objects.filter(client_id=id_prospect).values('id', 'num_facture', 'date_emission', 'etat')
+    
+    # Calculate totals if needed, but for now simple list
+    return JsonResponse(list(factures), safe=False)
 
 @login_required(login_url='institut_app:login')
 def AddNewDevis(request):
@@ -130,7 +158,7 @@ def ApiFetchEnterpriseTvas(request):
     if not ent_id:
         return JsonResponse({'status': 'error', 'message': 'ID Entreprise manquant'}, status=400)
     
-    tvas = TvaConseil.objects.filter(entreprise_id=ent_id).order_by('valeur')
+    tvas = TvaConseil.objects.all().order_by('valeur')
     data = [{'valeur': float(t.valeur), 'label': t.label, 'is_default': t.is_default} for t in tvas]
     return JsonResponse({'status': 'success', 'tvas': data})
 
@@ -149,7 +177,7 @@ def configure_devis(request, pk):
         if not config:
             config, _ = ConseilConfiguration.objects.get_or_create(entreprise=None)
         
-        tvas = TvaConseil.objects.filter(entreprise=devis.entreprise).order_by('valeur')
+        tvas = TvaConseil.objects.all().order_by('valeur')
         context = {
             'tenant' : request.tenant,
             'devis' : devis,
@@ -177,7 +205,7 @@ def configure_facture(request, pk):
         if not config:
             config, _ = ConseilConfiguration.objects.get_or_create(entreprise=None)
         
-        tvas = TvaConseil.objects.filter(entreprise=facture.entreprise).order_by('valeur')
+        tvas = TvaConseil.objects.all().order_by('valeur')
         context = {
             'tenant' : request.tenant,
             'facture' : facture,
@@ -294,8 +322,41 @@ def ApiLoadProspect(request):
     pass
 
 @login_required(login_url="institut_app:login")
+def ListeDesClients(request):
+    context = {
+        'tenant': request.tenant,
+    }
+    return render(request, "tenant_folder/conseil/clients/liste_des_clients.html", context)
+
+@login_required(login_url="institut_app:login")
+def DetailsClient(request, slug):
+    client = get_object_or_404(Prospets, slug=slug)
+    context = {
+        'tenant': request.tenant,
+        'client': client,
+        'pk': client.id,
+    }
+    return render(request, "tenant_folder/conseil/clients/details_client.html", context)
+
+@login_required(login_url="institut_app:login")
+def ApiListeClients(request):
+    liste = Prospets.objects.filter(context='con', is_client=True).values(
+        'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date'
+    )
+    return JsonResponse(list(liste), safe=False)
+
+@login_required(login_url="institut_app:login")
 def ApiTransformeToClient(request):
-    pass
+    id_prospect = request.POST.get('id_prospect')
+    try:
+        prospect = Prospets.objects.get(id=id_prospect)
+        prospect.is_client = True
+        prospect.statut = 'convertit'
+        prospect.convertit_date = timezone.now().date()
+        prospect.save()
+        return JsonResponse({'status': 'success', 'message': 'Prospect converti en client.'})
+    except Prospets.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
 
 @login_required(login_url="institut_app:login")
 def ApiSaveLigneDevis(request):
@@ -381,6 +442,7 @@ def ApiStartTransformationDevisToFacture(request):
         LignesFacture.objects.create(
             facture=facture,
             thematique=ligne.thematique,
+            specialite=ligne.specialite, # Support degree formations
             description=ligne.description,
             long_description=ligne.long_description,
             quantite=ligne.quantite,
@@ -408,6 +470,20 @@ def ApiStartTransformationDevisToFacture(request):
                  stage='facture',
                  budget=facture.total_ttc or 0
              )
+        
+    # Carry over participants if any
+    for part in Participant.objects.filter(devis=devis):
+        Participant.objects.create(
+            facture=facture,
+            nom=part.nom,
+            prenom=part.prenom,
+            email=part.email,
+            telephone=part.telephone,
+            date_naissance=part.date_naissance,
+            lieu_naissance=part.lieu_naissance,
+            poste=part.poste,
+            nin=part.nin
+        )
         
     return JsonResponse({'status': 'success', 'message': 'Devis transformé en facture avec succès.', 'facture_num': facture.num_facture})
 
@@ -456,6 +532,7 @@ def ApiSaveDevisItems(request):
             
             for item in items:
                 thematique_id = item.get('thematique_id')
+                specialite_id = item.get('specialite_id') # Support degree formations
                 description = item.get('description')
                 long_description = item.get('long_description', '')
                 quantite = item.get('quantity')
@@ -469,6 +546,14 @@ def ApiSaveDevisItems(request):
                     try:
                         thematique = Thematiques.objects.get(id=thematique_id)
                     except Thematiques.DoesNotExist:
+                        pass
+                
+                specialite = None
+                if specialite_id:
+                    try:
+                        from t_formations.models import Specialites
+                        specialite = Specialites.objects.get(id=specialite_id)
+                    except Specialites.DoesNotExist:
                         pass
                 
                 try:
@@ -488,6 +573,7 @@ def ApiSaveDevisItems(request):
                 LignesDevis.objects.create(
                     devis=devis,
                     thematique=thematique,
+                    specialite=specialite, # Support degree formations
                     description=description,
                     long_description=long_description,
                     quantite=qty,
@@ -1081,8 +1167,8 @@ def ConfigurationConseil(request):
         enterprise = Entreprise.objects.first()
 
     config, created = ConseilConfiguration.objects.get_or_create(entreprise=enterprise)
-    # Filter TVAs by enterprise
-    tvas = TvaConseil.objects.filter(entreprise=enterprise).order_by('valeur')
+    # Global TVAs
+    tvas = TvaConseil.objects.all().order_by('valeur')
     enterprises = Entreprise.objects.all()
     
     if request.method == "POST":
@@ -1118,7 +1204,7 @@ def ConfigurationConseil(request):
             valeur = request.POST.get('tva_valeur')
             if label and valeur:
                 try:
-                    TvaConseil.objects.create(label=label, valeur=valeur, entreprise=enterprise)
+                    TvaConseil.objects.create(label=label, valeur=valeur)
                     messages.success(request, f"TVA '{label}' ajoutée avec succès.")
                 except Exception as e:
                     messages.error(request, f"Erreur : {e}")
@@ -1372,7 +1458,7 @@ def ApiFetchEnterpriseTvas(request):
     if not enterprise_id:
         return JsonResponse({'status': 'error', 'message': 'ID Entreprise manquant.'})
     
-    tvas = TvaConseil.objects.filter(entreprise_id=enterprise_id).values('valeur', 'label', 'is_default')
+    tvas = TvaConseil.objects.all().values('valeur', 'label', 'is_default')
     return JsonResponse({'status': 'success', 'tvas': list(tvas)})
 
 
@@ -1493,3 +1579,227 @@ def DownloadFacturePDF(request, pk):
         
     except Exception as e:
         return HttpResponse(f"Erreur lors de la génération du PDF: {str(e)}", status=500)
+
+@login_required(login_url="institut_app:login")
+def ApiSaveParticipants(request):
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        devis_id = data.get('devis_id')
+        facture_id = data.get('facture_id')
+        participants = data.get('participants', [])
+        
+        devis = None
+        if devis_id:
+            devis = Devis.objects.get(num_devis=devis_id)
+        
+        facture = None
+        if facture_id:
+            facture = Facture.objects.get(num_facture=facture_id)
+            
+        # Full sync: delete existing for this doc and re-add
+        from django.db import transaction
+        with transaction.atomic():
+            if devis:
+                Participant.objects.filter(devis=devis).delete()
+            if facture:
+                Participant.objects.filter(facture=facture).delete()
+                
+            for p in participants:
+                Participant.objects.create(
+                    devis=devis,
+                    facture=facture,
+                    nom=p.get('nom'),
+                    prenom=p.get('prenom'),
+                    email=p.get('email'),
+                    telephone=p.get('telephone'),
+                    date_naissance=p.get('date_naissance') if p.get('date_naissance') else None,
+                    lieu_naissance=p.get('lieu_naissance'),
+                    poste=p.get('poste'),
+                    nin=p.get('nin')
+                )
+            
+        return JsonResponse({'status': 'success', 'message': 'Participants enregistrés avec succès.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+def ApiGetDegreeFormations(request):
+    from t_formations.models import Specialites
+    specialites = Specialites.objects.all().values('id', 'label', 'prix', 'code', 'created_at', 'formation__nom')
+    return JsonResponse(list(specialites), safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiLoadDegreeFormationsList(request):
+    from t_formations.models import Formation
+    formations = Formation.objects.all().values('id', 'nom', 'description', 'prix_formation', 'code', 'date_creation')
+    return JsonResponse(list(formations), safe=False)
+
+@login_required(login_url='institut_app:login')
+def ApiGetSpecialiteDetails(request):
+    """
+    Returns full details for a specific specialty, including associated modules.
+    """
+    spec_id = request.GET.get('id')
+    if not spec_id:
+        return JsonResponse({'status': 'error', 'message': 'Specialite ID required'}, status=400)
+    
+    from t_formations.models import Specialites, Modules
+    try:
+        spec = Specialites.objects.get(id=spec_id)
+        
+        # Fetch associated modules
+        modules = Modules.objects.filter(specialite=spec, is_archived=False).values('id', 'code', 'label', 'coef', 'duree')
+        
+        data = {
+            'id': spec.id,
+            'label': spec.label,
+            'code': spec.code,
+            'prix': str(spec.prix),
+            'prix_double': str(spec.prix_double_diplomation) if spec.prix_double_diplomation else None,
+            'duree': spec.duree,
+            'nb_semestre': spec.nb_semestre,
+            'branche': spec.branche,
+            'abr': spec.abr,
+            'formation_nom': spec.formation.nom if spec.formation else '-',
+            'nb_tranche': spec.nb_tranche,
+            'condition_access': spec.condition_access,
+            'etat': spec.get_etat_display() if hasattr(spec, 'get_etat_display') else spec.etat,
+            'modules': list(modules)
+        }
+        return JsonResponse({'status': 'success', 'data': data})
+    except Specialites.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Spécialité introuvable'}, status=404)
+
+@login_required(login_url="institut_app:login")
+def ApiEnrollToGroup(request):
+    from t_groupe.models import Groupe, GroupeLine
+    from t_crm.models import Prospets
+    import json
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        participant_id = data.get('participant_id') # From Participant model
+        prospect_id = data.get('prospect_id') # From Prospets model
+        groupe_id = data.get('groupe_id')
+        
+        groupe = Groupe.objects.get(id=groupe_id)
+        
+        prospect = None
+        if prospect_id:
+            prospect = Prospets.objects.get(id=prospect_id)
+        elif participant_id:
+            p = Participant.objects.get(id=participant_id)
+            prospect = Prospets.objects.filter(nom=p.nom, prenom=p.prenom, email=p.email).first()
+            if not prospect:
+                prospect = Prospets.objects.create(
+                    nom=p.nom,
+                    prenom=p.prenom,
+                    email=p.email,
+                    telephone=p.telephone,
+                    date_naissance=p.date_naissance,
+                    lieu_naissance=p.lieu_naissance,
+                    nin=p.nin,
+                    type_prospect='particulier',
+                    statut='convertit',
+                    context='con'
+                )
+        
+        if prospect:
+            from django.db import transaction
+            with transaction.atomic():
+                if not GroupeLine.objects.filter(groupe=groupe, student=prospect).exists():
+                    GroupeLine.objects.create(groupe=groupe, student=prospect)
+                    prospect.statut = 'convertit'
+                    prospect.save()
+                    return JsonResponse({'status': 'success', 'message': f'{prospect.nom} {prospect.prenom} inscrit au groupe {groupe.nom} avec succès.'})
+                else:
+                    return JsonResponse({'status': 'error', 'message': 'Déjà inscrit à ce groupe.'})
+        
+        return JsonResponse({'status': 'error', 'message': 'Participant ou prospect introuvable.'})
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url='institut_app:login')
+@ajax_required
+def ApiGetGroups(request):
+    """
+    Returns groups for a specific specialty.
+    """
+    specialite_id = request.GET.get('specialite_id')
+    if not specialite_id:
+        return JsonResponse({'status': 'error', 'message': 'Specialite ID required'}, status=400)
+    
+    from t_groupe.models import Groupe
+    groups = Groupe.objects.filter(specialite_id=specialite_id).values('id', 'nom', 'promotion__label', 'etat')
+    return JsonResponse({'status': 'success', 'groups': list(groups)})
+
+@login_required(login_url="institut_app:login")
+def ApiLoadProspectParticipants(request):
+    prospect_id = request.GET.get('prospect_id')
+    if not prospect_id:
+        return JsonResponse({'status': 'error', 'message': 'Prospect ID required'}, status=400)
+    
+    participants = Participant.objects.filter(prospect_id=prospect_id).values(
+        'id', 'nom', 'prenom', 'email', 'telephone', 'date_naissance', 'lieu_naissance', 'poste', 'nin'
+    )
+    return JsonResponse({'status': 'success', 'participants': list(participants)})
+
+@login_required(login_url="institut_app:login")
+@ajax_required
+def ApiSaveParticipant(request):
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        p_id = data.get('id')
+        prospect_id = data.get('prospect_id')
+        
+        if not prospect_id and not p_id:
+            return JsonResponse({'status': 'error', 'message': 'Prospect ID required'}, status=400)
+            
+        if p_id:
+            participant = Participant.objects.get(id=p_id)
+        else:
+            participant = Participant(prospect_id=prospect_id)
+            
+        participant.nom = data.get('nom')
+        participant.prenom = data.get('prenom')
+        participant.email = data.get('email')
+        participant.telephone = data.get('telephone')
+        participant.date_naissance = data.get('date_naissance') if data.get('date_naissance') else None
+        participant.lieu_naissance = data.get('lieu_naissance')
+        participant.poste = data.get('poste')
+        participant.nin = data.get('nin')
+        participant.save()
+        
+        return JsonResponse({'status': 'success', 'message': 'Participant enregistré avec succès.', 'id': participant.id})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+@ajax_required
+def ApiDeleteParticipant(request):
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        p_id = data.get('id')
+        if not p_id:
+            return JsonResponse({'status': 'error', 'message': 'Participant ID required'}, status=400)
+            
+        Participant.objects.filter(id=p_id).delete()
+        return JsonResponse({'status': 'success', 'message': 'Participant supprimé avec succès.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

@@ -23,6 +23,7 @@ class NewDevisForms(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(NewDevisForms, self).__init__(*args, **kwargs)
         self.fields['client'].queryset = Prospets.objects.filter(type_prospect='entreprise')
+        self.fields['client'].label_from_instance = lambda obj: obj.entreprise if obj.entreprise else f"{obj.nom} {obj.prenom}"
 
 class NewFactureForms(forms.ModelForm):
     class Meta:
@@ -46,6 +47,7 @@ class NewFactureForms(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(NewFactureForms, self).__init__(*args, **kwargs)
         self.fields['client'].queryset = Prospets.objects.filter(type_prospect='entreprise')
+        self.fields['client'].label_from_instance = lambda obj: obj.entreprise if obj.entreprise else f"{obj.nom} {obj.prenom}"
     
                 
                 

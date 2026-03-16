@@ -452,13 +452,13 @@ def ApiFilterProspect(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
@@ -472,13 +472,13 @@ def ApiFilterPrinscrit(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").order_by(value).values('id','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()

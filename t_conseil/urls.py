@@ -29,11 +29,17 @@ urlpatterns = [
 
 
 
+  path('details-prospect/<str:slug>/', DetailsProspectConseil, name="DetailsProspectConseil"),
   path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
   path('ApiLoadProspect',ApiLoadProspect, name="ApiLoadProspect"),
   path('ApiTransformeToClient',ApiTransformeToClient, name="ApiTransformeToClient"),
+  path('liste-des-clients/', ListeDesClients, name="ListeDesClients"),
+  path('details-client/<str:slug>/', DetailsClient, name="DetailsClient"),
+  path('ApiListeClients', ApiListeClients, name="ApiListeClients"),
 
   path('ApiListeProspect',ApiListeProspect, name="ApiListeProspect"),
+  path('ApiLoadProspectDevis',ApiLoadProspectDevis, name="ApiLoadProspectDevis"),
+  path('ApiLoadProspectFactures',ApiLoadProspectFactures, name="ApiLoadProspectFactures"),
   
   path('ApiCreateProspect', ApiCreateProspect, name="ApiCreateProspect"),
   path('ApiQuickCreateProspect', ApiQuickCreateProspect, name="ApiQuickCreateProspect"),
@@ -72,7 +78,18 @@ urlpatterns = [
   path('api/das/save/', ApiSaveDAS, name="ApiSaveDAS"),
   path('api/das/delete/', ApiDeleteDAS, name="ApiDeleteDAS"),
 
-  path('facture/pdf/<str:pk>/', DownloadFacturePDF, name="DownloadFacturePDF"),
+   path('facture/pdf/<str:pk>/', DownloadFacturePDF, name="DownloadFacturePDF"),
+  
+  path('api/participants/save/', ApiSaveParticipants, name="ApiSaveParticipants"),
+  path('api/formations-diplomantes/', ApiGetDegreeFormations, name="ApiGetDegreeFormations"),
+  path('api/formations-diplomantes-liste/', ApiLoadDegreeFormationsList, name="ApiLoadDegreeFormationsList"),
+  path('api/specialite-details/', ApiGetSpecialiteDetails, name="ApiGetSpecialiteDetails"),
+   path('api/enroll-to-group/', ApiEnrollToGroup, name="ApiEnrollToGroup"),
+   path('api/get-groups/', ApiGetGroups, name="ApiGetGroups"),
 
-  path('export/pipeline/', ExportPipelineCsv, name="ExportPipelineCsv"),
+   path('api/participants/load/', ApiLoadProspectParticipants, name="ApiLoadProspectParticipants"),
+   path('api/participants/save-one/', ApiSaveParticipant, name="ApiSaveParticipant"),
+   path('api/participants/delete-one/', ApiDeleteParticipant, name="ApiDeleteParticipant"),
+
+   path('export/pipeline/', ExportPipelineCsv, name="ExportPipelineCsv"),
 ]

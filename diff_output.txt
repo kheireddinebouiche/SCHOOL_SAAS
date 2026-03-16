@@ -1,0 +1,333 @@
+﻿diff --git a/templates/tenant_folder/crm/liste-des-prospects.html b/templates/tenant_folder/crm/liste-des-prospects.html
+index 64f0283a..70989043 100644
+--- a/templates/tenant_folder/crm/liste-des-prospects.html
++++ b/templates/tenant_folder/crm/liste-des-prospects.html
+@@ -4,6 +4,53 @@
+ 
+ {% block content %}
+ <style>
++  /* Premium Look & Feel */
++  .glass-card {
++      background: rgba(255, 255, 255, 0.95);
++      backdrop-filter: blur(10px);
++      border: 1px solid rgba(255, 255, 255, 0.2);
++      border-radius: 1.25rem;
++      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
++  }
++
++  .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
++  .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
++  .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
++  .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
++  .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #06b6d4; }
++
++  .btn-rounded {
++      border-radius: 0.75rem;
++  }
++
++  .table thead th {
++      background: #f8fafc;
++      color: #475569;
++      font-weight: 700;
++      text-transform: uppercase;
++      font-size: 0.75rem;
++      letter-spacing: 0.025em;
++      border-top: none;
++  }
++
++  .search-input-group {
++      position: relative;
++  }
++
++  .search-input-group i {
++      position: absolute;
++      left: 1rem;
++      top: 50%;
++      transform: translateY(-50%);
++      color: #94a3b8;
++  }
++
++  .search-input-group .form-control {
++      padding-left: 2.75rem;
++      border-radius: 0.75rem;
++      border: 1px solid #e2e8f0;
++  }
++
+   .search-box {
+     position: relative;
+   }
+@@ -12,11 +59,7 @@
+     right: 15px;
+     top: 50%;
+     transform: translateY(-50%);
+-    pointer-events: none; /* Emp├¬che l'ic├┤ne de capturer les ├®v├®nements souris */
+-  }
+-  .table th {
+-    font-weight: 600;
+-    background-color: #f8f9fa;
++    pointer-events: none;
+   }
+   .table td {
+     vertical-align: middle;
+@@ -25,18 +68,6 @@
+     padding: 0.5em 1em;
+     font-weight: 500;
+   }
+-  .dropdown-item {
+-    padding: 0.5rem 1rem;
+-  }
+-  .dropdown-item i {
+-    width: 1.2rem;
+-  }
+-  .btn-group .btn {
+-    padding: 0.375rem 0.75rem;
+-  }
+-  .modal-header .btn-close:focus {
+-    box-shadow: none;
+-  }
+   
+   /* Prospect type cards */
+   .prospect-type-card {
+@@ -52,29 +83,9 @@
+     box-shadow: 0 5px 15px rgba(64, 81, 137, 0.1) !important;
+   }
+   
+-  .prospect-type-card[data-type="entreprise"]:hover {
+-    border-color: #f06548;
+-    box-shadow: 0 5px 15px rgba(240, 101, 72, 0.1) !important;
+-  }
+-  
+-  /* Fix dropdown z-index issue */
+-  .table-responsive {
+-    overflow-x: visible;
+-  }
+-  
+-  .table td.text-end {
+-    position: relative;
+-    overflow: visible;
+-  }
+-  
+-  .table .dropdown-menu {
+-    z-index: 1050;
+-    position: absolute;
+-  }
+-
+   /* Card View Styles */
+   .cards-container {
+-    display: none; /* Initially hidden */
++    display: none;
+     display: grid;
+     grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+     gap: 1.5rem;
+@@ -82,9 +93,9 @@
+   }
+ 
+   .prospect-card {
+-    border: 1px solid #e9ebec;
+-    border-radius: 0.5rem;
+-    box-shadow: 0 1px 2px rgba(56, 65, 74, 0.15);
++    border: 1px solid rgba(255, 255, 255, 0.2);
++    border-radius: 1.25rem;
++    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+     transition: all 0.2s ease-in-out;
+     height: 100%;
+     background: #ffffff;
+@@ -96,7 +107,7 @@
+ 
+   .prospect-card:hover {
+     transform: translateY(-4px);
+-    box-shadow: 0 8px 16px rgba(56, 65, 74, 0.08); /* Velzon-like hover */
++    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+   }
+ 
+   .card-body-prospect {
+@@ -318,23 +329,23 @@
+ <div class="main-content">
+   <div class="page-content bg-light">
+     <div class="container-fluid">
+-      <!-- start page title -->
+-      <div class="row mb-3">
++      <!-- Header Section -->
++      <div class="row mb-4">
+         <div class="col-12">
+-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
++          <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+             <div class="d-flex align-items-center">
+-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+-                <i class="fas fa-users text-info"></i>
++              <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
++                <i class="ri-user-follow-line text-info fs-3"></i>
++              </div>
++              <div>
++                <h4 class="mb-1 fw-bold">Liste des prospects</h4>
++                <p class="text-muted mb-0">Gestion et suivi de vos prospects potentiels</p>
+               </div>
+-              <h4 class="mb-0 text-info">Liste des prospects</h4>
+             </div>
+-            <div class="d-flex align-items-center gap-2">
+-              
++            <div class="mt-3 mt-sm-0">
+               <nav aria-label="breadcrumb">
+-                <ol class="breadcrumb m-0 bg-transparent">
+-                  <li class="breadcrumb-item">
+-                    <a href="javascript: void(0);">CRM</a>
+-                  </li>
++                <ol class="breadcrumb m-0">
++                  <li class="breadcrumb-item"><a href="javascript: void(0);">CRM</a></li>
+                   <li class="breadcrumb-item active">Liste des prospects</li>
+                 </ol>
+               </nav>
+@@ -342,7 +353,6 @@
+           </div>
+         </div>
+       </div>
+-      <!-- end page title -->
+       <div class="row">
+         <!-- KPIs Section -->
+         <!-- KPI Cards Section -->
+@@ -350,7 +360,7 @@
+             <div class="row">
+                 <!-- Total Prospects -->
+                 <div class="col-xl-3 col-md-6">
+-                    <div class="card card-animate border-0 shadow-sm overflow-hidden">
++                    <div class="card glass-card border-0 shadow-sm overflow-hidden mb-4">
+                         <div class="card-body">
+                             <div class="d-flex align-items-center">
+                                 <div class="flex-grow-1 overflow-hidden">
+@@ -359,10 +369,10 @@
+                             </div>
+                             <div class="d-flex align-items-end justify-content-between mt-4">
+                                 <div>
+-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" id="totalProspects">0</span></h4>
++                                    <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="counter-value" id="totalProspects">0</span></h4>
+                                 </div>
+                                 <div class="avatar-sm flex-shrink-0">
+-                                    <span class="avatar-title bg-primary-subtle rounded fs-3">
++                                    <span class="avatar-title bg-primary bg-opacity-10 rounded fs-2">
+                                         <i class="ri-group-line text-primary"></i>
+                                     </span>
+                                 </div>
+@@ -373,7 +383,7 @@
+ 
+                 <!-- Particuliers -->
+                 <div class="col-xl-3 col-md-6">
+-                    <div class="card card-animate border-0 shadow-sm overflow-hidden">
++                    <div class="card glass-card border-0 shadow-sm overflow-hidden mb-4">
+                         <div class="card-body">
+                             <div class="d-flex align-items-center">
+                                 <div class="flex-grow-1 overflow-hidden">
+@@ -382,10 +392,10 @@
+                             </div>
+                             <div class="d-flex align-items-end justify-content-between mt-4">
+                                 <div>
+-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" id="particuliersCount">0</span></h4>
++                                    <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="counter-value" id="particuliersCount">0</span></h4>
+                                 </div>
+                                 <div class="avatar-sm flex-shrink-0">
+-                                    <span class="avatar-title bg-info-subtle rounded fs-3">
++                                    <span class="avatar-title bg-info bg-opacity-10 rounded fs-2">
+                                         <i class="ri-user-line text-info"></i>
+                                     </span>
+                                 </div>
+@@ -396,7 +406,7 @@
+ 
+                 <!-- Entreprises -->
+                 <div class="col-xl-3 col-md-6">
+-                    <div class="card card-animate border-0 shadow-sm overflow-hidden">
++                    <div class="card glass-card border-0 shadow-sm overflow-hidden mb-4">
+                         <div class="card-body">
+                             <div class="d-flex align-items-center">
+                                 <div class="flex-grow-1 overflow-hidden">
+@@ -405,10 +415,10 @@
+                             </div>
+                             <div class="d-flex align-items-end justify-content-between mt-4">
+                                 <div>
+-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" id="entreprisesCount">0</span></h4>
++                                    <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="counter-value" id="entreprisesCount">0</span></h4>
+                                 </div>
+                                 <div class="avatar-sm flex-shrink-0">
+-                                    <span class="avatar-title bg-danger-subtle rounded fs-3">
++                                    <span class="avatar-title bg-danger bg-opacity-10 rounded fs-2">
+                                         <i class="ri-building-line text-danger"></i>
+                                     </span>
+                                 </div>
+@@ -419,7 +429,7 @@
+ 
+                 <!-- En Attente -->
+                 <div class="col-xl-3 col-md-6">
+-                    <div class="card card-animate border-0 shadow-sm overflow-hidden">
++                    <div class="card glass-card border-0 shadow-sm overflow-hidden mb-4">
+                         <div class="card-body">
+                             <div class="d-flex align-items-center">
+                                 <div class="flex-grow-1 overflow-hidden">
+@@ -428,10 +438,10 @@
+                             </div>
+                             <div class="d-flex align-items-end justify-content-between mt-4">
+                                 <div>
+-                                    <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" id="enAttenteCount">0</span></h4>
++                                    <h4 class="fs-22 fw-semibold ff-secondary mb-0"><span class="counter-value" id="enAttenteCount">0</span></h4>
+                                 </div>
+                                 <div class="avatar-sm flex-shrink-0">
+-                                    <span class="avatar-title bg-warning-subtle rounded fs-3">
++                                    <span class="avatar-title bg-warning bg-opacity-10 rounded fs-2">
+                                         <i class="ri-time-line text-warning"></i>
+                                     </span>
+                                 </div>
+@@ -443,45 +453,45 @@
+         </div>
+         
+         <div class="col-lg-12">
+-          <div class="card border-0 shadow-sm" id="prospectList">
+-            <div class="card-header border-0 bg-white py-4">
++          <div class="card glass-card border-0 shadow-sm mb-4" id="prospectList">
++            <div class="card-header border-0 bg-transparent py-4">
+               <div class="row align-items-center gy-3">
+                 <div class="col-sm">
+                    <div class="d-flex align-items-center">
+-                    <h5 class="card-title mb-0 flex-grow-1">Liste des prospects</h5>
++                    <h5 class="card-title mb-0 flex-grow-1 fw-bold">Liste des prospects</h5>
+                   </div>
+                 </div>
+ 
+                 <div class="col-sm-auto">
+                   <div class="d-flex gap-2 flex-wrap">
+-                      <div class="search-box">
+-                        <input type="text" class="form-control" id="table-filter" placeholder="Rechercher...">
+-                        <i class="ri-search-line search-icon"></i>
++                      <div class="search-input-group">
++                        <i class="ri-search-line"></i>
++                        <input type="text" class="form-control" id="table-filter" placeholder="Rechercher..." style="width: 200px;">
+                       </div>
+                       
+-                      <select id="filter-prospect" class="form-select filter-select" style="width: auto;">
++                      <select id="filter-prospect" class="form-select btn-rounded border-0 bg-light" style="width: auto;">
+                         <option value="0">Tous les types</option>
+                         <option value="particulier">Particulier</option>
+                         <option value="entreprise">Entreprise</option>
+                       </select>
+ 
+-                      <select id="date_filter-prospect" class="form-select filter-select" style="width: auto;">
++                      <select id="date_filter-prospect" class="form-select btn-rounded border-0 bg-light" style="width: auto;">
+                         <option value="0">Date de cr├®ation</option>
+                         <option value="-created_at">Date (r├®cent)</option>
+                         <option value="created_at">Date (ancien)</option>
+                       </select>
+ 
+                       <!-- Toggle View Buttons -->
+-                      <div class="btn-group" role="group" aria-label="View options">
+-                        <button type="button" class="btn btn-soft-secondary btn-icon" id="tableViewBtn" data-view="table" title="Vue Tableau">
++                      <div class="btn-group" role="group">
++                        <button type="button" class="btn btn-soft-secondary btn-icon btn-rounded me-1" id="tableViewBtn" data-view="table">
+                           <i class="ri-list-check"></i>
+                         </button>
+-                        <button type="button" class="btn btn-soft-secondary btn-icon" id="cardViewBtn" data-view="card" title="Vue Carte">
++                        <button type="button" class="btn btn-soft-secondary btn-icon btn-rounded" id="cardViewBtn" data-view="card">
+                           <i class="ri-grid-fill"></i>
+                         </button>
+                       </div>
+ 
+-                      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newProspectModal">
++                      <button type="button" class="btn btn-primary btn-rounded px-4" data-bs-toggle="modal" data-bs-target="#newProspectModal">
+                         <i class="ri-add-line align-bottom me-1"></i> Nouveau prospect
+                       </button>
+                   </div>

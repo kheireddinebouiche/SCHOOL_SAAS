@@ -152,7 +152,7 @@
             <div class="row mb-4 align-items-center">
                 <div class="col">
                     <h4 class="mb-0 fw-bold text-dark">Configuration de la Facture</h4>
-                    <p class="text-muted mb-0 fs-13">Référence : #{{ facture.num_facture }} | Client : {{ facture.client.nom }} {{ facture.client.prenom }}</p>
+                            <p class="text-muted mb-0 fs-13">Référence : #{{ facture.num_facture }} | Client : {% if facture.client.entreprise %}{{ facture.client.entreprise }}{% else %}{{ facture.client.nom }} {{ facture.client.prenom }}{% endif %}</p>
                 </div>
                 <div class="col-auto d-flex gap-2">
                     <a href="{% url 't_conseil:DetailsFacture' facture.num_facture %}" class="btn btn-light btn-premium-action border" id="previewBtn">
@@ -244,7 +244,7 @@
                                         <td>
                                             <div class="d-flex flex-column gap-2">
                                                 <select class="form-select form-select-premium" id="newThematique" {% if not can_edit %}disabled{% endif %}>
-                                                    <option value="">-- Sélectionner --</option>
+                                                    <option value="">-- Sélectionner Thématique --</option>
                                                 </select>
                                                 <input type="text" class="form-control form-control-premium fs-12" id="newDesignation" placeholder="Désignation personnalisée (Optionnel)" {% if not can_edit %}disabled{% endif %}>
                                                 <textarea class="form-control form-control-premium fs-12" id="newLongDescription" rows="2" placeholder="Description détaillée (Optionnel)" {% if not can_edit %}disabled{% endif %}></textarea>
@@ -281,6 +281,7 @@
                             </div>
                         </div>
                     </div>
+
 
                     <div class="card-premium mt-4">
                         <div class="card-body p-4">
@@ -344,22 +345,16 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 </div>
+
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         let items = [];
         let thematiques = [];
-        let availableTvas = []; // To store all available TVAs for dynamic select options
+        let specialites = [];
         const factureId = "{{ facture.num_facture }}"; 
         const canEdit = {% if can_edit %}true{% else %}false{% endif %};
-
-        const itemsContainer = document.getElementById('itemsContainer');
-        const toggleTva = document.getElementById('toggleTva');
-        const toggleRemise = document.getElementById('toggleRemise');
-        const newThematique = document.getElementById('newThematique');
         const newDesignation = document.getElementById('newDesignation');
         const newLongDescription = document.getElementById('newLongDescription');
         const newQty = document.getElementById('newQty');
@@ -369,25 +364,19 @@
         const newRowTotal = document.getElementById('newRowTotal');
         const addItemBtn = document.getElementById('addItemBtn');
 
-        // Initial Toggle State Application
-    function applyColumnVisibility() {
-        const showTva = document.getElementById('toggleTva').checked;
-        const showRemise = document.getElementById('toggleRemise').checked;
+        const itemsContainer = document.getElementById('itemsContainer');
+        const toggleTva = document.getElementById('toggleTva');
+        const toggleRemise = document.getElementById('toggleRemise');
+        const newThematique = document.getElementById('newThematique');
 
-        // Headers and rows
-        document.querySelectorAll('.col-tva').forEach(el => el.style.display = showTva ? '' : 'none');
-        document.querySelectorAll('.col-remise').forEach(el => el.style.display = showRemise ? '' : 'none');
-        updateTotals(); // Recalculate totals based on TVA visibility
-    }
+        // Helper for safe parsing
+        const parseMoney = (val) => {
+             if(!val) return 0;
+             let v = val.toString().replace(/\s/g, '').replace(',', '.');
+             return parseFloat(v) || 0;
+        }
 
-    // Toggle Events
-    if(toggleTva) toggleTva.addEventListener('change', applyColumnVisibility);
-    if(toggleRemise) toggleRemise.addEventListener('change', applyColumnVisibility);
-
-    // Initial call
-    applyColumnVisibility();
-
-        // Load Services
+        // Load Thematiques
         fetch("{% url 't_conseil:ApiLoadThematique' %}", {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
@@ -402,24 +391,24 @@
             });
         });
 
+
+
         // Load Initial State
-        items = [
-            {% for l in lignes_facture %}
-            {
-                id: {{ l.id }},
-                thematique_id: "{{ l.thematique.id|default:'' }}",
-                description: "{{ l.description|escapejs }}",
-                long_description: "{{ l.long_description|default:''|escapejs }}",
-                quantity: parseFloat("{{ l.quantite|floatformat:2 }}".replace(',', '.')),
-                unitPrice: parseFloat("{{ l.montant_ht|floatformat:2 }}".replace(',', '.')) / (parseFloat("{{ l.quantite|floatformat:2 }}".replace(',', '.')) || 1),
-                remise_percent: parseFloat("{{ l.remise_percent|floatformat:2 }}".replace(',', '.')),
-                tva_percent: parseFloat("{{ l.tva_percent|floatformat:2 }}".replace(',', '.')) || 0,
-                total: parseFloat("{{ l.montant_ht|floatformat:2 }}".replace(',', '.'))
-            },
-            {% endfor %}
-        ];
-        
-        let editingIndex = -1;
+        {% for l in lignes_facture %}
+        items.push({
+            id: {{ l.id|default:0 }},
+            thematique_id: "{{ l.thematique.id|default:'' }}",
+            specialite_id: "{{ l.specialite.id|default:'' }}",
+            description: "{{ l.description|escapejs }}",
+            long_description: "{{ l.long_description|default:''|escapejs }}",
+            quantity: parseMoney("{{ l.quantite|floatformat:2 }}"),
+            unitPrice: parseMoney("{{ l.prix_unitaire|floatformat:2 }}"),
+            remise_percent: parseMoney("{{ l.remise_percent|floatformat:2 }}"),
+            tva_percent: parseMoney("{{ l.tva_percent|floatformat:2 }}") || 0,
+            total: parseMoney("{{ l.montant_ht|floatformat:2 }}")
+        });
+        {% endfor %}
+
         renderItems();
 
         newThematique.addEventListener('change', function() {
@@ -434,6 +423,7 @@
                 updateInputRowTotal();
             }
         });
+
 
         [newQty, newPrice, newRemise, newTva].forEach(el => {
             if(el) el.addEventListener('input', updateInputRowTotal);
@@ -467,12 +457,13 @@
             const itemData = {
                 id: editingIndex > -1 ? items[editingIndex].id : Date.now(),
                 thematique_id: tId,
+                specialite_id: null,
                 description: d || getTLab(tId),
                 long_description: longDesc,
                 quantity: q,
                 unitPrice: p,
                 remise_percent: r,
-                tva_percent: parseFloat(newTva ? newTva.value : 19) || 0,
+                tva_percent: tva,
                 total: discountedAt
             };
 
@@ -508,7 +499,10 @@
             const it = items[idx];
             editingIndex = idx;
             
-            newThematique.value = it.thematique_id;
+            if(it.thematique_id) {
+                newThematique.value = it.thematique_id;
+            }
+            
             newDesignation.value = it.description;
             newLongDescription.value = it.long_description || "";
             newQty.value = it.quantity;
@@ -516,13 +510,14 @@
             newRemise.value = it.remise_percent;
             if(newTva) newTva.value = it.tva_percent.toFixed(6);
             
-            addItemBtn.innerHTML = '<i class="ri-pencil-line fs-18"></i>'; // Change to edit icon
-            addItemBtn.classList.remove('btn-primary'); // Assuming btn-primary is the default add button class
+            addItemBtn.innerHTML = '<i class="ri-pencil-line fs-18"></i>'; 
+            addItemBtn.classList.remove('btn-primary'); 
             addItemBtn.classList.add('btn-warning');
             
             updateInputRowTotal();
             document.getElementById('newItemRow').scrollIntoView({behavior: 'smooth'});
         };
+
 
         function renderItems() {
             itemsContainer.innerHTML = '';
@@ -611,6 +606,19 @@
             saveBtn.addEventListener('click', function() {
                 if(!items.length) return alertify.warning("Aucun article");
                 this.disabled = true;
+
+                const payload = { 
+                    facture_id: factureId, 
+                    items: items,
+                    show_tva: document.getElementById('toggleTva').checked,
+                    show_remise: document.getElementById('toggleRemise').checked,
+                    conditions_commerciales: document.getElementById('factureConditions').value,
+                    mode_paiement: document.getElementById('modePaiement').value,
+                    date_emission: document.getElementById('dateEmission').value,
+                    date_echeance: document.getElementById('dateEcheance').value,
+                    entreprise_id: document.getElementById('factureEnterprise').value
+                };
+
                 fetch("{% url 't_conseil:ApiSaveFactureItems' %}", {
                     method: 'POST',
                     headers: { 
@@ -618,17 +626,7 @@
                         'X-CSRFToken': '{{ csrf_token }}',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ 
-                        facture_id: factureId, 
-                        items: items,
-                show_tva: document.getElementById('toggleTva').checked,
-                show_remise: document.getElementById('toggleRemise').checked,
-                conditions_commerciales: document.getElementById('factureConditions').value,
-                        mode_paiement: document.getElementById('modePaiement').value,
-                        date_emission: document.getElementById('dateEmission').value,
-                        date_echeance: document.getElementById('dateEcheance').value,
-                        validity_date: document.getElementById('validityDate') ? document.getElementById('validityDate').value : null // If exists
-                    })
+                    body: JSON.stringify(payload)
                 }).then(r => r.json()).then(d => {
                     if(d.status === 'success') {
                         alertify.success(d.message);

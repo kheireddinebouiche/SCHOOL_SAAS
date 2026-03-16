@@ -193,9 +193,9 @@
                                 </div>
                                 <div class="col-md-4">
                                     <span class="premium-info-label">CLIENT</span>
-                                    <p class="premium-info-value mb-1">{{ facture.client.nom }} {{ facture.client.prenom }}</p>
+                                    <p class="premium-info-value mb-1">{% if facture.client.entreprise %}{{ facture.client.entreprise }}{% else %}{{ facture.client.nom }} {{ facture.client.prenom }}{% endif %}</p>
                                     <div class="text-muted small">
-                                        {% if facture.client.entreprise %}<strong>{{ facture.client.entreprise }}</strong><br>{% endif %}
+                                        {% if facture.client.entreprise %}<span class="text-primary fw-medium"><i class="ri-user-line me-1"></i>{{ facture.client.nom }} {{ facture.client.prenom }}</span><br>{% endif %}
                                         {{ facture.client.adresse|default:"" }}<br>
                                         {{ facture.client.telephone|default:"-" }}
                                     </div>
@@ -336,6 +336,62 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Enrollment Management Section -->
+            <div class="row justify-content-center mt-4 no-print" id="enrollmentSection">
+                <div class="col-xl-10">
+                    <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold"><i class="ri-user-star-line me-2 text-primary"></i>Inscriptions aux Formations Diplomantes</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted small mb-4">Inscrivez les participants aux groupes académiques correspondants aux spécialités choisies.</p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Spécialité</th>
+                                            <th>Participants</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in lignes_facture %}
+                                            {% if item.specialite %}
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-bold">{{ item.specialite.label }}</div>
+                                                    <div class="text-muted small">{{ item.specialite.formation.nom }}</div>
+                                                </td>
+                                                <td>
+                                                    {% if facture.client.type_prospect == 'entreprise' %}
+                                                        <div class="d-flex flex-wrap gap-1">
+                                                            {% for p in facture.participants.all %}
+                                                            <span class="badge bg-soft-info text-info p-2">{{ p.nom }} {{ p.prenom }}</span>
+                                                            {% empty %}
+                                                            <span class="text-muted italic">Aucun participant enregistré</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="badge bg-soft-info text-info p-2">{% if facture.client.entreprise %}{{ facture.client.entreprise }}{% else %}{{ facture.client.nom }} {{ facture.client.prenom }}{% endif %}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    <button class="btn btn-sm btn-primary px-3" onclick="openEnrollModal('{{ item.specialite.id }}', '{{ item.specialite.label|escapejs }}')">
+                                                        <i class="ri-user-add-line me-1"></i> Inscrire au groupe
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -382,6 +438,36 @@
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-success px-4" onclick="submitPayment()">Enregistrer le paiement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Select Group Modal -->
+<div class="modal fade" id="enrollModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="ri-group-line me-2"></i>Inscrire au Groupe</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-3">Spécialité : <strong id="enrollSpecLabel"></strong></p>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Choisir un groupe académique</label>
+                    <select class="form-select" id="enrollGroupSelect">
+                        <option value="">Chargement...</option>
+                    </select>
+                </div>
+                
+                <h6 class="small fw-bold mb-3">Sélectionner les participants</h6>
+                <div id="enrollParticipantsList" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                    <!-- Participants checkboxes will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4" onclick="confirmEnrollment()">Inscrire maintenant</button>
             </div>
         </div>
     </div>
@@ -509,5 +595,99 @@
             }
         });
     }
+
+    // Enrollment Logic
+    let currentSpecId = null;
+    let participants = [
+        {% if facture.client.type_prospect == 'entreprise' %}
+            {% for p in facture.participants.all %}
+                { id: "{{ p.id }}", nom: "{{ p.nom|escapejs }}", prenom: "{{ p.prenom|escapejs }}" },
+            {% endfor %}
+        {% else %}
+            { prospect_id: "{{ facture.client.id }}", nom: "{% if facture.client.entreprise %}{{ facture.client.entreprise|escapejs }}{% else %}{{ facture.client.nom|escapejs }}{% endif %}", prenom: "{% if facture.client.entreprise %}{% else %}{{ facture.client.prenom|escapejs }}{% endif %}" }
+        {% endif %}
+    ];
+
+    window.openEnrollModal = (specId, specLabel) => {
+        currentSpecId = specId;
+        document.getElementById('enrollSpecLabel').textContent = specLabel;
+        const select = document.getElementById('enrollGroupSelect');
+        select.innerHTML = '<option value="">Chargement...</option>';
+
+        // Load groups
+        fetch(`{% url 't_conseil:ApiGetGroups' %}?specialite_id=${specId}`)
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                select.innerHTML = '<option value="">-- Sélectionner un groupe --</option>';
+                data.groups.forEach(g => {
+                    const opt = new Option(`${g.nom} (${g.promotion__label || 'Sans promo'})`, g.id);
+                    select.add(opt);
+                });
+                if(data.groups.length === 0) select.innerHTML = '<option value="">Aucun groupe disponible</option>';
+            } else {
+                alertify.error(data.message);
+            }
+        });
+
+        // Load participants checkboxes
+        const list = document.getElementById('enrollParticipantsList');
+        list.innerHTML = '';
+        participants.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-2';
+            const id = p.id ? `p_${p.id}` : `prospect_${p.prospect_id}`;
+            div.innerHTML = `
+                <input class="form-check-input participant-check" type="checkbox" value="${p.id || ''}" data-prospect-id="${p.prospect_id || ''}" id="${id}" checked>
+                <label class="form-check-label" for="${id}">${p.nom} ${p.prenom}</label>
+            `;
+            list.appendChild(div);
+        });
+
+        const modal = new bootstrap.Modal(document.getElementById('enrollModal'));
+        modal.show();
+    };
+
+    window.confirmEnrollment = async () => {
+        const groupId = document.getElementById('enrollGroupSelect').value;
+        if(!groupId) return alertify.error("Veuillez sélectionner un groupe.");
+
+        const checkedBoxes = document.querySelectorAll('.participant-check:checked');
+        if(checkedBoxes.length === 0) return alertify.error("Veuillez sélectionner au moins un participant.");
+
+        const promises = Array.from(checkedBoxes).map(cb => {
+            const payload = {
+                groupe_id: groupId,
+                specialite_id: currentSpecId
+            };
+            if(cb.dataset.prospectId) payload.prospect_id = cb.dataset.prospectId;
+            else payload.participant_id = cb.value;
+
+            return fetch("{% url 't_conseil:ApiEnrollToGroup' %}", {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            }).then(r => r.json());
+        });
+
+        try {
+            const results = await Promise.all(promises);
+            const errors = results.filter(r => r.status === 'error');
+            if(errors.length > 0) {
+                alertify.error(`${errors.length} erreurs lors de l'inscription.`);
+            }
+            const success = results.filter(r => r.status === 'success');
+            if(success.length > 0) {
+                alertify.success(`${success.length} inscriptions réussies !`);
+            }
+            bootstrap.Modal.getInstance(document.getElementById('enrollModal')).hide();
+        } catch(e) {
+            alertify.error("Erreur technique lors de l'inscription.");
+        }
+    };
 </script>
 {% endblock %}

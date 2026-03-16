@@ -411,14 +411,18 @@ def ApiValidateProspect(request):
         try:
             prospect = Prospets.objects.get(id=id_prospect)
             prospect.etat = "accepte"
-            prospect.statut = "prinscrit"
-            prospect.preinscri_date = datetime.now()
+            if prospect.context == "con":
+                prospect.statut = "convertit"
+                prospect.is_client = True
+                prospect.convertit_date = datetime.now()
+            else:
+                prospect.statut = "prinscrit"
+                prospect.preinscri_date = datetime.now()
             prospect.save()
 
 
-            voeux = FicheDeVoeux.objects.get(id = id_fiche_voeux)
-            voeux.is_confirmed = True
-            voeux.save()
+            if id_fiche_voeux:
+                FicheDeVoeux.objects.filter(id=id_fiche_voeux).update(is_confirmed=True)
 
             return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
         except Prospets.DoesNotExist:
@@ -438,9 +442,8 @@ def ApiValidateProspectDouble(request):
             prospect.save()
 
 
-            voeux = FicheVoeuxDouble.objects.get(id = id_fiche_voeux)
-            voeux.is_confirmed = True
-            voeux.save()
+            if id_fiche_voeux:
+                FicheVoeuxDouble.objects.filter(id=id_fiche_voeux).update(is_confirmed=True)
 
             return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
         except Exception as e:

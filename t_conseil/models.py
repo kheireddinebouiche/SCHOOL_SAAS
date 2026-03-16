@@ -114,6 +114,7 @@ class LignesDevis(models.Model):
     prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Prix unitaire HT")
     remise_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Pourcentage de remise")
     tva_percent = models.DecimalField(max_digits=5, decimal_places=2, default=19.00, help_text="Taux de TVA pour cette ligne")
+    specialite = models.ForeignKey('t_formations.Specialites', on_delete=models.SET_NULL, null=True, blank=True, related_name="lignes_devis")
 
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -207,7 +208,6 @@ class Facture(models.Model):
     total_ttc.short_description = "Total TTC"
 
 class TvaConseil(models.Model):
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="tvas_conseil")
     label = models.CharField(max_length=50, help_text="Ex: TVA 19%")
     valeur = models.DecimalField(max_digits=5, decimal_places=2, help_text="Valeur en %")
     is_default = models.BooleanField(default=False)
@@ -229,6 +229,7 @@ class LignesFacture(models.Model):
     montant_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     remise_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     tva_percent = models.DecimalField(max_digits=5, decimal_places=2, default=19.00)
+    specialite = models.ForeignKey('t_formations.Specialites', on_delete=models.SET_NULL, null=True, blank=True)
     
 class ConseilConfiguration(models.Model):
     """
@@ -300,5 +301,28 @@ class Paiement(models.Model):
         verbose_name = "Paiement"
         verbose_name_plural = "Paiements"
 
+class Participant(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name="participants_pool", null=True, blank=True)
+    devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name="participants", null=True, blank=True)
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE, related_name="participants", null=True, blank=True)
+    
+    nom = models.CharField(max_length=255)
+    prenom = models.CharField(max_length=255)
+    email = models.EmailField(null=True, blank=True)
+    telephone = models.CharField(max_length=20, null=True, blank=True)
+    
+    date_naissance = models.DateField(null=True, blank=True)
+    lieu_naissance = models.CharField(max_length=255, null=True, blank=True)
+    
+    poste = models.CharField(max_length=255, null=True, blank=True)
+    nin = models.CharField(max_length=255, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Participant"
+        verbose_name_plural = "Participants"
+
     def __str__(self):
-        return f"Paiement de {self.montant} pour {self.facture.num_facture}"
+        return f"{self.nom} {self.prenom}"

@@ -137,6 +137,13 @@ def verify_data(data, data_type):
                 code_spec = row.get('Code Spécialité') or row.get('specialite_code')
                 label_spec = row.get('Label Spécialité') or row.get('specialite_label')
                 
+                version_spec = row.get('Version Spécialité') or row.get('specialite_version')
+                semestres_spec = row.get('Semestres Spécialité') or row.get('specialite_nb_semestre')
+                tranches_spec = row.get('Tranches Spécialité') or row.get('specialite_nb_tranche')
+                prix_double_spec = row.get('Prix Double Diplomation') or row.get('specialite_prix_double')
+                abr_spec = row.get('Abréviation Spécialité') or row.get('specialite_abr')
+                conditions_spec = row.get("Conditions d'accès") or row.get('specialite_conditions')
+
                 code_mod = row.get('Code Module') or row.get('module_code')
                 label_mod = row.get('Label Module') or row.get('module_label')
                 
@@ -305,6 +312,13 @@ def import_data(data, data_type, user=None):
                 label_mod = row.get('Label Module') or row.get('module_label')
                 duree_mod = row.get('Durée Module') or row.get('module_duree')
                 coef_mod = row.get('Coefficient') or row.get('module_coef')
+
+                version_spec = row.get('Version Spécialité') or row.get('specialite_version')
+                semestres_spec = row.get('Semestres Spécialité') or row.get('specialite_nb_semestre')
+                tranches_spec = row.get('Tranches Spécialité') or row.get('specialite_nb_tranche')
+                prix_double_spec = row.get('Prix Double Diplomation') or row.get('specialite_prix_double')
+                abr_spec = row.get('Abréviation Spécialité') or row.get('specialite_abr')
+                conditions_spec = row.get("Conditions d'accès") or row.get('specialite_conditions')
                 
                 partenaire = None
                 if partenaire_code:
@@ -333,6 +347,12 @@ def import_data(data, data_type, user=None):
                              'duree': duree_spec,
                              'branche': branche_spec,
                              'prix': prix_spec,
+                             'version': version_spec,
+                             'nb_semestre': semestres_spec,
+                             'nb_tranche': tranches_spec,
+                             'prix_double_diplomation': prix_double_spec,
+                             'abr': abr_spec,
+                             'condition_access': conditions_spec,
                              'formation': formation,
                              'updated_by': user
                          }
@@ -360,9 +380,14 @@ def import_data(data, data_type, user=None):
                         defaults={
                             'label': row.get('label'),
                             'prix': row.get('prix'),
+                            'prix_double_diplomation': row.get('prix_double_diplomation') or row.get('prix_double'),
                             'duree': row.get('duree'),
+                            'nb_semestre': row.get('nb_semestre') or row.get('semestres'),
+                            'nb_tranche': row.get('nb_tranche') or row.get('tranches'),
                             'branche': row.get('branche'),
                             'abr': row.get('abr'),
+                            'version': row.get('version'),
+                            'condition_access': row.get('condition_access') or row.get('conditions'),
                             'formation': formation,
                             'updated_by': user
                         }

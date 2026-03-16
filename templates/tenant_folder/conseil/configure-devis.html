@@ -152,7 +152,7 @@
             <div class="row mb-4 align-items-center">
                 <div class="col">
                     <h4 class="mb-0 fw-bold text-dark">Configuration du Devis</h4>
-                    <p class="text-muted mb-0 fs-13">Référence : #{{ devis.num_devis }} | Client : {{ devis.client.nom }} {{ devis.client.prenom }}</p>
+                    <p class="text-muted mb-0 fs-13">Référence : #{{ devis.num_devis }} | Client : {% if devis.client.entreprise %}{{ devis.client.entreprise }}{% else %}{{ devis.client.nom }} {{ devis.client.prenom }}{% endif %}</p>
                 </div>
                 <div class="col-auto d-flex gap-2">
                     <button class="btn btn-light btn-premium-action border" id="previewBtn">
@@ -244,7 +244,7 @@
                                         <td>
                                             <div class="d-flex flex-column gap-2">
                                                 <select class="form-select form-select-premium" id="newThematique">
-                                                    <option value="">-- Sélectionner --</option>
+                                                    <option value="">-- Sélectionner Thématique --</option>
                                                 </select>
                                                 <input type="text" class="form-control form-control-premium fs-12" id="newDesignation" placeholder="Désignation personnalisée (Optionnel)">
                                                 <textarea class="form-control form-control-premium fs-12" id="newLongDescription" rows="2" placeholder="Description détaillée (Optionnel)"></textarea>
@@ -301,7 +301,8 @@
                             <textarea class="form-control form-control-premium" id="conditionsCommerciales" rows="4" placeholder="Saisissez les conditions spécifiques à ce devis..." {% if not can_edit %}readonly{% endif %}>{{ devis.conditions_commerciales|default:"" }}</textarea>
                         </div>
                     </div>
-                </div>
+
+                    </div>
 
                 <!-- Summary Sidebar -->
                 <div class="col-lg-4">
@@ -395,12 +396,15 @@
     </div>
 </div>
 
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         let items = [];
         let thematiques = [];
+        let specialites = [];
         const devisId = "{{ devis.num_devis }}"; 
         const devisState = "{{ devis.etat }}";
+        const isEnterprise = "{{ devis.client.type_prospect }}" === "entreprise";
         let hasUnsavedChanges = false;
         
         const convertBtn = document.getElementById('convertToInvoiceBtn');
@@ -441,7 +445,7 @@
         applyColumnVisibility();
         updateConvertButtonState();
 
-        // Load Services
+        // Load Thematiques
         fetch("{% url 't_conseil:ApiLoadThematique' %}", {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
@@ -456,6 +460,8 @@
             });
         });
 
+
+
         // Helper for safe parsing
         const parseMoney = (val) => {
              if(!val) return 0;
@@ -467,19 +473,21 @@
         // Load Initial State
         {% for l in lignes_devis %}
         items.push({
-            id: {{ l.id }},
+            id: {{ l.id|default:0 }},
             thematique_id: "{{ l.thematique.id|default:'' }}",
+            specialite_id: "{{ l.specialite.id|default:'' }}",
             description: "{{ l.description|escapejs }}",
             long_description: "{{ l.long_description|default:''|escapejs }}",
             quantity: parseMoney("{{ l.quantite|floatformat:2 }}"),
-            unitPrice: parseMoney("{{ l.montant|floatformat:2 }}") / (parseMoney("{{ l.quantite|floatformat:2 }}") || 1),
+            unitPrice: parseMoney("{{ l.prix_unitaire|floatformat:2 }}"),
             remise_percent: parseMoney("{{ l.remise_percent|floatformat:2 }}"),
             tva_percent: parseMoney("{{ l.tva_percent|floatformat:2 }}") || 0,
             total: parseMoney("{{ l.montant|floatformat:2 }}")
         });
         {% endfor %}
         
-        let editingIndex = -1; // Track which item is being edited
+        let editingIndex = -1; 
+        
         renderItems();
 
         newThematique.addEventListener('change', function() {
@@ -489,12 +497,12 @@
             if(th) {
                 newDesignation.value = th.label;
                 newPrice.value = th.prix;
-                newTva.value = parseFloat(th.default_tva).toFixed(6); // Set pre-calculated decimal
-                newLongDescription.value = th.description || ""; // Pre-fill description
-                // Trigger updates
+                newTva.value = parseFloat(th.default_tva).toFixed(6); 
+                newLongDescription.value = th.description || "";
                 updateInputRowTotal();
             }
         });
+
 
         [newQty, newPrice, newRemise, newTva].forEach(el => {
             if(el) el.addEventListener('input', updateInputRowTotal);
@@ -507,6 +515,47 @@
         if(toggleRemise) toggleRemise.addEventListener('change', () => { updateTotals(); setDirty(true); });
 
         const saveBtn = document.getElementById('saveBtn');
+        if(saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                if(!items.length) return alertify.warning("Aucun service sélectionné.");
+                this.disabled = true;
+                
+                const payload = {
+                    devis_id: devisId,
+                    items: items,
+                    show_tva: document.getElementById('toggleTva').checked,
+                    show_remise: document.getElementById('toggleRemise').checked,
+                    conditions_commerciales: document.getElementById('conditionsCommerciales').value,
+                    entreprise_id: document.getElementById('devisEnterprise').value
+                };
+
+                fetch("{% url 't_conseil:ApiSaveDevisItems' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if(d.status === 'success') {
+                        alertify.success(d.message);
+                        setDirty(false);
+                        setTimeout(() => location.reload(), 800);
+                    } else {
+                        alertify.error(d.message);
+                        this.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alertify.error("Erreur de communication avec le serveur.");
+                    this.disabled = false;
+                });
+            });
+        }
 
         function setDirty(isDirty) {
             hasUnsavedChanges = isDirty;
@@ -594,6 +643,7 @@
                 const itemData = {
                     id: editingIndex > -1 ? items[editingIndex].id : Date.now(),
                     thematique_id: tId,
+                    specialite_id: null,
                     description: d || getTLab(tId),
                     long_description: longDesc,
                     quantity: q,
@@ -623,7 +673,10 @@
             const it = items[idx];
             editingIndex = idx;
             
-            newThematique.value = it.thematique_id;
+            if(it.thematique_id) {
+                newThematique.value = it.thematique_id;
+            }
+            
             newDesignation.value = it.description;
             newLongDescription.value = it.long_description || "";
             newQty.value = it.quantity;
@@ -694,6 +747,7 @@
             return x ? x.label : 'SERVICE';
         }
 
+
         function updateTotals() {
             const sub = items.reduce((a, c) => a + c.total, 0);
             const showTvaOnSummary = toggleTva.checked; // Use the checkbox state for summary
@@ -724,64 +778,6 @@
             document.getElementById('totalAmount').textContent = (sub + totalTva).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DZA';
         }
 
-        if(saveBtn) {
-            saveBtn.addEventListener('click', function() {
-                if(!items.length) return alertify.warning("Aucun article");
-                this.disabled = true;
-                fetch("{% url 't_conseil:ApiSaveDevisItems' %}", {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ 
-                        devis_id: devisId, 
-                        items: items, 
-                        show_tva: document.getElementById('toggleTva').checked,
-                        show_remise: document.getElementById('toggleRemise').checked,
-                        entreprise_id: document.getElementById('devisEnterprise').value,
-                        conditions_commerciales: document.getElementById('conditionsCommerciales').value
-                    })
-                }).then(r => r.json()).then(d => {
-                    if(d.status === 'success') {
-                        alertify.success(d.message);
-                        setDirty(false);
-                        setTimeout(() => location.reload(), 800);
-                    } else {
-                        alertify.error(d.message);
-                        this.disabled = false;
-                    }
-                });
-            });
-        }
-
-        const devisEnterprise = document.getElementById('devisEnterprise');
-        if (devisEnterprise) {
-            devisEnterprise.addEventListener('change', function() {
-                const entId = this.value;
-                if (!entId) return;
-
-                fetch("{% url 't_conseil:ApiFetchEnterpriseTvas' %}?enterprise_id=" + entId, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Rebuild newTva select
-                        if (newTva) {
-                            newTva.innerHTML = '';
-                            data.tvas.forEach(t => {
-                                const opt = new Option(t.valeur + '%', t.valeur.toFixed(6));
-                                if (t.is_default) opt.selected = true;
-                                newTva.add(opt);
-                            });
-                        }
-                    }
-                });
-            });
-        }
-    
         const btnDeleteItems = document.getElementById('btnDeleteItems');
         if(btnDeleteItems) {
             btnDeleteItems.addEventListener('click', () => {

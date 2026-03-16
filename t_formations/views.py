@@ -1237,7 +1237,7 @@ def export_formations(request):
     # Define headers
     headers = [
         'Code Formation', 'Nom Formation', 'Description Formation', 'Durée Formation', 'Partenaire', 'Type de formation', 'Frais Inscription', 'Prix Formation',
-        'Code Spécialité', 'Label Spécialité', 'Durée Spécialité', 'Branche', 'Prix Spécialité',
+        'Code Spécialité', 'Label Spécialité', 'Durée Spécialité', 'Branche', 'Prix Spécialité', 'Version Spécialité', 'Semestres Spécialité', 'Tranches Spécialité', 'Prix Double Diplomation', 'Abréviation Spécialité', "Conditions d'accès",
         'Code Module', 'Code Interne Module', 'Label Module', 'Durée Module', 'Coefficient'
     ]
 
@@ -1252,11 +1252,12 @@ def export_formations(request):
         
         specialites = f.formation_specilite.all()
         if not specialites:
-            rows.append(base_f_row + [''] * 5 + [''] * 5)
+            rows.append(base_f_row + [''] * 11 + [''] * 5)
         else:
             for spec in specialites:
                 base_s_row = [
-                    spec.code, spec.label, spec.duree, spec.branche, spec.prix
+                    spec.code, spec.label, spec.duree, spec.branche, spec.prix,
+                    spec.version, spec.nb_semestre, spec.nb_tranche, spec.prix_double_diplomation, spec.abr, spec.condition_access
                 ]
                 
                 modules = Modules.objects.filter(specialite=spec)
