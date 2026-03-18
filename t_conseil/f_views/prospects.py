@@ -7,7 +7,7 @@ from t_crm.models import Prospets
 
 @login_required(login_url="institut_app:login")
 def ApiListeProspect(request):
-    liste = Prospets.objects.filter(type_prospect = "entreprise").values('id','slug','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email')
+    liste = Prospets.objects.filter(type_prospect="entreprise", context="con", is_client=False).values('id','slug','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -22,6 +22,10 @@ def ApiCreateProspect(request):
         canal = request.POST.get('canal')
         observation = request.POST.get('observation')
         type_prospect = request.POST.get('type_prospect', 'entreprise')
+        
+        adresse = request.POST.get('adresse')
+        wilaya = request.POST.get('wilaya')
+        code_zip = request.POST.get('code_zip')
 
         try:
             Prospets.objects.create(
@@ -34,6 +38,9 @@ def ApiCreateProspect(request):
                 canal=canal,
                 observation=observation,
                 type_prospect=type_prospect,
+                adresse=adresse,
+                wilaya=wilaya,
+                code_zip=code_zip,
                 context='con'
             )
             return JsonResponse({'status': 'success', 'message': 'Prospect créé avec succès.'})

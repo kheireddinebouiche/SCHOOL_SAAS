@@ -134,10 +134,24 @@
                     <button class="btn btn-primary px-4 shadow" onclick="window.print()">
                         <i class="ri-printer-line me-2"></i> Imprimer / PDF
                     </button>
-                    {% if devis.etat == 'envoye' and not has_facture %}
-                    <button class="btn btn-warning px-4" id="btnRevertToDraft">
-                        <i class="ri-refresh-line me-2"></i> Rendre en brouillon
-                    </button>
+                    {% if devis.etat == 'envoye' or devis.etat == 'accepte' %}
+                        {% if not has_facture %}
+                            {% if devis.etat == 'envoye' %}
+                            <button class="btn btn-warning px-4" id="btnRevertToDraft">
+                                <i class="ri-refresh-line me-2"></i> Rendre en brouillon
+                            </button>
+                            <button class="btn btn-success px-4" id="btnAcceptDevis">
+                                <i class="ri-check-line me-2"></i> Accepter
+                            </button>
+                            <button class="btn btn-danger px-4" id="btnRejectDevis">
+                                <i class="ri-close-line me-2"></i> Rejeter
+                            </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-info px-4 text-white" id="convertToInvoiceBtn">
+                                <i class="ri-file-text-line me-2"></i> Convertir en Facture
+                            </button>
+                        {% endif %}
                     {% endif %}
                     
                     {% if devis.etat == 'brouillon' %}
@@ -186,9 +200,21 @@
                                     <span class="premium-info-label">CLIENT</span>
                                     <p class="premium-info-value mb-1">{% if devis.client.entreprise %}{{ devis.client.entreprise }}{% else %}{{ devis.client.nom }} {{ devis.client.prenom }}{% endif %}</p>
                                     <div class="text-muted small">
-                                        {% if devis.client.entreprise %}<span class="text-primary fw-medium"><i class="ri-user-line me-1"></i>{{ devis.client.nom }} {{ devis.client.prenom }}</span><br>{% endif %}
-                                        {{ devis.client.adresse|default:"" }}<br>
+                                        {% if not devis.client.entreprise %}<span class="text-primary fw-medium"><i class="ri-user-line me-1"></i>{{ devis.client.nom }} {{ devis.client.prenom }}</span><br>{% endif %}
+                                        {% if devis.client.adresse %}{{ devis.client.adresse }}<br>{% endif %}
+                                        {% if devis.client.wilaya or devis.client.code_zip %}{{ devis.client.code_zip|default:"" }} {{ devis.client.wilaya|default:"" }}<br>{% endif %}
                                         {{ devis.client.telephone|default:"-" }}
+                                        {% if devis.client.type_prospect == 'entreprise' %}
+                                            {% if devis.client.rc %}<br><strong>RC :</strong> {{ devis.client.rc }}{% endif %}
+                                            {% if devis.client.nif %}<br><strong>NIF :</strong> {{ devis.client.nif }}{% endif %}
+                                            {% if devis.client.nis %}<br><strong>NIS :</strong> {{ devis.client.nis }}{% endif %}
+                                            {% if devis.client.art_imp %}<br><strong>ART :</strong> {{ devis.client.art_imp }}{% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-2 no-print">
+                                        <a href="{% url 't_conseil:DetailsClient' devis.client.slug %}" class="btn btn-sm btn-outline-primary rounded-pill mt-2">
+                                            <i class="ri-user-search-line align-middle me-1"></i> Voir Fiche Client
+                                        </a>
                                     </div>
                                 </div>
                                 <div class="col-md-4 text-md-end">
@@ -296,9 +322,117 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Participants Management Section -->
+            {% if devis.client.type_prospect == 'entreprise' %}
+            <div class="row justify-content-center mt-4 no-print">
+                <div class="col-xl-10">
+                    <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold"><i class="ri-team-line me-2 text-primary"></i>Participants à la Formation</h5>
+                            <button class="btn btn-sm btn-primary px-3 rounded-pill" onclick="openParticipantSelector()">
+                                <i class="ri-user-add-line me-1"></i> Gérer les participants
+                            </button>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted small mb-4">Sélectionnez les collaborateurs de <strong>{{ devis.client.entreprise }}</strong> qui participeront à cette formation.</p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Nom & Prénom</th>
+                                            <th>Poste / Fonction</th>
+                                            <th>Email / Contact</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="participantsTableBody">
+                                        {% for p in participants %}
+                                        <tr>
+                                            <td><div class="fw-bold">{{ p.nom }} {{ p.prenom }}</div></td>
+                                            <td>{{ p.poste|default:"-" }}</td>
+                                            <td>{{ p.email|default:"-" }}</td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-soft-danger rounded-pill" onclick="removeParticipantFromDevis('{{ p.id }}')">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr id="emptyParticipantsRow">
+                                            <td colspan="4" class="text-center py-4 text-muted">Aucun participant lié à ce devis pour le moment.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Modal Conversion -->
+<div class="modal fade" id="convertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 bg-primary text-white p-4">
+                <h5 class="modal-title fw-bold"><i class="ri-exchange-line me-2"></i>Conversion en Facture</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center">
+                     <p class="text-muted fs-14 mb-0">Cette action génèrera une facture définitive basée sur les articles de ce devis.</p>
+                     <input type="hidden" id="selectTvaConversion" value="{{ config.default_tva_percent|stringformat:'f' }}">
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="confirmConversionBtn">Confirmer la transformation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Participant Selection Modal -->
+<div class="modal fade" id="participantSelectorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 bg-primary text-white p-4">
+                <h5 class="modal-title fw-bold"><i class="ri-user-search-line me-2"></i>Sélectionner des Participants</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4">Voici les collaborateurs enregistrés pour <strong>{{ devis.client.entreprise }}</strong>. Cochez ceux qui participent à ce devis.</p>
+                
+                <div id="clientParticipantsList" class="vstack gap-2" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Checkboxes will be injected here -->
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                        <span class="ms-2">Chargement des collaborateurs...</span>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center" style="border-radius: 12px;">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                        Vous ne trouvez pas un collaborateur ? Ajoutez-le d'abord sur la <a href="{% url 't_conseil:DetailsClient' devis.client.slug %}" class="fw-bold text-decoration-underline">fiche client</a>.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="saveSelectedParticipantsBtn">Enregistrer la sélection</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 
 {% block extra_js %}
@@ -334,6 +468,238 @@
                 }, null).set('labels', {ok:'Confirmer', cancel:'Annuler'});
             });
         }
+
+        const acceptBtn = document.getElementById('btnAcceptDevis');
+        if(acceptBtn) {
+            acceptBtn.addEventListener('click', function() {
+                alertify.confirm("Accepter le devis", "Voulez-vous vraiment marquer ce devis comme accepté ? Cela permettra de regrouper les participants.", 
+                function() {
+                    const formData = new FormData();
+                    formData.append('devis_id', '{{ devis.num_devis }}');
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch("{% url 't_conseil:ApiAcceptDevis' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    }).then(r => r.json()).then(d => {
+                        if(d.status === 'success') {
+                            alertify.success(d.message);
+                            setTimeout(() => { window.location.reload(); }, 1000);
+                        } else { alertify.error(d.message); }
+                    });
+                }, null).set('labels', {ok:'Accepter', cancel:'Annuler'});
+            });
+        }
+
+        const rejectBtn = document.getElementById('btnRejectDevis');
+        if(rejectBtn) {
+            rejectBtn.addEventListener('click', function() {
+                alertify.confirm("Rejeter le devis", "Voulez-vous vraiment rejeter ce devis ?", 
+                function() {
+                    const formData = new FormData();
+                    formData.append('devis_id', '{{ devis.num_devis }}');
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch("{% url 't_conseil:ApiRejectDevis' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    }).then(r => r.json()).then(d => {
+                        if(d.status === 'success') {
+                            alertify.success(d.message);
+                            setTimeout(() => { window.location.reload(); }, 1000);
+                        } else { alertify.error(d.message); }
+                    });
+                }, null).set('labels', {ok:'Rejeter', cancel:'Annuler'});
+            });
+        }
+
+        const convertBtn = document.getElementById('convertToInvoiceBtn');
+        if(convertBtn) {
+            convertBtn.addEventListener('click', () => {
+                const modalEl = document.getElementById('convertModal');
+                if(modalEl) {
+                    let modal = bootstrap.Modal.getInstance(modalEl);
+                    if (!modal) {
+                        modal = new bootstrap.Modal(modalEl);
+                    }
+                    modal.show();
+                } else {
+                    alert("Erreur: Le modal de conversion est introuvable.");
+                }
+            });
+        }
+
+        const confirmConversionBtn = document.getElementById('confirmConversionBtn');
+        if(confirmConversionBtn) {
+            confirmConversionBtn.addEventListener('click', function() {
+                this.disabled = true;
+                const fd = new FormData();
+                fd.append('devis_id', '{{ devis.num_devis }}');
+                fd.append('tva', document.getElementById('selectTvaConversion').value);
+                fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                fetch("{% url 't_conseil:ApiStartTransformationDevisToFacture' %}", { 
+                    method: 'POST', 
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: fd 
+                })
+                .then(r=>r.json()).then(d => {
+                    if(d.status==='success') location.href="{% url 't_conseil:ListeDesFactures' %}";
+                    else { alertify.error(d.message); this.disabled=false; }
+                });
+            });
+        }
+
+        // --- Participant Management Logic ---
+        {% if devis.client.type_prospect == 'entreprise' %}
+        let allClientParticipants = [];
+        let currentlyLinkedIds = [
+            {% for p in participants %}"{{ p.id }}",{% endfor %}
+        ];
+
+        window.openParticipantSelector = function() {
+            const modal = new bootstrap.Modal(document.getElementById('participantSelectorModal'));
+            modal.show();
+            
+            fetch("{% url 't_conseil:ApiLoadProspectParticipants' %}?prospect_id={{ devis.client.id }}")
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    allClientParticipants = data.participants;
+                    renderParticipantSelectorList();
+                } else {
+                    alertify.error("Erreur lors du chargement des collaborateurs");
+                }
+            });
+        };
+
+        function renderParticipantSelectorList() {
+            const list = document.getElementById('clientParticipantsList');
+            list.innerHTML = '';
+            
+            if(allClientParticipants.length === 0) {
+                list.innerHTML = '<div class="text-center py-4 text-muted">Aucun collaborateur trouvé pour ce client.</div>';
+                return;
+            }
+
+            allClientParticipants.forEach(p => {
+                const isChecked = currentlyLinkedIds.includes(p.id.toString());
+                const div = document.createElement('div');
+                div.className = 'p-3 border rounded-3 d-flex align-items-center gap-3 bg-white hover-light';
+                div.style.cursor = 'pointer';
+                div.onclick = () => {
+                   const cb = div.querySelector('input');
+                   cb.checked = !cb.checked;
+                };
+
+                div.innerHTML = `
+                    <div class="form-check m-0">
+                        <input class="form-check-input participant-select-cb" type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">${p.nom} ${p.prenom}</div>
+                        <div class="text-muted small">${p.poste || 'Poste non défini'} • ${p.email || 'Pas d\'email'}</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('saveSelectedParticipantsBtn').addEventListener('click', function() {
+            const cbs = document.querySelectorAll('.participant-select-cb:checked');
+            const selectedParticipants = Array.from(cbs).map(cb => {
+                const p = allClientParticipants.find(ap => ap.id == cb.value);
+                return p;
+            });
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enregistrement...';
+
+            fetch("{% url 't_conseil:ApiSaveParticipants' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    devis_id: '{{ devis.num_devis }}',
+                    participants: selectedParticipants
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    alertify.success(data.message);
+                    setTimeout(() => { window.location.reload(); }, 800);
+                } else {
+                    alertify.error(data.message);
+                    this.disabled = false;
+                    this.innerHTML = 'Enregistrer la sélection';
+                }
+            });
+        });
+
+        window.removeParticipantFromDevis = function(pid) {
+            alertify.confirm("Retirer le participant", "Voulez-vous retirer ce collaborateur du devis ?", function() {
+                const remaining = allClientParticipants.filter(p => currentlyLinkedIds.includes(p.id.toString()) && p.id != pid);
+                
+                // If allClientParticipants isn't loaded yet, we fetch current state first or just filter from currentlyLinkedIds
+                // For simplicity, let's use the UI table rows to reconstruct the list if needed, or better, use current participants.
+                // But wait, the API expects the FULL list to sync.
+                
+                // Let's just use the checkbox list logic but triggered programmatically if we want to be clean.
+                // Or easier: fetch current Linked participants from DOM or data
+                
+                const participantsToKeep = [];
+                // We'll use the IDs we already have.
+                const newIds = currentlyLinkedIds.filter(id => id != pid);
+                
+                // We need the participant objects to send to ApiSaveParticipants
+                // Since we don't have all objects at hand if modal was never opened, 
+                // let's fetch them or use a simpler approach.
+                
+                // Actually, let's just use the checkboxes from the modal even if hidden, 
+                // but that's risky if not rendered.
+                
+                // Re-fetch everything and save is safest.
+                fetch("{% url 't_conseil:ApiLoadProspectParticipants' %}?prospect_id={{ devis.client.id }}")
+                .then(r => r.json())
+                .then(data => {
+                    const filtered = data.participants.filter(p => newIds.includes(p.id.toString()));
+                    return fetch("{% url 't_conseil:ApiSaveParticipants' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            devis_id: '{{ devis.num_devis }}',
+                            participants: filtered
+                        })
+                    });
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        alertify.success("Participant retiré");
+                        setTimeout(() => { window.location.reload(); }, 500);
+                    }
+                });
+            }, null).set('labels', {ok:'Retirer', cancel:'Annuler'});
+        };
+        {% endif %}
     });
 </script>
 {% endblock extra_js %}

@@ -6,6 +6,10 @@ from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+import json
+from t_conseil.models import Thematiques, Devis, Participant
+from t_crm.models import Prospets
+from institut_app.models import Entreprise
 
 @login_required(login_url="insitut_app:login")
 @transaction.atomic
@@ -118,16 +122,16 @@ def detailsGroupe(request, pk):
         'groupe' : groupe,
         'students' : students,
         "specialite" : groupe.specialite,
-        "qualification" : groupe.specialite.formation.qualification,
+        "qualification" : groupe.specialite.formation.qualification if groupe.specialite and groupe.specialite.formation else "",
         "date_debut" : groupe.start_date,
         "date_fin" : groupe.end_date,
-        "branche" : groupe.specialite.branche,
-        "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id),
-        "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite.formation.partenaire.logo else "",
+        "branche" : groupe.specialite.branche if groupe.specialite else "",
+        "entreprise_details" : Entreprise.objects.get(id = groupe.specialite.formation.entite_legal.id) if groupe.specialite and groupe.specialite.formation and groupe.specialite.formation.entite_legal else None,
+        "logo_partenaire" : groupe.specialite.formation.partenaire.logo.url if groupe.specialite and groupe.specialite.formation and groupe.specialite.formation.partenaire and groupe.specialite.formation.partenaire.logo else "",
         "documents" : documents,
         #"active_templates": DocumentTemplate.objects.filter(is_active=True), # Filtrer par type si nécessaire, ex: template_type='student_info'
         "active_templates": documents, # Filtrer par type si nécessaire, ex: template_type='student_info'
-        "double_students": students.filter(student__is_double = True)
+        "double_students": students.filter(student__is_double = True),
     }
     return render(request,'tenant_folder/formations/groupe/details_du_groupe.html', context)
 
@@ -229,4 +233,3 @@ def PrintSuivieCours(request):
 
 def PrintPvExamen(request):
     pass
-

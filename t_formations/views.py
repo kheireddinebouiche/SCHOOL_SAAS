@@ -1236,9 +1236,9 @@ def export_formations(request):
 
     # Define headers
     headers = [
-        'Code Formation', 'Nom Formation', 'Description Formation', 'Durée Formation', 'Partenaire', 'Type de formation', 'Frais Inscription', 'Prix Formation',
+        'Code Formation', 'Nom Formation', 'Description Formation', 'Durée Formation', 'Partenaire', 'Type de formation', 'Qualification Formation', 'Frais Inscription', 'Prix Formation',
         'Code Spécialité', 'Label Spécialité', 'Durée Spécialité', 'Branche', 'Prix Spécialité', 'Version Spécialité', 'Semestres Spécialité', 'Tranches Spécialité', 'Prix Double Diplomation', 'Abréviation Spécialité', "Conditions d'accès",
-        'Code Module', 'Code Interne Module', 'Label Module', 'Durée Module', 'Coefficient'
+        'Code Module', 'Code Interne Module', 'Label Module', 'Durée Module', 'Coefficient', 'Semestre Module'
     ]
 
     def get_rows_for_formation(f):
@@ -1247,12 +1247,13 @@ def export_formations(request):
         base_f_row = [
             f.code, f.nom, f.description, f.duree, partenaire_val,
             f.type_formation if f.type_formation else '',
+            f.qualification if f.qualification else '',
             f.frais_inscription, f.prix_formation
         ]
         
         specialites = f.formation_specilite.all()
         if not specialites:
-            rows.append(base_f_row + [''] * 11 + [''] * 5)
+            rows.append(base_f_row + [''] * 12 + [''] * 6)
         else:
             for spec in specialites:
                 base_s_row = [
@@ -1262,11 +1263,13 @@ def export_formations(request):
                 
                 modules = Modules.objects.filter(specialite=spec)
                 if not modules:
-                    rows.append(base_f_row + base_s_row + [''] * 5)
+                    rows.append(base_f_row + base_s_row + [''] * 6)
                 else:
                     for mod in modules:
+                        programme = ProgrammeFormation.objects.filter(module=mod, specialite=spec).first()
+                        semestre = programme.semestre if programme else ''
                         mod_row = [
-                            mod.code, mod.code_interne, mod.label, mod.duree, mod.coef
+                            mod.code, mod.code_interne, mod.label, mod.duree, mod.coef, semestre
                         ]
                         rows.append(base_f_row + base_s_row + mod_row)
         return rows

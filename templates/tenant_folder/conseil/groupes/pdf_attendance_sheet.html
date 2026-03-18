@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Feuille d'émargement - {{ session.date|date:"d/m/Y" }}</title>
+    <style>
+        @page {
+            size: landscape;
+            margin: 1cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #333;
+            line-height: 1.4;
+            font-size: 10pt;
+        }
+        .header {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 15px;
+        }
+        .header-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        .header-left {
+            width: 25%;
+            text-align: left;
+        }
+        .header-center {
+            width: 50%;
+            text-align: center;
+        }
+        .header-right {
+            width: 25%;
+            text-align: right;
+        }
+        .header-center h1 {
+            margin: 0;
+            color: #6366f1;
+            font-size: 18pt;
+        }
+        .logo-img {
+            max-height: 70px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+        .info-grid {
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            display: block;
+        }
+        .info-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .info-col {
+            display: table-cell;
+            width: 50%;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            width: 100px;
+            display: inline-block;
+        }
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .attendance-table th {
+            background-color: #6366f1;
+            color: white;
+            text-align: left;
+            padding: 10px;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+        .attendance-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px 10px;
+            vertical-align: middle;
+        }
+        .attendance-table tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+        .col-signature {
+            width: 150px;
+        }
+        .col-observation {
+            width: 200px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 8pt;
+            color: #999;
+            text-align: center;
+        }
+        .signature-box {
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-cell header-left">
+            {% if client_logo_path %}
+                <img src="{{ client_logo_path }}" class="logo-img" alt="Client Logo">
+            {% endif %}
+        </div>
+        <div class="header-cell header-center">
+            <h1>FEUILLE D'ÉMARGEMENT</h1>
+            <div style="margin-top: 5px; font-weight: bold; font-size: 12pt;">
+                Groupe : {{ groupe.nom }}
+            </div>
+            <div style="font-size: 10pt; color: #666; margin-top: 5px;">
+                {{ session.date|date:"d/m/Y" }} | {{ session.heure_debut|time:"H:i" }} - {{ session.heure_fin|time:"H:i" }}
+            </div>
+        </div>
+        <div class="header-cell header-right">
+            {% if enterprise_logo_path %}
+                <img src="{{ enterprise_logo_path }}" class="logo-img" alt="Enterprise Logo">
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-row">
+            <div class="info-col">
+                <span class="info-label">Thématique :</span>
+                <span>{{ session.thematique.label }}</span>
+            </div>
+            <div class="info-col">
+                <span class="info-label">Formateur :</span>
+                <span>{{ session.formateur|default:"Non assigné" }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-col">
+                <span class="info-label">Client :</span>
+                <span>
+                    {% if groupe.devis.client.type_prospect == 'entreprise' %}
+                        {{ groupe.devis.client.entreprise }}
+                    {% else %}
+                        {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-col">
+                <span class="info-label">Lieu :</span>
+                <span>{{ groupe.lieu_formation|default:"Non spécifié" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <table class="attendance-table">
+        <thead>
+            <tr>
+                <th style="width: 40px;">N°</th>
+                <th>Nom & Prénom</th>
+                <th class="col-signature">Signature</th>
+                <th class="col-observation">Observation</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gcp in participants %}
+            <tr>
+                <td style="text-align: center;">{{ forloop.counter }}</td>
+                <td style="font-weight: bold;">{{ gcp.participant.nom }} {{ gcp.participant.prenom }}</td>
+                <td class="col-signature"><div class="signature-box"></div></td>
+                <td class="col-observation"></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 20px; color: #999;">
+                    Aucun participant inscrit dans ce groupe.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document généré le {{ now|date:"d/m/Y à H:i" }} — {{ tenant.nom }}
+    </div>
+</body>
+</html>

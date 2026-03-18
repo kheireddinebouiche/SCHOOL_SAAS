@@ -79,6 +79,43 @@
         border-radius: 2rem;
         padding: 0.25rem 1rem;
     }
+
+    .nav-pills-custom .nav-link {
+        color: #64748b;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .nav-pills-custom .nav-link:hover {
+        background: rgba(59, 130, 246, 0.05);
+        color: #3b82f6;
+    }
+
+    .nav-pills-custom .nav-link.active {
+        background: #3b82f6;
+        color: white;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .kpi-card {
+        border-left: 4px solid #3b82f6;
+    }
+
+    .kpi-card.invoiced { border-color: #3b82f6; }
+    .kpi-card.paid { border-color: #10b981; }
+    .kpi-card.balance { border-color: #f59e0b; }
+
+    .avatar-xl {
+        width: 80px;
+        height: 80px;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 
 <div class="main-content">
@@ -117,229 +154,279 @@
             </div>
             <!-- end page title -->
 
-            <div class="row mb-4">
-                <!-- Informations personnelles -->
-                <div class="col-lg-4">
-                    <div class="card glass-card h-100 overflow-hidden">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-user-3-line text-primary fs-4"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold text-primary mb-0">Informations Contact</h5>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm btn-rounded shadow-sm" id="udapteProspectDetailsBtn">
-                                    <i class="ri-edit-line"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-user-line text-primary"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Nom et Prénom</small>
-                                    <span class="fw-semibold" id="nom_prenom">{{ client.nom }} {{ client.prenom }}</span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-mail-line text-info"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Email</small>
-                                    <span class="fw-semibold" id="email">{{ client.email }}</span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-phone-line text-success"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Téléphone</small>
-                                    <span class="fw-semibold" id="phone">{{ client.telephone }}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-calendar-line text-warning"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Client depuis le</small>
-                                    <span class="fw-semibold" id="convertit_date">{{ client.convertit_date|date:"d/m/Y" }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section Informations Entreprise -->
+             <!-- Dashboard Header -->
+            <div class="row align-items-center mb-4">
                 <div class="col-lg-8">
-                    <div class="card glass-card h-100 overflow-hidden">
-                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-building-line text-info fs-4"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold text-info mb-0">Informations Entreprise</h5>
-                                </div>
-                                <button type="button" class="btn btn-info btn-sm btn-rounded shadow-sm text-white" id="updateEtsDetails">
-                                    <i class="ri-edit-line me-1"></i> Modifier
-                                </button>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-xl bg-primary bg-opacity-10 text-primary rounded-circle me-4 fw-bold overflow-hidden" id="header_avatar_container">
+                            {% if client.logo_entreprise %}
+                                <img src="{{ client.logo_entreprise.url }}" class="w-100 h-100 object-fit-cover" id="header_logo_img">
+                            {% else %}
+                                <span id="header_initials">{{ client.nom|slice:":1" }}{{ client.prenom|slice:":1" }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <h2 class="mb-0 fw-bold" id="header_nom_prenom">{{ client.nom }} {{ client.prenom }}</h2>
+                                <span class="badge-client small"><i class="ri-checkbox-circle-line me-1"></i>Client Confirmé</span>
+                            </div>
+                            <div class="d-flex gap-3 text-muted">
+                                <span><i class="ri-building-line me-1"></i>{{ client.entreprise|default:"Individuel" }}</span>
+                                <span><i class="ri-map-pin-line me-1"></i>Détails Client</span>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="row w-100">
-                                <div class="col-12 mb-4">
-                                    <div class="d-flex flex-column align-items-center justify-content-center bg-light rounded-3 p-4 mb-3">
-                                        <div class="icon-circle bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                                            <i class="ri-building-line text-info fs-2"></i>
-                                        </div>
-                                        <div class="text-center">
-                                            <small class="text-muted d-block mb-1">Nom de l'entreprise</small>
-                                            <h5 class="fw-semibold mb-0" id="entreprise_nom">{{ client.entreprise|default:"-" }}</h5>
-                                        </div>
+                    </div>
+                </div>
+                <!-- KPI Cards -->
+                <div class="col-lg-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="glass-card p-3 kpi-card invoiced">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted small mb-1">Total Facturé</p>
+                                        <h4 class="fw-bold mb-0" id="totalInvoiced">0.00 DA</h4>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 p-2 rounded-3">
+                                        <i class="ri-bill-line text-primary fs-4"></i>
                                     </div>
                                 </div>
-                                <div class="col-12">
-                                    <div class="d-flex flex-column bg-light rounded-3 p-3">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                                <i class="ri-file-text-line text-warning fs-5"></i>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="glass-card p-3 kpi-card paid">
+                                <div>
+                                    <p class="text-muted small mb-1">Total Payé</p>
+                                    <h5 class="fw-bold mb-0 text-success" id="totalPaid">0.00 DA</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="glass-card p-3 kpi-card balance">
+                                <div>
+                                    <p class="text-muted small mb-1">Solde Restant</p>
+                                    <h5 class="fw-bold mb-0 text-warning" id="totalBalance">0.00 DA</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabbed Navigation -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <ul class="nav nav-pills nav-pills-custom gap-2 mb-4 p-2 bg-white rounded-3 shadow-sm border overflow-auto flex-nowrap" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-overview-tab" data-bs-toggle="pill" data-bs-target="#pills-overview" type="button" role="tab"><i class="ri-dashboard-line me-2"></i>Résumé</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-billing-tab" data-bs-toggle="pill" data-bs-target="#pills-billing" type="button" role="tab"><i class="ri-bank-card-line me-2"></i>Facturation</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-team-tab" data-bs-toggle="pill" data-bs-target="#pills-team" type="button" role="tab"><i class="ri-team-line me-2"></i>Équipe</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-banking-tab" data-bs-toggle="pill" data-bs-target="#pills-banking" type="button" role="tab"><i class="ri-bank-line me-2"></i>Bancaire</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-activity-tab" data-bs-toggle="pill" data-bs-target="#pills-activity" type="button" role="tab"><i class="ri-history-line me-2"></i>Journal</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="pills-tabContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="pills-overview" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-lg-5">
+                                    <div class="card glass-card h-100 shadow-none border">
+                                        <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                            <h5 class="fw-bold mb-0">Informations de Contact</h5>
+                                            <button type="button" class="btn btn-soft-primary btn-sm rounded-pill" id="udapteProspectDetailsBtn">
+                                                <i class="ri-edit-line me-1"></i>Modifier
+                                            </button>
+                                        </div>
+                                        <div class="card-body p-4 pt-0">
+                                            <div class="vstack gap-4 mt-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3 me-3"><i class="ri-user-line fs-5"></i></div>
+                                                    <div><small class="text-muted d-block">Identité</small><span class="fw-semibold text-dark" id="nom_prenom">{{ client.nom }} {{ client.prenom }}</span></div>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-info bg-opacity-10 text-info p-2 rounded-3 me-3"><i class="ri-mail-line fs-5"></i></div>
+                                                    <div><small class="text-muted d-block">E-mail Professionnel</small><span class="fw-semibold text-dark" id="email">{{ client.email }}</span></div>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-success bg-opacity-10 text-success p-2 rounded-3 me-3"><i class="ri-phone-line fs-5"></i></div>
+                                                    <div><small class="text-muted d-block">Ligne Directe</small><span class="fw-semibold text-dark" id="phone">{{ client.telephone }}</span></div>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3 me-3"><i class="ri-calendar-line fs-5"></i></div>
+                                                    <div><small class="text-muted d-block">Conversion Client</small><span class="fw-semibold text-dark">{{ client.convertit_date|date:"d F Y" }}</span></div>
+                                                </div>
                                             </div>
-                                            <small class="text-muted fw-bold">Observations</small>
                                         </div>
-                                        <p class="mt-2 text-muted mb-0" id="entreprise_observation" style="white-space: pre-line;">{{ client.observation|default:"Aucune observation" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-lg-7">
+                                    <div class="card glass-card h-100 shadow-none border">
+                                        <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                            <h5 class="fw-bold mb-0">Données Entreprise</h5>
+                                            <button type="button" class="btn btn-soft-info btn-sm rounded-pill" id="updateEtsDetails">
+                                                <i class="ri-edit-line me-1"></i>Paramètres
+                                            </button>
+                                        </div>
+                                        <div class="card-body p-4 pt-0">
+                                            <div class="row g-4 mt-1">
+                                                <div class="col-md-6">
+                                                    <div class="p-3 bg-light rounded-3 border-start border-4 border-info">
+                                                        <small class="text-muted d-block mb-1">Dénomination</small>
+                                                        <h6 class="fw-bold mb-0" id="entreprise_nom">{{ client.entreprise|default:"-" }}</h6>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="p-3 bg-light rounded-3">
+                                                        <small class="text-muted d-block mb-1">Registre de Commerce</small>
+                                                        <h6 class="fw-bold mb-0" id="ets_rc">{{ client.rc|default:"-" }}</h6>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="p-2 border rounded-3 text-center">
+                                                        <small class="text-muted d-block mb-1">NIF</small>
+                                                        <span class="small fw-semibold" id="ets_nif">{{ client.nif|default:"-" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="p-2 border rounded-3 text-center">
+                                                        <small class="text-muted d-block mb-1">NIS</small>
+                                                        <span class="small fw-semibold" id="ets_nis">{{ client.nis|default:"-" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="p-2 border rounded-3 text-center">
+                                                        <small class="text-muted d-block mb-1">Article</small>
+                                                        <span class="small fw-semibold" id="ets_art">{{ client.art_imp|default:"-" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="p-3 bg-light rounded-3 d-flex align-items-center">
+                                                        <div class="bg-secondary bg-opacity-10 text-secondary p-2 rounded-3 me-3">
+                                                            <i class="ri-map-pin-line fs-5"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <small class="text-muted d-block mb-1">Adresse Siège</small>
+                                                            <h6 class="fw-bold mb-0" id="ets_adresse">{{ client.adresse|default:"-" }}</h6>
+                                                            <small class="text-muted fw-medium" id="ets_wilaya_zip">
+                                                                {% if client.code_zip or client.wilaya %}
+                                                                    {{ client.code_zip|default:"" }} {{ client.wilaya|default:"" }}
+                                                                {% endif %}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 mt-4">
+                                                    <p class="text-muted mb-1 small uppercase fw-bold">Note Administrative</p>
+                                                    <div class="p-3 bg-light rounded-3 italic" id="entreprise_observation" style="white-space: pre-line;">{{ client.observation|default:"Aucune observation enregistrée." }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Devis et Factures -->
-            <div class="row mb-4">
-                <div class="col-lg-6">
-                    <div class="card glass-card h-100 overflow-hidden">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-file-list-3-line text-primary fs-4"></i>
+                        <!-- Billing Tab -->
+                        <div class="tab-pane fade" id="pills-billing" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-lg-6">
+                                    <div class="card glass-card shadow-none border h-100">
+                                        <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                            <h5 class="fw-bold mb-0">Historique des Devis</h5>
+                                            <a href="{% url 't_conseil:AddNewDevis' %}?client={{ client.id }}" class="btn btn-primary btn-sm rounded-pill"><i class="ri-add-line me-1"></i>Créer</a>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="table-responsive">
+                                                <table class="table table-premium align-middle mb-0">
+                                                    <thead>
+                                                        <tr><th>Numéro</th><th>Montant</th><th>Statut</th></tr>
+                                                    </thead>
+                                                    <tbody id="listeDevisProspect"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <h5 class="card-title fw-bold text-primary mb-0">Devis</h5>
                                 </div>
-                                <a href="{% url 't_conseil:AddNewDevis' %}?client={{ client.id }}" class="btn btn-primary btn-sm btn-rounded shadow-sm">
-                                    <i class="ri-add-line me-1"></i> Nouveau Devis
-                                </a>
+                                <div class="col-lg-6">
+                                    <div class="card glass-card shadow-none border h-100">
+                                        <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                            <h5 class="fw-bold mb-0">Portefeuille Factures</h5>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="table-responsive">
+                                                <table class="table table-premium align-middle mb-0">
+                                                    <thead>
+                                                        <tr><th>Facture</th><th>Émission</th><th>État</th></tr>
+                                                    </thead>
+                                                    <tbody id="listeFacturesProspect"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-premium align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>Numéro</th>
-                                            <th>Montant</th>
-                                            <th>Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeDevisProspect"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="col-lg-6">
-                    <div class="card glass-card h-100 overflow-hidden">
-                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-bill-line text-info fs-4"></i>
+                        <!-- Team Tab -->
+                        <div class="tab-pane fade" id="pills-team" role="tabpanel">
+                            <div class="card glass-card shadow-none border">
+                                <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                    <h5 class="fw-bold mb-0">Participants & Points de Contact</h5>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-pill" id="addParticipantBtn"><i class="ri-add-line me-1"></i>Ajouter</button>
+                                </div>
+                                <div class="card-body p-4 pt-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-premium align-middle mb-0">
+                                            <thead>
+                                                <tr><th>Collaborateur</th><th>Fonction</th><th>Coordonnées</th><th class="text-end">Actions</th></tr>
+                                            </thead>
+                                            <tbody id="listeParticipants"></tbody>
+                                        </table>
                                     </div>
-                                    <h5 class="card-title fw-bold text-info mb-0">Factures</h5>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-premium align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>Numéro</th>
-                                            <th>Date</th>
-                                            <th>Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeFacturesProspect"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Participants -->
-            <div class="row mb-4" id="participantsSection" {% if client.type_prospect != 'entreprise' %}style="display: none;"{% endif %}>
-                <div class="col-12">
-                    <div class="card glass-card h-100 overflow-hidden">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="ri-group-line text-primary fs-4"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold text-primary mb-0">Participants</h5>
+                        <!-- Banking Tab -->
+                        <div class="tab-pane fade" id="pills-banking" role="tabpanel">
+                            <div class="card glass-card shadow-none border">
+                                <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                    <h5 class="fw-bold mb-0">Configurations Bancaires</h5>
+                                    <button type="button" class="btn btn-info btn-sm rounded-pill text-white" id="addBankAccountBtn"><i class="ri-add-line me-1"></i>Nouveau Compte</button>
                                 </div>
-                                <button type="button" class="btn btn-primary btn-sm btn-rounded shadow-sm" id="addParticipantBtn">
-                                    <i class="ri-add-line me-1"></i> Nouveau Participant
-                                </button>
+                                <div class="card-body p-4 pt-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-premium align-middle mb-0">
+                                            <thead>
+                                                <tr><th>Établissement</th><th>RIB / Compte</th><th>SWIFT</th><th>Agence</th><th class="text-end">Actions</th></tr>
+                                            </thead>
+                                            <tbody id="listeComptesBancaires"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-premium align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>Nom & Prénom</th>
-                                            <th>Poste</th>
-                                            <th>Téléphone</th>
-                                            <th class="text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeParticipants"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Notes -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card glass-card overflow-hidden">
-                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                        <i class="ri-sticky-note-line text-warning fs-4"></i>
-                                    </div>
-                                    <h5 class="card-title fw-bold text-warning mb-0">Notes & Observations</h5>
+                        <!-- Activity Tab -->
+                        <div class="tab-pane fade" id="pills-activity" role="tabpanel">
+                            <div class="card glass-card shadow-none border">
+                                <div class="card-header border-0 bg-transparent px-4 py-3 d-flex justify-content-between align-items-center">
+                                    <h5 class="fw-bold mb-0">Journal de Bord</h5>
+                                    <button type="button" class="btn btn-warning btn-sm rounded-pill" id="addNoteModalBtn"><i class="ri-add-line me-1"></i>Nouvelle Note</button>
                                 </div>
-                                <button type="button" class="btn btn-warning btn-sm btn-rounded shadow-sm" id="addNoteModalBtn">
-                                    <i class="ri-add-line me-1"></i> Nouvelle note
-                                </button>
+                                <div class="card-body p-4">
+                                    <div class="vstack gap-3" id="ListeDesNotes"></div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="vstack gap-3" id="ListeDesNotes"></div>
                         </div>
                     </div>
                 </div>
@@ -376,6 +463,106 @@
     </div>
 </div>
 
+<!-- Entreprise Modal -->
+<div class="modal fade" id="entrepriseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10">
+                <h5 class="modal-title text-info fw-bold">Modifier l'entreprise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nom de l'entreprise</label>
+                        <input type="text" id="entreprise_nom_input" class="form-control" value="{{ client.entreprise }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">RC</label>
+                        <input type="text" id="ets_rc_input" class="form-control" value="{{ client.rc }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">NIF</label>
+                        <input type="text" id="ets_nif_input" class="form-control" value="{{ client.nif }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">NIS</label>
+                        <input type="text" id="ets_nis_input" class="form-control" value="{{ client.nis }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Article</label>
+                        <input type="text" id="ets_art_input" class="form-control" value="{{ client.art_imp }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Adresse</label>
+                        <input type="text" id="ets_adresse_input" class="form-control" value="{{ client.adresse|default:"" }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Wilaya</label>
+                        <input type="text" id="ets_wilaya_input" class="form-control" value="{{ client.wilaya|default:"" }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Code Postal</label>
+                        <input type="text" id="ets_code_zip_input" class="form-control" value="{{ client.code_zip|default:"" }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Logo de l'entreprise</label>
+                        <input type="file" id="logo_entreprise_input" class="form-control" accept="image/*">
+                        <div class="form-text">Format recommandé : PNG ou JPG (Carré de préférence).</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Observations</label>
+                        <textarea id="entreprise_observation_input" class="form-control" rows="3">{{ client.observation }}</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light btn-rounded" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-info btn-rounded text-white" id="saveEntrepriseBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bank Account Modal -->
+<div class="modal fade" id="bankAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10">
+                <h5 class="modal-title text-info fw-bold" id="bankAccountModalLabel">Compte Bancaire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="bankAccountForm">
+                    <input type="hidden" id="accId">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Nom de la Banque</label>
+                            <input type="text" class="form-control" id="accBankName" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">RIB / N° Compte</label>
+                            <input type="text" class="form-control" id="accRib" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Code SWIFT (Optionnel)</label>
+                            <input type="text" class="form-control" id="accSwift">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Adresse de la Banque</label>
+                            <textarea class="form-control" id="accBankAddress" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light btn-rounded" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-info btn-rounded text-white" id="saveBankAccountBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Participant Modal -->
 <div class="modal fade" id="participantModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -389,11 +576,11 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nom</label>
-                            <input type="text" class="form-control" id="pNom">
+                            <input type="text" class="form-control" id="pNom" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Prénom</label>
-                            <input type="text" class="form-control" id="pPrenom">
+                            <input type="text" class="form-control" id="pPrenom" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Email</label>
@@ -418,9 +605,98 @@
     </div>
 </div>
 
+<!-- Modal de modification du contact -->
+<div class="modal fade" id="editProspectModal" tabindex="-1" aria-labelledby="editProspectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-edit-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="editProspectModalLabel">
+                            Modifier les informations de contact
+                        </h5>
+                        <p class="text-muted small mb-0">Modification des informations personnelles du client</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-lg mx-auto mb-3">
+                        <div class="avatar-title bg-primary bg-opacity-10 text-primary display-5 rounded-circle">
+                            <i class="ri-user-settings-line"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-primary mb-3">Modification du contact</h4>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label fw-medium">Nom</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light">
+                                    <i class="ri-user-line text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="nomInputUpdate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label fw-medium">Prénom</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light">
+                                    <i class="ri-user-line text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="prenomInputUpdate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label fw-medium">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light">
+                                    <i class="ri-mail-line text-muted"></i>
+                                </span>
+                                <input type="email" class="form-control border-0 bg-light py-2" id="emailInputUpdate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label fw-medium">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light">
+                                    <i class="ri-phone-line text-muted"></i>
+                                </span>
+                                <input type="tel" class="form-control border-0 bg-light py-2" id="telephoneInputUpdate">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-center w-100">
+                    <button type="button" class="btn btn-light px-4 py-2 w-100" data-bs-dismiss="modal">
+                        <i class="ri-close-line me-2"></i>Annuler
+                    </button>
+                    <button type="button" id="validateUpdateProspectDetailsBtn" class="btn btn-primary px-4 py-2 w-100">
+                        <i class="ri-save-line me-2"></i>Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function(){
     const id = "{{ pk }}";
+    let currentParticipantId = null;
 
     function loadNotes(){
         $.ajax({
@@ -457,7 +733,7 @@ $(document).ready(function(){
                     data.forEach(item => {
                         html += `
                             <tr>
-                                <td><a href="/conseil/configure-devis/${item.num_devis}/" class="fw-bold text-primary">${item.num_devis}</a></td>
+                                <td><a href="/conseil/details-devis/${item.num_devis}/" class="fw-bold text-primary">${item.num_devis}</a></td>
                                 <td>${item.montant} DA</td>
                                 <td><span class="badge bg-primary-subtle text-primary">${item.etat}</span></td>
                             </tr>`;
@@ -480,7 +756,7 @@ $(document).ready(function(){
                     data.forEach(item => {
                         html += `
                             <tr>
-                                <td><a href="/conseil/facture/${item.id}/" class="fw-bold text-info">${item.num_facture}</a></td>
+                                <td><a href="/conseil/details-facture/${item.num_facture}/" class="fw-bold text-info">${item.num_facture}</a></td>
                                 <td>${item.date_emission}</td>
                                 <td><span class="badge bg-info-subtle text-info">${item.etat}</span></td>
                             </tr>`;
@@ -493,6 +769,18 @@ $(document).ready(function(){
         });
     }
 
+    function loadFinancials(){
+        $.ajax({
+            url: "{% url 't_conseil:ApiLoadProspectFinancials' %}",
+            data: {'id_prospect': id},
+            success: function(data){
+                $('#totalInvoiced').text(data.total_invoiced.toLocaleString() + ' DA');
+                $('#totalPaid').text(data.total_paid.toLocaleString() + ' DA');
+                $('#totalBalance').text(data.balance.toLocaleString() + ' DA');
+            }
+        });
+    }
+
     function loadParticipants() {
         $.ajax({
             url: "{% url 't_conseil:ApiLoadProspectParticipants' %}",
@@ -501,21 +789,103 @@ $(document).ready(function(){
                 if (response.status === 'success') {
                     const container = $('#listeParticipants');
                     container.empty();
-                    response.participants.forEach(p => {
+                    if (response.participants && response.participants.length > 0) {
+                        response.participants.forEach(p => {
+                            container.append(`
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">${p.nom} ${p.prenom}</div>
+                                        <small class="text-muted">${p.email || ''}</small>
+                                    </td>
+                                    <td>${p.poste || '-'}</td>
+                                    <td>${p.telephone || '-'}</td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-soft-info btn-sm edit-participant" data-id="${p.id}"><i class="ri-pencil-line"></i></button>
+                                            <button class="btn btn-soft-danger btn-sm delete-participant" data-id="${p.id}"><i class="ri-delete-bin-line"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>`);
+                        });
+                    } else {
+                        container.append('<tr><td colspan="4" class="text-center text-muted">Aucun participant enregistré</td></tr>');
+                    }
+                }
+            }
+        });
+    }
+
+    function loadBankAccounts() {
+        $.ajax({
+            url: "{% url 't_conseil:ApiLoadBankAccounts' %}",
+            type: 'GET',
+            data: { 'id_prospect': id },
+            success: function(response) {
+                const container = $('#listeComptesBancaires');
+                container.empty();
+                if (response && response.length > 0) {
+                    response.forEach(acc => {
                         container.append(`
                             <tr>
-                                <td>
-                                    <div class="fw-bold">${p.nom} ${p.prenom}</div>
-                                    <small class="text-muted">${p.email || ''}</small>
-                                </td>
-                                <td>${p.poste || '-'}</td>
-                                <td>${p.telephone || '-'}</td>
+                                <td><div class="fw-semibold text-info">${acc.bank_name}</div></td>
+                                <td><code>${acc.rib}</code></td>
+                                <td>${acc.swift || '-'}</td>
+                                <td><small class="text-muted">${acc.bank_address || '-'}</small></td>
                                 <td class="text-end">
-                                    <button class="btn btn-soft-danger btn-sm delete-participant" data-id="${p.id}"><i class="ri-delete-bin-line"></i></button>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-soft-info btn-sm edit-account" data-id="${acc.id}"><i class="ri-pencil-line"></i></button>
+                                        <button class="btn btn-soft-danger btn-sm delete-account" data-id="${acc.id}"><i class="ri-delete-bin-line"></i></button>
+                                    </div>
                                 </td>
-                            </tr>`);
+                            </tr>
+                        `);
                     });
+                } else {
+                    container.append('<tr><td colspan="5" class="text-center text-muted">Aucun compte bancaire enregistré</td></tr>');
                 }
+            }
+        });
+    }
+
+    function loadPersonalInfos() {
+        $.ajax({
+            url : "{% url 't_crm:ApiLoadEntrepriseProspectInfo' %}",
+            dataType : 'JSON',
+            type : 'GET',
+            data : {'id_prospect' : id},
+            success : function(data){
+                $('#nom_prenom').text(data.nom + ' ' + data.prenom);
+                $('#header_nom_prenom').text(data.nom + ' ' + data.prenom);
+                $('#email').text(data.email);
+                $('#phone').text(data.telephone);
+                $('#entreprise_nom').text(data.entreprise);
+                $('#entreprise_observation').text(data.observation || '-') ;
+                
+                $('#ets_rc').text(data.rc || '-');
+                $('#ets_nif').text(data.nif || '-');
+                $('#ets_nis').text(data.nis || '-');
+                $('#ets_art').text(data.art_imp || '-');
+                $('#ets_adresse').text(data.adresse || '-');
+                $('#ets_wilaya_zip').text((data.code_zip || '') + ' ' + (data.wilaya || ''));
+
+                if(data.logo_entreprise_url) {
+                    $('#header_avatar_container').html(`<img src="${data.logo_entreprise_url}" class="w-100 h-100 object-fit-cover" id="header_logo_img">`);
+                }
+
+                $('#nomInputUpdate').val(data.nom);
+                $('#prenomInputUpdate').val(data.prenom);
+                $('#emailInputUpdate').val(data.email);
+                $('#telephoneInputUpdate').val(data.telephone);
+
+                $('#entreprise_nom_input').val(data.entreprise);
+                $('#entreprise_observation_input').val(data.observation);
+                $('#ets_rc_input').val(data.rc);
+                $('#ets_nif_input').val(data.nif);
+                $('#ets_nis_input').val(data.nis);
+                $('#ets_art_input').val(data.art_imp);
+                $('#ets_adresse_input').val(data.adresse);
+                $('#ets_wilaya_input').val(data.wilaya);
+                $('#ets_code_zip_input').val(data.code_zip);
             }
         });
     }
@@ -545,13 +915,251 @@ $(document).ready(function(){
     });
 
     $(document).on('click', '#addNoteModalBtn', function(){ $('#addNoteModal').modal('show'); });
-    $(document).on('click', '#addParticipantBtn', function(){ $('#participantModal').modal('show'); });
+    $(document).on('click', '#addParticipantBtn', function(){ 
+        currentParticipantId = null;
+        $('#participantForm')[0].reset();
+        $('#participantModalLabel').text('Nouveau Participant');
+        $('#participantModal').modal('show'); 
+    });
+
+    $('#saveParticipantBtn').on('click', function() {
+        const data = {
+            id: currentParticipantId,
+            prospect_id: id,
+            nom: $('#pNom').val(),
+            prenom: $('#pPrenom').val(),
+            email: $('#pEmail').val(),
+            telephone: $('#pTel').val(),
+            poste: $('#pPoste').val()
+        };
+
+        if(!data.nom || !data.prenom) {
+            alertify.error("Le nom et le prénom sont obligatoires");
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 't_conseil:ApiSaveParticipant' %}",
+            type: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.status === 'success') {
+                    alertify.success(response.message);
+                    $('#participantModal').modal('hide');
+                    loadParticipants();
+                } else {
+                    alertify.error(response.message);
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '.edit-participant', function() {
+        const pId = $(this).data('id');
+        $.ajax({
+            url: "{% url 't_conseil:ApiLoadProspectParticipants' %}",
+            data: { 'prospect_id': id },
+            success: function(response) {
+                if (response.status === 'success') {
+                    const p = response.participants.find(x => x.id == pId);
+                    if (p) {
+                        currentParticipantId = p.id;
+                        $('#pNom').val(p.nom);
+                        $('#pPrenom').val(p.prenom);
+                        $('#pEmail').val(p.email);
+                        $('#pPoste').val(p.poste);
+                        $('#pTel').val(p.telephone);
+                        $('#participantModalLabel').text('Modifier le Participant');
+                        $('#participantModal').modal('show');
+                    }
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-participant', function() {
+        const pId = $(this).data('id');
+        alertify.confirm("Supprimer le participant", "Êtes-vous sûr de vouloir supprimer ce participant ?", 
+            function() {
+                $.ajax({
+                    url: "{% url 't_conseil:ApiDeleteParticipant' %}",
+                    type: 'POST',
+                    data: {
+                        'participant_id': pId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            loadParticipants();
+                        } else {
+                            alertify.error(response.message);
+                        }
+                    }
+                });
+            }, null
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+    });
 
     // Initial load
     loadNotes();
     loadDevis();
     loadFactures();
-    if("{{ client.type_prospect }}" === "entreprise") loadParticipants();
+    loadFinancials();
+    loadPersonalInfos();
+    if("{{ client.type_prospect }}" === "entreprise") {
+        $('#participantsSection').show();
+        $('#bankAccountsSection').show();
+        loadParticipants();
+        loadBankAccounts();
+    }
+
+    $(document).on('click', '#updateEtsDetails', function(){
+        $('#entrepriseModal').modal('show');
+    });
+
+    $(document).on('click', '#udapteProspectDetailsBtn', function(){
+        $('#editProspectModal').modal('show');
+    });
+
+    $(document).on('click','#validateUpdateProspectDetailsBtn', function(){
+        $.ajax({
+            url : "{% url 't_crm:ApiUpdateContactInfo' %}",
+            dataType: 'JSON',
+            type : "POST",
+            data : {
+                'id_prospect' : id,
+                'nomUpdate' : $('#nomInputUpdate').val(),
+                'prenomUpdate' : $('#prenomInputUpdate').val(),
+                'emailUpdate' : $('#emailInputUpdate').val(),
+                'telephoneInputUpdate' : $('#telephoneInputUpdate').val(),
+                'csrfmiddlewaretoken' : '{{ csrf_token }}'
+            },
+            success : function(data){
+                if (data.status === 'success'){
+                    $('#editProspectModal').modal('hide');
+                    alertify.success(data.message);
+                    loadPersonalInfos();
+                } else {
+                    alertify.error(data.message);
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '#saveEntrepriseBtn', function(){
+        let formData = new FormData();
+        formData.append('id_prospect', id);
+        formData.append('designation', $('#entreprise_nom_input').val());
+        formData.append('observation', $('#entreprise_observation_input').val());
+        formData.append('rc', $('#ets_rc_input').val());
+        formData.append('nif', $('#ets_nif_input').val());
+        formData.append('nis', $('#ets_nis_input').val());
+        formData.append('art_imp', $('#ets_art_input').val());
+        formData.append('adresse', $('#ets_adresse_input').val());
+        formData.append('wilaya', $('#ets_wilaya_input').val());
+        formData.append('code_zip', $('#ets_code_zip_input').val());
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        const logoFile = $('#logo_entreprise_input')[0].files[0];
+        if (logoFile) {
+            formData.append('logo_entreprise', logoFile);
+        }
+
+        $.ajax({
+            url :'{% url "t_crm:ApiUpdateEntrepriseData" %}',
+            type : 'POST',
+            data : formData,
+            processData: false,
+            contentType: false,
+            success: function(response){
+                if (response.status ==="success"){
+                    alertify.success("Les informations ont été mis à jour");
+                    loadPersonalInfos();
+                    $('#entrepriseModal').modal('hide');
+                    // Refresh page to show new logo in header if needed, or rely on loadPersonalInfos
+                }
+            }
+        });
+    });
+
+    // Bank Account CRUD
+    const bankAccountModal = new bootstrap.Modal(document.getElementById('bankAccountModal'));
+
+    $('#addBankAccountBtn').on('click', function() {
+        $('#accId').val('');
+        $('#bankAccountForm')[0].reset();
+        $('#bankAccountModalLabel').text('Nouveau Compte Bancaire');
+        bankAccountModal.show();
+    });
+
+    $(document).on('click', '.edit-account', function() {
+        const accId = $(this).data('id');
+        $.ajax({
+            url: "{% url 't_conseil:ApiLoadBankAccounts' %}",
+            type: 'GET',
+            data: { 'id_prospect': id },
+            success: function(response) {
+                const acc = response.find(x => x.id == accId);
+                if (acc) {
+                    $('#accId').val(acc.id);
+                    $('#accBankName').val(acc.bank_name);
+                    $('#accRib').val(acc.rib);
+                    $('#accSwift').val(acc.swift);
+                    $('#accBankAddress').val(acc.bank_address);
+                    $('#bankAccountModalLabel').text('Modifier le Compte Bancaire');
+                    bankAccountModal.show();
+                }
+            }
+        });
+    });
+
+    $('#saveBankAccountBtn').on('click', function() {
+        $.ajax({
+            url: "{% url 't_conseil:ApiSaveBankAccount' %}",
+            type: 'POST',
+            data: {
+                'account_id': $('#accId').val(),
+                'prospect_id': id,
+                'bank_name': $('#accBankName').val(),
+                'rib': $('#accRib').val(),
+                'swift': $('#accSwift').val(),
+                'bank_address': $('#accBankAddress').val(),
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    alertify.success(response.message);
+                    bankAccountModal.hide();
+                    loadBankAccounts();
+                }
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-account', function() {
+        const accId = $(this).data('id');
+        alertify.confirm("Supprimer le compte bancaire", "Êtes-vous sûr de vouloir supprimer ce compte bancaire ?", 
+            function() {
+                $.ajax({
+                    url: "{% url 't_conseil:ApiDeleteBankAccount' %}",
+                    type: 'POST',
+                    data: {
+                        'account_id': accId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            loadBankAccounts();
+                        }
+                    }
+                });
+            }, null
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+    });
 });
 </script>
 {% endblock content %}

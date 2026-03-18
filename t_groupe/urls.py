@@ -23,6 +23,9 @@ urlpatterns = [
     path('affectation-en-attente/',AffectationPage, name="AffectationPage"),
     path('ApiLoadAttenteAffectation',ApiLoadAttenteAffectation, name="ApiLoadAttenteAffectation"),
     path('ApiListePromosEnAttente', ApiListePromosEnAttente, name="ApiListePromosEnAttente"),
+    path('autre-affectation/', AutreAffectationPage, name="AutreAffectationPage"),
+    path('api/participants-confirmes/', ApiParticipantsConfirmes, name="ApiParticipantsConfirmes"),
+    path('api/affecter-participant-groupe/', ApiAffectParticipantToAcademicGroupe, name="ApiAffectParticipantToAcademicGroupe"),
     path('ApiSpecialiteByPromo', ApiSpecialiteByPromo, name="ApiSpecialiteByPromo"),
     path('affectation-au-groupe/<int:pk>/<str:code>/', AffectationAuGroupe, name="AffectationAuGroupe"),
     path('ApiListeStudentNotAffected', ApiListeStudentNotAffected, name="ApiListeStudentNotAffected"),
@@ -45,4 +48,5 @@ urlpatterns = [
     
     path('students/<int:pk>/print/<slug:template_slug>/', generate_student_pdf.as_view(), name='generate_student_pdf'),
     path('bulk-print/', GenerateBulkStudentPdf.as_view(), name='generate_group_students_pdf'),
+
 ]

@@ -180,6 +180,7 @@ class Prospets(models.Model):
     nationnalite = models.CharField(max_length=100, null=True, blank=True)
     num_secu = models.CharField(max_length=100, null=True, blank=True)
     entreprise = models.CharField(max_length=255, null=True, blank=True)
+    logo_entreprise = models.ImageField(upload_to=tenant_directory_path_for_logos, null=True, blank=True)
     poste_dans_entreprise = models.CharField(max_length=100, null=True, blank=True, choices=[('salarie', 'Salarié'),('responsable','Responsable'),('directeur','Directeur'),('gerant','Gérant')])
     observation = models.TextField(null=True, blank=True)
 
@@ -274,6 +275,12 @@ class Prospets(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Algerian Business Fields for Enterprises
+    rc = models.CharField(max_length=100, null=True, blank=True, verbose_name="Registre de Commerce")
+    nif = models.CharField(max_length=100, null=True, blank=True, verbose_name="NIF")
+    nis = models.CharField(max_length=100, null=True, blank=True, verbose_name="NIS")
+    art_imp = models.CharField(max_length=100, null=True, blank=True, verbose_name="Article d'imposition")
 
     class Meta:
         verbose_name = "Prospect"
@@ -616,6 +623,23 @@ class Opportunite(models.Model):
 
     def __str__(self):
         return f"{self.nom} - {self.prospect}"
+
+class ProspectBankAccount(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='bank_accounts')
+    bank_name = models.CharField(max_length=255, verbose_name="Nom de la banque")
+    rib = models.CharField(max_length=100, verbose_name="RIB / Numéro de compte")
+    swift = models.CharField(max_length=50, null=True, blank=True, verbose_name="SWIFT / BIC")
+    bank_address = models.TextField(null=True, blank=True, verbose_name="Adresse de la banque")
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Compte Bancaire Prospect"
+        verbose_name_plural = "Comptes Bancaires Prospects"
+
+    def __str__(self):
+        return f"{self.bank_name} - {self.rib}"
     
 
 

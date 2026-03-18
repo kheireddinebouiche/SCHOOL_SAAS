@@ -89,6 +89,53 @@
         border-radius: 0.75rem;
         border: 1px solid #e2e8f0;
     }
+
+    /* Card View Styles */
+    .client-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        height: 100%;
+    }
+
+    .client-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1);
+    }
+
+    .avatar-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+
+    .view-toggle-btn {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem;
+        background: #f1f5f9;
+        color: #64748b;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    .view-toggle-btn.active {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .filter-dropdown .form-select {
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
 </style>
 
 <div class="main-content">
@@ -116,9 +163,28 @@
         <div class="col-lg-12">
           <div class="glass-card p-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                <div class="search-input-group flex-grow-1" style="max-width: 400px;">
-                    <i class="ri-search-line"></i>
-                    <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un client...">
+                <div class="d-flex align-items-center gap-3 flex-grow-1">
+                    <div class="search-input-group flex-grow-1" style="max-width: 400px;">
+                        <i class="ri-search-line"></i>
+                        <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un client...">
+                    </div>
+                    <div class="filter-dropdown">
+                        <select id="sort-clients" class="form-select" style="min-width: 180px;">
+                            <option value="name_asc">Nom (A-Z)</option>
+                            <option value="name_desc">Nom (Z-A)</option>
+                            <option value="date_desc">Plus récent</option>
+                            <option value="date_asc">Plus ancien</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <button class="view-toggle-btn active" id="listViewBtn" title="Vue Liste">
+                        <i class="ri-list-check-2 fs-5"></i>
+                    </button>
+                    <button class="view-toggle-btn" id="gridViewBtn" title="Vue Cartes">
+                        <i class="ri-grid-fill fs-5"></i>
+                    </button>
                 </div>
             </div>
 
@@ -127,10 +193,9 @@
                   <table id="example" class="table table-premium align-middle table-nowrap mb-0">
                     <thead>
                       <tr>
-                        <th class="ps-4">Nom & Prénom</th>
+                        <th class="ps-4">Client</th>
                         <th>Entreprise</th>
-                        <th>Téléphone</th>
-                        <th>Email</th>
+                        <th>Coordonnées</th>
                         <th>Date de conversion</th>
                         <th class="text-end pe-4">Actions</th>
                       </tr>
@@ -138,6 +203,10 @@
                     <tbody id="listeItem"></tbody>
                   </table>
               </div>
+            </div>
+
+            <div id="GridContainer" class="d-none">
+                <div class="row g-4" id="gridItem"></div>
             </div>
 
             <!-- Empty State UI -->
@@ -161,46 +230,186 @@
   $(document).ready(function () {
     $('.table-responsive').css('overflow-x', 'visible');
     
+    let allClients = [];
+    let currentView = 'list';
+
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
     function loadClients(){
         $.ajax({
           url : '{% url "t_conseil:ApiListeClients" %}',
           dataType: "JSON",
           type: 'GET',
           success : function(data){
-            var row = "";
-            if (data.length === 0) {
-              $("#TableContainer").addClass('d-none');
-              $("#EmptyState").removeClass('d-none');
-            }else{
-              $("#TableContainer").removeClass('d-none');
-              $("#EmptyState").addClass('d-none');
-              $.each(data, function(index, item){
-                row += "<tr class='align-middle'>";
-                row += "<td><a href='/conseil/details-client/" + item.slug + "/'><div class='d-flex align-items-center'><div class='flex-grow-1 font-weight-bold'>" + item.nom + " " + item.prenom + "</div></div></a></td>";
-                row += "<td><div class='fw-medium'>" + (item.entreprise ? "<span class='text-info fw-semibold'>"+item.entreprise+"</span>" : "<span class='text-muted'>N/A</span>") + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-phone-line text-muted me-2'></i>" + (item.telephone || '-') + "</div></td>";
-                row += "<td><div class='text-body'><i class='ri-mail-line text-muted me-2'></i>" + (item.email || '-') + "</div></td>";
-                row += "<td>" + (item.convertit_date || item.created_at) + "</td>";
-                row += '<td class="text-end">';
-                row += '<a href="/conseil/details-client/' + item.slug + '/" class="btn btn-soft-info btn-sm shadow-none">';
-                row += '<i class="ri-eye-line me-1"></i> Consulter</a>';
-                row += '</td>';
-                row += "</tr>";
-            });
+            allClients = data;
+            renderClients();
           }
-          $("#listeItem").html(row);
+        });
+    }
+
+    function renderClients() {
+        if (allClients.length === 0) {
+            $("#TableContainer, #GridContainer").addClass('d-none');
+            $("#EmptyState").removeClass('d-none');
+            return;
         }
-      });
+
+        $("#EmptyState").addClass('d-none');
+        
+        let filteredClients = filterAndSortClients(allClients);
+
+        if (currentView === 'list') {
+            renderListView(filteredClients);
+            $("#TableContainer").removeClass('d-none');
+            $("#GridContainer").addClass('d-none');
+        } else {
+            renderGridView(filteredClients);
+            $("#GridContainer").removeClass('d-none');
+            $("#TableContainer").addClass('d-none');
+        }
+    }
+
+    function filterAndSortClients(clients) {
+        let searchTerm = $("#table-filter").val().toLowerCase();
+        let sortVal = $("#sort-clients").val();
+
+        let result = clients.filter(c => 
+            (c.nom + " " + c.prenom).toLowerCase().includes(searchTerm) ||
+            (c.entreprise && c.entreprise.toLowerCase().includes(searchTerm)) ||
+            (c.email && c.email.toLowerCase().includes(searchTerm))
+        );
+
+        result.sort((a, b) => {
+            if (sortVal === 'name_asc') return (a.nom + a.prenom).localeCompare(b.nom + b.prenom);
+            if (sortVal === 'name_desc') return (b.nom + b.prenom).localeCompare(a.nom + a.prenom);
+            if (sortVal === 'date_desc') return new Date(b.convertit_date || b.created_at) - new Date(a.convertit_date || a.created_at);
+            if (sortVal === 'date_asc') return new Date(a.convertit_date || a.created_at) - new Date(b.convertit_date || b.created_at);
+            return 0;
+        });
+
+        return result;
+    }
+
+    function renderListView(clients) {
+        let rows = "";
+        $.each(clients, function(index, item) {
+            let initials = (item.nom ? item.nom[0] : '') + (item.prenom ? item.prenom[0] : '');
+            let date = item.convertit_date ? formatDate(item.convertit_date) : formatDate(item.created_at);
+            
+            let avatarContent = "";
+            if (item.logo_entreprise_url) {
+                avatarContent = `<img src="${item.logo_entreprise_url}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">`;
+            } else {
+                avatarContent = `<div class='avatar-shape bg-primary bg-opacity-10 text-primary rounded-circle me-3'>${initials}</div>`;
+            }
+
+            rows += `<tr class='align-middle'>
+                <td>
+                    <div class='d-flex align-items-center'>
+                        <div class='flex-shrink-0 me-3'>${avatarContent}</div>
+                        <div>
+                            <a href='/conseil/details-client/${item.slug}/' class='fw-bold text-dark d-block text-truncate' style='max-width: 200px;'>${item.nom} ${item.prenom}</a>
+                        </div>
+                    </div>
+                </td>
+                <td><div class='fw-medium'>${item.entreprise ? `<span class='text-info fw-semibold'>${item.entreprise}</span>` : `<span class='text-muted'>Individuel</span>`}</div></td>
+                <td>
+                    <div class='small text-muted mb-1'><i class='ri-mail-line me-1'></i>${item.email || '-'}</div>
+                    <div class='small text-muted'><i class='ri-phone-line me-1'></i>${item.telephone || '-'}</div>
+                </td>
+                <td><span class='badge bg-light text-dark fw-medium p-2 rounded-3'>${date}</span></td>
+                <td class='text-end'>
+                    <a href="/conseil/details-client/${item.slug}/" class="btn btn-soft-primary btn-sm rounded-pill px-3 shadow-none">
+                        <i class="ri-eye-line me-1"></i> Voir
+                    </a>
+                </td>
+            </tr>`;
+        });
+        $("#listeItem").html(rows);
+    }
+
+    function renderGridView(clients) {
+        let cards = "";
+        $.each(clients, function(index, item) {
+            let initials = (item.nom ? item.nom[0] : '') + (item.prenom ? item.prenom[0] : '');
+            let date = item.convertit_date ? formatDate(item.convertit_date) : formatDate(item.created_at);
+            
+            let avatarContent = "";
+            if (item.logo_entreprise_url) {
+                avatarContent = `<img src="${item.logo_entreprise_url}" class="rounded-xl" style="width: 48px; height: 48px; object-fit: cover;">`;
+            } else {
+                avatarContent = `<div class="avatar-shape bg-primary bg-opacity-10 text-primary rounded-xl">${initials}</div>`;
+            }
+
+            cards += `
+                <div class="col-xl-3 col-md-6">
+                    <div class="card glass-card client-card">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                ${avatarContent}
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-muted p-1" data-bs-toggle="dropdown"><i class="ri-more-2-fill fs-5"></i></button>
+                                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                        <li><a class="dropdown-item" href="/conseil/details-client/${item.slug}/"><i class="ri-eye-line me-2 text-info"></i>Détails</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <h5 class="mb-1 text-truncate"><a href="/conseil/details-client/${item.slug}/" class="text-dark">${item.nom} ${item.prenom}</a></h5>
+                            <p class="text-muted small mb-3 text-truncate">${item.entreprise || 'Individuel'}</p>
+                            
+                            <hr class="my-3 opacity-25">
+                            
+                            <div class="mb-2 d-flex align-items-center gap-2">
+                                <i class="ri-mail-line text-primary"></i>
+                                <span class="small text-muted text-truncate">${item.email || '-'}</span>
+                            </div>
+                            <div class="mb-3 d-flex align-items-center gap-2">
+                                <i class="ri-phone-line text-primary"></i>
+                                <span class="small text-muted text-truncate">${item.telephone || '-'}</span>
+                            </div>
+                            
+                            <div class="d-flex align-items-center justify-content-between mt-auto">
+                                <span class="badge bg-light text-muted fw-normal">Depuis: ${date}</span>
+                                <a href="/conseil/details-client/${item.slug}/" class="btn btn-icon btn-soft-primary rounded-circle" style="width: 32px; height: 32px; padding: 0;">
+                                    <i class="ri-arrow-right-line"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        $("#gridItem").html(cards);
     }
 
     loadClients();
 
-    // Simple search filter
-    $("#table-filter").on("keyup", function() {
-        var value = $(this).val().toLowerCase();
-        $("#listeItem tr").filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-        });
+    // View Toggles
+    $("#listViewBtn").on("click", function() {
+        currentView = 'list';
+        $(this).addClass('active');
+        $("#gridViewBtn").removeClass('active');
+        renderClients();
+    });
+
+    $("#gridViewBtn").on("click", function() {
+        currentView = 'grid';
+        $(this).addClass('active');
+        $("#listViewBtn").removeClass('active');
+        renderClients();
+    });
+
+    // Filtering & Sorting
+    $("#table-filter, #sort-clients").on("change keyup", function() {
+        renderClients();
     });
   });
 </script>

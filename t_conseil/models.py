@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from institut_app.models import ConfigurationDesDocument, Entreprise
 from t_crm.models import Prospets, Opportunite
 from t_tresorerie.models import PaymentCategory
@@ -319,6 +320,8 @@ class Participant(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_confirmed_for_scolarite = models.BooleanField(default=False)
+    scolarite_note = models.TextField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Participant"
@@ -326,3 +329,76 @@ class Participant(models.Model):
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"
+
+class GroupeConseil(models.Model):
+    nom = models.CharField(max_length=100, null=True, blank=True)
+    devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name='groupes_conseil')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    
+    lieu_formation = models.CharField(max_length=255, null=True, blank=True, help_text="Lieu de l'action de formation")
+    jours_travail = models.CharField(max_length=255, null=True, blank=True, help_text="Jours de travail prévus (ex: Lun, Mar, Jeu)")
+    
+    etat = models.CharField(max_length=200, choices=[('brouillon','Brouillon'),('enc', 'En cours'), ('cloture', 'Clôturé')], default='brouillon')
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='groupes_conseil_crees')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Groupe Conseil"
+        verbose_name_plural = "Groupes Conseil"
+
+    def __str__(self):
+        return f"{self.nom} - {self.devis.num_devis}"
+
+class GroupeConseilParticipant(models.Model):
+    groupe = models.ForeignKey(GroupeConseil, on_delete=models.CASCADE, related_name='participants_groupe')
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='groupes_impliques')
+
+    date_inscription = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Participant du Groupe Conseil"
+        verbose_name_plural = "Participants des Groupes Conseil"
+
+    def __str__(self):
+        return f"{self.groupe.nom} - {self.participant.nom} {self.participant.prenom}"
+
+class GroupeConseilThematique(models.Model):
+    groupe = models.ForeignKey(GroupeConseil, on_delete=models.CASCADE, related_name='affectations_thematiques')
+    thematique = models.ForeignKey(Thematiques, on_delete=models.CASCADE)
+    formateur = models.ForeignKey('t_formations.Formateurs', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    date_debut = models.DateField(null=True, blank=True)
+    date_fin = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Affectation Thématique Groupe Conseil"
+        verbose_name_plural = "Affectations Thématiques Groupes Conseil"
+
+    def __str__(self):
+        formateur_str = self.formateur if self.formateur else "Sans formateur"
+        return f"{self.groupe.nom} - {self.thematique.label} ({formateur_str})"
+
+class GroupeConseilPlanning(models.Model):
+    groupe = models.ForeignKey(GroupeConseil, on_delete=models.CASCADE, related_name='planning')
+    thematique = models.ForeignKey(Thematiques, on_delete=models.CASCADE)
+    formateur = models.ForeignKey('t_formations.Formateurs', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    date = models.DateField()
+    heure_debut = models.TimeField()
+    heure_fin = models.TimeField()
+    
+    note = models.TextField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Planning Groupe Conseil"
+        verbose_name_plural = "Plannings Groupes Conseil"
+        ordering = ['date', 'heure_debut']
+
+    def __str__(self):
+        return f"{self.groupe.nom} - {self.thematique.label} le {self.date}"

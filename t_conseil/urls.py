@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from .f_views.prospects import *
+from .f_views.groupes_conseil import *
 
 app_name="t_conseil"
 
@@ -40,6 +41,7 @@ urlpatterns = [
   path('ApiListeProspect',ApiListeProspect, name="ApiListeProspect"),
   path('ApiLoadProspectDevis',ApiLoadProspectDevis, name="ApiLoadProspectDevis"),
   path('ApiLoadProspectFactures',ApiLoadProspectFactures, name="ApiLoadProspectFactures"),
+  path('ApiLoadProspectFinancials', ApiLoadProspectFinancials, name="ApiLoadProspectFinancials"),
   
   path('ApiCreateProspect', ApiCreateProspect, name="ApiCreateProspect"),
   path('ApiQuickCreateProspect', ApiQuickCreateProspect, name="ApiQuickCreateProspect"),
@@ -91,5 +93,29 @@ urlpatterns = [
    path('api/participants/save-one/', ApiSaveParticipant, name="ApiSaveParticipant"),
    path('api/participants/delete-one/', ApiDeleteParticipant, name="ApiDeleteParticipant"),
 
-   path('export/pipeline/', ExportPipelineCsv, name="ExportPipelineCsv"),
+   path('api/prospect/save-ets-details/', ApiSaveEtsDetails, name="ApiSaveEtsDetails"),
+   path('api/prospect/bank-accounts/load/', ApiLoadBankAccounts, name="ApiLoadBankAccounts"),
+   path('api/prospect/bank-accounts/save/', ApiSaveBankAccount, name="ApiSaveBankAccount"),
+   path('api/prospect/bank-accounts/delete/', ApiDeleteBankAccount, name="ApiDeleteBankAccount"),
+
+    path('export/pipeline/', ExportPipelineCsv, name="ExportPipelineCsv"),
+
+    path('api/participants/create-group/', ApiCreateGroupFromParticipants, name="ApiCreateGroupFromParticipants"),
+    path('api/devis/accept/', ApiAcceptDevis, name="ApiAcceptDevis"),
+    path('api/devis/reject/', ApiRejectDevis, name="ApiRejectDevis"),
+    
+    # Executive Education Groups (Conseil)
+    path('groupes/', ListeGroupesConseil, name="ListeGroupesConseil"),
+    path('groupes/nouveau-groupe/', NouveauGroupeConseil, name="NouveauGroupeConseil"),
+    path('groupes/details-groupe/<int:pk>/', DetailsGroupeConseil, name="DetailsGroupeConseil"),
+    path('api/groupes/get-client-devis/', ApiGetClientDevis, name="ApiGetClientDevis"),
+    path('api/groupes/get-devis-details/', ApiGetDevisDetails, name="ApiGetDevisDetails"),
+    path('api/groupes/save/', ApiSaveConseilGroupe, name="ApiSaveConseilGroupe"),
+    path('api/groupes/delete/', ApiDeleteGroupeConseil, name="ApiDeleteGroupeConseil"),
+    path('api/groupes/update-settings/', ApiUpdateGroupeSettings, name="ApiUpdateGroupeSettings"),
+    path('api/groupes/planning/add/', ApiAddPlanningSession, name="ApiAddPlanningSession"),
+    path('api/groupes/planning/delete/', ApiDeletePlanningSession, name="ApiDeletePlanningSession"),
+    path('groupes/planning/session-pdf/<int:session_id>/', SessionAttendancePDF, name="SessionAttendancePDF"),
+    path('api/participants/confirm-scolarite/', ApiConfirmParticipantForScolarite, name="ApiConfirmParticipantForScolarite"),
+    path('api/participants/cancel-scolarite-confirmation/', ApiCancelParticipantConfirmationForScolarite, name="ApiCancelParticipantConfirmationForScolarite"),
 ]

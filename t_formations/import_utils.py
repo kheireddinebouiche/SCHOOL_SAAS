@@ -1,7 +1,7 @@
 import json
 from django.core.exceptions import ValidationError
 import openpyxl
-from .models import Partenaires, Formation, Specialites, Modules, Formateurs
+from .models import Partenaires, Formation, Specialites, Modules, Formateurs, ProgrammeFormation
 from django.db.models import Q
 
 def parse_dispo_string(dispo_str):
@@ -136,16 +136,19 @@ def verify_data(data, data_type):
                 # Specialite and Module fields
                 code_spec = row.get('Code Spécialité') or row.get('specialite_code')
                 label_spec = row.get('Label Spécialité') or row.get('specialite_label')
+                abr_spec = row.get('Abréviation Spécialité') or row.get('specialite_abr')
+                
+                qualification_form = row.get('Qualification Formation') or row.get('qualification')
                 
                 version_spec = row.get('Version Spécialité') or row.get('specialite_version')
                 semestres_spec = row.get('Semestres Spécialité') or row.get('specialite_nb_semestre')
                 tranches_spec = row.get('Tranches Spécialité') or row.get('specialite_nb_tranche')
                 prix_double_spec = row.get('Prix Double Diplomation') or row.get('specialite_prix_double')
-                abr_spec = row.get('Abréviation Spécialité') or row.get('specialite_abr')
                 conditions_spec = row.get("Conditions d'accès") or row.get('specialite_conditions')
 
                 code_mod = row.get('Code Module') or row.get('module_code')
                 label_mod = row.get('Label Module') or row.get('module_label')
+                semestre_mod = row.get('Semestre Module') or row.get('module_semestre')
                 
                 if not code_form: 
                     error_msg.append("Code Formation manquant")
@@ -299,6 +302,7 @@ def import_data(data, data_type, user=None):
                 frais_form = row.get('Frais Inscription') or row.get('frais_inscription')
                 prix_form = row.get('Prix Formation') or row.get('prix_formation')
                 partenaire_code = row.get('Partenaire') or row.get('partenaire_code')
+                qualification_form = row.get('Qualification Formation') or row.get('qualification')
                 
                 # Specialite and Module fields
                 code_spec = row.get('Code Spécialité') or row.get('specialite_code')
@@ -312,6 +316,7 @@ def import_data(data, data_type, user=None):
                 label_mod = row.get('Label Module') or row.get('module_label')
                 duree_mod = row.get('Durée Module') or row.get('module_duree')
                 coef_mod = row.get('Coefficient') or row.get('module_coef')
+                semestre_mod = row.get('Semestre Module') or row.get('module_semestre')
 
                 version_spec = row.get('Version Spécialité') or row.get('specialite_version')
                 semestres_spec = row.get('Semestres Spécialité') or row.get('specialite_nb_semestre')
@@ -334,6 +339,7 @@ def import_data(data, data_type, user=None):
                         'frais_inscription': frais_form,
                         'prix_formation': prix_form,
                         'partenaire': partenaire,
+                        'qualification': qualification_form,
                         'created_by': user
                     }
                 )
@@ -360,7 +366,7 @@ def import_data(data, data_type, user=None):
                     
                     # Create or Update Module if provided
                     if code_mod:
-                        Modules.objects.update_or_create(
+                        module, _ = Modules.objects.update_or_create(
                             code=code_mod,
                             defaults={
                                 'code_interne': int_mod,
@@ -371,6 +377,15 @@ def import_data(data, data_type, user=None):
                                 'created_by': user
                             }
                         )
+                        if semestre_mod:
+                            ProgrammeFormation.objects.update_or_create(
+                                module=module,
+                                specialite=specialite,
+                                defaults={
+                                    'semestre': str(semestre_mod).strip(),
+                                    'created_by': user
+                                }
+                            )
 
             elif data_type == 'Specialites':
                 formation = Formation.objects.filter(code=row['formation_code']).first()

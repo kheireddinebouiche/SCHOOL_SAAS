@@ -1,0 +1,1080 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} {{ groupe.nom }} — Détails du groupe {% endblock title %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * { font-family: 'Inter', sans-serif; }
+
+    :root {
+        --accent: #6366f1;
+        --accent-dark: #4f46e5;
+        --accent-light: rgba(99, 102, 241, 0.12);
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --surface: #ffffff;
+        --surface-2: #f8faff;
+        --border: rgba(99,102,241,0.12);
+        --text-primary: #1e1b4b;
+        --text-muted: #6b7280;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+        --shadow-md: 0 4px 16px rgba(99,102,241,0.1);
+        --shadow-lg: 0 12px 40px rgba(99,102,241,0.15);
+    }
+
+    .bg-light { background: #f0f2ff !important; }
+
+    /* ─── TOP BANNER ─────────────────────────────────────── */
+    .detail-banner {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+    .detail-banner::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 250px; height: 250px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+    }
+    .detail-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; left: 30%;
+        width: 300px; height: 300px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.04);
+    }
+    .banner-inner {
+        position: relative; z-index: 2;
+        padding: 2rem 2.5rem;
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;
+    }
+    .banner-title {
+        font-size: 1.6rem; font-weight: 700;
+        color: #fff; margin: 0 0 0.4rem;
+    }
+    .banner-sub { color: rgba(255,255,255,0.75); font-size: 0.9rem; }
+    .banner-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 14px; border-radius: 50px;
+        font-size: 0.78rem; font-weight: 600;
+        background: rgba(255,255,255,0.2); color: #fff;
+        backdrop-filter: blur(4px);
+        margin: 4px 4px 0 0;
+    }
+    .banner-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .btn-ghost-white {
+        border: 1.5px solid rgba(255,255,255,0.4);
+        color: #fff; background: rgba(255,255,255,0.1);
+        border-radius: 12px; padding: 8px 18px;
+        font-weight: 500; font-size: 0.875rem;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-ghost-white:hover {
+        background: rgba(255,255,255,0.2); color: #fff;
+    }
+
+    /* ─── STAT PILLS ─────────────────────────────────────── */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    @media (max-width: 1200px) {
+        .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+        .stats-row { grid-template-columns: 1fr; }
+    }
+    .stat-pill {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 1.2rem 1.5rem;
+        display: flex; align-items: center; gap: 1rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-pill:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .stat-pill-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; flex-shrink: 0;
+    }
+    .stat-pill-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 2px; }
+    .stat-pill-value { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+
+    /* ─── LAYOUT ─────────────────────────────────────────── */
+    .details-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 992px) {
+        .details-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ─── CARD ───────────────────────────────────────────── */
+    .premium-card {
+        background: var(--surface);
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    .premium-card-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .premium-card-title {
+        font-size: 0.9rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--accent); margin: 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .premium-card-body { padding: 1.5rem; }
+
+    /* ─── TABS ───────────────────────────────────────────── */
+    .pill-tabs {
+        display: flex; gap: 6px;
+        background: var(--surface-2);
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        margin-bottom: 1.5rem;
+    }
+    .pill-tab {
+        flex: 1; padding: 9px 16px;
+        border: none; background: transparent;
+        border-radius: 10px; font-size: 0.85rem;
+        font-weight: 500; color: var(--text-muted);
+        cursor: pointer; transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .pill-tab.active {
+        background: var(--surface);
+        color: var(--accent);
+        box-shadow: var(--shadow-sm);
+        font-weight: 600;
+    }
+    .pill-tab-pane { display: none; }
+    .pill-tab-pane.active { display: block; }
+
+    /* ─── INFO ROW ───────────────────────────────────────── */
+    .info-row {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; flex-shrink: 0; width: 45%; }
+    .info-value { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); text-align: right; }
+
+    /* ─── PARTICIPANT ITEM ───────────────────────────────── */
+    .participant-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 0.9rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .participant-item:last-child { border-bottom: none; }
+    .participant-avatar {
+        width: 42px; height: 42px; border-radius: 12px;
+        background: var(--accent-light);
+        color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+    }
+    .participant-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+    .participant-meta { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* ─── THEMATIQUE CHIP ────────────────────────────────── */
+    .thematique-item {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 0.75rem;
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        transition: all 0.2s;
+    }
+    .thematique-item:hover { border-color: var(--accent); background: var(--accent-light); }
+    .thematique-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .thematique-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--accent); flex-shrink: 0;
+    }
+    .thematique-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+    .thematique-formateur { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ─── SIDEBAR INFO BLOCK ─────────────────────────────── */
+    .sidebar-info-block {
+        background: var(--surface);
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .sidebar-block-title {
+        font-size: 0.75rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.07em;
+        color: var(--text-muted); margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .devis-card {
+        background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+        border-radius: 14px;
+        padding: 1.2rem;
+        border: 1px solid rgba(99,102,241,0.2);
+    }
+    .devis-num { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .devis-client { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); margin-top: 4px; }
+    .devis-state { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; }
+
+    /* ─── EMPTY STATE ────────────────────────────────────── */
+    .empty-block {
+        text-align: center; padding: 3rem 1rem;
+    }
+    .empty-icon {
+        width: 64px; height: 64px; border-radius: 20px;
+        background: var(--accent-light); color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; margin: 0 auto 1rem;
+    }
+
+    /* ─── ETAT BADGE ─────────────────────────────────────── */
+    .etat-brouillon { background: #f3f4f6; color: #6b7280; }
+    .etat-enc { background: #dbeafe; color: #1d4ed8; }
+    .etat-cloture { background: #f3f4f6; color: #374151; }
+
+    /* ─── SEARCH ─────────────────────────────────────────── */
+    .search-box {
+        position: relative; margin-bottom: 1rem;
+    }
+    .search-box i {
+        position: absolute; left: 12px; top: 50%;
+        transform: translateY(-50%); color: var(--text-muted);
+    }
+    .search-box input {
+        padding-left: 36px; border-radius: 10px;
+        border: 1px solid var(--border); background: var(--surface-2);
+        font-size: 0.85rem; width: 100%;
+    }
+    .search-box input:focus {
+        outline: none; border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+        background: #fff;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+
+            <!-- ─── BANNER ─── -->
+            <div class="detail-banner">
+                <div class="banner-inner">
+                    <div>
+                        <p class="banner-sub mb-2">
+                            <a href="{% url 't_conseil:ListeGroupesConseil' %}" class="text-white-50 text-decoration-none me-1">
+                                <i class="ri-arrow-left-s-line"></i> Groupes
+                            </a>
+                            / Détails
+                        </p>
+                        <h1 class="banner-title">{{ groupe.nom }}</h1>
+                        <div>
+                            <span class="banner-badge"><i class="ri-file-text-line"></i> {{ groupe.devis.num_devis }}</span>
+                            <span class="banner-badge">
+                                <i class="ri-building-line"></i> 
+                                {% if groupe.devis.client.type_prospect == 'entreprise' %}
+                                    {{ groupe.devis.client.entreprise }}
+                                {% else %}
+                                    {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                                {% endif %}
+                            </span>
+                            {% if groupe.etat == "brouillon" %}
+                                <span class="banner-badge" style="background:rgba(255,255,255,0.15)"><i class="ri-pencil-line"></i> {{ groupe.get_etat_display }}</span>
+                            {% elif groupe.etat == "enc" %}
+                                <span class="banner-badge" style="background:rgba(59,130,246,0.4)"><i class="ri-loader-4-line"></i> {{ groupe.get_etat_display }}</span>
+                            {% elif groupe.etat == "cloture" %}
+                                <span class="banner-badge" style="background:rgba(0,0,0,0.3)"><i class="ri-archive-line"></i> {{ groupe.get_etat_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="banner-actions">
+                        {% if groupe.etat != "cloture" %}
+                            <button class="btn-ghost-white" data-bs-toggle="modal" data-bs-target="#cloturerModal">
+                                <i class="ri-lock-line me-1"></i> Clôturer
+                            </button>
+                        {% endif %}
+                        <a href="{% url 't_conseil:DetailsDevis' pk=groupe.devis.num_devis %}" class="btn-ghost-white">
+                            <i class="ri-file-text-line me-1"></i> Voir le devis
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── STAT PILLS ─── -->
+            <div class="stats-row">
+                <div class="stat-pill">
+                    <div class="stat-pill-icon" style="background:#eef2ff;color:#6366f1"><i class="ri-group-line"></i></div>
+                    <div>
+                        <div class="stat-pill-label">Participants</div>
+                        <div class="stat-pill-value">{{ participants_associes.count }}</div>
+                    </div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-pill-icon" style="background:#d1fae5;color:#10b981"><i class="ri-book-read-line"></i></div>
+                    <div>
+                        <div class="stat-pill-label">Thématiques</div>
+                        <div class="stat-pill-value">{{ affectations_thematiques.count }}</div>
+                    </div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-pill-icon" style="background:#fef3c7;color:#f59e0b"><i class="ri-calendar-event-line"></i></div>
+                    <div>
+                        <div class="stat-pill-label">Sessions prévues</div>
+                        <div class="stat-pill-value" id="stat-count-sessions">{{ planning_sessions.count }}</div>
+                    </div>
+                </div>
+                <div class="stat-pill">
+                    <div class="stat-pill-icon" style="background:#fee2e2;color:#ef4444"><i class="ri-map-pin-line"></i></div>
+                    <div>
+                        <div class="stat-pill-label">Lieu</div>
+                        <div class="stat-pill-value" style="font-size:0.9rem" id="stat-lieu">{{ groupe.lieu_formation|default:"Non finté"|truncatechars:15 }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── MAIN LAYOUT ─── -->
+            <div class="details-layout">
+
+                <!-- LEFT: Main content -->
+                <div>
+                    <!-- Pill Tabs -->
+                    <div class="pill-tabs" id="mainTabs">
+                        <button class="pill-tab active" data-target="tab-participants">
+                            <i class="ri-user-line me-1"></i> Participants
+                        </button>
+                        <button class="pill-tab" data-target="tab-thematiques">
+                            <i class="ri-book-read-line me-1"></i> Thématiques
+                        </button>
+                        <button class="pill-tab" data-target="tab-planning">
+                            <i class="ri-calendar-event-line me-1"></i> Planning
+                        </button>
+                        <button class="pill-tab" data-target="tab-infos">
+                            <i class="ri-information-line me-1"></i> Informations
+                        </button>
+                    </div>
+
+                    <!-- Tab: Participants -->
+                    <div class="pill-tab-pane active" id="tab-participants">
+                        <div class="premium-card">
+                            <div class="premium-card-header">
+                                <h6 class="premium-card-title"><i class="ri-group-line"></i> Participants du groupe</h6>
+                                <span class="badge" style="background:var(--accent-light);color:var(--accent);font-size:0.75rem;padding:5px 12px;border-radius:50px;">
+                                    {{ participants_associes.count }} total
+                                </span>
+                            </div>
+                            <div class="premium-card-body">
+                                {% if participants_associes %}
+                                    <div class="search-box">
+                                        <i class="ri-search-line" style="font-size:0.9rem"></i>
+                                        <input type="text" id="searchParticipant" placeholder="Rechercher un participant..." class="form-control">
+                                    </div>
+                                    <div id="participantsList">
+                                    {% for gcp in participants_associes %}
+                                        <div class="participant-item participant-row">
+                                            <div class="participant-avatar">
+                                                {{ gcp.participant.nom|first }}{{ gcp.participant.prenom|first }}
+                                            </div>
+                                            <div class="flex-grow-1 min-width-0">
+                                                <div class="participant-name">{{ gcp.participant.nom }} {{ gcp.participant.prenom }}</div>
+                                                <div class="participant-meta">
+                                                    {% if gcp.participant.poste %}{{ gcp.participant.poste }} &nbsp;·&nbsp; {% endif %}
+                                                    {{ gcp.participant.email|default:"—" }}
+                                                </div>
+                                            </div>
+                                            <div class="text-end flex-shrink-0">
+                                                <div class="participant-meta">{{ gcp.participant.telephone|default:"" }}</div>
+                                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">{{ gcp.date_inscription|date:"d/m/Y" }}</div>
+                                                {% if not gcp.participant.is_confirmed_for_scolarite %}
+                                                    <button class="btn btn-sm btn-outline-success mt-2 py-0 px-2 btn-confirm-scolarite" 
+                                                            style="font-size: 0.7rem; border-radius: 6px;"
+                                                            onclick="confirmForScolarite({{ gcp.participant.id }}, this)">
+                                                        <i class="ri-check-line"></i> Confirmer Scolarité
+                                                    </button>
+                                                {% else %}
+                                                    <div class="d-flex flex-column align-items-end mt-2">
+                                                        <span class="badge bg-success-subtle text-success" style="font-size: 0.65rem;">Confirmé Scolarité</span>
+                                                        <button class="btn btn-link text-danger p-0 mt-1" 
+                                                                style="font-size: 0.6rem; text-decoration: none;"
+                                                                onclick="cancelScolariteConfirmation({{ gcp.participant.id }}, this)">
+                                                            <i class="ri-close-circle-line"></i> Annuler
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-block">
+                                        <div class="empty-icon"><i class="ri-user-add-line"></i></div>
+                                        <h6 class="fw-bold">Aucun participant</h6>
+                                        <p class="text-muted small mb-0">Ce groupe n'a pas encore de participants associés.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Thématiques -->
+                    <div class="pill-tab-pane" id="tab-thematiques">
+                        <div class="premium-card">
+                            <div class="premium-card-header">
+                                <h6 class="premium-card-title"><i class="ri-book-read-line"></i> Thématiques assignées</h6>
+                                <span class="badge" style="background:#d1fae5;color:#10b981;font-size:0.75rem;padding:5px 12px;border-radius:50px;">
+                                    {{ affectations_thematiques.count }} total
+                                </span>
+                            </div>
+                            <div class="premium-card-body">
+                                {% if affectations_thematiques %}
+                                    {% for aff in affectations_thematiques %}
+                                        <div class="thematique-item">
+                                            <div class="thematique-left">
+                                                <div class="thematique-dot"></div>
+                                                <div>
+                                                    <div class="thematique-name">{{ aff.thematique.label }}</div>
+                                                    <div class="thematique-formateur">
+                                                        {% if aff.formateur %}
+                                                            <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.formateur }}
+                                                        {% else %}
+                                                            <span style="color:var(--warning)"><i class="ri-user-unfollow-line me-1"></i>Formateur non affecté</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% if aff.date_debut %}
+                                                <div class="text-end flex-shrink-0">
+                                                    <div style="font-size:0.78rem;color:var(--text-muted)">{{ aff.date_debut|date:"d/m/Y" }} → {{ aff.date_fin|date:"d/m/Y"|default:"?" }}</div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-block">
+                                        <div class="empty-icon" style="background:#d1fae5;color:#10b981"><i class="ri-book-read-line"></i></div>
+                                        <h6 class="fw-bold">Aucune thématique</h6>
+                                        <p class="text-muted small mb-0">Aucune thématique n'a été assignée à ce groupe.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Planning -->
+                    <div class="pill-tab-pane" id="tab-planning">
+                        <div class="premium-card">
+                            <div class="premium-card-header">
+                                <h6 class="premium-card-title"><i class="ri-calendar-event-line"></i> Planning des cours</h6>
+                                <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddSession"
+                                    style="background:var(--accent);color:#fff;border-radius:8px;font-size:0.8rem;font-weight:600;">
+                                    <i class="ri-add-line me-1"></i> Prévoir un cours
+                                </button>
+                            </div>
+                            <div class="premium-card-body" id="planningTabContainer">
+                                {% if planning_sessions %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle" style="font-size:0.875rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Horaire</th>
+                                                    <th>Thématique</th>
+                                                    <th>Formateur</th>
+                                                    <th class="text-end pe-4">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="planningTableBody">
+                                                {% for session in planning_sessions %}
+                                                <tr id="session-{{ session.id }}">
+                                                    <td class="fw-bold text-primary">{{ session.date|date:"d/m/Y" }}</td>
+                                                    <td>
+                                                        <span class="badge" style="background:var(--accent-light);color:var(--accent)">
+                                                            {{ session.heure_debut|time:"H:i" }} - {{ session.heure_fin|time:"H:i" }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="fw-medium">{{ session.thematique.label }}</td>
+                                                    <td>
+                                                        {% if session.formateur %}
+                                                            <i class="ri-user-voice-line me-1 text-success"></i>{{ session.formateur }}
+                                                        {% else %}
+                                                            <span class="text-muted italic small">N/A</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end pe-4">
+                                                        <a href="{% url 't_conseil:SessionAttendancePDF' session_id=session.id %}" target="_blank" class="btn btn-sm btn-light-primary btn-icon me-2" title="Imprimer la feuille d'émargement">
+                                                            <i class="ri-printer-line fs-5"></i>
+                                                        </a>
+                                                        <button class="btn btn-link btn-sm text-danger p-0 border-0" onclick="deleteSession({{ session.id }})">
+                                                            <i class="ri-delete-bin-line fs-5"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="empty-block">
+                                        <div class="empty-icon" style="background:#f0f2ff;color:var(--accent)"><i class="ri-calendar-event-line"></i></div>
+                                        <h6 class="fw-bold">Planning vide</h6>
+                                        <p class="text-muted small mb-0">Aucun cours n'a été planifié pour ce groupe.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Informations -->
+                    <div class="pill-tab-pane" id="tab-infos">
+                        <div class="premium-card">
+                            <div class="premium-card-header">
+                                <h6 class="premium-card-title"><i class="ri-information-line"></i> Informations générales</h6>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditSettings" style="border-radius:8px;font-size:0.8rem">
+                                    <i class="ri-edit-line me-1"></i> Configurer
+                                </button>
+                            </div>
+                            <div class="premium-card-body">
+                                <div class="info-row">
+                                    <span class="info-label">Nom du groupe</span>
+                                    <span class="info-value">{{ groupe.nom }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">État</span>
+                                    <span class="info-value">
+                                        <span class="badge etat-{{ groupe.etat }}" style="padding:5px 12px;border-radius:50px;">{{ groupe.get_etat_display }}</span>
+                                    </span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Lieu de formation</span>
+                                    <span class="info-value" id="val-lieu">{{ groupe.lieu_formation|default:"—" }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Jours de travail</span>
+                                    <span class="info-value" id="val-jours">{{ groupe.jours_travail|default:"—" }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Date de début</span>
+                                    <span class="info-value">{{ groupe.start_date|default:"—" }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Date de fin</span>
+                                    <span class="info-value">{{ groupe.end_date|default:"—" }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Créé par</span>
+                                    <span class="info-value">{{ groupe.created_by|default:"—" }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Date de création</span>
+                                    <span class="info-value">{{ groupe.created_at|date:"d/m/Y à H:i" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Sidebar -->
+                <div>
+                    <!-- Devis card -->
+                    <div class="sidebar-info-block">
+                        <div class="sidebar-block-title"><i class="ri-file-text-line"></i> Devis associé</div>
+                        <div class="devis-card">
+                            <div class="devis-num">{{ groupe.devis.num_devis }}</div>
+                            <div class="devis-client">
+                                <i class="ri-building-line me-1"></i>
+                                {% if groupe.devis.client.type_prospect == 'entreprise' %}
+                                    {{ groupe.devis.client.entreprise }}
+                                {% else %}
+                                    {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                                {% endif %}
+                            </div>
+                            <div class="devis-state">État : {{ groupe.devis.get_etat_display }}</div>
+                            <a href="{% url 't_conseil:DetailsDevis' pk=groupe.devis.num_devis %}" 
+                               class="btn btn-sm mt-3 w-100" 
+                               style="background:var(--accent);color:#fff;border-radius:10px;font-size:0.82rem;font-weight:600;">
+                                <i class="ri-eye-line me-1"></i> Consulter le devis
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Synthèse -->
+                    <div class="sidebar-info-block">
+                        <div class="sidebar-block-title"><i class="ri-bar-chart-line"></i> Synthèse</div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="font-size:0.82rem;color:var(--text-muted)">Participants</span>
+                            <strong style="font-size:0.95rem;color:var(--text-primary)">{{ participants_associes.count }}</strong>
+                        </div>
+                        <div style="height:6px;background:#f0f2ff;border-radius:50px;margin-bottom:1rem;overflow:hidden">
+                            <div style="height:6px;background:var(--accent);border-radius:50px;width:{{ participants_associes.count|default:0 }}00%;max-width:100%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="font-size:0.82rem;color:var(--text-muted)">Planning</span>
+                            <strong style="font-size:0.95rem;color:var(--text-primary)" class="sidebar-planning-count">{{ planning_sessions.count }} sessions</strong>
+                        </div>
+                        <div style="height:6px;background:#f0fff9;border-radius:50px;overflow:hidden">
+                            <div style="height:6px;background:var(--success);border-radius:50px;width:{{ planning_sessions.count|default:0 }}0%;max-width:100%" class="sidebar-planning-progress"></div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    {% if groupe.etat != "cloture" %}
+                    <div class="sidebar-info-block">
+                        <div class="sidebar-block-title"><i class="ri-settings-3-line"></i> Actions</div>
+                        <button class="btn w-100 mb-2" data-bs-toggle="modal" data-bs-target="#cloturerModal"
+                            style="background:#fee2e2;color:#ef4444;border-radius:12px;font-weight:600;font-size:0.875rem;border:none;">
+                            <i class="ri-lock-line me-1"></i> Clôturer le groupe
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Clôturer -->
+<div class="modal fade" id="cloturerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div class="w-100 text-center">
+                    <div class="empty-icon mx-auto mb-3" style="background:#fee2e2;color:#ef4444">
+                        <i class="ri-lock-line"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark">Clôturer le groupe ?</h5>
+                    <p class="text-muted small">Cette action est irréversible. Le groupe <strong>{{ groupe.nom }}</strong> ne pourra plus être modifié.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 gap-2 justify-content-center">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:12px">Annuler</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmerCloture" style="border-radius:12px">
+                    <i class="ri-lock-line me-1"></i> Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ADD PLANNING SESSION -->
+<div class="modal fade" id="modalAddSession" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header px-4 pt-4 border-0">
+                <h5 class="fw-bold m-0"><i class="ri-calendar-add-line me-2 text-indigo"></i>Prévoir un cours</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4">
+                <form id="formAddSession">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date du cours</label>
+                        <input type="date" class="form-control" name="date" required value="{{ groupe.start_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-bold">Heure début</label>
+                            <input type="time" class="form-control" name="heure_debut" required value="08:30">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-bold">Heure fin</label>
+                            <input type="time" class="form-control" name="heure_fin" required value="12:00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Thématique</label>
+                        <select class="form-select" name="thematique_id" required>
+                            <option value="">-- Sélectionner --</option>
+                            {% for aff in affectations_thematiques %}
+                                <option value="{{ aff.thematique.id }}">{{ aff.thematique.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Note / Salle</label>
+                        <textarea class="form-control" name="note" rows="2" placeholder="Ex: Salle 302, prévoir projecteur..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:10px">Annuler</button>
+                <button type="submit" form="formAddSession" class="btn btn-primary px-4" style="border-radius:10px">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal EDIT SETTINGS -->
+<div class="modal fade" id="modalEditSettings" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header px-4 pt-4 border-0">
+                <h5 class="fw-bold m-0"><i class="ri-settings-3-line me-2 text-indigo"></i>Configurer le groupe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4">
+                <form id="formEditSettings">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Lieu de formation</label>
+                        <input type="text" class="form-control" name="lieu_formation" value="{{ groupe.lieu_formation|default:'' }}" placeholder="Ex: Alger, Siège Ecole, Site Client...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Jours de travail</label>
+                        <input type="text" class="form-control" name="jours_travail" value="{{ groupe.jours_travail|default:'' }}" placeholder="Ex: Dimanche au Jeudi, ou Sam-Lun-Mer">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:10px">Annuler</button>
+                <button type="submit" form="formEditSettings" class="btn btn-primary px-4" style="border-radius:10px">
+                    <i class="ri-check-line me-1"></i> Appliquer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal DELETE PLANNING SESSION -->
+<div class="modal fade" id="modalDeleteSession" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div class="w-100 text-center">
+                    <div class="empty-icon mx-auto mb-3" style="background:#fee2e2;color:#ef4444">
+                        <i class="ri-delete-bin-line"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark">Supprimer la session ?</h5>
+                    <p class="text-muted small">Voulez-vous vraiment supprimer cette session du planning ?</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 gap-2 justify-content-center">
+                <input type="hidden" id="deleteSessionId">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:12px">Annuler</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmDeleteSession" style="border-radius:12px">
+                    <i class="ri-delete-bin-line me-1"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+
+    // ─── Pill tabs ───────────────────────────────────────────
+    $('#mainTabs .pill-tab').on('click', function () {
+        const target = $(this).data('target');
+        $('#mainTabs .pill-tab').removeClass('active');
+        $(this).addClass('active');
+        $('.pill-tab-pane').removeClass('active');
+        $('#' + target).addClass('active');
+    });
+
+    // ─── Participant search ───────────────────────────────────
+    $('#searchParticipant').on('input', function () {
+        const term = $(this).val().toLowerCase();
+        $('.participant-row').each(function () {
+            $(this).toggle($(this).text().toLowerCase().includes(term));
+        });
+    });
+
+    // ─── Save Settings ───────────────────────────────────────
+    $('#formEditSettings').on('submit', function(e) {
+        e.preventDefault();
+        const data = {
+            groupe_id: '{{ groupe.id }}',
+            lieu_formation: $(this).find('[name="lieu_formation"]').val(),
+            jours_travail: $(this).find('[name="jours_travail"]').val()
+        };
+
+        $.ajax({
+            url: '{% url "t_conseil:ApiUpdateGroupeSettings" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if(res.status === 'success') {
+                    $('#val-lieu').text(data.lieu_formation || '—');
+                    $('#val-jours').text(data.jours_travail || '—');
+                    $('#stat-lieu').text(data.lieu_formation || 'Non finté');
+                    $('#modalEditSettings').modal('hide');
+                    alertify.success('Configuration mise à jour');
+                } else {
+                    alertify.error(res.message);
+                }
+            }
+        });
+    });
+
+    // ─── Add Planning Session ───────────────────────────────
+    $('#formAddSession').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        data.groupe_id = '{{ groupe.id }}';
+
+        $.ajax({
+            url: '{% url "t_conseil:ApiAddPlanningSession" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if(res.status === 'success') {
+                    alertify.success('Session ajoutée au planning');
+                    $('#modalAddSession').modal('hide');
+                    $('#formAddSession')[0].reset();
+
+                    // Update UI dynamically
+                    const s = res.session;
+                    const printUrl = "{% url 't_conseil:SessionAttendancePDF' session_id=0 %}".replace('0', s.id);
+                    const newRow = `
+                        <tr id="session-${s.id}" style="display:none;">
+                            <td class="fw-bold text-primary">${s.date}</td>
+                            <td>
+                                <span class="badge" style="background:var(--accent-light);color:var(--accent)">
+                                    ${s.heure}
+                                </span>
+                            </td>
+                            <td class="fw-medium">${s.thematique}</td>
+                            <td>
+                                ${s.formateur !== 'N/A' ? `<i class="ri-user-voice-line me-1 text-success"></i>${s.formateur}` : '<span class="text-muted italic small">N/A</span>'}
+                            </td>
+                            <td class="text-end pe-4">
+                                <a href="${printUrl}" target="_blank" class="btn btn-sm btn-light-primary btn-icon me-2" title="Imprimer la feuille d'émargement">
+                                    <i class="ri-printer-line fs-5"></i>
+                                </a>
+                                <button class="btn btn-link btn-sm text-danger p-0 border-0" onclick="deleteSession(${s.id})">
+                                    <i class="ri-delete-bin-line fs-5"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+
+                    if ($('#planningTableBody').length === 0) {
+                        // Switch from empty state to table
+                        $('#planningTabContainer').html(`
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle" style="font-size:0.875rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Horaire</th>
+                                            <th>Thématique</th>
+                                            <th>Formateur</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="planningTableBody">
+                                        ${newRow}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `);
+                    } else {
+                        $('#planningTableBody').append(newRow);
+                    }
+                    $(`#session-${s.id}`).fadeIn(500);
+
+                    // Update stats & counters
+                    const sessionCount = $('#planningTableBody tr').length;
+                    $('#stat-count-sessions').text(sessionCount);
+                    $('.sidebar-planning-count').text(sessionCount + ' sessions');
+                    
+                    // Update progress bar (cap it at 100%)
+                    const progress = Math.min(sessionCount * 10, 100);
+                    $('.sidebar-planning-progress').css('width', progress + '%');
+                } else {
+                    alertify.error(res.message);
+                }
+            }
+        });
+    });
+
+    // ─── Delete Planning Session ────────────────────────────
+    window.deleteSession = function(id) {
+        $('#deleteSessionId').val(id);
+        $('#modalDeleteSession').modal('show');
+    }
+
+    $('#btnConfirmDeleteSession').on('click', function() {
+        const id = $('#deleteSessionId').val();
+        const btn = $(this);
+        
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> ...');
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiDeletePlanningSession" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ session_id: id }),
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if(res.status === 'success') {
+                    $(`#session-${id}`).fadeOut(300, function() { 
+                        $(this).remove(); 
+                        
+                        // Update stats & counters after removal
+                        const sessionCount = $('#planningTableBody tr').length;
+                        $('#stat-count-sessions').text(sessionCount);
+                        $('.sidebar-planning-count').text(sessionCount + ' sessions');
+                        
+                        const progress = Math.min(sessionCount * 10, 100);
+                        $('.sidebar-planning-progress').css('width', progress + '%');
+
+                        // If last session deleted, restore empty state
+                        if (sessionCount === 0) {
+                            $('#planningTabContainer').html(`
+                                <div class="empty-block">
+                                    <div class="empty-icon" style="background:#f0f2ff;color:var(--accent)"><i class="ri-calendar-event-line"></i></div>
+                                    <h6 class="fw-bold">Planning vide</h6>
+                                    <p class="text-muted small mb-0">Aucun cours n'a été planifié pour ce groupe.</p>
+                                </div>
+                            `);
+                        }
+                    });
+                    alertify.success('Session supprimée');
+                    $('#modalDeleteSession').modal('hide');
+                } else {
+                    alertify.error(res.message);
+                }
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i> Supprimer');
+            }
+        });
+    });
+
+    // ─── Clôturer ────────────────────────────────────────────
+    $('#btnConfirmerCloture').on('click', function () {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> ...');
+        $.ajax({
+            url: '{% url "t_conseil:ApiDeleteGroupeConseil" %}',
+            type: 'GET',
+            data: { id: '{{ groupe.id }}' },
+            success: function (res) {
+                if (res.status === 'success') {
+                    alertify.success('Groupe clôturé avec succès.');
+                    setTimeout(() => { window.location.href = '{% url "t_conseil:ListeGroupesConseil" %}'; }, 1200);
+                } else {
+                    alertify.error(res.message || 'Erreur.');
+                    btn.prop('disabled', false).html('<i class="ri-lock-line me-1"></i> Confirmer');
+                    $('#cloturerModal').modal('hide');
+                }
+            },
+            error: function () {
+                alertify.error('Une erreur est survenue.');
+                btn.prop('disabled', false).html('<i class="ri-lock-line me-1"></i> Confirmer');
+                $('#cloturerModal').modal('hide');
+            }
+        });
+    });
+
+    // ─── Confirm for Scolarité ───────────────────────────────
+    window.confirmForScolarite = function(participantId, btn) {
+        alertify.prompt('Confirmation Scolarité', 'Décrivez la formation/filière que ce participant va suivre :', '', function(evt, value) {
+            const $btn = $(btn);
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            
+            $.ajax({
+                url: '{% url "t_conseil:ApiConfirmParticipantForScolarite" %}',
+                type: 'POST',
+                data: { 
+                    'participant_id': participantId,
+                    'note': value,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        $btn.replaceWith('<span class="badge bg-success-subtle text-success mt-2" style="font-size: 0.65rem;">Confirmé Scolarité</span>');
+                    } else {
+                        alertify.error(res.message);
+                        $btn.prop('disabled', false).html('<i class="ri-check-line"></i> Confirmer Scolarité');
+                    }
+                },
+                error: function() {
+                    alertify.error('Une erreur est survenue.');
+                    $btn.prop('disabled', false).html('<i class="ri-check-line"></i> Confirmer Scolarité');
+                }
+            });
+        }, function() {
+            // Cancelled
+        }).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+    };
+
+    // ─── Cancel Scolarité Confirmation ───────────────────────
+    window.cancelScolariteConfirmation = function(participantId, btn) {
+        if (!confirm('Voulez-vous vraiment annuler la confirmation de ce participant pour la Scolarité ?')) return;
+        
+        const $btn = $(btn);
+        const $parent = $btn.closest('.d-flex');
+        const originalHtml = $parent.html();
+        
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiCancelParticipantConfirmationForScolarite" %}',
+            type: 'POST',
+            data: { 
+                'participant_id': participantId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    // Remplacer par le bouton de confirmation initial
+                    $parent.replaceWith(`
+                        <button class="btn btn-sm btn-outline-success mt-2 py-0 px-2 btn-confirm-scolarite" 
+                                style="font-size: 0.7rem; border-radius: 6px;"
+                                onclick="confirmForScolarite(${participantId}, this)">
+                            <i class="ri-check-line"></i> Confirmer Scolarité
+                        </button>
+                    `);
+                } else {
+                    alertify.error(res.message);
+                    $btn.prop('disabled', false).html('<i class="ri-close-circle-line"></i> Annuler');
+                }
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue.');
+                $btn.prop('disabled', false).html('<i class="ri-close-circle-line"></i> Annuler');
+            }
+        });
+    };
+});
+</script>
+
+{% endblock content %}

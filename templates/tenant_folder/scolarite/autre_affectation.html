@@ -1,0 +1,424 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Scolarité - Autre affectation {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.5rem;
+    }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); }
+    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: var(--success-color); }
+    .icon-box.warning { background: rgba(247, 37, 133, 0.1); color: var(--warning-color); }
+    .icon-box.info { background: rgba(72, 149, 239, 0.1); color: var(--accent-color); }
+
+    .stat-card-modern {
+        background: white;
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.3s ease;
+    }
+    .stat-card-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+    }
+
+    .participant-row { transition: all 0.2s; cursor: pointer; }
+    .participant-row:hover { background-color: #f8fafc; }
+    .participant-row.selected { background-color: #eef2ff; border-left: 4px solid var(--primary-color); }
+
+    .group-item {
+        padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px;
+        margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .group-item:hover { border-color: var(--primary-color); background: #f0f7ff; }
+    .group-item.selected { border-color: var(--primary-color); background: #eef2ff; box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2); }
+
+    /* Custom scrollbar for groups list */
+    #groupsList::-webkit-scrollbar { width: 6px; }
+    #groupsList::-webkit-scrollbar-track { background: #f1f1f1; }
+    #groupsList::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fs-24 fw-bold text-dark mb-1">Autre affectation</h4>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Scolarité</a></li>
+                                    <li class="breadcrumb-item active text-primary" aria-current="page">Autre affectation</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <button class="btn btn-primary shadow-sm px-4" onclick="loadParticipants()">
+                            <i class="ri-refresh-line me-1"></i>Actualiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="row mb-4">
+                <div class="col-xl-4 col-md-6">
+                    <div class="card stat-card-modern h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-0">Participants confirmés</p>
+                                    <h4 class="fs-22 fw-bold mb-0 mt-2" id="statTotalParticipants">0</h4>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="icon-box warning">
+                                        <i class="ri-user-received-2-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <div class="card stat-card-modern h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-0">Groupes disponibles</p>
+                                    <h4 class="fs-22 fw-bold mb-0 mt-2" id="statTotalGroups">0</h4>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="icon-box primary">
+                                        <i class="ri-group-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-12">
+                    <div class="card stat-card-modern h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="text-muted mb-0">Répartition</p>
+                                    <h4 class="fs-22 fw-bold mb-0 mt-2">Executive Ed.</h4>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="icon-box info">
+                                        <i class="ri-external-link-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left: Participants List -->
+                <div class="col-lg-7">
+                    <div class="card modern-card">
+                        <div class="card-header-modern border-bottom-0 pb-0">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box info me-3"><i class="ri-user-follow-line fs-20"></i></div>
+                                    <div>
+                                        <h5 class="fw-bold mb-0">Participants confirmés</h5>
+                                        <p class="text-muted small mb-0">Liste provenant de l'Executive Education</p>
+                                    </div>
+                                </div>
+                                <div class="search-box position-relative" style="width: 200px;">
+                                    <input type="text" id="searchParticipant" class="form-control form-control-sm border-light bg-light rounded-pill" placeholder="Rechercher...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead class="bg-light text-muted text-uppercase fs-11">
+                                        <tr>
+                                            <th class="ps-4">Nom & Prénom</th>
+                                            <th>Contact</th>
+                                            <th>Poste</th>
+                                            <th>Formation</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="participantsTableBody">
+                                        <!-- Loaded via AJAX -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Group Selection & Assignment -->
+                <div class="col-lg-5">
+                    <div class="card modern-card sticky-top" style="top: 80px;">
+                        <div class="card-header-modern border-bottom-0 pb-0">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="icon-box primary me-3"><i class="ri-send-plane-2-line fs-20"></i></div>
+                                <div>
+                                    <h5 class="fw-bold mb-0">Affectation au groupe</h5>
+                                    <p class="text-muted small mb-0">Finalisez l'affectation académique</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="selectionInfo" class="alert alert-info border-0 border-start border-4 border-info bg-light-subtle rounded-3 mb-4" style="display: none;">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-information-line fs-18 text-info me-2"></i>
+                                    <div>Affecter : <strong id="selectedParticipantName" class="text-dark">---</strong></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Rechercher un groupe académique</label>
+                                <div class="position-relative">
+                                    <input type="text" id="searchGroup" class="form-control bg-light border-light" placeholder="Nom du groupe ou spécialité...">
+                                    <i class="ri-search-line position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+                                </div>
+                            </div>
+
+                            <div id="groupsList" class="px-1" style="max-height: 350px; overflow-y: auto;">
+                                <!-- Loaded via AJAX -->
+                                <div class="text-center py-5 text-muted small">
+                                    <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                                    <br>Chargement des groupes...
+                                </div>
+                            </div>
+
+                            <button id="btnAssign" class="btn btn-primary w-100 mt-4 py-3 fw-bold rounded-3 shadow-sm" disabled>
+                                <i class="ri-user-add-line me-2"></i>Finaliser l'affectation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedParticipantId = null;
+    let selectedGroupId = null;
+    let allGroups = [];
+
+    $(document).ready(function() {
+        loadParticipants();
+        loadGroups();
+
+        $('#searchParticipant').on('input', function() {
+            const term = $(this).val().toLowerCase();
+            $('#participantsTableBody tr').each(function() {
+                $(this).toggle($(this).text().toLowerCase().includes(term));
+            });
+        });
+
+        $('#searchGroup').on('input', function() {
+            renderGroups($(this).val());
+        });
+
+        $('#btnAssign').on('click', function() {
+            if (!selectedParticipantId || !selectedGroupId) return;
+            
+            const btn = $(this);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>En cours...');
+
+            $.ajax({
+                url: "{% url 't_groupe:ApiAffectParticipantToAcademicGroupe' %}",
+                type: 'POST',
+                data: {
+                    participant_id: selectedParticipantId,
+                    groupId: selectedGroupId,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        loadParticipants(); 
+                        resetSelection();
+                    } else {
+                        alertify.error(res.message);
+                    }
+                },
+                error: function() { alertify.error('Erreur lors de l\'affectation'); },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="ri-user-add-line me-2"></i>Finaliser l\'affectation');
+                }
+            });
+        });
+    });
+
+    function loadParticipants() {
+        $('#participantsTableBody').html('<tr><td colspan="4" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+        $.getJSON("{% url 't_groupe:ApiParticipantsConfirmes' %}", function(data) {
+            let html = '';
+            $('#statTotalParticipants').text(data.length);
+            if (data.length === 0) {
+                html = '<tr><td colspan="4" class="text-center py-5 text-muted"><i class="ri-user-voice-line fs-24 d-block mb-2"></i>Aucun participant en attente</td></tr>';
+            } else {
+                data.forEach(p => {
+                    html += `
+                        <tr class="participant-row" id="participant-${p.id}">
+                            <td class="ps-4 fw-bold text-dark" onclick="selectParticipant(${p.id}, '${p.nom} ${p.prenom}')">${p.nom} ${p.prenom}</td>
+                            <td onclick="selectParticipant(${p.id}, '${p.nom} ${p.prenom}')"><small class="text-muted"><i class="ri-mail-line me-1"></i>${p.email || ''}<br><i class="ri-phone-line me-1"></i>${p.telephone || ''}</small></td>
+                            <td onclick="selectParticipant(${p.id}, '${p.nom} ${p.prenom}')"><span class="badge bg-light text-primary border border-primary-subtle">${p.poste || '---'}</span></td>
+                            <td onclick="selectParticipant(${p.id}, '${p.nom} ${p.prenom}')" style="max-width: 200px;"><small class="text-info fw-medium">${p.scolarite_note || '---'}</small></td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-soft-danger me-2" onclick="cancelConfirmation(${p.id}, event)" title="Annuler la confirmation">
+                                    <i class="ri-close-circle-line"></i>
+                                </button>
+                                <i class="ri-arrow-right-s-line text-muted" onclick="selectParticipant(${p.id}, '${p.nom} ${p.prenom}')"></i>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            $('#participantsTableBody').html(html);
+        });
+    }
+
+    function loadGroups() {
+        $.getJSON("{% url 't_groupe:ApiGetGroupeList' %}", function(data) {
+            allGroups = data;
+            $('#statTotalGroups').text(data.length);
+            renderGroups();
+        });
+    }
+
+    function renderGroups(term = '') {
+        const list = $('#groupsList');
+        let html = '';
+        const search = term.toLowerCase();
+        
+        const filtered = allGroups.filter(g => 
+            !search || 
+            (g.nom && g.nom.toLowerCase().includes(search)) || 
+            (g.specialite__label && g.specialite__label.toLowerCase().includes(search))
+        );
+
+        if (filtered.length === 0) {
+            html = '<div class="text-center py-4 text-muted small">Aucun groupe trouvé.</div>';
+        } else {
+            filtered.forEach(g => {
+                html += `
+                    <div class="group-item ${selectedGroupId == g.id ? 'selected' : ''}" onclick="selectGroup(${g.id})" id="group-${g.id}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-dark text-truncate">${g.nom}</div>
+                                <div class="text-muted small text-truncate">${g.specialite__label || 'Sans spécialité'}</div>
+                            </div>
+                            <div class="text-end flex-shrink-0 ms-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${g.promotion__code || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        list.html(html);
+    }
+
+    function selectParticipant(id, name) {
+        selectedParticipantId = id;
+        $('.participant-row').removeClass('selected');
+        $(`#participant-${id}`).addClass('selected');
+        
+        $('#selectionInfo').fadeIn();
+        $('#selectedParticipantName').text(name);
+        checkReady();
+    }
+
+    function selectGroup(id) {
+        selectedGroupId = id;
+        $('.group-item').removeClass('selected');
+        $(`#group-${id}`).addClass('selected');
+        checkReady();
+    }
+
+    function cancelConfirmation(participantId, event) {
+        if (event) event.stopPropagation();
+        if (!confirm('Voulez-vous vraiment annuler la confirmation de ce participant ? Il sera retiré de cette liste.')) return;
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiCancelParticipantConfirmationForScolarite" %}',
+            type: 'POST',
+            data: { 
+                'participant_id': participantId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    if (selectedParticipantId == participantId) {
+                        selectedParticipantId = null;
+                        $('#selectionInfo').hide();
+                        $('#btnAssign').prop('disabled', true);
+                    }
+                    loadParticipants();
+                    loadGroups(); // Refresh stats
+                } else {
+                    alertify.error(res.message);
+                }
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue.');
+            }
+        });
+    }
+
+    function checkReady() {
+        if (selectedParticipantId && selectedGroupId) {
+            $('#btnAssign').prop('disabled', false).addClass('shadow');
+        }
+    }
+
+    function resetSelection() {
+        selectedParticipantId = null;
+        selectedGroupId = null;
+        $('.participant-row').removeClass('selected');
+        $('.group-item').removeClass('selected');
+        $('#selectionInfo').hide();
+        $('#btnAssign').prop('disabled', true).removeClass('shadow');
+    }
+</script>
+{% endblock content %}

@@ -117,7 +117,11 @@ class NewProspecFormEntreprise(forms.ModelForm):
             "observation" : forms.Textarea(attrs={'class':'form-control'}),
             "entreprise": forms.TextInput(attrs={'class':'form-control', 'id' : 'id_entreprise'}),
             "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_nom'}),
-            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_prenom'}), 
+            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_prenom'}),
+            "rc" : forms.TextInput(attrs={'class':'form-control'}),
+            "nif" : forms.TextInput(attrs={'class':'form-control'}),
+            "nis" : forms.TextInput(attrs={'class':'form-control'}),
+            "art_imp" : forms.TextInput(attrs={'class':'form-control'}),
         }
 
 class DemandeInscriptionForm(forms.ModelForm):

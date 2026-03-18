@@ -148,15 +148,15 @@
                 <h4 class="fw-bold mb-1">{{ page_title }}</h4>
                 <nav aria-label="breadcrumb">
                   <ol class="breadcrumb m-0 bg-transparent p-0">
-                    <li class="breadcrumb-item text-muted">{% if context_type == 'con' %}Executive Education{% else %}Scolarité{% endif %}</li>
-                    <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Gestion des Groupes</li>
+                    <li class="breadcrumb-item text-muted">Executive Education</li>
+                    <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Session de formations</li>
                   </ol>
                 </nav>
               </div>
             </div>
             <div class="d-flex gap-2">
-              <a href="{% if context_type == 'con' %}{% url 't_groupe:nouveaugroupe_conseil' %}{% else %}{% url 't_groupe:nouveaugroupe' %}{% endif %}" class="btn btn-primary btn-rounded px-4">
-                <i class="ri-add-line align-bottom me-1"></i> Nouveau Groupe
+              <a href="{% url 't_conseil:NouveauGroupeConseil' %}" class="btn btn-primary btn-rounded px-4">
+                <i class="ri-add-line align-bottom me-1"></i> Nouvelle Session
               </a>
             </div>
           </div>
@@ -258,8 +258,7 @@
                       <th class="border-0 rounded-start">Nom du groupe</th>
                       <th class="border-0">Date de début</th>
                       <th class="border-0">Date de fin</th>
-                      <th class="border-0">Spécialité</th>
-                      <th class="border-0">Année scolaire</th>
+                      <th class="border-0">Devis</th>
                       <th class="border-0">Etat</th>
                       <th class="border-0 text-end">Actions</th>
                     </tr>
@@ -271,8 +270,7 @@
                         <td>{{i.nom}}</td>
                         <td>{{i.start_date}}</td>
                         <td>{{i.end_date}}</td>
-                        <td>{{i.specialite}}</td>
-                        <td>{{i.annee_scolaire}}</td>
+                        <td><span class="badge badge-soft-primary"><i class="ri-file-text-line me-1"></i> {{i.devis.num_devis}}</span></td>
                         <td>
                           {% if i.etat == "brouillon" %}   
                               <span class="badge bg-secondary bg-opacity-10 text-secondary">{{i.get_etat_display}}</span>
@@ -289,7 +287,7 @@
                               <i class="ri-more-fill align-middle"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a href="{% url 't_groupe:detailsgroupe' pk=i.id %}" data-id="{{i.id}}" class=" dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
+                              <li><a href="{% url 't_conseil:DetailsGroupeConseil' pk=i.id %}" data-id="{{i.id}}" class=" dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>
                               <li>
                                 <button data-id="{{i.id}}" id="deleteConfirmation" class="dropdown-item remove-item-btn">
                                   <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Supprimer
@@ -482,67 +480,19 @@
                   nom: nom,
                   start_date: cells.eq(1).text().trim(),
                   end_date: cells.eq(2).text().trim(),
-                  specialite: cells.eq(3).text().trim(),
-                  annee_scolaire: cells.eq(4).text().trim(),
-                  etat: cells.eq(5).find('span').text().trim()
+                  devis: cells.eq(3).text().trim(),
+                  etat: cells.eq(4).find('span').text().trim()
               });
           }
       });
       
       originalData = templateData;
       updateStatistics(originalData);
-      populateSpecialtyFilter(originalData);
       renderData(originalData); // Trigger initial render for Grid View
-    }
-
-    
-    
-    function populateSpecialtyFilter(data) {
-      var specialtySelect = $('#filter-specialty');
-      specialtySelect.empty(); // Clear existing options
-      
-      // Add default option
-      specialtySelect.append($('<option>', {
-        value: '',
-        text: 'Filtrer par spécialité'
-      }));
-      
-      // Extract unique specialties
-      var specialties = [];
-      $.each(data, function(index, item) {
-        if (item.specialite && specialties.indexOf(item.specialite) === -1) {
-          specialties.push(item.specialite);
-        }
-      });
-      
-      // Sort and add options
-      specialties.sort().forEach(function(specialty) {
-        specialtySelect.append($('<option>', {
-          value: specialty,
-          text: specialty
-        }));
-      });
     }
 
     // Initialize with template data
     loadGroups();
-
-    // Client-side filter by specialty
-    $(document).on('change', '#filter-specialty', function() {
-      var filterValue = $(this).val();
-      
-      if (filterValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Filter based on specialty
-        var filteredData = originalData.filter(function(item) {
-          return item.specialite && item.specialite.toLowerCase().includes(filterValue.toLowerCase());
-        });
-        
-        renderData(filteredData);
-      }
-    });
 
     // Function to render data to the table and grid
     function renderData(data) {
@@ -559,8 +509,8 @@
                 </div>
                 <h5 class="fw-bold">Aucun groupe trouvé</h5>
                 <p class="text-muted">Il n'y a aucun groupe enregistré pour le moment</p>
-                <a href="{% if context_type == 'con' %}{% url 't_groupe:nouveaugroupe_conseil' %}{% else %}{% url 't_groupe:nouveaugroupe' %}{% endif %}" class="btn btn-primary btn-rounded mt-2">
-                    <i class="ri-add-line align-bottom me-1"></i> Créer votre premier groupe
+                <a href="{% url 't_conseil:NouveauGroupeConseil' %}" class="btn btn-primary btn-rounded mt-2">
+                    <i class="ri-add-line align-bottom me-1"></i> Créer votre première session
                 </a>
             </div>
         `;
@@ -597,7 +547,7 @@
                   <i class="ri-more-2-fill"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 glass-card">
-                  <li><a class="dropdown-item" href="/scolarite/groupes/details-groupe/${item.id}/"><i class="ri-eye-line me-2 text-primary"></i> Consulter</a></li>
+                  <li><a class="dropdown-item" href="/conseil/groupes/details-groupe/${item.id}/"><i class="ri-eye-line me-2 text-primary"></i> Consulter</a></li>
                   <li><hr class="dropdown-divider opacity-50"></li>
                   <li><a class="dropdown-item text-danger" href="javascript:void(0);" data-id="${item.id}" id="deleteConfirmation"><i class="ri-delete-bin-line me-2"></i> Supprimer</a></li>
                 </ul>
@@ -621,7 +571,7 @@
                 </div>
                 
                 <h5 class="fw-bold mb-1 text-truncate">${item.nom}</h5>
-                <p class="text-muted fs-13 mb-3 text-truncate">${item.specialite}</p>
+                <p class="text-muted fs-13 mb-3 text-truncate"><i class="ri-file-text-line me-1"></i> ${item.devis}</p>
                 
                 <div class="d-flex align-items-center gap-3 mb-4">
                   <div class="flex-grow-1">
@@ -636,7 +586,7 @@
 
                 <div class="mt-auto">
                   <div class="d-flex gap-2">
-                    <a href="/scolarite/groupes/details-groupe/${item.id}/" class="btn btn-primary btn-rounded btn-sm flex-grow-1 fw-medium">
+                    <a href="/conseil/groupes/details-groupe/${item.id}/" class="btn btn-primary btn-rounded btn-sm flex-grow-1 fw-medium">
                       Voir détails
                     </a>
                     <button class="btn btn-soft-danger btn-rounded btn-sm px-3" id="deleteConfirmation" data-id="${item.id}">
@@ -690,8 +640,7 @@
         var filteredData = originalData.filter(function(item) {
           return (
             item.nom.toLowerCase().includes(searchTerm) ||
-            item.specialite.toLowerCase().includes(searchTerm) ||
-            item.annee_scolaire.toLowerCase().includes(searchTerm) ||
+            item.devis.toLowerCase().includes(searchTerm) ||
             item.etat.toLowerCase().includes(searchTerm)
           );
         });
@@ -744,7 +693,7 @@
   
       
       $.ajax({
-        url : "{% url 't_groupe:ApiDeleteGroupe' %}",
+        url : "{% url 't_conseil:ApiDeleteGroupeConseil' %}",
         dataType: "JSON",
         type:"GET",
         data : {
@@ -752,7 +701,7 @@
         },
         success : function(response){
           if (response.status === "success"){
-            window.location.href="{% url 't_groupe:listegroupes' %}";
+            window.location.href="{% url 't_conseil:ListeGroupesConseil' %}";
           }else{
             $('.groupInUseModal').modal('show');
           }

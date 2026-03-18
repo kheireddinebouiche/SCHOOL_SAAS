@@ -452,13 +452,13 @@ def ApiFilterProspect(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, is_client=False).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, status="visiteur").order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, is_client=False).order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
@@ -571,6 +571,9 @@ def ApiLoadProspectDetails(request):
         'canal': prospect.canal,
         'observation' : prospect.observation,
         'entreprise' : prospect.entreprise,
+        'adresse' : prospect.adresse,
+        'wilaya' : prospect.wilaya,
+        'code_zip': prospect.code_zip,
     }
     return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
 
@@ -617,6 +620,10 @@ def ApiUpdateProspectEtsDetails(request):
     telephone = request.POST.get('telephone_ets')
     canal = request.POST.get('canal_ets')
     observation = request.POST.get('observation_ets')
+    
+    adresse = request.POST.get('adresse_ets')
+    wilaya = request.POST.get('wilaya_ets')
+    code_zip = request.POST.get('code_zip_ets')
 
     prospect = Prospets.objects.get(id = id_prospect)
     prospect.entreprise = entreprise
@@ -626,6 +633,9 @@ def ApiUpdateProspectEtsDetails(request):
     prospect.telephone = telephone
     prospect.canal = canal
     prospect.observation = observation
+    prospect.adresse = adresse
+    prospect.wilaya = wilaya
+    prospect.code_zip = code_zip
     prospect.save()
 
     return JsonResponse({'status': 'success', 'message': 'Les informations du prospect ont été mises à jour avec succès.'})

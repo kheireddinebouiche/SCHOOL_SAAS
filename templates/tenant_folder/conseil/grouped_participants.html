@@ -1,0 +1,392 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Participants par Thématique {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --premium-blue: #0f172a;
+        --accent-blue: #3b82f6;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+    }
+
+    .main-content {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        min-height: 100vh;
+    }
+
+    .premium-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+
+    .premium-card:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .theme-header {
+        background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
+        padding: 1.5rem 2rem;
+        color: white;
+    }
+
+    .theme-badge {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .table-premium {
+        margin-bottom: 0;
+    }
+
+    .table-premium thead th {
+        background: rgba(248, 250, 252, 0.5);
+        text-transform: uppercase;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table-premium tbody td {
+        padding: 1.25rem 1rem;
+        vertical-align: middle;
+        font-size: 14px;
+        color: #1e293b;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .generate-btn-float {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        z-index: 1000;
+        padding: 16px 32px;
+        border-radius: 50px;
+        background: #1e293b;
+        color: white;
+        font-weight: 700;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        display: none;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .generate-btn-float:hover {
+        transform: scale(1.05);
+        color: white;
+        background: #0f172a;
+    }
+
+    .counter-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-left: 8px;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Header -->
+            <div class="row mb-5 align-items-center">
+                <div class="col">
+                    <h1 class="display-6 fw-bold text-dark mb-1">Participants par Thématique</h1>
+                    <p class="text-muted fs-16">Gérez et regroupez les participants issus des devis confirmés.</p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 't_groupe:nouveaugroupe_conseil' %}" class="btn btn-primary btn-rounded px-4 shadow-sm">
+                        <i class="ri-magic-line me-1"></i> Nouveau Groupe (Wizard)
+                    </a>
+                </div>
+            </div>
+
+            {% if grouped_data %}
+                {% for item in grouped_data %}
+                    <div class="premium-card" data-thematique-id="{{ item.thematique.id }}">
+                        <div class="theme-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input check-all-theme" type="checkbox" style="width: 22px; height: 22px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <h3 class="h5 fw-bold mb-1">{{ item.thematique.label }}</h3>
+                                    <span class="theme-badge">Executive Education</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm btn-light btn-rounded fw-bold btn-generate-theme" data-theme-id="{{ item.thematique.id }}" data-theme-label="{{ item.thematique.label }}">
+                                    <i class="ri-group-add-line me-1 text-primary"></i> Générer un groupe
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-premium">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;"></th>
+                                        <th>Participant</th>
+                                        <th>Contact</th>
+                                        <th>Poste</th>
+                                        <th>Client Associé</th>
+                                        <th class="text-end">Document</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in item.participants %}
+                                    <tr>
+                                        <td>
+                                            <input class="form-check-input participant-check" type="checkbox" value="{{ p.id }}" data-name="{{ p.nom }} {{ p.prenom }}">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-light rounded-circle p-1 me-3 text-center d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                                    <span class="fw-bold text-primary">{{ p.nom|slice:":1" }}{{ p.prenom|slice:":1" }}</span>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">{{ p.prenom }} {{ p.nom }}</h6>
+                                                    <small class="text-muted">ID: #{{ p.id }}</small>
+                                                    {% if p.is_prospect_direct %}
+                                                        <span class="badge bg-soft-info text-info ms-1" style="font-size: 9px;">Client Direct</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="mb-1"><i class="ri-mail-line me-1 text-muted"></i> {{ p.email|default:"-" }}</div>
+                                            <div><i class="ri-phone-line me-1 text-muted"></i> {{ p.telephone|default:"-" }}</div>
+                                        </td>
+                                        <td>{{ p.poste|default:"-" }}</td>
+                                        <td>
+                                            {% if p.prospect.entreprise %}
+                                                <span class="badge bg-soft-primary text-primary">{{ p.prospect.entreprise }}</span>
+                                            {% else %}
+                                                {{ p.prospect.nom }} {{ p.prospect.prenom }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if p.devis %}
+                                                <a href="{% url 't_conseil:DetailsDevis' p.devis.num_devis %}" class="btn btn-sm btn-outline-info rounded-pill">
+                                                    Devis {{ p.devis.num_devis }}
+                                                </a>
+                                            {% elif p.facture %}
+                                                 <a href="{% url 't_conseil:DetailsFacture' p.facture.num_facture %}" class="btn btn-sm btn-outline-success rounded-pill">
+                                                    Facture {{ p.facture.num_facture }}
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="premium-card p-5 text-center">
+                    <div class="avatar-lg bg-light rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center">
+                        <i class="ri-group-line display-4 text-muted"></i>
+                    </div>
+                    <h4 class="fw-bold">Aucun participant trouvé</h4>
+                    <p class="text-muted">
+                        Les participants apparaissent ici une fois que les devis sont validés (**Status: Accepté**).<br>
+                        Assurez-vous que vos devis contiennent des thématiques du module Executive Education.
+                    </p>
+                    <div class="mt-4">
+                        <a href="{% url 't_conseil:ListeDesDevis' %}" class="btn btn-primary rounded-pill">
+                            <i class="ri-file-list-3-line me-1"></i> Gérer les devis
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Floating Action Button -->
+            <button class="btn generate-btn-float shadow-lg" id="btnShowGroupModal">
+                <i class="ri-group-add-line me-2"></i> Générer un Groupe <span class="counter-badge" id="selectedCount">0</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Group Generation Modal -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 bg-dark text-white p-4">
+                <h5 class="modal-title fw-bold"><i class="ri-group-line me-2"></i>Nouveau Groupe d'Études</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="groupForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Nom du Groupe</label>
+                        <input type="text" class="form-control form-control-lg" id="groupName" placeholder="Ex: Groupe Thématique A - Session Mars" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Lien Thématique</label>
+                        <select class="form-select form-select-lg" id="groupThematic" required>
+                            <option value="">Sélectionner une thématique</option>
+                            {% for item in grouped_data %}
+                                <option value="{{ item.thematique.id }}">{{ item.thematique.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Le groupe sera rattaché à cette thématique pour le suivi.</small>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-bold">Promotion</label>
+                        <select class="form-select form-select-lg" id="groupPromo" required>
+                            <option value="">Sélectionner une promo</option>
+                            {% for p in promos %}
+                                <option value="{{ p.id }}">{{ p.label }} ({{ p.annee_academique }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-dark px-4 fw-bold shadow" id="confirmGenerateBtn">Confirmer la création</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="{% static 'assets/libs/alertifyjs/build/alertify.min.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const participantChecks = document.querySelectorAll('.participant-check');
+        const checkAllThemes = document.querySelectorAll('.check-all-theme');
+        const floatBtn = document.getElementById('btnShowGroupModal');
+        const selectedCountEl = document.getElementById('selectedCount');
+        const groupModal = new bootstrap.Modal(document.getElementById('groupModal'));
+        const confirmBtn = document.getElementById('confirmGenerateBtn');
+        const themeGenerateBtns = document.querySelectorAll('.btn-generate-theme');
+
+        function updateFloatBtn() {
+            const checkedCount = document.querySelectorAll('.participant-check:checked').length;
+            selectedCountEl.textContent = checkedCount;
+            if (checkedCount > 0) {
+                floatBtn.style.display = 'block';
+            } else {
+                floatBtn.style.display = 'none';
+            }
+        }
+
+        participantChecks.forEach(cb => {
+            cb.addEventListener('change', updateFloatBtn);
+        });
+
+        checkAllThemes.forEach(allCb => {
+            allCb.addEventListener('change', function() {
+                const themeCard = this.closest('.premium-card');
+                const themeChecks = themeCard.querySelectorAll('.participant-check');
+                themeChecks.forEach(cb => {
+                    cb.checked = this.checked;
+                });
+                updateFloatBtn();
+            });
+        });
+
+        themeGenerateBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const themeId = this.getAttribute('data-theme-id');
+                const themeLabel = this.getAttribute('data-theme-label');
+                const themeCard = this.closest('.premium-card');
+                
+                // Select all in this theme if none selected
+                const themeChecks = themeCard.querySelectorAll('.participant-check');
+                const checkedInTheme = themeCard.querySelectorAll('.participant-check:checked');
+                
+                if(checkedInTheme.length === 0) {
+                    themeChecks.forEach(cb => cb.checked = true);
+                    updateFloatBtn();
+                }
+
+                document.getElementById('groupThematic').value = themeId;
+                document.getElementById('groupName').value = "Groupe " + themeLabel;
+                groupModal.show();
+            });
+        });
+
+        floatBtn.addEventListener('click', () => {
+            const checkedOnes = document.querySelectorAll('.participant-check:checked');
+            if(checkedOnes.length > 0) {
+                const firstThemeId = checkedOnes[0].closest('.premium-card').getAttribute('data-thematique-id');
+                document.getElementById('groupThematic').value = firstThemeId;
+            }
+            groupModal.show();
+        });
+
+        confirmBtn.addEventListener('click', function() {
+            const groupName = document.getElementById('groupName').value;
+            const thematicId = document.getElementById('groupThematic').value;
+            const promoId = document.getElementById('groupPromo').value;
+            const participantIds = Array.from(document.querySelectorAll('.participant-check:checked')).map(cb => cb.value);
+
+            if (!groupName || !thematicId || !promoId) {
+                alertify.error("Veuillez remplir tous les champs obligatoires.");
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i> Création...';
+
+            fetch("{% url 't_conseil:ApiCreateGroupFromParticipants' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    group_name: groupName,
+                    thematique_id: thematicId,
+                    promo_id: promoId,
+                    participant_ids: participantIds
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alertify.success(data.message);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alertify.error(data.message);
+                    this.disabled = false;
+                    this.innerHTML = 'Confirmer la création';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alertify.error("Une erreur est survenue.");
+                this.disabled = false;
+                this.innerHTML = 'Confirmer la création';
+            });
+        });
+    });
+</script>
+{% endblock extra_js %}

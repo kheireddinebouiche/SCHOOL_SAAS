@@ -94,6 +94,38 @@
                 </div>
             </div>
 
+            <!-- Global Alert -->
+            {% regroup liste by formation as grouped_specialites %}
+            {% with missing_count=0 %}
+                {% for formation_group in grouped_specialites %}
+                    {% for item in formation_group.list %}
+                        {% if not item.prix or not item.nb_semestre or not item.nb_tranche or not item.prix_double_diplomation or not item.branche %}
+                            {% if forloop.parentloop.first and forloop.first %}
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="alert alert-warning alert-dismissible fade show border-warning glass-card d-flex flex-column flex-sm-row align-items-sm-center justify-content-between mb-0" role="alert">
+                                            <div class="d-flex align-items-center mb-3 mb-sm-0">
+                                                <i class="ri-alert-line fs-3 text-warning me-3"></i>
+                                                <div>
+                                                    <h6 class="alert-heading fw-bold mb-1">Attention : Paramétrage incomplet</h6>
+                                                    <p class="mb-0">Certaines spécialités manquent d'informations essentielles. Veuillez les configurer pour assurer le bon fonctionnement du système.</p>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center ms-sm-3">
+                                                <button type="button" class="btn btn-warning btn-sm btn-rounded text-white" data-bs-toggle="modal" data-bs-target="#missingConfigModalSpecialites">
+                                                    Voir les détails
+                                                </button>
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="position: static; margin-left: 1rem;"></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            {% endwith %}
+
             <!-- Main Card -->
             <div class="row">
                 <div class="col-12">
@@ -179,8 +211,20 @@
                                                                     <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
                                                                         <i class="ri-file-list-line text-primary fs-14"></i>
                                                                     </div>
-                                                                    <a href="{% url 't_formations:detailSpecialite' pk=item.id %}"
-                                                                       class="text-dark fw-medium">{{ item.label }}</a>
+                                                                    <div>
+                                                                        <a href="{% url 't_formations:detailSpecialite' pk=item.id %}"
+                                                                           class="text-dark fw-medium">{{ item.label }}</a>
+                                                                        {% if not item.prix or not item.nb_semestre or not item.nb_tranche or not item.prix_double_diplomation or not item.branche %}
+                                                                        <div class="text-warning small mt-1" style="font-size: 0.75rem;">
+                                                                            <i class="ri-error-warning-line"></i> <b>À configurer:</b>
+                                                                            {% if not item.prix %}Prix, {% endif %}
+                                                                            {% if not item.prix_double_diplomation %}Prix DD, {% endif %}
+                                                                            {% if not item.nb_semestre %}Semestres, {% endif %}
+                                                                            {% if not item.nb_tranche %}Tranches, {% endif %}
+                                                                            {% if not item.branche %}Branche{% endif %}
+                                                                        </div>
+                                                                        {% endif %}
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                             <td>
@@ -287,5 +331,46 @@ $(document).ready(function () {
     });
 });
 </script>
+
+<!-- Missing Config Modal Specialites -->
+<div class="modal fade" id="missingConfigModalSpecialites" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content shadow-lg" style="border-radius: 1.5rem; border: none;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="ri-error-warning-line text-warning me-2"></i>Spécialités à configurer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-3">
+                <ul class="list-group list-group-flush">
+                    {% regroup liste by formation as grouped_specialites %}
+                    {% for formation_group in grouped_specialites %}
+                        {% for item in formation_group.list %}
+                            {% if not item.prix or not item.nb_semestre or not item.nb_tranche or not item.prix_double_diplomation or not item.branche %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <span class="fw-bold text-dark">{{ item.label }}</span> <span class="text-muted small">({{ item.code }})</span>
+                                    <div class="small text-muted mt-1"><i class="ri-book-mark-line me-1"></i> Formation: {{ item.formation.nom }}</div>
+                                    <div class="small text-danger mt-1">
+                                        <b>Manque :</b> 
+                                        {% if not item.prix %}Prix, {% endif %}
+                                        {% if not item.prix_double_diplomation %}Prix DD, {% endif %}
+                                        {% if not item.nb_semestre %}Semestres, {% endif %}
+                                        {% if not item.nb_tranche %}Tranches, {% endif %}
+                                        {% if not item.branche %}Branche{% endif %}
+                                    </div>
+                                </div>
+                                <a href="{% url 't_formations:updateSpecialite' pk=item.id %}" class="btn btn-sm btn-soft-info btn-rounded ms-3">Configurer</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 pb-3 px-4">
+                <button type="button" class="btn btn-light btn-rounded w-100" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}

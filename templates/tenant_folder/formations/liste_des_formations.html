@@ -131,6 +131,36 @@
                 </div>
             </div>
 
+            <!-- Global Alert -->
+            {% regroup liste by type_formation as formations_type %}
+            {% with missing_count=0 %}
+                {% for i in liste %}
+                    {% if not i.type_formation or not i.frais_inscription or not i.prix_formation or not i.duree or not i.partenaire %}
+                        {% if forloop.first %}
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="alert alert-warning alert-dismissible fade show border-warning glass-card d-flex flex-column flex-sm-row align-items-sm-center justify-content-between mb-0" role="alert">
+                                        <div class="d-flex align-items-center mb-3 mb-sm-0">
+                                            <i class="ri-alert-line fs-3 text-warning me-3"></i>
+                                            <div>
+                                                <h6 class="alert-heading fw-bold mb-1">Attention : Paramétrage incomplet</h6>
+                                                <p class="mb-0">Certaines formations de votre catalogue manquent d'informations essentielles. Veuillez les configurer pour assurer le bon fonctionnement du système.</p>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center ms-sm-3">
+                                            <button type="button" class="btn btn-warning btn-sm btn-rounded text-white" data-bs-toggle="modal" data-bs-target="#missingConfigModalFormations">
+                                                Voir les détails
+                                            </button>
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="position: static; margin-left: 1rem;"></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
             <!-- Content Grid -->
             <div class="row g-4" id="formations-grid">
                 {% if liste %}
@@ -163,6 +193,17 @@
                                         <p class="text-muted small mb-0"><i class="ri-building-line me-1 opacity-50"></i> Aucun partenaire</p>
                                     {% endif %}
                                 </div>
+                                {% if not i.type_formation or not i.frais_inscription or not i.prix_formation or not i.duree or not i.partenaire %}
+                                <div class="alert alert-warning py-1 px-2 mb-2 small" style="font-size: 0.75rem;">
+                                    <i class="ri-error-warning-line me-1"></i>
+                                    <b>À configurer:</b>
+                                    {% if not i.type_formation %}Type, {% endif %}
+                                    {% if not i.frais_inscription %}Frais inscr., {% endif %}
+                                    {% if not i.prix_formation %}Prix, {% endif %}
+                                    {% if not i.duree %}Durée, {% endif %}
+                                    {% if not i.partenaire %}Partenaire{% endif %}
+                                </div>
+                                {% endif %}
                                 <div class="mt-4 d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center">
                                         <div class="bg-light rounded-circle p-2 me-2">
@@ -243,4 +284,42 @@
         ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
     }
 </script>
+
+<!-- Missing Config Modal Formations -->
+<div class="modal fade" id="missingConfigModalFormations" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content shadow-lg" style="border-radius: 1.5rem; border: none;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="ri-error-warning-line text-warning me-2"></i>Formations à configurer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-3">
+                <ul class="list-group list-group-flush">
+                    {% for i in liste %}
+                        {% if not i.type_formation or not i.frais_inscription or not i.prix_formation or not i.duree or not i.partenaire %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <span class="fw-bold text-dark">{{ i.nom }}</span> <span class="text-muted small">({{ i.code }})</span>
+                                <div class="small text-danger mt-1">
+                                    <b>Manque :</b> 
+                                    {% if not i.type_formation %}Type de formation, {% endif %}
+                                    {% if not i.frais_inscription %}Frais d'inscription, {% endif %}
+                                    {% if not i.prix_formation %}Prix, {% endif %}
+                                    {% if not i.duree %}Durée, {% endif %}
+                                    {% if not i.partenaire %}Partenaire{% endif %}
+                                </div>
+                            </div>
+                            <a href="{% url 't_formations:updateFormation' pk=i.id %}" class="btn btn-sm btn-soft-info btn-rounded ms-3">Configurer</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 pb-3 px-4">
+                <button type="button" class="btn btn-light btn-rounded w-100" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}

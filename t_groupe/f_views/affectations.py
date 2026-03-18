@@ -6,6 +6,8 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from t_crm.models import *
+from t_etudiants.models import Etudiant
+from t_conseil.models import Participant
 from django.db.models import Count,Q,Exists, OuterRef
 
 @login_required(login_url="institut_app:login")
@@ -339,3 +341,93 @@ def ApiCancelStudentAffectation(request):
         return JsonResponse({"status":"success","message":"L'affectation a été annulée avec succès"})
     else:
         return JsonResponse({"status":"error","message":"Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def AutreAffectationPage(request):
+    return render(request, 'tenant_folder/scolarite/autre_affectation.html')
+
+@login_required(login_url="institut_app:login")
+def ApiParticipantsConfirmes(request):
+    participants = Participant.objects.filter(is_confirmed_for_scolarite=True)
+    data = []
+    for p in participants:
+        data.append({
+            'id': p.id,
+            'nom': p.nom,
+            'prenom': p.prenom,
+            'email': p.email,
+            'telephone': p.telephone,
+            'poste': p.poste,
+            'scolarite_note': p.scolarite_note,
+        })
+    return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiAffectParticipantToAcademicGroupe(request):
+    if request.method == "POST":
+        participant_id = request.POST.get('participant_id')
+        group_id = request.POST.get('groupId')
+
+        if not participant_id or not group_id:
+            return JsonResponse({'status': 'error', 'message': 'Informations manquantes'})
+
+        try:
+            participant = Participant.objects.get(id=participant_id)
+            groupe = Groupe.objects.get(id=group_id)
+        except (Participant.DoesNotExist, Groupe.DoesNotExist):
+            return JsonResponse({'status': 'error', 'message': 'Participant ou Groupe non trouvé'})
+
+        # 1. Ensure/Create Prospect
+        prospect = participant.prospect
+        if not prospect:
+            from django.utils.text import slugify
+            base_email = participant.email or f"{slugify(participant.nom)}.{slugify(participant.prenom)}_{participant_id}@auto.com"
+            prospect = Prospets.objects.create(
+                nom=participant.nom,
+                prenom=participant.prenom,
+                email=base_email,
+                telephone=participant.telephone,
+                statut="convertit",
+                context="con",
+                type_prospect="particulier"
+            )
+            participant.prospect = prospect
+            participant.save()
+        else:
+            if prospect.statut != "convertit":
+                prospect.statut = "convertit"
+                prospect.save()
+
+        # 2. Ensure/Create Etudiant (Scolarité record)
+        etudiant = Etudiant.objects.filter(relation=prospect).first()
+        if not etudiant:
+            # Check for email conflict in Etudiant model
+            etudiant_by_email = Etudiant.objects.filter(email=prospect.email).first()
+            if etudiant_by_email:
+                etudiant = etudiant_by_email
+                etudiant.relation = prospect
+                etudiant.save()
+            else:
+                etudiant = Etudiant.objects.create(
+                    relation=prospect,
+                    email=prospect.email,
+                    telephone=prospect.telephone or ""
+                )
+
+        # 3. Assign to Groupe
+        if not AffectationGroupe.objects.filter(etudiant=prospect, specialite=groupe.specialite).exists():
+            GroupeLine.objects.create(
+                student=prospect,
+                groupe=groupe
+            )
+            AffectationGroupe.objects.create(
+                etudiant=prospect,
+                groupe=groupe,
+                specialite=groupe.specialite
+            )
+            return JsonResponse({'status': 'success', 'message': 'Participant affecté avec succès'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Ce participant est déjà affecté à cette spécialité/groupe'})
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)

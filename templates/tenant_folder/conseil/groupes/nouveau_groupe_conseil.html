@@ -1,0 +1,439 @@
+{% extends 'tenant_folder/base.html' %}
+{% block title %} Conseil - Creation de Groupe {% endblock title %}
+{% block content %}
+<style>
+    /* Premium Glass-Card Styles */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+        --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        border-radius: 16px;
+    }
+
+    .bg-light { background-color: #f4f7f9 !important; }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 1.5rem;
+    }
+
+    .wizard-step {
+        display: none;
+    }
+    .wizard-step.active {
+        display: block;
+    }
+
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .step-indicator::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+        transform: translateY(-50%);
+    }
+    .step-dot {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    .step-dot.active {
+        border-color: #405189;
+        color: #405189;
+        box-shadow: 0 0 0 4px rgba(64, 81, 137, 0.1);
+    }
+    .step-dot.completed {
+        background: #405189;
+        border-color: #405189;
+        color: #fff;
+    }
+
+    .participant-card {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid #e9ecef;
+    }
+    .participant-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .participant-card.selected {
+        border-color: #405189;
+        background-color: rgba(64, 81, 137, 0.05);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                <i class="ri-equalizer-line"></i>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold mb-1 text-primary">Nouveau Groupe Conseil</h4>
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0 bg-transparent p-0">
+                                        <li class="breadcrumb-item text-muted">Formation</li>
+                                        <li class="breadcrumb-item active text-primary fw-medium">Wizard Création</li>
+                                    </ol>
+                                </nav>
+                            </div>
+                        </div>
+                        <a href="{% url 't_conseil:ListeGroupesConseil' %}" class="btn btn-soft-secondary btn-rounded px-4">
+                            <i class="ri-arrow-left-line me-1"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-9">
+                    <div class="glass-card mb-4 p-4">
+                        <!-- Step Indicators -->
+                        <div class="step-indicator px-5">
+                            <div class="step-dot active" data-step="1">1</div>
+                            <div class="step-dot" data-step="2">2</div>
+                            <div class="step-dot" data-step="3">3</div>
+                            <div class="step-dot" data-step="4">4</div>
+                            <div class="step-dot" data-step="5">5</div>
+                        </div>
+
+                        <form id="wizardForm">
+                            <!-- Step 1: Selection Client -->
+                            <div class="wizard-step active" id="step1">
+                                <h5 class="fw-bold mb-4">Étape 1 : Sélection du Client</h5>
+                                <div class="mb-4 text-center">
+                                    <label class="form-label d-block mb-3">Choisissez l'entreprise ou le client particulier</label>
+                                    <select id="clientSelect" class="form-select form-select-lg shadow-sm border-0 bg-light" style="max-width: 500px; margin: 0 auto;">
+                                        <option value="">-- Sélectionner un client --</option>
+                                        {% for client in clients %}
+                                            <option value="{{ client.id }}">{% if client.type_prospect == 'entreprise' %}{{ client.entreprise }} (Entreprise){% else %}{{ client.nom }} {{ client.prenom|default:"" }}{% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Selection Devis -->
+                            <div class="wizard-step" id="step2">
+                                <h5 class="fw-bold mb-4">Étape 2 : Sélection du Devis Accepté</h5>
+                                <div id="devisList" class="row g-3">
+                                    <div class="col-12 text-center py-5 text-muted">
+                                        <p>Chargement des devis...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Participants -->
+                            <div class="wizard-step" id="step3">
+                                <h5 class="fw-bold mb-4">Étape 3 : Sélection des Participants</h5>
+                                <div id="participantsList" class="row g-3">
+                                    <!-- Dynamic -->
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Formateurs -->
+                            <div class="wizard-step" id="step4">
+                                <h5 class="fw-bold mb-4">Étape 4 : Affectation des Formateurs par Thématique</h5>
+                                <div id="thematicAssignments" class="row g-4">
+                                    <!-- Dynamic -->
+                                </div>
+                            </div>
+
+                            <!-- Step 5: Finalisation -->
+                            <div class="wizard-step" id="step5">
+                                <h5 class="fw-bold mb-4">Étape 5 : Détails du Groupe</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label">Nom du Groupe</label>
+                                        <input type="text" id="groupName" class="form-control" placeholder="Ex: Groupe Management - session Mars">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date de début</label>
+                                        <input type="date" id="startDate" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date de fin</label>
+                                        <input type="date" id="endDate" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Navigation -->
+                            <div class="d-flex justify-content-between mt-5 pt-4 border-top">
+                                <button type="button" class="btn btn-light btn-rounded px-4" id="prevBtn" style="display: none;">
+                                    <i class="ri-arrow-left-line"></i> Précédent
+                                </button>
+                                <button type="button" class="btn btn-primary btn-rounded px-4 ms-auto" id="nextBtn">
+                                    Suivant <i class="ri-arrow-right-line"></i>
+                                </button>
+                                <button type="button" class="btn btn-success btn-rounded px-4 ms-auto" id="submitBtn" style="display: none;">
+                                    <i class="ri-check-line"></i> Créer le Groupe
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let currentStep = 1;
+        let selectedClient = null;
+        let selectedDevis = null;
+        let selectedParticipants = [];
+        let assignments = [];
+        let trainersPool = [];
+
+        function updateStep() {
+            $('.wizard-step').removeClass('active');
+            $(`#step${currentStep}`).addClass('active');
+            
+            // Indicators
+            $('.step-dot').removeClass('active completed');
+            for(let i=1; i<=5; i++) {
+                let dot = $(`.step-dot[data-step="${i}"]`);
+                if(i < currentStep) dot.addClass('completed');
+                if(i == currentStep) dot.addClass('active');
+            }
+
+            // Buttons
+            if(currentStep == 1) $('#prevBtn').hide();
+            else $('#prevBtn').show();
+
+            if(currentStep == 5) {
+                $('#nextBtn').hide();
+                $('#submitBtn').show();
+            } else {
+                $('#nextBtn').show();
+                $('#submitBtn').hide();
+            }
+        }
+
+        $('#nextBtn').click(function() {
+            if(currentStep == 1) {
+                selectedClient = $('#clientSelect').val();
+                if(!selectedClient) {
+                    alertify.error('Veuillez sélectionner un client');
+                    return;
+                }
+                loadClientDevis();
+            }
+            if(currentStep == 2) {
+                selectedDevis = $('input[name="devisRadio"]:checked').val();
+                if(!selectedDevis) {
+                    alertify.error('Veuillez sélectionner un devis');
+                    return;
+                }
+                loadDevisDetails();
+            }
+            if(currentStep == 3) {
+                selectedParticipants = [];
+                $('.participant-check:checked').each(function() {
+                    selectedParticipants.push($(this).val());
+                });
+                if(selectedParticipants.length == 0) {
+                    alertify.error('Veuillez sélectionner au moins un participant');
+                    return;
+                }
+            }
+            
+            if(currentStep < 5) {
+                currentStep++;
+                updateStep();
+            }
+        });
+
+        $('#prevBtn').click(function() {
+            if(currentStep > 1) {
+                currentStep--;
+                updateStep();
+            }
+        });
+
+        function loadClientDevis() {
+            $('#devisList').html('<div class="col-12 text-center"><div class="spinner-border text-primary"></div></div>');
+            $.get("{% url 't_conseil:ApiGetClientDevis' %}", {client_id: selectedClient}, function(data) {
+                if(data.length == 0) {
+                    $('#devisList').html('<div class="col-12 text-center py-4"><p class="text-danger">Aucun devis accepté trouvé pour ce client.</p></div>');
+                } else {
+                    let html = '';
+                    data.forEach(d => {
+                        html += `
+                            <div class="col-md-6">
+                                <div class="glass-card p-3 d-flex align-items-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
+                                        <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
+                                            ${d.num_devis} <small class="text-muted d-block">Émis le ${d.date_emission}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    $('#devisList').html(html);
+                }
+            });
+        }
+
+        function loadDevisDetails() {
+            $('#participantsList').html('<div class="col-12 text-center"><div class="spinner-border text-primary"></div></div>');
+            $('#thematicAssignments').empty();
+            $.get("{% url 't_conseil:ApiGetDevisDetails' %}", {devis_id: selectedDevis}, function(data) {
+                trainersPool = data.trainers;
+                
+                // Participants
+                let p_html = '';
+                data.participants.forEach(p => {
+                    p_html += `
+                        <div class="col-md-4">
+                            <label class="participant-card rounded-3 p-3 d-block position-relative" for="p_${p.id}">
+                                <div class="form-check position-absolute top-0 end-0 m-3">
+                                    <input class="form-check-input participant-check" type="checkbox" value="${p.id}" id="p_${p.id}" checked>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        ${p.nom.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-truncate" style="max-width: 150px;">${p.nom} ${p.prenom}</h6>
+                                        <small class="text-muted">${p.poste || 'Participant'}</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    `;
+                });
+                $('#participantsList').html(p_html);
+
+                // Thematics for Assignments
+                let a_html = '';
+                data.thematics.forEach(th => {
+                    let trainerOptions = '<option value="">-- Sélectionner un formateur --</option>';
+                    data.trainers.forEach(tr => {
+                        trainerOptions += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                    });
+                    a_html += `
+                        <div class="col-md-6 assignment-block" data-th-id="${th.thematique__id}">
+                            <div class="glass-card p-3">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-box bg-warning bg-opacity-10 text-warning me-2" style="width:32px; height:32px; font-size:1rem;">
+                                        <i class="ri-book-read-line"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-0">${th.thematique__label}</h6>
+                                </div>
+                                <select class="form-select trainer-select">
+                                    ${trainerOptions}
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                });
+                $('#thematicAssignments').html(a_html);
+
+                // Auto-fill metadata suggestions
+                if(data.thematics.length > 0) {
+                   $('#groupName').val("Groupe " + data.thematics[0].thematique__label);
+                }
+            });
+        }
+
+        $('#submitBtn').click(function() {
+            let assignments = [];
+            $('.assignment-block').each(function() {
+               assignments.push({
+                   thematique_id: $(this).data('th-id'),
+                   formateur_id: $(this).find('.trainer-select').val()
+               });
+            });
+
+            let groupData = {
+                nom: $('#groupName').val(),
+                devis_id: selectedDevis,
+                start_date: $('#startDate').val(),
+                start_date: $('#startDate').val(),
+                end_date: $('#endDate').val(),
+                participants: selectedParticipants,
+                assignments: assignments
+            };
+
+            if(!groupData.nom || !groupData.start_date) {
+                alertify.error('Veuillez remplir le nom et la date de début');
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Création...');
+
+            $.ajax({
+                url: "{% url 't_conseil:ApiSaveConseilGroupe' %}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(groupData),
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                success: function(res) {
+                    if(res.status == 'success') {
+                        alertify.success('Groupe créé avec succès !');
+                        setTimeout(() => window.location.href = "{% url 't_conseil:ListeGroupesConseil' %}", 1000);
+                    } else {
+                        alertify.error(res.message);
+                        $('#submitBtn').prop('disabled', false).html('<i class="ri-check-line"></i> Créer le Groupe');
+                    }
+                }
+            });
+        });
+
+        // Toggle selected class on participant cards
+        $(document).on('change', '.participant-check', function() {
+            $(this).closest('.participant-card').toggleClass('selected', this.checked);
+        });
+    });
+</script>
+{% endblock content %}
