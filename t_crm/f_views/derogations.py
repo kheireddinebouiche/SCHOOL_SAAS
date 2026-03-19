@@ -121,3 +121,27 @@ def ApiTraiteDerogation(request):
         prospect.save()
 
     return JsonResponse({"status" : "success"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiDeleteDerogation(request):
+    id_derogation = request.POST.get('id_derogation')
+    try:
+        obj = Derogations.objects.get(id=id_derogation)
+        prospect = obj.demandeur
+        
+        # Delete the derogation
+        obj.delete()
+        
+        # Check if there are any other accepted derogations for this prospect
+        # to decide if we should keep the has_derogation flag
+        other_accepted = Derogations.objects.filter(demandeur=prospect, statut='acceptee').exists()
+        if not other_accepted:
+            prospect.has_derogation = False
+            prospect.save()
+            
+        return JsonResponse({"status": "success", "message": "Dérogation supprimée avec succès."})
+    except Derogations.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Dérogation introuvable."})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})

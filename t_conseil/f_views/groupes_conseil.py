@@ -170,9 +170,7 @@ def ApiDeleteGroupeConseil(request):
         
         try:
             groupe = GroupeConseil.objects.get(id=id)
-            if groupe.etat != "brouillon":
-                return JsonResponse({"status": "error", "message": "Le groupe est en cours d'utilisation, vous ne pouvez pas effectuer la suppression"})
-            
+            # Remove state restriction to allow deletion of active/closed groups
             groupe.delete()
             messages.success(request, "Le groupe a été supprimé avec succès")
             return JsonResponse({"status": "success"})
@@ -180,6 +178,25 @@ def ApiDeleteGroupeConseil(request):
             return JsonResponse({"status": "error", "message": "Groupe non trouvé"})
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def ApiCloturerGroupeConseil(request):
+    id = request.GET.get('id')
+    if not id:
+        return JsonResponse({"status": "error", "message": "Informations manquantes"})
+    
+    try:
+        groupe = GroupeConseil.objects.get(id=id)
+        
+        # We allow closing even if the end date hasn't passed
+        groupe.etat = 'cloture'
+        groupe.save()
+        
+        return JsonResponse({"status": "success", "message": "Le groupe a été clôturé avec succès."})
+    except GroupeConseil.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Groupe non trouvé."})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
 
 @login_required(login_url="institut_app:login")
 def ApiUpdateGroupeSettings(request):

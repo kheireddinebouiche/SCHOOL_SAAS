@@ -21,7 +21,7 @@ def crm_reporting(request):
 def ApiGetCrmReportingData(request):
     # 1. Prospects per Status (Statut)
     # statut choices: ('visiteur','Visiteur'),('prinscrit','Pré-inscrit'),('instance','Instance de paiement'),('convertit','Convertit'),('annuler','Inscription Annulée')
-    status_data = Prospets.objects.values('statut').annotate(count=Count('id')).order_by('-count')
+    status_data = Prospets.objects.exclude(context='con').values('statut').annotate(count=Count('id')).order_by('-count')
     
     # Mapping for better display in charts if needed, usually frontend handles it but we can send labels
     statut_dict = dict(Prospets._meta.get_field('statut').choices)
@@ -35,7 +35,7 @@ def ApiGetCrmReportingData(request):
         })
 
     # 2. Prospects per Type (Particulier vs Entreprise)
-    type_data = Prospets.objects.values('type_prospect').annotate(count=Count('id')).order_by('-count')
+    type_data = Prospets.objects.exclude(context='con').values('type_prospect').annotate(count=Count('id')).order_by('-count')
     formatted_type = []
     type_dict = dict(Prospets._meta.get_field('type_prospect').choices)
     for item in type_data:
@@ -46,7 +46,7 @@ def ApiGetCrmReportingData(request):
         })
 
     # 3. Prospects per Channel
-    channel_data = Prospets.objects.values('canal').annotate(count=Count('id')).order_by('-count')
+    channel_data = Prospets.objects.exclude(context='con').values('canal').annotate(count=Count('id')).order_by('-count')
     formatted_channel = []
     canal_dict = dict(Prospets._meta.get_field('canal').choices)
     for item in channel_data:
@@ -59,7 +59,7 @@ def ApiGetCrmReportingData(request):
     # 4. Evolution (Last 30 days)
     # Use timezone aware datetime
     last_30_days = timezone.now() - timedelta(days=30)
-    evolution_data = Prospets.objects.filter(created_at__gte=last_30_days)\
+    evolution_data = Prospets.objects.filter(created_at__gte=last_30_days).exclude(context='con')\
         .annotate(date=TruncDate('created_at'))\
         .values('date')\
         .annotate(count=Count('id'))\
@@ -73,10 +73,10 @@ def ApiGetCrmReportingData(request):
         })
 
     # 5. Key Metrics
-    total_prospects = Prospets.objects.count()
-    total_converted = Prospets.objects.filter(statut='convertit').count()
+    total_prospects = Prospets.objects.exclude(context='con').count()
+    total_converted = Prospets.objects.filter(statut='convertit').exclude(context='con').count()
     conversion_rate = round((total_converted / total_prospects * 100), 2) if total_prospects > 0 else 0
-    total_new_this_month = Prospets.objects.filter(created_at__month=timezone.now().month).count()
+    total_new_this_month = Prospets.objects.filter(created_at__month=timezone.now().month).exclude(context='con').count()
 
     # --- Matrix Data: Speciality x Status ---
     
@@ -94,23 +94,23 @@ def ApiGetCrmReportingData(request):
     # 1. Simple Diplomation (FicheDeVoeux -> Specialites)
     # Using the related_name 'specialite_fiche_voeux' from FicheDeVoeux model
     matrix_simple_qs = Specialites.objects.annotate(
-        visiteur=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='visiteur') & simple_filter),
-        prinscrit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='prinscrit') & simple_filter),
-        instance=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='instance') & simple_filter),
-        convertit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='convertit') & simple_filter),
-        annuler=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='annuler') & simple_filter),
-        total=Count('specialite_fiche_voeux', filter=simple_filter)
+        visiteur=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='visiteur') & ~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter),
+        prinscrit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='prinscrit') & ~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter),
+        instance=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='instance') & ~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter),
+        convertit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='convertit') & ~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter),
+        annuler=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='annuler') & ~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter),
+        total=Count('specialite_fiche_voeux', filter=~Q(specialite_fiche_voeux__prospect__context='con') & simple_filter)
     ).values('label', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
 
     # 2. Double Diplomation (FicheVoeuxDouble -> DoubleDiplomation)
     # Default related_name is 'fichevoeuxdouble_set'
     matrix_double_qs = DoubleDiplomation.objects.annotate(
-        visiteur=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='visiteur') & double_filter),
-        prinscrit=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='prinscrit') & double_filter),
-        instance=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='instance') & double_filter),
-        convertit=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='convertit') & double_filter),
-        annuler=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='annuler') & double_filter),
-        total=Count('fichevoeuxdouble', filter=double_filter)
+        visiteur=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='visiteur') & ~Q(fichevoeuxdouble__prospect__context='con') & double_filter),
+        prinscrit=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='prinscrit') & ~Q(fichevoeuxdouble__prospect__context='con') & double_filter),
+        instance=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='instance') & ~Q(fichevoeuxdouble__prospect__context='con') & double_filter),
+        convertit=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='convertit') & ~Q(fichevoeuxdouble__prospect__context='con') & double_filter),
+        annuler=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='annuler') & ~Q(fichevoeuxdouble__prospect__context='con') & double_filter),
+        total=Count('fichevoeuxdouble', filter=~Q(fichevoeuxdouble__prospect__context='con') & double_filter)
     ).values('label', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
 
     return JsonResponse({

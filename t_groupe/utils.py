@@ -118,81 +118,76 @@ def get_student_context(student_id, group_id=None):
     montant_specialite = 0.0
 
     fiche = None
-
     if student.is_double:
         fiche = FicheVoeuxDouble.objects.filter(prospect=student).first()
-        # Si pas de fiche double trouvée, on essaie la fiche normale par sécurité
+        
+        # If no double fiche found, don't use 404, just fallback or return empty
         if not fiche:
-            fiche = get_object_or_404(FicheDeVoeux, prospect=student)
+            fiche = FicheDeVoeux.objects.filter(prospect=student).first()
 
-        # Pour les doubles, on s'appuie fortement sur le groupe pour le contexte formation
+        # For doubles, we rely heavily on the group for formation context
         if isinstance(fiche, FicheVoeuxDouble) and current_groupe:
-            
-            # Validation : on vérifie que le groupe correspond bien à l'une des spécialités du double diplôme
             double_diplome = fiche.specialite
             is_valid_group = False
-            
-            if double_diplome:
-                 if current_groupe.specialite == double_diplome.specialite1 or current_groupe.specialite == double_diplome.specialite2:
-                     is_valid_group = True
+            if double_diplome and (current_groupe.specialite == double_diplome.specialite1 or current_groupe.specialite == double_diplome.specialite2):
+                is_valid_group = True
             
             if is_valid_group:
                 formation_obj = current_groupe.specialite.formation
-                
-                logo = formation_obj.entite_legal.entete_logo.url if formation_obj.entite_legal.entete_logo else ''
+                logo = formation_obj.entite_legal.entete_logo.url if formation_obj and formation_obj.entite_legal and formation_obj.entite_legal.entete_logo else ''
                 specialite_label = current_groupe.specialite.label 
-                formation_label = formation_obj.nom
-                
+                formation_label = formation_obj.nom if formation_obj else ''
                 if fiche.promo:
                      annee_academique = fiche.promo.annee_academique
                      date_entree = fiche.promo.date_debut
                      date_sortie = fiche.promo.date_fin
-                
-                documents_qs = DossierInscription.objects.filter(formation=formation_obj.id)
-                qualification = formation_obj.qualification
+                documents_qs = DossierInscription.objects.filter(formation=formation_obj.id) if formation_obj else []
+                qualification = formation_obj.qualification if formation_obj else ''
                 branche = current_groupe.specialite.branche
-
                 if current_groupe.specialite == double_diplome.specialite1:
                     montant_specialite = double_diplome.prix_spec1
                 elif current_groupe.specialite == double_diplome.specialite2:
                     montant_specialite = double_diplome.prix_spec2
             else:
-                # Le groupe ne correspond pas au double diplôme de l'étudiant
-                # On peut logger ou laisser vide ? 
-                # On va tenter de remplir avec la spécialité du groupe quand même si on est dans une logique forcée, 
-                # mais le User a demandé de comparer. Si ça match pas, on risque d'imprimer des trucs faux.
-                # On laisse vide ou on met un warning ? 
-                # Pour l'instant on ne remplit pas les infos formation si pas de match.
+                # The group does not match the student's double diploma
                 pass
 
         elif isinstance(fiche, FicheVoeuxDouble):
-             # Cas limite : double sans groupe contexte (affichage minimal)
+             # Edge case: double without group context (minimal display)
              specialite_label = fiche.specialite.label if fiche.specialite else ''
              if fiche.promo:
                  annee_academique = fiche.promo.annee_academique
     
     else:
-        # Cas standard
-        try:
-            fiche = FicheDeVoeux.objects.get(prospect=student)
-        except FicheDeVoeux.DoesNotExist:
-             # Gestion erreur ou fiche vide
-             pass
+        # Standard case
+        fiche = FicheDeVoeux.objects.filter(prospect=student).first()
         
         if fiche:
             formation_obj = fiche.specialite.formation
-            logo = formation_obj.entite_legal.entete_logo.url if formation_obj.entite_legal.entete_logo else ''
+            logo = formation_obj.entite_legal.entete_logo.url if formation_obj and formation_obj.entite_legal and formation_obj.entite_legal.entete_logo else ''
             specialite_label = fiche.specialite.label
-            formation_label = formation_obj.nom
-            annee_academique = fiche.promo.annee_academique
-            
-            date_entree = fiche.promo.date_debut
-            date_sortie = fiche.promo.date_fin
-
-            documents_qs = DossierInscription.objects.filter(formation=formation_obj.id)
-            qualification = formation_obj.qualification
+            formation_label = formation_obj.nom if formation_obj else ''
+            annee_academique = fiche.promo.annee_academique if fiche.promo else ''
+            date_entree = fiche.promo.date_debut if fiche.promo else None
+            date_sortie = fiche.promo.date_fin if fiche.promo else None
+            documents_qs = DossierInscription.objects.filter(formation=formation_obj.id) if formation_obj else []
+            qualification = formation_obj.qualification if formation_obj else ''
             branche = fiche.specialite.branche
             montant_specialite = fiche.specialite.prix
+        elif current_groupe:
+            # Fallback for Conseil/Integrated students without FicheDeVoeux
+            formation_obj = current_groupe.specialite.formation
+            logo = formation_obj.entite_legal.entete_logo.url if formation_obj and formation_obj.entite_legal and formation_obj.entite_legal.entete_logo else ''
+            specialite_label = current_groupe.specialite.label
+            formation_label = formation_obj.nom if formation_obj else ''
+            annee_academique = current_groupe.annee_scolaire or "N/A"
+            date_entree = current_groupe.start_date
+            date_sortie = current_groupe.end_date
+            documents_qs = DossierInscription.objects.filter(formation=formation_obj.id) if formation_obj else []
+            qualification = formation_obj.qualification if formation_obj else ''
+            branche = current_groupe.specialite.branche
+            montant_specialite = 0.0
+
 
     echeancier_qs = DuePaiements.objects.filter(client=student, type="frais_f").order_by('date_echeance')
     echeancier = []

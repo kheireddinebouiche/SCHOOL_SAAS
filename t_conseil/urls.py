@@ -112,6 +112,7 @@ urlpatterns = [
     path('api/groupes/get-devis-details/', ApiGetDevisDetails, name="ApiGetDevisDetails"),
     path('api/groupes/save/', ApiSaveConseilGroupe, name="ApiSaveConseilGroupe"),
     path('api/groupes/delete/', ApiDeleteGroupeConseil, name="ApiDeleteGroupeConseil"),
+    path('api/groupes/cloture/', ApiCloturerGroupeConseil, name="ApiCloturerGroupeConseil"),
     path('api/groupes/update-settings/', ApiUpdateGroupeSettings, name="ApiUpdateGroupeSettings"),
     path('api/groupes/planning/add/', ApiAddPlanningSession, name="ApiAddPlanningSession"),
     path('api/groupes/planning/delete/', ApiDeletePlanningSession, name="ApiDeletePlanningSession"),

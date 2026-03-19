@@ -103,7 +103,7 @@ def ListeGroupe(request):
 
 @login_required(login_url="insitut_app:login")
 def ApiGetGroupeList(request):
-    liste = Groupe.objects.all().values('id','nom')
+    liste = Groupe.objects.all().values('id', 'nom', 'specialite__label', 'promotion__code')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")

@@ -1,11 +1,15 @@
-from institut_app.decorators import ajax_required
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import *
-from .forms import *
+from .models import (
+    Visiteurs, Prospets, DemandeInscription, FicheDeVoeux, FicheVoeuxDouble,
+    NotesProcpects, RendezVous, Derogations, CrmCounter,
+    RemiseAppliquer, RemiseAppliquerLine, UserActionLog,
+    Opportunite, ProspectBankAccount
+)
+from .forms import VisiteurForm, DemandeInscriptionForm, NewProspecFormParticulier, NewProspecFormEntreprise
 from django.contrib import messages
-from t_tresorerie.models import *
-from t_formations.models import *
+from t_tresorerie.models import ClientPaiementsRequest, clientPaiementsRequestLine, SeuilPaiements
+from t_formations.models import Formation, Specialites, Promos, DossierInscription, DoubleDiplomation
 from django.db import transaction
 from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
@@ -13,7 +17,8 @@ from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta
-from institut_app.decorators import *
+from django.utils.dateformat import format
+from institut_app.decorators import ajax_required, module_permission_required, role_required
 
 
 @login_required(login_url="institut_app:login")
@@ -426,16 +431,16 @@ def ListeDesProspects(request):
     }
     return render(request, 'tenant_folder/crm/liste-des-prospects.html', context)
 
-from django.utils.dateformat import format
 
 @login_required(login_url='institut_app:login')
 @ajax_required
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.filter(context="acc").values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise').order_by('-created_at')
+    prospects = Prospets.objects.filter(context="acc", statut__in=["visiteur", "annuler"]).values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise', 'motif_annulation', 'statut').order_by('-created_at')
     for l in prospects:
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()
         l['etat_label'] = l_obj.get_etat_display()
+        l['statut_label'] = l_obj.get_statut_display()
         l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
     return JsonResponse(list(prospects), safe=False)
 
@@ -452,17 +457,19 @@ def ApiFilterProspect(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, is_client=False).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, is_client=False, context='acc', statut__in=["visiteur", "annuler"]).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat', 'motif_annulation', 'statut')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
+            l['statut_label'] = l_obj.get_statut_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, is_client=False).order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, is_client=False, context='acc', statut__in=["visiteur", "annuler"]).order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat', 'motif_annulation', 'statut')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
+            l['statut_label'] = l_obj.get_statut_display()
 
     return JsonResponse(list(prospects), safe=False)
 
@@ -472,13 +479,13 @@ def ApiFilterPrinscrit(request):
     value = request.GET.get('value')
 
     if (filter_option == "filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").exclude(context='con').values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
             l['etat_label'] = l_obj.get_etat_display()
     elif (filter_option == "date_filter-prospect"):
-        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
+        prospects = Prospets.objects.filter(type_prospect=value, statut="prinscrit").exclude(context='con').order_by(value).values('id','slug','entreprise', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat')
         for l in prospects:
             l_obj = Prospets.objects.get(id=l['id'])
             l['type_prospect_label'] = l_obj.get_type_prospect_display()
@@ -501,6 +508,9 @@ def ApiLoadSpecialite(request):
 @module_permission_required('crm','view')
 def DetailsProspect(request, slug):
     prospect = Prospets.objects.get(slug=slug)
+
+    if prospect.statut in ['prinscrit', 'instance', 'convertit']:
+        return redirect('t_crm:DetailsPrinscrit', pk=prospect.id)
 
     if prospect.is_double and prospect.type_prospect == "particulier":
         context = {
@@ -568,13 +578,17 @@ def ApiLoadProspectDetails(request):
         'prenom': prospect.prenom,
         'email': prospect.email,
         'telephone': prospect.telephone,
+    }
+    data.update({
         'canal': prospect.canal,
         'observation' : prospect.observation,
         'entreprise' : prospect.entreprise,
         'adresse' : prospect.adresse,
         'wilaya' : prospect.wilaya,
         'code_zip': prospect.code_zip,
-    }
+        'statut': prospect.statut,
+        'motif_annulation': prospect.motif_annulation,
+    })
     return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
 
 @login_required(login_url='institut_app:login')

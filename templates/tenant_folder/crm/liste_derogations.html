@@ -574,11 +574,33 @@
 
     $('#confirmDeleteBtn').on('click', function(){
       const id = $(this).data('id');
-      // Simulated delete (can be improved with real API if exists)
-      alertify.message("Action de suppression simulée");
-      $('.deleteModal').modal('hide');
-      loadDerogations();
+      const btn = $(this);
+      
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Suppression...');
+
+      $.ajax({
+        url : "{% url 't_crm:ApiDeleteDerogation' %}",
+        type : 'POST',
+        data : {
+          'id_derogation' : id,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(res){
+          if(res.status === "success"){
+            alertify.success(res.message || "Dérogation supprimée");
+            $('.deleteModal').modal('hide');
+            loadDerogations();
+          } else {
+            alertify.error(res.message || "Erreur lors de la suppression");
+          }
+        },
+        error: function() {
+          alertify.error("Erreur réseau lors de la suppression");
+        },
+        complete: () => btn.prop('disabled', false).text('Oui, supprimer')
+      });
     });
+
   });
 </script>
 {% endblock content %}

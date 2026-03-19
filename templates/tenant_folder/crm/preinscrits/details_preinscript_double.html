@@ -4,25 +4,105 @@
 {% block content %}
 
 <style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+    }
+
+    .main-content {
+        background-color: #f8fafc;
+    }
+
     .completion-check-card {
         transition: all 0.3s ease;
         border: 1px solid #e9ecef;
+        border-radius: 1rem;
     }
     
     .completion-check-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         border-color: #dee2e6;
     }
     
     .completion-check-card.completed {
-        background-color: rgba(25, 135, 84, 0.1);
-        border-color: rgba(25, 135, 84, 0.3);
+        background-color: rgba(25, 135, 84, 0.05);
+        border-color: rgba(25, 135, 84, 0.2);
     }
     
     .completion-check-card.incomplete {
-        background-color: rgba(220, 53, 69, 0.1);
-        border-color: rgba(220, 53, 69, 0.3);
+        background-color: rgba(220, 53, 69, 0.05);
+        border-color: rgba(220, 53, 69, 0.2);
+    }
+
+    /* Stat Cards Modern Design */
+    .stat-card {
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1.25rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: translateX(-100%);
+        transition: 0.6s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px) scale(1.01);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-card:hover::before {
+        transform: translateX(100%);
+    }
+
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    /* Table Customization */
+    .custom-table-card {
+        border-radius: 1.25rem;
+        border: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        background: #fff;
+    }
+
+    .table thead th {
+        background-color: #f1f5f9;
+        color: #475569;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        padding: 1rem 1.5rem;
+        border: none;
+    }
+
+    .table tbody td {
+        padding: 1.25rem 1.5rem;
+        color: #1e293b;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
     }
 </style>
 
@@ -34,34 +114,60 @@
 
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid">                                                    
+        <div class="container-fluid">                                                                
+            <!-- Cancellation Alert Banner -->
+            <div id="cancellationBanner" class="row mb-4" style="display: none;">
+                <div class="col-12">
+                    <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-error-warning-line text-danger fs-3"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading mb-1 fw-bold text-danger">Préinscription Annulée</h5>
+                                <p class="mb-0 text-dark">Raison : <span id="cancellationReasonText" class="fw-semibold"></span></p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger rounded-pill px-4 py-2 fw-medium shadow-sm transition-all" id="btnReactivatePreinscrit">
+                            <i class="ri-refresh-line me-2"></i>Ré-activer la préinscription
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- start page title -->
-            <div class="row mb-3">
+            <div class="row mb-4 mt-2">
                 <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                    <div class="d-flex align-items-center justify-content-between p-4 bg-white rounded-4 shadow-sm">
                         <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
-                                <i class="ri-user-line text-primary"></i>
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-user-line text-primary fs-3"></i>
                             </div>
-                            <h4 class="mb-0 text-primary">Details du pré-inscrit</h4>
+                            <div>
+                                <h4 class="mb-1 fw-bold text-primary">Détails du pré-inscrit</h4>
+                                <p class="text-muted mb-0">Consultation et gestion du dossier (Double diplômation)</p>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center gap-3">
-                            <nav aria-label="breadcrumb">
-                                <ol class="breadcrumb m-0 bg-transparent">
-                                    <li class="breadcrumb-item">
-                                        <a href="javascript: void(0);">CRM</a>
-                                    </li>
-                                    <li class="breadcrumb-item active">Détails du pré-inscrit</li>
-                                </ol>
-                            </nav>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-success px-4 py-2" data-bs-toggle="modal" id="validatePreinscritBtn">
-                                    <i class="ri-check-line me-2"></i>Valider la pré-inscription
+                            <div class="d-none d-md-block">
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0 px-3 py-2 bg-light rounded-pill">
+                                        <li class="breadcrumb-item"><a href="javascript:void(0);" class="text-primary">CRM</a></li>
+                                        <li class="breadcrumb-item active">Détails</li>
+                                    </ol>
+                                </nav>
+                            </div>
+                            <div class="btn-group gap-2">
+                                <button type="button" class="btn btn-success rounded-pill px-4 py-2" data-bs-toggle="modal" id="validatePreinscritBtn">
+                                    <i class="ri-check-line me-2"></i>Valider
+                                </button>
+
+                                <button type="button" class="btn btn-soft-danger rounded-pill px-4 py-2" id="btnOpenCancelModal">
+                                    <i class="ri-close-circle-line me-2"></i>Annuler
                                 </button>
                               
-                                <a href="/crm/liste-des-preinscrits/" class="btn btn-light px-4 py-2">
-                                    <i class="ri-arrow-left-line me-2"></i>Retour à la liste
+                                <a href="/crm/liste-des-preinscrits/" class="btn btn-light rounded-pill px-4 py-2">
+                                    <i class="ri-arrow-left-line me-2"></i>Retour
                                 </a>
                             </div>
                         </div>
@@ -203,7 +309,7 @@
             <div class="row mb-4">
                 <!-- Informations personnelles -->
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card stat-card h-100">
                         <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
                             <div class="d-flex align-items-center">
                                 <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
@@ -276,7 +382,7 @@
 
                 <!-- Section Fiche de Voeux -->
                 <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card stat-card h-100">
                         <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
@@ -302,7 +408,7 @@
             <!-- Documents du pré-inscrit -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card custom-table-card">
                         <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
@@ -343,7 +449,7 @@
             <!-- Situation financière -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card stat-card">
                         <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
@@ -414,7 +520,7 @@
             <div class="row">
                 <!-- Rappels & Rendez-vous -->
                 <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card custom-table-card h-100">
                         <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
@@ -455,7 +561,7 @@
 
                 <!-- Section Notes -->
                 <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card custom-table-card h-100">
                         <!-- Header -->
                         <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
                             <div class="d-flex justify-content-between align-items-center">
@@ -509,6 +615,46 @@
         <!-- container-fluid -->
     </div>
     <!-- End Page-content -->
+</div>
+
+<!-- Modal Annuler Préinscription -->
+<div class="modal fade" id="modalAnnulerPreinscription" tabindex="-1" aria-labelledby="modalAnnulerPreinscriptionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger bg-opacity-10 border-bottom-0 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-3">
+                        <div class="avatar-title bg-danger bg-opacity-20 rounded-circle">
+                            <i class="ri-error-warning-line text-danger fs-4"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-danger" id="modalAnnulerPreinscriptionLabel">Annuler la préinscription</h5>
+                        <p class="text-muted small mb-0">Cette action est irréversible</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label for="motif_annulation" class="form-label fw-semibold">Raison de l'annulation <span class="text-danger">*</span></label>
+                    <textarea class="form-control border-2" id="motif_annulation_text" rows="4" placeholder="Veuillez indiquer la raison de l'annulation..."></textarea>
+                </div>
+                <div class="alert alert-soft-danger d-flex align-items-center mb-0" role="alert">
+                    <i class="ri-information-line fs-5 me-2"></i>
+                    <div class="small">
+                        Le prospect sera déplacé vers la liste des prospects avec le statut "Visiteur".
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0 py-3">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmCancel">
+                    <i class="ri-check-line me-1"></i>Confirmer l'annulation
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal profil incomplet -->
@@ -1524,17 +1670,15 @@
                                             <div id="profile_tel_mere">-</div>
                                         </div>
                                     </div>
-
                                     <div class="col-md-4">
                                         <div class="d-flex">
-                                            <div class="text-muted fw-medium me-2">Téléphone mère:</div>
+                                            <div class="text-muted fw-medium me-2">Tuteur légal:</div>
                                             <div id="profile_tuteur_legal">-</div>
                                         </div>
                                     </div>
-
                                     <div class="col-md-4">
                                         <div class="d-flex">
-                                            <div class="text-muted fw-medium me-2">Téléphone mère:</div>
+                                            <div class="text-muted fw-medium me-2">Téléphone tuteur:</div>
                                             <div id="profile_tel_tuteur">-</div>
                                         </div>
                                     </div>
@@ -1563,12 +1707,6 @@
                                         <div class="d-flex">
                                             <div class="text-muted fw-medium me-2">Description du besoin:</div>
                                             <div id="profile_type_handicap" class="text-truncate">-</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="d-flex">
-                                            <div class="text-muted fw-medium me-2">Groupe sanguin:</div>
-                                            <div id="profile_groupe_sanguin">-</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1670,6 +1808,34 @@
         </div>
     </div>
 </div>
+
+        <!-- Modal Blocage Réactivation sans Fiche de Vœux -->
+        <div class="modal fade" id="reactivationNoVoeuxModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-lg border-0">
+                    <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-error-warning-line text-danger fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-semibold text-danger mb-1">Réactivation bloquée</h5>
+                                <p class="text-muted small mb-0">Action requise avant de continuer</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 text-center">
+                        <p class="mb-0">Réactivation impossible : ce prospect ne possède aucune fiche de vœux. Veuillez en créer une avant de procéder à la réactivation.</p>
+                    </div>
+                    <div class="modal-footer border-0 bg-light px-4 py-3">
+                        <button type="button" class="btn btn-danger px-4 py-2 w-100" data-bs-dismiss="modal">
+                            J'ai compris
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 <!-- Modal Nouveau Rappel -->
 <div class="modal fade" id="addReminderModal" tabindex="-1" aria-labelledby="addReminderModalLabel" aria-hidden="true">
@@ -3077,6 +3243,16 @@
                     if(data.statut_key !== "prinscrit"){
                         document.getElementById("validatePreinscritBtn").disabled = true;
                     };
+
+                    // Handle cancellation banner
+                    if (data.motif_annulation) {
+                        $('#cancellationBanner').show();
+                        $('#cancellationReasonText').text(data.motif_annulation);
+                        $('#btnOpenCancelModal').hide();
+                    } else {
+                        $('#cancellationBanner').hide();
+                        $('#btnOpenCancelModal').show();
+                    }
                 }
             });
         }
@@ -3295,6 +3471,39 @@
         loadRappelRendezVous();
         loadDocuments();
         loadFinancialData(); // Charger les données financières
+
+        $(document).on('click', '#btnReactivatePreinscrit', function() {
+            var btn = $(this);
+            btn.prop('disabled', true);
+            
+            $.ajax({
+                url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
+                type: 'POST',
+                data: {
+                    'id_preinscrit': id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        setTimeout(function(){
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        if (response.has_voeux === false) {
+                            $('#reactivationNoVoeuxModal').modal('show');
+                        } else {
+                            alertify.error(response.message);
+                        }
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alertify.error("Erreur lors de la communication avec le serveur.");
+                    btn.prop('disabled', false);
+                }
+            });
+        });
         
         
         // Initialiser l'état des boutons de navigation
@@ -4413,6 +4622,47 @@
 
             // 4️⃣ Réinjecter la valeur formatée dans le champ
             e.target.value = formatted;
+        });
+
+        // Annulation de la préinscription
+        $(document).on('click', '#btnOpenCancelModal', function() {
+            $('#modalAnnulerPreinscription').modal('show');
+        });
+
+        $(document).on('click', '#btnConfirmCancel', function() {
+            const reason = $('#motif_annulation_text').val().trim();
+            if (!reason) {
+                alertify.error("Veuillez indiquer une raison pour l'annulation.");
+                return;
+            }
+
+            const btn = $(this);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Traitement...');
+
+            $.ajax({
+                url: '{% url "t_crm:ApiCancelPreinscrit" %}',
+                type: 'POST',
+                data: {
+                    'id_preinscrit': id,
+                    'motif': reason,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        setTimeout(function() {
+                            window.location.href = "{% url 't_crm:ListeDesPrinscrits' %}";
+                        }, 1500);
+                    } else {
+                        alertify.error(response.message);
+                        btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i>Confirmer l\'annulation');
+                    }
+                },
+                error: function() {
+                    alertify.error("Erreur lors de la communication avec le serveur.");
+                    btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i>Confirmer l\'annulation');
+                }
+            });
         });
     });
 </script>

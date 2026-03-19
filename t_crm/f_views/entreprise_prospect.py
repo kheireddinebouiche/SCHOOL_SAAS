@@ -25,7 +25,8 @@ def ApiLoadEntrepriseProspectInfo(request):
         'poste_dans_entreprise',
         'observation',
         'rc', 'nif', 'nis', 'art_imp',
-        'adresse', 'wilaya', 'code_zip').first()
+        'adresse', 'wilaya', 'code_zip',
+        'motif_annulation').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])

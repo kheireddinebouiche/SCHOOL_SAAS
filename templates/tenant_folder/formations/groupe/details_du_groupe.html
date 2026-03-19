@@ -18,7 +18,6 @@
         border-radius: 1rem;
         padding: 2.5rem 2rem;
         position: relative;
-        overflow: hidden;
         margin-bottom: 2rem;
         box-shadow: var(--hover-shadow);
     }
@@ -32,6 +31,7 @@
         left: 0;
         background: url('{% static "img/photos/pattern.png" %}') center/cover;
         opacity: 0.1;
+        border-radius: 1rem;
     }
 
     .hero-content {
@@ -444,14 +444,21 @@
                                                     <td>
                                                         {% if i.student.is_double %}
                                                             <span class="badge bg-warning bg-opacity-10 text-warning px-2 py-1"><i class="ri-share-forward-fill me-1"></i> Double</span>
+                                                        {% elif i.student.context == 'con' %}
+                                                            <span class="badge bg-info bg-opacity-10 text-info px-2 py-1"><i class="ri-briefcase-4-line me-1"></i> Executive Ed.</span>
                                                         {% else %}
-                                                            <span class="text-muted small">Standard</span>
+                                                            <span class="badge bg-success bg-opacity-10 text-success px-2 py-1"><i class="ri-graduation-cap-line me-1"></i> Diplômante</span>
                                                         {% endif %}
                                                     </td>
                                                     <td class="text-end">
                                                         <a href="{% url 't_groupe:StudentDetails' pk=i.student.id %}" class="btn btn-sm btn-soft-secondary" title="Voir le profil">
                                                             <i class="ri-eye-line"></i>
                                                         </a>
+                                                        {% if i.student.context == 'con' %}
+                                                            <button class="btn btn-sm btn-soft-danger ms-1 btn-unenroll" data-student-id="{{i.student.id}}" data-specialty-id="{{groupe.specialite.id}}" title="Désinscrire l'étudiant">
+                                                                <i class="ri-user-unfollow-line"></i>
+                                                            </button>
+                                                        {% endif %}
                                                     </td>
                                                 </tr>
                                             {% endfor %}
@@ -2044,9 +2051,80 @@
 
     });
 
+    var unenrollStudentId = null;
+    var unenrollSpecialtyId = null;
+    var $unenrollRow = null;
 
+    $(document).on('click', '.btn-unenroll', function() {
+        var $btn = $(this);
+        unenrollStudentId = $btn.data('student-id');
+        unenrollSpecialtyId = $btn.data('specialty-id');
+        $unenrollRow = $btn.closest('tr');
+        var myModal = new bootstrap.Modal(document.getElementById('unenrollModal'));
+        myModal.show();
+    });
+
+    $('#confirmUnenrollBtn').on('click', function() {
+        var $btn = $(this);
+        var originalText = $btn.html();
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Traitement...');
+
+        $.ajax({
+            url: "{% url 't_groupe:ApiCancelStudentAffectation' %}",
+            type: "GET",
+            data: {
+                studentId: unenrollStudentId,
+                specialite: unenrollSpecialtyId
+            },
+            success: function(res) {
+                if(res.status === 'success') {
+                    $('#unenrollModal').modal('hide');
+                    alertify.success(res.message);
+                    
+                    if ($unenrollRow) {
+                        $unenrollRow.fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    }
+                } else {
+                    alertify.error(res.message);
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la désinscription.");
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
 
 </script>
+
+<!-- Unenroll Modal -->
+<div class="modal fade" id="unenrollModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-1">
+                        <i class="ri-user-unfollow-line"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-2">Confirmer la désinscription</h4>
+                <p class="text-muted mb-4">Êtes-vous sûr de vouloir désinscrire cet étudiant de ce groupe ? Cette action annule juste son affectation au groupe actuel.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger rounded-pill px-4 fw-medium" id="confirmUnenrollBtn">Oui, désinscrire</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 {% endblock content %}
            

@@ -25,34 +25,86 @@ def StudentDetails(request, pk):
     student = Prospets.objects.get(id = pk)
 
     if not student.is_double:
-        groupe = GroupeLine.objects.filter(student = student)
-        current_groupe = GroupeLine.objects.get(student = student, groupe__etat = "inscription" )
-        paiements = Paiements.objects.filter(prospect = student)
-        documents = DocumentsDemandeInscription.objects.filter(prospect = student)
-        notes = NotesProcpects.objects.filter(prospect = student, context="etudiant")
-        rappels = RendezVous.objects.filter(prospect = student, context="etudiant" )
-        echeanciers = DuePaiements.objects.filter(client = student, type='frais_f').order_by('ordre')
-        remises = RemiseAppliquerLine.objects.filter(prospect = student, remise_appliquer__is_approuved = True,remise_appliquer__is_applicated = True)        
-        montant_due = DuePaiements.objects.filter(client = student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
-        montant_paye = Paiements.objects.filter(prospect= student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
-        montant_total = DuePaiements.objects.filter(client = student, type='frais_f').aggregate(total=Sum('montant_due'))['total'] or 0
-        specialite_simple = FicheDeVoeux.objects.get(prospect = student, is_confirmed=True)
-        #modele_contrat = ModelContrat.objects.get(formation = specialite_simple.specialite.formation, annee_scolaire = specialite_simple.promo.annee_academique, status = "act")
-        entreprise_details = Entreprise.objects.get(id = specialite_simple.specialite.formation.entite_legal.id)
-        echancier_standard = EcheancierPaiement.objects.get(formation = specialite_simple.specialite.formation, is_active = True, is_default=True, is_approuved=True)
-        echeancier_line = EcheancierPaiementLine.objects.filter(echeancier = echancier_standard).values('id','value','montant_tranche','date_echeancier')
-        rachat_due_paiement = DuePaiements.objects.filter(client = student, type='rach')
-        documents_available = current_groupe.groupe.specialite.formation.documents.all()
-        # Add fetching of other payments
-        autre_paiements = AutreProduit.objects.filter(client = student).select_related('compte')
+        groupe = GroupeLine.objects.filter(student=student)
+        
+        # Determine current group (default to 'inscription', otherwise the most recent one)
+        current_groupe = GroupeLine.objects.filter(student=student, groupe__etat="inscription").first()
+        if not current_groupe:
+            current_groupe = GroupeLine.objects.filter(student=student).first()
+            
+        # Basic student info (Generic)
+        paiements = []
+        documents = DocumentsDemandeInscription.objects.filter(prospect=student)
+        notes = NotesProcpects.objects.filter(prospect=student, context="etudiant")
+        rappels = RendezVous.objects.filter(prospect=student, context="etudiant")
+        echeanciers = []
+        remises = []
+        montant_due = 0
+        montant_paye = 0
+        montant_total = 0
+        rachat_due_paiement = []
+        autre_paiements = []
+        
+        # Payment logic (Skip for Conseil participants: student.context == "con")
+        if student.context != "con":
+            paiements = Paiements.objects.filter(prospect=student)
+            echeanciers = DuePaiements.objects.filter(client=student, type='frais_f').order_by('ordre')
+            remises = RemiseAppliquerLine.objects.filter(prospect=student, remise_appliquer__is_approuved=True, remise_appliquer__is_applicated=True)
+            
+            montant_due = DuePaiements.objects.filter(client=student, is_done=False, type='frais_f').aggregate(total=Sum('montant_restant'))['total'] or 0
+            montant_paye = Paiements.objects.filter(prospect=student, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+            montant_total = DuePaiements.objects.filter(client=student, type='frais_f').aggregate(total=Sum('montant_due'))['total'] or 0
+            
+            rachat_due_paiement = DuePaiements.objects.filter(client=student, type='rach')
+            # Fix: Model AutreProduit does not have 'compte' field
+            autre_paiements = AutreProduit.objects.filter(client=student).select_related('payment_type')
+
+        # Handle Specialite and Formation (FicheDeVoeux is only for standard students)
+        specialite_simple = FicheDeVoeux.objects.filter(prospect=student, is_confirmed=True).first()
+        
+        if specialite_simple:
+            formation = specialite_simple.specialite.formation
+            specialite_label = specialite_simple.specialite.label
+            qualification = formation.qualification
+            annee_academique = specialite_simple.promo.annee_academique
+            branche = specialite_simple.specialite.branche
+            montant_formation = formation.prix_formation
+        elif current_groupe:
+            formation = current_groupe.groupe.specialite.formation
+            specialite_label = current_groupe.groupe.specialite.label
+            qualification = formation.qualification if formation else "N/A"
+            annee_academique = current_groupe.groupe.promotion.annee_academique if current_groupe.groupe.promotion else "N/A"
+            branche = current_groupe.groupe.specialite.branche
+            montant_formation = formation.prix_formation if formation else 0
+        else:
+            formation = None
+            specialite_label = "N/A"
+            qualification = "N/A"
+            annee_academique = "N/A"
+            branche = None
+            montant_formation = 0
+
+        # Legal entity and Echeancier
+        try:
+            entreprise_details = Entreprise.objects.get(id=formation.entite_legal.id) if formation and formation.entite_legal else None
+        except:
+            entreprise_details = None
+            
+        echancier_standard = EcheancierPaiement.objects.filter(formation=formation, is_active=True, is_default=True, is_approuved=True).first()
+        if echancier_standard:
+            echeancier_line = EcheancierPaiementLine.objects.filter(echeancier=echancier_standard).values('id', 'value', 'montant_tranche', 'date_echeancier')
+            frais_inscription = echancier_standard.frais_inscription
+        else:
+            echeancier_line = []
+            frais_inscription = 0
+            
+        documents_available = formation.documents.all() if formation else []
         
         # Historique Absence
         from t_etudiants.models import HistoriqueAbsence
         historique_absence = HistoriqueAbsence.objects.filter(etudiant=student).select_related('ligne_presence__module')
         
-        # Aggregation Logic
         attendance_summary = {}
-
         for record in historique_absence:
             if record.historique:
                 for entry in record.historique:
@@ -60,78 +112,62 @@ def StudentDetails(request, pk):
                         code = d.get('code')
                         etat = d.get('etat')
                         module_label = record.ligne_presence.module.label if record.ligne_presence and record.ligne_presence.module else d.get('module')
-
                         if code:
                             if code not in attendance_summary:
-                                attendance_summary[code] = {
-                                    'label': module_label,
-                                    'code': code,
-                                    'P': 0,
-                                    'A': 0,
-                                    'J': 0,
-                                    'details': []
-                                }
-                            
+                                attendance_summary[code] = {'label': module_label, 'code': code, 'P': 0, 'A': 0, 'J': 0, 'details': []}
                             if etat in ['P', 'A', 'J']:
                                 attendance_summary[code][etat] += 1
-                                
-                            attendance_summary[code]['details'].append({
-                                'date': entry.get('date'),
-                                'etat': etat
-                            })
+                            attendance_summary[code]['details'].append({'date': entry.get('date'), 'etat': etat})
 
         try:
-            echeancier_special = EcheancierSpecial.objects.filter(prospect = student).first()
-            echeancier_special_line = EcheancierPaiementLine.objects.filter(echeancier_id = echeancier_special.id).values('id','value','montant_tranche','date_echeancier')
+            echeancier_special = EcheancierSpecial.objects.filter(prospect=student).first()
+            echeancier_special_line = EcheancierPaiementLine.objects.filter(echeancier_id=echeancier_special.id).values('id','value','montant_tranche','date_echeancier') if echeancier_special else []
         except:
-            echeancier_special = 0
+            echeancier_special = None
             echeancier_special_line = []
 
-        montant_formation = specialite_simple.specialite.formation.prix_formation
-        frais_incription = echancier_standard.frais_inscription
-        branche = specialite_simple.specialite.branche
-        dossier_inscription = DossierInscription.objects.filter(formation = specialite_simple.specialite.formation).values('label')
+        dossier_inscription = DossierInscription.objects.filter(formation=formation).values('label') if formation else []
+        
         try:
-            logo_partenanire = Partenaires.objects.get(id = current_groupe.groupe.specialite.formation.partenaire.id)
+            logo_partenaire = Partenaires.objects.get(id=current_groupe.groupe.specialite.formation.partenaire.id) if current_groupe and current_groupe.groupe.specialite.formation.partenaire else None
         except:
-            logo_partenanire = None
+            logo_partenaire = None
 
         context = {
-            'pk' : pk,
-            'etudiant' : student,
-            'groupe' : groupe,
-            'paiements' : paiements,
-            'documents' : documents,
-            'notes' : notes,
-            'rappels' : rappels,
-            'echeanciers' : echeanciers,
-            'montant_due' : montant_due,
-            'montant_paye' : montant_paye,
-            'total_a_paye' : montant_total,
-            'remises' : remises,
-            'specialite_simple' : specialite_simple.specialite.label if not student.is_double else None,
-            'formation' : specialite_simple.specialite.formation.nom,
-            #'modele_contrat' : modele_contrat,
-            'qualification' : specialite_simple.specialite.formation.qualification,
-            'entreprise_details' : entreprise_details,
-            'echeancier_standart' : echancier_standard,
-            'echeancier_line' : json.dumps(list(echeancier_line), cls=DjangoJSONEncoder),
-            'echeancier_special_line' : json.dumps(list(echeancier_special_line)),
-            'dossier_inscription' : json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
-            'montant_formation' : montant_formation,
-            'frais_incription' : frais_incription,
-            'annee_academique' : specialite_simple.promo.annee_academique,
-            'branche' : branche,
-            'date_debut' : current_groupe.groupe.start_date,
-            'date_fin' : current_groupe.groupe.end_date,
-            'type_formation' : current_groupe.groupe.specialite.formation.type_formation,
-            'logo_partenaire' : logo_partenanire.logo.url if logo_partenanire.logo else "",
-            'documents_available':documents_available,
-            'rachat_due_paiement' : rachat_due_paiement,
+            'pk': pk,
+            'etudiant': student,
+            'groupe': groupe,
+            'paiements': paiements,
+            'documents': documents,
+            'notes': notes,
+            'rappels': rappels,
+            'echeanciers': echeanciers,
+            'montant_due': montant_due,
+            'montant_paye': montant_paye,
+            'total_a_paye': montant_total,
+            'remises': remises,
+            'specialite_simple': specialite_label,
+            'formation': formation.nom if formation else "N/A",
+            'qualification': qualification,
+            'entreprise_details': entreprise_details,
+            'echeancier_standart': echancier_standard,
+            'echeancier_line': json.dumps(list(echeancier_line), cls=DjangoJSONEncoder),
+            'echeancier_special_line': json.dumps(list(echeancier_special_line)),
+            'dossier_inscription': json.dumps(list(dossier_inscription), cls=DjangoJSONEncoder),
+            'montant_formation': montant_formation,
+            'frais_incription': frais_inscription,
+            'annee_academique': annee_academique,
+            'branche': branche,
+            'date_debut': current_groupe.groupe.start_date if current_groupe else None,
+            'date_fin': current_groupe.groupe.end_date if current_groupe else None,
+            'type_formation': formation.type_formation if formation else "N/A",
+            'logo_partenaire': logo_partenaire.logo.url if logo_partenaire and logo_partenaire.logo else "",
+            'documents_available': documents_available,
+            'rachat_due_paiement': rachat_due_paiement,
             'autre_paiements': autre_paiements,
             'historique_absence': attendance_summary.values(),
         }
-        return render(request, 'tenant_folder/student/profile_etudiant.html',context)
+        return render(request, 'tenant_folder/student/profile_etudiant.html', context)
 
 
     else:

@@ -348,9 +348,18 @@ def AutreAffectationPage(request):
 
 @login_required(login_url="institut_app:login")
 def ApiParticipantsConfirmes(request):
-    participants = Participant.objects.filter(is_confirmed_for_scolarite=True)
+    participants = Participant.objects.filter(is_confirmed_for_scolarite=True).select_related('prospect')
     data = []
     for p in participants:
+        status = "Non affecté"
+        groupe_nom = None
+        
+        if p.prospect:
+            affectation = AffectationGroupe.objects.filter(etudiant=p.prospect).select_related('groupe').first()
+            if affectation:
+                status = "Affecté"
+                groupe_nom = affectation.groupe.nom
+        
         data.append({
             'id': p.id,
             'nom': p.nom,
@@ -359,75 +368,98 @@ def ApiParticipantsConfirmes(request):
             'telephone': p.telephone,
             'poste': p.poste,
             'scolarite_note': p.scolarite_note,
+            'status_affectation': status,
+            'groupe_nom': groupe_nom,
         })
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
-@transaction.atomic
 def ApiAffectParticipantToAcademicGroupe(request):
     if request.method == "POST":
-        participant_id = request.POST.get('participant_id')
+        participant_id_single = request.POST.get('participant_id')
+        participant_ids_bulk = request.POST.getlist('participant_ids[]')
         group_id = request.POST.get('groupId')
 
-        if not participant_id or not group_id:
-            return JsonResponse({'status': 'error', 'message': 'Informations manquantes'})
+        if not group_id:
+            return JsonResponse({'status': 'error', 'message': 'Groupe manquant'})
+
+        ids_to_process = participant_ids_bulk if participant_ids_bulk else ([participant_id_single] if participant_id_single else [])
+
+        if not ids_to_process:
+            return JsonResponse({'status': 'error', 'message': 'Aucun participant sélectionné'})
 
         try:
-            participant = Participant.objects.get(id=participant_id)
             groupe = Groupe.objects.get(id=group_id)
-        except (Participant.DoesNotExist, Groupe.DoesNotExist):
-            return JsonResponse({'status': 'error', 'message': 'Participant ou Groupe non trouvé'})
+        except Groupe.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Groupe non trouvé'})
 
-        # 1. Ensure/Create Prospect
-        prospect = participant.prospect
-        if not prospect:
-            from django.utils.text import slugify
-            base_email = participant.email or f"{slugify(participant.nom)}.{slugify(participant.prenom)}_{participant_id}@auto.com"
-            prospect = Prospets.objects.create(
-                nom=participant.nom,
-                prenom=participant.prenom,
-                email=base_email,
-                telephone=participant.telephone,
-                statut="convertit",
-                context="con",
-                type_prospect="particulier"
-            )
-            participant.prospect = prospect
-            participant.save()
+        success_count = 0
+        errors = []
+
+        with transaction.atomic():
+            for pid in ids_to_process:
+                try:
+                    participant = Participant.objects.get(id=pid)
+                except Participant.DoesNotExist:
+                    errors.append(f"Participant introuvable.")
+                    continue
+
+                # 1. Ensure/Create Prospect
+                prospect = participant.prospect
+                if not prospect:
+                    from django.utils.text import slugify
+                    base_email = participant.email or f"{slugify(participant.nom)}.{slugify(participant.prenom)}_{pid}@auto.com"
+                    prospect = Prospets.objects.create(
+                        nom=participant.nom,
+                        prenom=participant.prenom,
+                        email=base_email,
+                        telephone=participant.telephone,
+                        statut="convertit",
+                        context="con",
+                        type_prospect="particulier"
+                    )
+                    participant.prospect = prospect
+                    participant.save()
+                else:
+                    if prospect.statut != "convertit":
+                        prospect.statut = "convertit"
+                        prospect.save()
+
+                # 2. Ensure/Create Etudiant (Scolarité record)
+                etudiant = Etudiant.objects.filter(relation=prospect).first()
+                if not etudiant:
+                    etudiant_by_email = Etudiant.objects.filter(email=prospect.email).first()
+                    if etudiant_by_email:
+                        etudiant = etudiant_by_email
+                        etudiant.relation = prospect
+                        etudiant.save()
+                    else:
+                        etudiant = Etudiant.objects.create(
+                            relation=prospect,
+                            email=prospect.email,
+                            telephone=prospect.telephone or ""
+                        )
+
+                # 3. Assign to Groupe
+                if not AffectationGroupe.objects.filter(etudiant=prospect, specialite=groupe.specialite).exists():
+                    GroupeLine.objects.create(
+                        student=prospect,
+                        groupe=groupe
+                    )
+                    AffectationGroupe.objects.create(
+                        etudiant=prospect,
+                        groupe=groupe,
+                        specialite=groupe.specialite
+                    )
+                    success_count += 1
+                else:
+                    errors.append(f"{participant.nom} est déjà affecté à cette spécialité.")
+
+        if success_count > 0:
+            if errors:
+                return JsonResponse({'status': 'success', 'message': f'{success_count} participant(s) affecté(s). Quelques erreurs ignorées.'})
+            return JsonResponse({'status': 'success', 'message': f'{success_count} participant(s) affecté(s) avec succès !'})
         else:
-            if prospect.statut != "convertit":
-                prospect.statut = "convertit"
-                prospect.save()
-
-        # 2. Ensure/Create Etudiant (Scolarité record)
-        etudiant = Etudiant.objects.filter(relation=prospect).first()
-        if not etudiant:
-            # Check for email conflict in Etudiant model
-            etudiant_by_email = Etudiant.objects.filter(email=prospect.email).first()
-            if etudiant_by_email:
-                etudiant = etudiant_by_email
-                etudiant.relation = prospect
-                etudiant.save()
-            else:
-                etudiant = Etudiant.objects.create(
-                    relation=prospect,
-                    email=prospect.email,
-                    telephone=prospect.telephone or ""
-                )
-
-        # 3. Assign to Groupe
-        if not AffectationGroupe.objects.filter(etudiant=prospect, specialite=groupe.specialite).exists():
-            GroupeLine.objects.create(
-                student=prospect,
-                groupe=groupe
-            )
-            AffectationGroupe.objects.create(
-                etudiant=prospect,
-                groupe=groupe,
-                specialite=groupe.specialite
-            )
-            return JsonResponse({'status': 'success', 'message': 'Participant affecté avec succès'})
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Ce participant est déjà affecté à cette spécialité/groupe'})
+            return JsonResponse({'status': 'error', 'message': "Aucun participant n'a pu être affecté.", 'errors': errors})
 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)

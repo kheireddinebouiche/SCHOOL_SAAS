@@ -968,6 +968,7 @@
           row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">';
           row += '<li><a href="/crm/details-preinscrit/' + item.id + '/" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
           row += '<li><a class="dropdown-item edit-prospect" href="javascript:void(0)" data-prospect-id="' + item.id + '" data-bs-toggle="modal" data-bs-target="#updateInfoProspect"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+          row += '<li><a class="dropdown-item cancel-preinscription text-warning" href="javascript:void(0)" data-prospect-id="' + item.id + '"><i class="ri-close-circle-line align-bottom me-2 text-warning"></i> Annuler la préinscription</a></li>';
           row += '<li><hr class="dropdown-divider"></li>';
           row += '<li><a class="dropdown-item delete-prospect text-danger" href="javascript:void(0)" data-prospect-id="' + item.id + '"><i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer</a></li>';
           row += '</ul>';
@@ -1073,6 +1074,9 @@
           
           cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 edit-prospect" data-prospect-id="' + item.id + '" data-bs-toggle="modal" data-bs-target="#updateInfoProspect">';
           cards += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
+          
+          cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 text-warning cancel-preinscription" data-prospect-id="' + item.id + '">';
+          cards += '<i class="ri-close-circle-line me-2"></i>Annuler la préinscription</button></li>';
           
           cards += '<li><hr class="dropdown-divider my-1"></li>';
           cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-prospect" data-prospect-id="' + item.id + '">';
@@ -1202,6 +1206,74 @@
       $('.deleteModal').modal('show');
       console.log('Delete prospect with ID:', prospectId);
       // Additional code to handle deletion would go here
+    });
+
+    // Handle cancel pre-registration action
+    $(document).on('click', '.cancel-preinscription', function() {
+      var prospectId = $(this).data('prospect-id');
+      $('#cancel_prospect_id').val(prospectId);
+      $('#cancellation_reason').val('');
+      $('#modalAnnulerPreinscription').modal('show');
+    });
+
+    $('#btnConfirmCancel').on('click', function() {
+        var prospectId = $('#cancel_prospect_id').val();
+        var reason = $('#cancellation_reason').val();
+
+        if (!reason.trim()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Champ requis',
+                text: 'Veuillez saisir une raison pour l\'annulation.',
+            });
+            return;
+        }
+
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Traitement...');
+
+        $.ajax({
+            url: '{% url "t_crm:ApiCancelPreinscrit" %}',
+            type: 'POST',
+            data: {
+                'id_preinscrit': prospectId,
+                'motif': reason,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                $('#modalAnnulerPreinscription').modal('hide');
+                $('#btnConfirmCancel').prop('disabled', false).html('<i class="ri-close-circle-line me-1"></i> Confirmer l\'annulation');
+                
+                if (response.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Succès',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        loadProspects(); // Refresh the list
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: response.message,
+                    });
+                }
+            },
+            error: function(xhr) {
+                $('#btnConfirmCancel').prop('disabled', false).html('<i class="ri-close-circle-line me-1"></i> Confirmer l\'annulation');
+                var message = "Une erreur est survenue lors de l'annulation.";
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: message,
+                });
+            }
+        });
     });
 
   });

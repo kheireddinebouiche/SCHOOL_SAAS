@@ -24,7 +24,7 @@ def AipLoadRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadProspectParticulier(request):
-    prospect = Prospets.objects.filter(type_prospect = 'particulier').filter(Q(statut = "visiteur") | Q(statut = "prinscrit")).values('slug','id','nom','prenom','date_naissance','statut','nin','created_at')
+    prospect = Prospets.objects.filter(type_prospect = 'particulier').filter(Q(statut = "visiteur") | Q(statut = "prinscrit")).exclude(context='con').values('slug','id','nom','prenom','date_naissance','statut','nin','created_at')
 
     for i in prospect:
         i_obj = Prospets.objects.get(id= i['id'])

@@ -1,16 +1,67 @@
 from django.contrib import admin
 from django.urls import path
-from .views import *
-from .f_views.prospects import *
-from .f_views.prinscrits import *
-from .f_views.derogations import *
-from .f_views.reminder import *
-from .f_views.entreprise_prospect import *
-from .f_views.secondwishe import *
-from .f_views.remise import *
-from.f_views.counter import *
-from .f_views.logs import *
-from .f_views.reporting import *
+from .views import (
+    listeVisiteurs, ApiListeVisiteurs, nouveauVisiteur, modifierVisiteur, supprimerVisiteur,
+    detailsVisiteur, updateVisiteur, ApiGetSpecialite, ApiGETDemandeInscription,
+    ListeDemandeInscription, ApiGetListeDemandeInscription, ApiGetGrideDemandeInscription,
+    ApiAddNewDemandeInscription, ApiConfirmDemandeInscription, ApiAnnulerDemandeInscription,
+    ApiRemoveDemandeInscription, filter_visiteur, InscriptionParticulier,
+    InscriptionEntreprise, ListeDesProspects, DetailsProspect,
+    ApiLoadProspects, ApiDeleteProspect, ApiFilterProspect,
+    ApiLoadProspectDetails, ApiUpdatePropectDetails, ApiUpdateProspectEtsDetails,
+    ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCreateVoeuxDouble,
+    ApiFilterPrinscrit, ApiLoadSpecialite
+)
+from .f_views.prospects import (
+    ApiLoadProspectPerosnalInfos,
+    ApiLoadProspectRendezVous, ApiLoadRendezVousDetails, ApiValidateProspect,
+    ApiValidateProspectDouble, ApiUpdateProspectData,
+    ApiCreateDoubleDiplomation, ApiLoadFicheVoeuxProspect, ApiLoadFicheVoeuxDoubleProspect,
+    ApiConfirmeDoubleDiplome, ApiLoadDoubleDiplomations, ApiLoadDoubleSpecialite,
+    ApiUpdateDoubleVoeux, ApiChangeToStandardCursus,
+    ApiLoadPromos, ApiCheckStatutProspect, ApiLoadFormationAndSpecialite,
+    ApiLoadSpecialiteProspect, ApiUpdateVoeux, ApiCreateVoeux,
+    ApiLoadNote, ApiStoreNote, ApiDeleteNote, ApiUpdateNote,
+    ApiStoreRappel, ApiDeleteRappel, ApiUpdateRappel,
+    ApiLoadFormation
+)
+from .f_views.prinscrits import (
+    ListeDesPrinscrits, ApiLoadPrinscrits, DetailsPrinscrit,
+    ApiLoadPreinscrisPerosnalInfos, ApiLoadPreinscritRendezVous,
+    ApiLoadNotePr, ApiCheckHasCompletedProfile, ApiCheckCompletedDoc,
+    ApiUpdatePreinscritInfos, ApiLoadRequiredDocs, add_document, add_document_double,
+    LoadPresinscritDocs, DeleteDocumentPreinscrit, ApiStoreNotePreinscrit,
+    check_all_required_docs, check_all_required_doc_double, ApiStoreRappelPreinscrit,
+    ApiValidatePreinscrit, ApiCancelPreinscrit, ApiReactivatePreinscrit,
+    ApiLoadFinancialData, ApiLoadPreinscritDoubleVoeux, prospects_incomplets_view,
+    ApiGetDossierDetails, ApiGetDossierDetailsDouble
+)
+from .f_views.derogations import (
+    liste_derogations,
+    LoadDerogations, ApiCheckDerogationStatus, ApiStoreDerogation,
+    ApiGetDerogationDetails, ApiTraiteDerogation, ApiDeleteDerogation
+)
+from .f_views.reminder import (
+    ApiValidateRemider, ApiArchiveReminder
+)
+from .f_views.entreprise_prospect import (
+    ApiLoadEntrepriseProspectInfo,
+    ApiUpdateEntrepriseData, ApiUpdateContactInfo
+)
+from .f_views.secondwishe import (
+    ApiListeSecondWishes, ApiStoreSecondWish, ApiDeleteSecondWish,
+    ApiCountFormationSupplementaire, ApiConfirmeSecondWish
+)
+from .f_views.remise import (
+    ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
+    ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
+    ApiGetReductionDetails, ApiActivateRemiseAppliquer,
+    ApiLoadProspectParticulier
+)
+from .f_views.counter import get_crm_counters, increment_crm_counter, get_activity_history
+from .f_views.logs import user_action_log_list, clear_logs
+from .f_views.reporting import crm_reporting, ApiGetCrmReportingData
+from .f_views.generate_paiements import ApiGeneratePaiementRequest
 
 app_name="t_crm"
 
@@ -137,6 +188,7 @@ urlpatterns = [
     path('ApiStoreDerogation', ApiStoreDerogation, name="ApiStoreDerogation"),
     path('ApiGetDerogationDetails', ApiGetDerogationDetails, name="ApiGetDerogationDetails"),
     path('ApiTraiteDerogation', ApiTraiteDerogation, name="ApiTraiteDerogation"),
+    path('ApiDeleteDerogation', ApiDeleteDerogation, name="ApiDeleteDerogation"),
     ################################################### Gestion des dérogations ##########################################################
 
     path('suivie-des-dossiers/', prospects_incomplets_view, name="prospects_incomplets_view"),
@@ -167,6 +219,8 @@ urlpatterns = [
     path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
 
     path('ApiValidatePreinscrit', ApiValidatePreinscrit, name="ApiValidatePreinscrit"),
+    path('ApiCancelPreinscrit', ApiCancelPreinscrit, name="ApiCancelPreinscrit"),
+    path('ApiReactivatePreinscrit', ApiReactivatePreinscrit, name="ApiReactivatePreinscrit"),
 
     path('ApiGeneratePaiementRequest', ApiGeneratePaiementRequest, name="ApiGeneratePaiementRequest"),
 

@@ -2,30 +2,76 @@
 {% load static %}
 {% block title %} Lancement de Stage {% endblock title %}
 {% block content %}
+<style>
+    /* Premium Look & Feel Integration */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+    }
+
+    .form-control, .form-select {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
 <div class="main-content">
-    <div class="page-content">
+    <div class="page-content bg-light">
         <div class="container-fluid">
-            <!-- Header -->
-            <div class="row">
+            <!-- Header Section -->
+            <div class="row mb-4">
                 <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">{% if stage %}Modification du Stage{% else %}Planification d'un Nouveau Stage{% endif %}</h4>
-                        <div class="page-title-right">
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{% url 't_stage:stage_dashboard' %}">Stages</a></li>
-                                <li class="breadcrumb-item active">{% if stage %}Modification{% else %}Lancement{% endif %}</li>
-                            </ol>
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="{% if stage %}ri-edit-2-line{% else %}ri-rocket-line{% endif %} text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">{% if stage %}Modification du Stage{% else %}Planification d'un Nouveau Stage{% endif %}</h4>
+                                <p class="text-muted mb-0">Initialisation et paramétrage du projet</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="{% url 't_stage:stage_dashboard' %}">Stages</a></li>
+                                    <li class="breadcrumb-item active">{% if stage %}Modification{% else %}Lancement{% endif %}</li>
+                                </ol>
+                            </nav>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="alert alert-info border-0 rounded-top-0 m-0 d-flex align-items-center" role="alert">
-                        <i class="ri-information-line me-2 fs-18"></i>
-                        <div>
-                            <strong>{% if stage %}Modification{% else %}Initialisation{% endif %} du Stage :</strong> {% if stage %}Mettez à jour les informations du stage, les étudiants assignés ou l'encadrant.{% else %}Cette étape permet d'enregistrer officiellement un binôme ou monôme, d'affecter un encadrant et de définir le cadre temporel du projet. Une fois créé, le stage apparaîtra dans le tableau de bord pour le suivi.{% endif %}
+            <!-- Hint/Alert -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert glass-card border-0 d-flex align-items-center mb-0" role="alert" style="background: rgba(59, 130, 246, 0.05);">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                            <i class="ri-information-line text-primary fs-4"></i>
+                        </div>
+                        <div class="text-dark">
+                            <strong>{% if stage %}Modification{% else %}Initialisation{% endif %} du Stage :</strong> {% if stage %}Mettez à jour les informations du stage, les étudiants assignés ou l'encadrant.{% else %}Cette étape permet d'enregistrer officiellement un binôme ou monôme, d'affecter un encadrant et de définir le cadre temporel du projet.{% endif %}
                         </div>
                     </div>
                 </div>
@@ -33,19 +79,18 @@
 
             <div class="row justify-content-center mt-4">
                 <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header border-0">
-                            <h5 class="card-title mb-0">Formulaire d'Affectation</h5>
+                    <div class="card glass-card border-0">
+                        <div class="card-header bg-transparent border-0 p-4">
+                            <h5 class="card-title mb-0 fw-bold">Formulaire d'Affectation</h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4 pt-0">
                             <form method="POST">
                                 {% csrf_token %}
-                                <div class="row g-3">
-                                    <!-- Étudiants -->
+                                <div class="row g-4">
                                     <!-- Groupe Filter -->
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label for="groupe_filtre" class="form-label">Filtrer par Groupe</label>
-                                        <select class="form-select mb-2" id="groupe_filtre" name="groupe_filtre">
+                                        <select class="form-select" id="groupe_filtre" name="groupe_filtre">
                                             <option value="">Tous les étudiants</option>
                                             {% for grp in groupes %}
                                             <option value="{{ grp.id }}" {% if stage and stage.groupe_id == grp.id %}selected{% endif %}>{{ grp.nom }}</option>
@@ -54,43 +99,35 @@
                                     </div>
 
                                     <!-- Étudiants -->
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label for="etudiants" class="form-label">Étudiants (Binôme / Trinôme...) <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="etudiants" name="etudiants" multiple required style="height: 120px;">
+                                        <select class="form-select" id="etudiants" name="etudiants" multiple required style="height: 150px;">
                                             {% for etud in etudiants %}
                                             <option value="{{ etud.id }}" {% if etud.id in selected_etudiants_ids %}selected{% endif %}>{{ etud }}</option>
                                             {% endfor %}
                                         </select>
-                                        <div class="form-text">Maintenez la touche Ctrl (ou Cmd) enfoncée pour sélectionner plusieurs étudiants.</div>
+                                        <div class="form-text mt-2"><i class="ri-information-fill me-1"></i> Maintenez la touche <strong>Ctrl</strong> (ou <strong>Cmd</strong>) enfoncée pour sélectionner plusieurs étudiants.</div>
                                     </div>
                                     
                                     <script>
                                     document.addEventListener('DOMContentLoaded', function() {
                                         const groupSelect = document.getElementById('groupe_filtre');
                                         const studentSelect = document.getElementById('etudiants');
-                                        // Safe way to pass IDs list from Django context
                                         const selectedIds = {{ selected_etudiants_ids|default:"[]"|safe }};
 
                                         function fetchStudents(groupId) {
-                                             // Reset options is handled by replacing innerHTML BUT we want to keep selection if re-fetching?
-                                             // Actually if group changes and we filter, we might lose selection if current selection is not in new group. 
-                                             // BUT usually we filter to FIND students.
-                                             
                                             studentSelect.innerHTML = '<option value="" disabled>Chargement...</option>';
-                                            
-                                            // Fetch students
                                             const url = `{% url 't_stage:ajax_get_students_by_group' %}?groupe_id=${groupId}`;
                                             
                                             fetch(url)
                                             .then(response => response.json())
                                             .then(data => {
-                                                studentSelect.innerHTML = ''; // Clear loading
+                                                studentSelect.innerHTML = '';
                                                 if (data.students.length > 0) {
                                                     data.students.forEach(student => {
                                                         const option = document.createElement('option');
                                                         option.value = student.id;
                                                         option.textContent = student.nom;
-                                                        // Check if this student should be selected based on backend data
                                                         if (selectedIds.includes(parseInt(student.id))) {
                                                             option.selected = true;
                                                         }
@@ -112,16 +149,6 @@
                                         groupSelect.addEventListener('change', function() {
                                             fetchStudents(this.value);
                                         });
-
-                                        // If filtering by group is desired on load (e.g. edit mode with a group selected), uncomment below.
-                                        // However, the template loop above already renders ALL options correctly marked as selected.
-                                        // Using AJAX on load might replace the list with ONLY the group members.
-                                        // If we want consistency: if group is selected, show only its members? 
-                                        // Let's rely on the user changing the filter for now, or if a group is present, trigger it.
-                                        if (groupSelect.value) {
-                                             // If we want to restrict list to group on load:
-                                             // fetchStudents(groupSelect.value);
-                                        }
                                     });
                                     </script>
 
@@ -161,9 +188,11 @@
                                         <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ stage.date_fin|date:'Y-m-d'|default:'' }}">
                                     </div>
 
-                                    <div class="col-12 text-end mt-4">
-                                        <a href="{% url 't_stage:stage_dashboard' %}" class="btn btn-light me-2">Annuler</a>
-                                        <button type="submit" class="btn btn-primary px-4">{% if stage %}Modifier{% else %}Lancer{% endif %} le Stage</button>
+                                    <div class="col-12 hstack gap-2 justify-content-end mt-4">
+                                        <a href="{% url 't_stage:stage_dashboard' %}" class="btn btn-light btn-rounded px-4 py-2">Annuler</a>
+                                        <button type="submit" class="btn btn-primary btn-rounded px-4 py-2">
+                                            <i class="ri-save-line me-1"></i> {% if stage %}Enregistrer les modifications{% else %}Lancer le Stage{% endif %}
+                                        </button>
                                     </div>
                                 </div>
                             </form>

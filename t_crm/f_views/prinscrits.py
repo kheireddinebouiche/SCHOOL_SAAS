@@ -29,8 +29,8 @@ def ListeDesPrinscrits(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
-    #liste = Prospets.objects.filter(statut = "prinscrit").values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
-    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut= "convertit")).values('slug','statut','id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    liste = Prospets.objects.filter(is_double = True, statut = "prinscrit").exclude(context='con').values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
+    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut= "convertit")).exclude(context='con').values('slug','statut','id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
     for i in liste:
         i_obj = Prospets.objects.get(id=i['id'])
         i['etat_label'] = i_obj.get_etat_display()
@@ -72,6 +72,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'email': prospect.email,
         'telephone': prospect.telephone,
         'canal': prospect.get_canal_display() if hasattr(prospect, "get_canal_display") else prospect.canal,
+        'motif_annulation': prospect.motif_annulation,
         'adresse': prospect.adresse,
         'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
         'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
@@ -393,9 +394,17 @@ def LoadPresinscritDocs(request):
         obj_preinscrit = Prospets.objects.get(id = id_preinscrit)
 
         if obj_preinscrit.is_double:
-            docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect__id = id_preinscrit))
+            fiche = FicheVoeuxDouble.objects.filter(prospect=obj_preinscrit).first()
+            if fiche:
+                docs = DocumentsDemandeInscription.objects.filter(prospect=obj_preinscrit, fiche_voeux_double=fiche)
+            else:
+                docs = DocumentsDemandeInscription.objects.filter(prospect=obj_preinscrit)
         else:
-            docs = DocumentsDemandeInscription.objects.filter(prospect__id = id_preinscrit,fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_preinscrit))
+            fiche = FicheDeVoeux.objects.filter(prospect=obj_preinscrit).first()
+            if fiche:
+                docs = DocumentsDemandeInscription.objects.filter(prospect=obj_preinscrit, fiche_voeux=fiche)
+            else:
+                docs = DocumentsDemandeInscription.objects.filter(prospect=obj_preinscrit)
 
         data = [{
             "id": doc.id,
@@ -519,7 +528,7 @@ def ApiStoreRappelPreinscrit(request):
 
 def get_prospects_incomplets():
     
-    prospects = Prospets.objects.filter(type_prospect="particulier").filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit"))
+    prospects = Prospets.objects.filter(type_prospect="particulier").filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit")).exclude(context='con')
     results = []
 
     for prospect in prospects:
@@ -570,7 +579,8 @@ def get_prospects_incomplets():
 
 def get_prospects_incomplets_double():
     
-    prospects = Prospets.objects.filter(type_prospect="particulier", is_double=True).filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit"))
+    prospects_incomplets = Prospets.objects.filter(statut="prinscrit", is_double=True).exclude(context='con')
+    prospects = Prospets.objects.filter(type_prospect="particulier", is_double=True).filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit")).exclude(context='con')
     results = []
 
     for prospect in prospects:
@@ -781,23 +791,105 @@ from django.utils.timezone import now
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
-def ApiValidatePreinscrit(request):
-    id_preinscrit=  request.GET.get('id_preinscrit')
+def ApiCancelPreinscrit(request):
+    id_preinscrit = request.POST.get('id_preinscrit')
+    motif = request.POST.get('motif')
+
+    if not id_preinscrit or not motif:
+        return JsonResponse({'status': 'error', 'message': 'Informations manquantes.'}, status=400)
 
     try:
-        preinscrit = Prospets.objects.get(id = id_preinscrit)
+        preinscrit = Prospets.objects.get(id=id_preinscrit)
+        preinscrit.statut = 'annuler'
+        preinscrit.motif_annulation = motif
+        preinscrit.save()
+
+        # Handle associated payment requests
+        # We look for pending (unpaid) payment requests for this client
+        payment_requests = ClientPaiementsRequest.objects.filter(client=preinscrit, paid=False).exclude(etat__in=['annulation', 'annulation_approuver'])
+        for req in payment_requests:
+            req.etat = 'annulation'
+            req.save()
+
+        # Supprimer les fiches de voeux associées
+        if preinscrit.is_double:
+            FicheVoeuxDouble.objects.filter(prospect=preinscrit).delete()
+        else:
+            FicheDeVoeux.objects.filter(prospect=preinscrit).delete()
+
+        return JsonResponse({'status': 'success', 'message': 'La préinscription a été annulée avec succès.'})
+
+    except Prospets.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiReactivatePreinscrit(request):
+    if request.method == 'POST':
+        id_preinscrit = request.POST.get('id_preinscrit')
+        try:
+            preinscrit = Prospets.objects.get(id=id_preinscrit)
+
+            # [NOUVEAU] Vérification STRICTE AVANT réactivation
+            if preinscrit.is_double:
+                has_voeux = FicheVoeuxDouble.objects.filter(prospect=preinscrit).exists()
+            else:
+                has_voeux = FicheDeVoeux.objects.filter(prospect=preinscrit).exists()
+
+            if not has_voeux:
+                return JsonResponse({
+                    'status': 'error', # Changé en error pour bloquer le flux frontend standard
+                    'message': 'Réactivation impossible : ce prospect ne possède aucune fiche de vœux. Veuillez en créer une avant de procéder à la réactivation.',
+                    'has_voeux': False
+                })
+
+            # Si la fiche existe, on procède à la réactivation
+            preinscrit.statut = 'prinscrit'
+            preinscrit.motif_annulation = ''
+            preinscrit.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'La préinscription a été réactivée avec succès.',
+                'has_voeux': True
+            })
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiValidatePreinscrit(request):
+    id_preinscrit = request.GET.get('id_preinscrit')
+
+    try:
+        preinscrit = Prospets.objects.get(id=id_preinscrit)
 
         if preinscrit.is_double:
-            fiche_voeux = FicheVoeuxDouble.objects.get(prospect_id = id_preinscrit, is_confirmed=True)
+            fiche_voeux = FicheVoeuxDouble.objects.filter(prospect_id=id_preinscrit, is_confirmed=True).first()
+            if not fiche_voeux:
+                return JsonResponse({
+                    'status': 'no_voeux',
+                    'message': "Impossible de valider : ce prospect n'a pas de fiche de vœux (double diplomation) confirmée. Veuillez en créer et confirmer une avant de valider."
+                })
             specialite = fiche_voeux.specialite
             promo = fiche_voeux.promo
-            ClientPaiementsRequest.objects.create(client = preinscrit,promo = promo,specialite_double = specialite,motif = "frais_f")
+            ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite_double=specialite, motif="frais_f")
         else:
-            fiche_voeux = FicheDeVoeux.objects.filter(prospect = preinscrit, is_confirmed = True).first()
+            fiche_voeux = FicheDeVoeux.objects.filter(prospect=preinscrit, is_confirmed=True).first()
+            if not fiche_voeux:
+                return JsonResponse({
+                    'status': 'no_voeux',
+                    'message': "Impossible de valider : ce prospect n'a pas de fiche de vœux confirmée. Veuillez en créer et confirmer une avant de valider."
+                })
             specialite = fiche_voeux.specialite
             promo = fiche_voeux.promo
-            ClientPaiementsRequest.objects.create(client = preinscrit,promo = promo,specialite = specialite,motif = "frais_f")
-        
+            ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite=specialite, motif="frais_f")
+
         preinscrit.statut = "instance"
         preinscrit.instance_date = now()
         preinscrit.save()
@@ -807,9 +899,9 @@ def ApiValidatePreinscrit(request):
         link = reverse('t_tresorerie:attentes_de_paiements')
         send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
 
-        return JsonResponse({'status' : "success", "message" : "La validation a été effectuée avec succès"})
+        return JsonResponse({'status': "success", "message": "La validation a été effectuée avec succès"})
     except Exception as e:
-        return JsonResponse({"status":"error",'message' : str(e)})
+        return JsonResponse({"status": "error", 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadFinancialData(request):

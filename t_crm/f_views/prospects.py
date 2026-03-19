@@ -17,7 +17,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
@@ -410,6 +410,18 @@ def ApiValidateProspect(request):
         id_fiche_voeux = request.POST.get("id_fiche_voeux")
         try:
             prospect = Prospets.objects.get(id=id_prospect)
+
+            # Vérification de la fiche de vœux
+            if not id_fiche_voeux:
+                fiche_existe = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).exists()
+                if not fiche_existe:
+                    # On vérifie aussi s'il y a une fiche non confirmée qu'on pourrait confirmer automatiquement ? 
+                    # Non, on suit la règle : il faut une fiche.
+                    return JsonResponse({
+                        'status': 'no_voeux', 
+                        'message': "Impossible de valider : ce prospect n'a pas de fiche de vœux confirmée. Veuillez en créer une avant de valider."
+                    })
+
             prospect.etat = "accepte"
             if prospect.context == "con":
                 prospect.statut = "convertit"
@@ -418,8 +430,8 @@ def ApiValidateProspect(request):
             else:
                 prospect.statut = "prinscrit"
                 prospect.preinscri_date = datetime.now()
+            prospect.motif_annulation = ""
             prospect.save()
-
 
             if id_fiche_voeux:
                 FicheDeVoeux.objects.filter(id=id_fiche_voeux).update(is_confirmed=True)
@@ -436,8 +448,19 @@ def ApiValidateProspectDouble(request):
         id_fiche_voeux = request.POST.get("id_fiche_voeux")
         try:
             prospect = Prospets.objects.get(id=id_prospect)
+
+            # Vérification de la fiche de vœux double
+            if not id_fiche_voeux:
+                fiche_existe = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).exists()
+                if not fiche_existe:
+                    return JsonResponse({
+                        'status': 'no_voeux', 
+                        'message': "Impossible de valider : ce prospect n'a pas de fiche de vœux (double diplomation) confirmée. Veuillez en créer une avant de valider."
+                    })
+
             prospect.etat = "accepte"
             prospect.statut = "prinscrit"
+            prospect.motif_annulation = ""
             prospect.preinscri_date = datetime.now()
             prospect.save()
 
@@ -446,10 +469,9 @@ def ApiValidateProspectDouble(request):
                 FicheVoeuxDouble.objects.filter(id=id_fiche_voeux).update(is_confirmed=True)
 
             return JsonResponse({'status': 'success', 'message': 'Prospect validé avec succès.'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
-    else:
-        return JsonResponse({"status" : "error"})
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url='institut_app:login')
 def ApiCheckStatutProspect(request):
@@ -458,7 +480,8 @@ def ApiCheckStatutProspect(request):
 
     data = {
         'id': prospect.id,
-        'etat': prospect.etat
+        'etat': prospect.etat,
+        'statut': prospect.statut
     }
     return JsonResponse({'data': data})
 

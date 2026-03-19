@@ -185,6 +185,7 @@ class Prospets(models.Model):
     observation = models.TextField(null=True, blank=True)
 
     motif_rejet = models.CharField(max_length=100, null=True, blank=True)
+    motif_annulation = models.TextField(null=True, blank=True)
 
     groupe_sanguin = models.CharField(max_length=100, null=True, blank=True, choices=[('a-','A-'),('a+','A+'),('b+','B+'),('b-','B-'),('ab-','AB-'),('ab+','AB+'),('o-','o-'),('o+','o+')])
     nom_arabe = models.CharField(max_length=100, null=True, blank=True)
