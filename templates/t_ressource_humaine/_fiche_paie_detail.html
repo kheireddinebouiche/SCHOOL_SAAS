@@ -1,69 +1,83 @@
 {% load humanize %}
 <div class="modal-body p-4">
-    <div class="alert alert-success border-0 d-flex align-items-center mb-4" role="alert">
-        <i class="ri-checkbox-circle-line fs-24 me-3"></i>
+    <div class="alert alert-soft-success border-0 d-flex align-items-center mb-4 p-3 rounded-3" role="alert">
+        <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3">
+            <i class="ri-checkbox-circle-line fs-20 text-success"></i>
+        </div>
         <div>
-            <h6 class="alert-heading mb-1">Fiche de paie générée avec succès !</h6>
-            <p class="mb-0 text-muted">Voici le résumé pour <strong>{{ fiche.get_mois_display }} {{ fiche.annee }}</strong>.</p>
+            <h6 class="alert-heading mb-0 fw-bold text-dark">Bulletin de Paie Généré</h6>
+            <p class="mb-0 text-muted small">Résumé pour <span class="text-success fw-semibold">{{ fiche.get_mois_display }} {{ fiche.annee }}</span></p>
         </div>
     </div>
 
-    <div class="row g-4 overflow-hidden">
-        <div class="col-md-6 border-end">
-            <h6 class="text-uppercase fw-bold text-muted mb-3 fs-11">Détails Formateur</h6>
-            <div class="d-flex align-items-center mb-2">
-                <div class="avatar-xs flex-shrink-0 me-3">
-                    <div class="avatar-title bg-soft-primary text-primary rounded-circle">
-                        <i class="ri-user-follow-line"></i>
+    <div class="row g-4">
+        <div class="col-md-6 border-end border-light">
+            <h6 class="text-muted small fw-bold text-uppercase tracking-widest mb-3">Informations Formateur</h6>
+            <div class="d-flex align-items-center mb-3">
+                <div class="avatar-md flex-shrink-0 me-3">
+                    <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-20 fw-bold shadow-sm">
+                        {{ fiche.contrat.formateur.nom|slice:":1" }}{{ fiche.contrat.formateur.prenom|slice:":1" }}
                     </div>
                 </div>
                 <div>
-                    <h6 class="mb-0">{{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</h6>
-                    <small class="text-muted">#{{ fiche.contrat.formateur.id|stringformat:"04d" }}</small>
+                    <h6 class="mb-0 fw-bold text-dark">{{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</h6>
+                    <span class="badge badge-soft-primary mt-1">{{ fiche.contrat.get_type_contrat_display }}</span>
                 </div>
             </div>
-            <p class="mb-1 text-muted fs-12"><i class="ri-file-list-3-line me-1"></i> {{ fiche.contrat.get_type_contrat_display }}</p>
-            <p class="mb-0 text-muted fs-12">
-                <i class="ri-time-line me-1"></i> 
-                {% if fiche.contrat.type_contrat == 'VACATION' %}
-                    {{ fiche.heures_travailles }} Heures
-                {% else %}
-                    {{ fiche.jours_travailles }} Jours
-                {% endif %}
-            </p>
+            <div class="vstack gap-2">
+                <div class="d-flex align-items-center text-muted small">
+                    <i class="ri-hashtag me-2"></i> Contrat #{{ fiche.contrat.id }}
+                </div>
+                <div class="d-flex align-items-center text-muted small">
+                    <i class="ri-time-line me-2"></i> 
+                    {% if fiche.contrat.type_contrat == 'VACATION' %}
+                        {{ fiche.heures_travailles }} Heures effectuées
+                    {% else %}
+                        {{ fiche.jours_travailles }} Jours travaillés
+                    {% endif %}
+                </div>
+            </div>
         </div>
         <div class="col-md-6">
-            <h6 class="text-uppercase fw-bold text-muted mb-3 fs-11">Récapitulatif (DA)</h6>
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Salaire de Base</span>
-                <span class="fw-medium text-dark">{{ fiche.salaire_base_calcule|intcomma }}</span>
+            <h6 class="text-muted small fw-bold text-uppercase tracking-widest mb-3">Calcul du Net (DA)</h6>
+            <div class="vstack gap-2 mb-3">
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-2 hover-bg-light">
+                    <span class="text-muted small">Salaire de Base</span>
+                    <span class="fw-bold text-dark">{{ fiche.salaire_base_calcule|intcomma }}</span>
+                </div>
+                {% if fiche.prime_panier or fiche.prime_transport %}
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-2 hover-bg-light">
+                    <span class="text-muted small">Primes & Avantages</span>
+                    <span class="fw-bold text-success">+{{ fiche.prime_panier|add:fiche.prime_transport|intcomma }}</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-2 hover-bg-light">
+                    <span class="text-muted small">Cotisation SS (9%)</span>
+                    <span class="fw-bold text-danger">-{{ fiche.montant_ss|intcomma }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-2 hover-bg-light">
+                    <span class="text-muted small">Impôt (IRG)</span>
+                    <span class="fw-bold text-danger">-{{ fiche.irg|intcomma }}</span>
+                </div>
             </div>
-            {% if fiche.prime_panier or fiche.prime_transport %}
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Primes (Panier/Transp)</span>
-                <span class="fw-medium text-success">+{{ fiche.prime_panier|add:fiche.prime_transport|intcomma }}</span>
-            </div>
-            {% endif %}
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Cotisation SS (9%)</span>
-                <span class="fw-medium text-danger">-{{ fiche.montant_ss|intcomma }}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                <span class="text-muted">Impôt (IRG)</span>
-                <span class="fw-medium text-danger">-{{ fiche.irg|intcomma }}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold fs-14">Net à Payer</span>
-                <span class="fw-bold fs-18 text-primary">{{ fiche.net_a_payer|intcomma }} DA</span>
+            <div class="bg-primary bg-opacity-5 p-3 rounded-3 border border-primary border-opacity-10 d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark fs-12 uppercase tracking-tighter">Net à percevoir</span>
+                <span class="fw-black text-primary fs-22">{{ fiche.net_a_payer|intcomma }} <small class="fs-12">DA</small></span>
             </div>
         </div>
     </div>
 </div>
-<div class="modal-footer bg-light p-3">
-    <button type="button" class="btn btn-ghost-secondary btn-sm" data-bs-dismiss="modal">
-        <i class="ri-close-line align-bottom me-1"></i> Fermer
+<div class="modal-footer bg-light p-3 border-0">
+    <button type="button" class="btn btn-ghost-secondary btn-rounded px-4" data-bs-dismiss="modal">
+        Fermer
     </button>
-    <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.pk %}" target="_blank" class="btn btn-soft-primary btn-sm px-4">
-        <i class="ri-printer-line align-bottom me-1"></i> Imprimer Bulletin
+    <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.pk %}" target="_blank" class="btn btn-primary btn-rounded px-4 shadow-sm">
+        <i class="ri-printer-line me-2"></i> Imprimer le bulletin
     </a>
 </div>
+
+<style>
+    .hover-bg-light:hover { background-color: #f8fafc; }
+    .btn-rounded { border-radius: 0.85rem; }
+    .fw-black { font-weight: 900; }
+</style>

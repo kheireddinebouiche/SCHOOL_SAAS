@@ -229,6 +229,10 @@
                   <option value="">Spécialité (Toutes)</option>
                 </select>
 
+                <select id="filter-promo" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
+                  <option value="">Promotion (Toutes)</option>
+                </select>
+
                 <select id="date_filter-group" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
                   <option value="">Trier par date</option>
                   <option value="-created_at">Plus récents</option>
@@ -267,7 +271,7 @@
                   <tbody id="listeItem" class="border-top-0">
                     {% if liste.count != 0 %}
                       {% for i in liste %}
-                      <tr data-id="{{i.id}}"> 
+                      <tr data-id="{{i.id}}" data-promotion="{{i.promotion.code}}"> 
                         <td>{{i.nom}}</td>
                         <td>{{i.start_date}}</td>
                         <td>{{i.end_date}}</td>
@@ -484,7 +488,8 @@
                   end_date: cells.eq(2).text().trim(),
                   specialite: cells.eq(3).text().trim(),
                   annee_scolaire: cells.eq(4).text().trim(),
-                  etat: cells.eq(5).find('span').text().trim()
+                  etat: cells.eq(5).find('span').text().trim(),
+                  promotion: $row.data("promotion") // Extract promo from data attribute
               });
           }
       });
@@ -492,7 +497,25 @@
       originalData = templateData;
       updateStatistics(originalData);
       populateSpecialtyFilter(originalData);
+      populatePromoFilter(originalData); // Add this
       renderData(originalData); // Trigger initial render for Grid View
+    }
+
+    function populatePromoFilter(data) {
+      var promoSelect = $('#filter-promo');
+      promoSelect.empty();
+      promoSelect.append($('<option>', { value: '', text: 'Promotion (Toutes)' }));
+      
+      var promos = [];
+      $.each(data, function(index, item) {
+        if (item.promotion && promos.indexOf(item.promotion) === -1) {
+          promos.push(item.promotion);
+        }
+      });
+      
+      promos.sort().forEach(function(promo) {
+        promoSelect.append($('<option>', { value: promo, text: promo }));
+      });
     }
 
     
@@ -527,22 +550,32 @@
     // Initialize with template data
     loadGroups();
 
-    // Client-side filter by specialty
-    $(document).on('change', '#filter-specialty', function() {
-      var filterValue = $(this).val();
+    // Unified Filter logic for client-side search and selects
+    function applyFilters() {
+      var searchTerm = $('#table-filter').val().trim().toLowerCase();
+      var specialtyFilter = $('#filter-specialty').val();
+      var promoFilter = $('#filter-promo').val();
       
-      if (filterValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Filter based on specialty
-        var filteredData = originalData.filter(function(item) {
-          return item.specialite && item.specialite.toLowerCase().includes(filterValue.toLowerCase());
-        });
+      var filteredData = originalData.filter(function(item) {
+        var matchesSearch = (
+          item.nom.toLowerCase().includes(searchTerm) ||
+          item.specialite.toLowerCase().includes(searchTerm) ||
+          item.annee_scolaire.toLowerCase().includes(searchTerm) ||
+          item.etat.toLowerCase().includes(searchTerm)
+        );
         
-        renderData(filteredData);
-      }
-    });
+        var matchesSpecialty = (specialtyFilter === '' || (item.specialite && item.specialite === specialtyFilter));
+        var matchesPromo = (promoFilter === '' || (item.promotion && item.promotion === promoFilter));
+        
+        return matchesSearch && matchesSpecialty && matchesPromo;
+      });
+      
+      renderData(filteredData);
+    }
+
+    $(document).on('change', '#filter-specialty', applyFilters);
+    $(document).on('change', '#filter-promo', applyFilters);
+    $(document).on('input', '#table-filter', applyFilters);
 
     // Function to render data to the table and grid
     function renderData(data) {

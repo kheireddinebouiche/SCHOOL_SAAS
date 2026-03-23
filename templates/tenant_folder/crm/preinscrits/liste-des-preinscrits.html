@@ -533,7 +533,10 @@
         </div>
       </div>
       <div class="modal-footer border-top-0 justify-content-center pb-4">
-        <div class="hstack gap-2 justify-content-center w-100"></div>
+        <div class="hstack gap-2 justify-content-center w-100">
+            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmDeleteBtn">Confirmer la suppression</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1202,10 +1205,53 @@
     // Handle delete prospect action
     $(document).on('click', '.delete-prospect', function() {
       var prospectId = $(this).data('prospect-id');
+      $('#confirmDeleteBtn').data('id', prospectId);
       // Show the delete confirmation modal
       $('.deleteModal').modal('show');
-      console.log('Delete prospect with ID:', prospectId);
-      // Additional code to handle deletion would go here
+    });
+
+    $('#confirmDeleteBtn').on('click', function() {
+        var prospectId = $(this).data('id');
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Suppression...');
+
+        $.ajax({
+            url: '{% url "t_crm:ApiDeleteProspect" %}',
+            type: 'POST',
+            data: {
+                'id_prospect': prospectId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                $('.deleteModal').modal('hide');
+                $('#confirmDeleteBtn').prop('disabled', false).text('Confirmer la suppression');
+                
+                if (response.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Supprimé !',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        loadProspects(); // Refresh the list
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: response.message,
+                    });
+                }
+            },
+            error: function(xhr) {
+                $('#confirmDeleteBtn').prop('disabled', false).text('Confirmer la suppression');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: "Une erreur est survenue lors de la suppression.",
+                });
+            }
+        });
     });
 
     // Handle cancel pre-registration action
