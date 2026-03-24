@@ -8,57 +8,117 @@
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
 
 <style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+    }
+
+    .main-content {
+        background-color: #f8fafc;
+    }
+
     /* Custom Calendar Styling */
     .fc {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Poppins', sans-serif;
     }
     .fc .fc-toolbar-title {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #344767;
+        color: #1e293b;
     }
     .fc .fc-button {
-        background-color: #f8f9fa;
-        border-color: #f8f9fa;
-        color: #6c757d;
+        background-color: #f1f5f9;
+        border-color: #f1f5f9;
+        color: #475569;
         font-weight: 500;
         text-transform: capitalize;
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        border-radius: 9999px;
+        box-shadow: none;
         transition: all 0.2s ease;
+        padding: 0.5rem 1.25rem;
     }
     .fc .fc-button:hover, .fc .fc-button-active {
-        background-color: #e9ecef !important;
-        border-color: #e9ecef !important;
-        color: #344767 !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        background-color: #e2e8f0 !important;
+        border-color: #e2e8f0 !important;
+        color: #1e293b !important;
     }
     .fc .fc-button-primary:not(:disabled).fc-button-active, 
     .fc .fc-button-primary:not(:disabled):active {
-        background-color: #cb0c9f !important;
-        border-color: #cb0c9f !important;
+        background: var(--primary-gradient) !important;
+        border: none !important;
         color: white !important;
     }
     .fc-daygrid-day.fc-day-today {
-        background-color: rgba(203, 12, 159, 0.05) !important;
+        background-color: rgba(99, 102, 241, 0.05) !important;
     }
     .fc-event {
-        border-radius: 4px;
+        border-radius: 0.5rem;
         border: none;
-        padding: 2px 4px;
+        padding: 4px 8px;
         font-size: 0.85rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         transition: transform 0.2s;
     }
     .fc-event:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .card {
-        border-radius: 1rem;
-        overflow: hidden;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     
+    /* Stat Cards Modern Design */
+    .stat-card {
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1.25rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: translateX(-100%);
+        transition: 0.6s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-card:hover::before {
+        transform: translateX(100%);
+    }
+
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover .stat-icon {
+        transform: rotate(-10deg) scale(1.1);
+    }
+
+    .custom-table-card {
+        border-radius: 1.25rem;
+        border: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        background: #fff;
+    }
+
     /* Filtering Styles */
     .calendar-container.hide-owner .event-owner {
         display: none !important;
@@ -72,91 +132,96 @@
     
     /* Visual distinction for invited events */
     .event-invited {
-        border: 2px dashed rgba(0,0,0,0.2) !important;
+        border: 2px dashed rgba(99, 102, 241, 0.3) !important;
     }
     
     /* Completed events style */
     .event-completed {
-        opacity: 0.6;
+        opacity: 0.5;
         text-decoration: line-through;
     }
+
+    /* Avatar specific styles */
+    .avatar-soft-primary { background-color: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .avatar-soft-success { background-color: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .avatar-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 </style>
 
 <div class="main-content">
     <div class="page-content bg-light">
         <div class="container-fluid">
-            <!-- page title -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-3 shadow-lg p-4">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-gradient-primary rounded-3 p-3 me-3 d-flex align-items-center justify-content-center shadow-sm">
-                                <i class="ri-calendar-todo-line text-white fs-4"></i>
-                            </div>
-                            <div>
-                                <h4 class="mb-1 text-dark fw-bold">Mon Calendrier</h4>
-                                <p class="mb-0 text-muted small">Gérez vos rappels et événements personnels</p>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary btn-lg shadow-sm rounded-3 mt-3 mt-sm-0" id="addEventBtn">
-                            <i class="ri-add-line me-2"></i>Nouveau Rappel
-                        </button>
-                    </div>
-                </div>
+      <!-- Header Section -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between p-4 bg-white rounded-4 shadow-sm">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                <i class="ri-calendar-todo-line text-primary fs-3"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold">Mon Calendrier</h4>
+                <p class="text-muted mb-0">Gérez vos rappels et événements personnels</p>
+              </div>
             </div>
+            <div class="d-none d-md-block">
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 px-3 py-2 bg-light rounded-pill">
+                  <li class="breadcrumb-item"><a href="#" class="text-primary">Communication</a></li>
+                  <li class="breadcrumb-item active">Calendrier</li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- Stats Widgets -->
-            <div class="row mb-4">
-                <div class="col-xl-4 col-sm-6">
-                    <div class="card shadow-sm border-0 overflow-hidden">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="avatar-lg bg-soft-primary rounded-3 text-primary">
-                                        <i class="ri-task-line fs-1 m-3"></i>
+            <!-- KPI Cards Section -->
+            <div class="col-12">
+                <div class="row g-4 mb-4">
+                    <!-- Total Reminders -->
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="ri-task-line"></i>
                                     </div>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">Total</span>
                                 </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">Total Tâches</h6>
-                                    <h3 class="mb-0 fw-bold">{{ stats.total }}</h3>
-                                    <p class="text-muted mb-0 small">Assignées ou invitées</p>
-                                </div>
+                                <h3 class="fw-bold mb-1"><span class="counter-value">{{ stats.total }}</span></h3>
+                                <p class="text-muted mb-0 small">Assignées ou invitées</p>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-xl-4 col-sm-6">
-                    <div class="card shadow-sm border-0 overflow-hidden">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="avatar-lg bg-soft-success rounded-3 text-success">
-                                        <i class="ri-checkbox-circle-line fs-1 m-3"></i>
+
+                    <!-- Completed -->
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="ri-checkbox-circle-line"></i>
                                     </div>
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Terminées</span>
                                 </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">Terminées</h6>
-                                    <h3 class="mb-0 fw-bold">{{ stats.completed }}</h3>
-                                    <p class="text-muted mb-0 small">Tâches accomplies</p>
-                                </div>
+                                <h3 class="fw-bold mb-1"><span class="counter-value">{{ stats.completed }}</span></h3>
+                                <p class="text-muted mb-0 small">Tâches accomplies</p>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-xl-4 col-sm-6">
-                    <div class="card shadow-sm border-0 overflow-hidden">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="avatar-lg bg-soft-warning rounded-3 text-warning">
-                                        <i class="ri-time-line fs-1 m-3"></i>
+
+                    <!-- Pending -->
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="ri-time-line"></i>
                                     </div>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">En Cours</span>
                                 </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="text-uppercase text-muted mb-0 fs-13 fw-semibold">En Cours</h6>
-                                    <h3 class="mb-0 fw-bold">{{ stats.pending }}</h3>
-                                    <p class="text-muted mb-0 small">Nécessite une action</p>
-                                </div>
+                                <h3 class="fw-bold mb-1"><span class="counter-value">{{ stats.pending }}</span></h3>
+                                <p class="text-muted mb-0 small">Nécessite une action</p>
                             </div>
                         </div>
                     </div>
@@ -165,22 +230,30 @@
 
             <div class="row">
                 <div class="col-12">
-                    <div class="card shadow-lg border-0">
-                        <div class="card-header bg-white border-bottom-0 p-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                             <h5 class="mb-0 text-muted fw-bold">Planning</h5>
+                    <div class="card custom-table-card shadow-sm">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                             <div class="d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 rounded-2 p-2">
+                                    <i class="ri-calendar-event-line text-primary"></i>
+                                </div>
+                                <h5 class="mb-0 fw-bold">Planning</h5>
+                             </div>
                              <div class="d-flex align-items-center gap-3">
-                                <div class="form-check form-switch">
+                                <div class="form-check form-switch custom-switch">
                                     <input class="form-check-input" type="checkbox" id="filterOwner" checked>
                                     <label class="form-check-label fw-medium cursor-pointer" for="filterOwner">Mes Tâches</label>
                                 </div>
-                                <div class="form-check form-switch">
+                                <div class="form-check form-switch custom-switch">
                                     <input class="form-check-input" type="checkbox" id="filterInvited" checked>
                                     <label class="form-check-label fw-medium cursor-pointer" for="filterInvited">Invitations</label>
                                 </div>
-                                <div class="form-check form-switch">
+                                <div class="form-check form-switch custom-switch">
                                     <input class="form-check-input" type="checkbox" id="filterCompleted" checked>
                                     <label class="form-check-label fw-medium cursor-pointer" for="filterCompleted">Terminées</label>
                                 </div>
+                                <button class="btn btn-primary rounded-pill px-4" id="addEventBtn">
+                                    <i class="ri-add-line me-1"></i> Nouveau
+                                </button>
                              </div>
                         </div>
                         <div class="card-body p-4 pt-2">
@@ -196,10 +269,18 @@
 <!-- Reminder Modal -->
 <div class="modal fade" id="reminderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-2xl">
-            <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
-                <h5 class="modal-title fw-bold text-dark fs-4" id="modalTitle">Nouveau Rappel</h5>
-                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 p-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-notification-3-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-primary mb-0" id="modalTitle">Nouveau Rappel</h5>
+                        <p class="text-muted small mb-0">Détails de votre événement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body px-4 py-3">
                 <form id="reminderForm">
@@ -234,11 +315,11 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Début</label>
-                            <input type="datetime-local" class="form-control bg-light border-0 rounded-3" id="start_time" required>
+                            <input type="datetime-local" class="form-control bg-light border-0 rounded-pill px-3" id="start_time" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label text-xs font-weight-bold text-uppercase text-muted sp-1">Fin</label>
-                            <input type="datetime-local" class="form-control bg-light border-0 rounded-3" id="end_time">
+                            <input type="datetime-local" class="form-control bg-light border-0 rounded-pill px-3" id="end_time">
                         </div>
                     </div>
                     <div class="form-check mt-3 p-3 bg-light rounded-3" id="completedContainer" style="display:none;">
@@ -249,12 +330,12 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-top-0 px-4 pb-4 pt-2">
+            <div class="modal-footer border-0 bg-light p-4">
                 <button type="button" class="btn btn-link text-danger text-decoration-none me-auto fw-medium" id="deleteBtn" style="display:none;">
                     <i class="ri-delete-bin-line me-1"></i>Supprimer
                 </button>
-                <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm" id="saveBtn">Enregistrer</button>
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="saveBtn">Enregistrer</button>
             </div>
         </div>
     </div>

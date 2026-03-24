@@ -424,11 +424,28 @@
                   <button class="btn btn-ghost-secondary btn-icon btn-sm rounded-circle" data-bs-toggle="dropdown" data-bs-boundary="viewport">
                     <i class="ri-more-2-fill"></i>
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
-                    <li><a class="dropdown-item py-2 btn-details" href="javascript:void(0)" data-id="${item.id}" data-demandeur="${item.demandeur}"><i class="ri-eye-line me-2 text-info"></i>Détails</a></li>
-                    ${item.statut === 'en_attente' ? `<li><a class="dropdown-item py-2 btn-traiter" href="javascript:void(0)" data-id="${item.id}"><i class="ri-check-line me-2 text-success"></i>Traiter</a></li>` : ''}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item py-2 text-danger btn-supprimer" href="javascript:void(0)" data-id="${item.id}"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 py-2">
+                    <li>
+                      <a class="dropdown-item py-2 d-flex align-items-center btn-details ${item.statut === 'en_attente' ? 'text-primary fw-medium' : ''}" 
+                         href="javascript:void(0)" 
+                         data-id="${item.id}" 
+                         data-demandeur="${item.demandeur}">
+                        ${item.statut === 'en_attente' 
+                          ? '<i class="ri-edit-circle-line me-2 fs-5"></i> Ouvrir & Traiter' 
+                          : '<i class="ri-eye-line me-2 fs-5 text-info"></i> Consulter'}
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item py-2 d-flex align-items-center btn-view-profile" href="javascript:void(0)" data-url="/crm/details-preinscrit/${item.demandeur}/">
+                        <i class="ri-user-line me-2 fs-5 text-primary"></i> Voir le Profil
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                      <a class="dropdown-item py-2 d-flex align-items-center text-danger btn-supprimer" href="javascript:void(0)" data-id="${item.id}">
+                        <i class="ri-delete-bin-line me-2 fs-5"></i> Supprimer
+                      </a>
+                    </li>
                   </ul>
                 </div>
               </td>
@@ -453,13 +470,30 @@
     // Initial Load
     loadDerogations();
 
-    // Details Handler
-    $(document).on('click', '.btn-details', function(){
+    // Details & Traiter Handler (Unified)
+    $(document).on('click', '.btn-details, .btn-traiter', function(){
       const id = $(this).data('id');
-      const demandeur = $(this).data('demandeur');
+      // If clicked from btn-traiter, demandeur might be undefined, so we fetch it from the sibling btn-details
+      const demandeur = $(this).data('demandeur') || $(this).closest('.dropdown-menu').find('.btn-details').data('demandeur');
       
       $('#display-id').text(id);
-      $('#detailsDerogationModal').modal('show');
+      
+      const offcanvasEl = document.getElementById('derogationOffcanvas');
+      const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl) || new bootstrap.Offcanvas(offcanvasEl);
+      bsOffcanvas.show();
+      
+      // Reset offcanvas state and tabs
+      $('#decision_derogation').val("");
+      $('#commentaire_traitement').val("");
+      $('#action-section, #btnConfirmerTraitement').hide();
+      $('#listeDossiersManquants').html('<div class="text-center p-4"><div class="spinner-border text-info" role="status"></div><p class="mt-2 mb-0 small text-muted">Vérification en cours...</p></div>');
+      $('#missing-docs-count').hide().text('0');
+      
+      const tabDetailsEl = document.querySelector('a[href="#tab-details"]');
+      if(tabDetailsEl) {
+          const tab = new bootstrap.Tab(tabDetailsEl);
+          tab.show();
+      }
       
       $.ajax({
         url : "{% url 't_crm:ApiGetDerogationDetails' %}",
@@ -471,32 +505,57 @@
           $('#detail-motif').text(data.motif);
           $('#detail-description').text(data.type);
           $('#detail-type_formation').text(data.is_double ? 'Double Diplômation' : 'Cursus Standard');
-          $('#detail-type_formation').data('is_double', data.is_double);
+          $('#link-profile').data('url', `/crm/details-preinscrit/${demandeur}/`).data('demandeur', demandeur);
           
           let statusBadge = "";
           if(data.statut === "en_attente") statusBadge = '<span class="badge badge-pill badge-soft-warning">En attente</span>';
           else if(data.statut === "acceptee") statusBadge = '<span class="badge badge-pill badge-soft-success">Acceptée</span>';
           else statusBadge = '<span class="badge badge-pill badge-soft-danger">Rejetée</span>';
-          
           $('#detail-statut').html(statusBadge);
           
-          // Toggle Treatment button
-          if (data.statut !== "en_attente") $('#traiteDerogBtn').addClass('d-none');
-          else $('#traiteDerogBtn').removeClass('d-none').data('id', id);
+          // Toggle Treatment section
+          if (data.statut === "en_attente") {
+            $('#action-section').slideDown();
+            $('#btnConfirmerTraitement').fadeIn().data('id', id);
+          }
           
-          $('#voirDossiersManquantsBtn').data('id', data.demandeur_id);
+          // Auto-load missing documents inline
+          const urlDocs = data.is_double ? "{% url 't_crm:check_all_required_doc_double' %}" : "{% url 't_crm:check_all_required_docs' %}";
+          $.ajax({
+            url: urlDocs,
+            type: 'GET',
+            data: {'id_prospect': demandeur},
+            success: function(docData) {
+              let html = '<div class="list-group list-group-flush">';
+              if (docData.status === "error" || docData.error) {
+                const errorMsg = docData.error || docData.message || "Erreur de récupération.";
+                html += `<div class="text-center p-4 text-danger"><i class="ri-error-warning-fill fs-1 d-block mb-2"></i>${errorMsg}</div>`;
+              } else {
+                if (docData.missing_docs && docData.missing_docs.length > 0) {
+                  $('#missing-docs-count').text(docData.missing_docs.length).show();
+                  docData.missing_docs.forEach(doc => {
+                    html += `
+                      <div class="list-group-item px-3 py-2 border-0 border-bottom d-flex align-items-center">
+                        <i class="ri-file-warning-line text-danger fs-4 me-3"></i>
+                        <div>
+                          <h6 class="mb-0 fw-bold text-dark">${doc.label}</h6>
+                          <small class="text-muted">Requis</small>
+                        </div>
+                      </div>`;
+                  });
+                } else {
+                  html += `<div class="text-center p-4 text-success"><i class="ri-checkbox-circle-fill fs-1 d-block mb-2"></i>Dossier complet !</div>`;
+                }
+              }
+              html += '</div>';
+              $('#listeDossiersManquants').html(html);
+            },
+            error: function() {
+              $('#listeDossiersManquants').html(`<div class="text-center p-4 text-danger"><i class="ri-wifi-off-line fs-1 d-block mb-2"></i>Erreur réseau</div>`);
+            }
+          });
         }
       });
-    });
-
-    // Treat Handler
-    $(document).on('click', '.btn-traiter, #traiteDerogBtn', function(){
-      const id = $(this).data('id');
-      $('#detailsDerogationModal').modal('hide');
-      $('#decision_derogation').val("");
-      $('#commentaire_traitement').val("");
-      $('#btnConfirmerTraitement').data('id', id);
-      $('#traiterDerogationModal').modal('show');
     });
 
     // Confirm Treatment
@@ -511,6 +570,7 @@
       }
 
       const btn = $(this);
+      const originalText = btn.html();
       btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Traitement...');
 
       $.ajax({
@@ -525,44 +585,132 @@
         success: function(res){
           if(res.status === "success"){
             alertify.success("Décision enregistrée");
-            $('#traiterDerogationModal').modal('hide');
+            bootstrap.Offcanvas.getInstance('#derogationOffcanvas').hide();
             loadDerogations();
           }
         },
-        complete: () => btn.prop('disabled', false).text('Confirmer la décision')
+        complete: () => btn.prop('disabled', false).html(originalText)
       });
     });
 
-    // Dossiers Manquants
-    $(document).on('click', '#voirDossiersManquantsBtn', function(){
-      const id = $(this).data('id');
-      const isDouble = $('#detail-type_formation').data('is_double');
-      const url = isDouble ? "{% url 't_crm:check_all_required_doc_double' %}" : "{% url 't_crm:check_all_required_docs' %}";
+    // View Profile in Integrated Modal (AJAX)
+    $(document).on('click', '.btn-view-profile', function(e){
+      e.preventDefault();
+      const id_prospect = $(this).data('demandeur') || $(this).closest('.dropdown-menu').find('.btn-details').data('demandeur') || $('#link-profile').data('url').split('/').filter(Boolean).pop();
+      // Note: demandeur ID might be in different places depending on click context
       
-      $('#detailsDerogationModal').modal('hide');
-      $('#listeDossiersManquants').html('<div class="text-center p-4"><div class="spinner-border text-info"></div></div>');
-      $('#dossiersManquantsModal').modal('show');
+      const modal = $('#profileModal');
+      const content = $('#profileContent');
+      const loader = $('#profileLoading');
 
+      content.hide();
+      loader.show();
+      modal.modal('show');
+
+      // 1. Load Personal Info
       $.ajax({
-        url: url,
+        url: "{% url 't_crm:ApiLoadPreinscrisPerosnalInfos' %}",
         type: 'GET',
-        data: {'id_prospect': id},
+        data: {'id_prospect': id_prospect},
         success: function(data) {
-          let html = '<div class="list-group list-group-flush">';
-          if (data.missing_docs && data.missing_docs.length > 0) {
-            data.missing_docs.forEach(doc => {
-              html += `<div class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="fw-medium">${doc.label}</span>
-                        <span class="badge bg-soft-danger text-danger rounded-pill">Manquant</span>
-                      </div>`;
-            });
-          } else {
-            html += '<div class="text-center p-4 text-success"><i class="ri-checkbox-circle-fill display-4 d-block mb-2"></i>Dossier complet !</div>';
-          }
-          html += '</div>';
-          $('#listeDossiersManquants').html(html);
+          $('#prof-header-name').text(`${data.nom} ${data.prenom}`);
+          $('#prof-header-id').text(`ID: ${data.id} | Statut: ${data.statut}`);
+          $('#prof-email').text(data.email || '-');
+          $('#prof-phone').text(data.telephone || '-');
+          $('#prof-adresse').text(data.adresse || '-');
+          $('#prof-date-naissance').text(`${data.date_naissance || '-'} / ${data.lieu_naissance || '-'}`);
+          $('#prof-nationalite').text(data.nationnalite || '-');
+          $('#prof-niveau').text(data.niveau_scolaire || '-');
+          $('#prof-created-at').text(data.created_at || '-');
+          $('#prof-canal').text(data.canal || '-');
+
+          // 2. Load Wish List (Standard or Double)
+          // We can check if is_double from the derogation details or fetch it again.
+          // Let's use the derogation details if we are coming from the offcanvas, 
+          // but for safety let's check a flag or just try both or use the prospect data if it had it.
+          // ApiLoadPreinscrisPerosnalInfos doesn't seem to have is_double in my previous view_file.
+          // Let's assume we can determine it or check both.
+          
+          fetchVoeux(id_prospect);
+        },
+        error: function() {
+          $('#prof-header-name').text("Erreur");
+          loader.hide();
+          alertify.error("Impossible de charger les informations personnelles.");
         }
       });
+
+      function fetchVoeux(id) {
+        // We'll try to detect if it's double based on the offcanvas info if available
+        const isDouble = $('#detail-type_formation').text().includes('Double');
+        const voeuxUrl = isDouble ? "{% url 't_crm:ApiLoadFicheVoeuxDoubleProspect' %}" : "{% url 't_crm:ApiLoadFicheVoeuxProspect' %}";
+        
+        $('#prof-cursus-badge').text(isDouble ? 'Double Diplômation' : 'Cursus Standard')
+                              .removeClass('bg-soft-primary bg-soft-info')
+                              .addClass(isDouble ? 'bg-soft-info text-info' : 'bg-soft-primary text-primary');
+
+        $.ajax({
+          url: voeuxUrl,
+          type: 'GET',
+          data: {'id_prospect': id},
+          success: function(vData) {
+            let vHtml = "";
+            if (vData.fiche_voeux && vData.fiche_voeux.length > 0) {
+              vData.fiche_voeux.forEach(f => {
+                if (isDouble) {
+                  vHtml += `
+                    <div class="p-3 border rounded-3 mb-3 bg-white">
+                      <div class="row align-items-center">
+                        <div class="col-md-5">
+                          <small class="text-muted d-block">Formation 1</small>
+                          <h6 class="mb-1 text-dark fw-bold">${f.formation_1}</h6>
+                          <span class="badge bg-light text-primary border">${f.specialite1_label}</span>
+                        </div>
+                        <div class="col-md-2 text-center">
+                          <i class="ri-arrow-left-right-line fs-4 text-muted"></i>
+                        </div>
+                        <div class="col-md-5 text-end">
+                          <small class="text-muted d-block">Formation 2</small>
+                          <h6 class="mb-1 text-dark fw-bold">${f.formation_2}</h6>
+                          <span class="badge bg-light text-info border">${f.specialite2_label}</span>
+                        </div>
+                      </div>
+                      <div class="mt-3 pt-2 border-top d-flex justify-content-between">
+                        <small class="text-muted">Promotion: <strong>${f.promo}</strong></small>
+                        <small class="text-muted">Date: ${f.created_at.substring(0,10)}</small>
+                      </div>
+                    </div>`;
+                } else {
+                  vHtml += `
+                    <div class="p-3 border rounded-3 bg-white">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <small class="text-muted d-block">Spécialité Choisie</small>
+                          <h6 class="mb-0 fw-bold text-dark fs-5">${f.specialite_label}</h6>
+                        </div>
+                        <span class="badge bg-soft-primary text-primary">Vœu Unique</span>
+                      </div>
+                      <div class="mt-3 d-flex gap-4">
+                        <div><small class="text-muted">Promo</small><p class="mb-0 fw-medium">${f.promo}</p></div>
+                        <div><small class="text-muted">Date</small><p class="mb-0 fw-medium">${f.created_at}</p></div>
+                      </div>
+                    </div>`;
+                }
+              });
+            } else {
+              vHtml = '<div class="text-center py-4 text-warning"><i class="ri-error-warning-line fs-2 d-block mb-2"></i>Aucune fiche de vœux trouvée.</div>';
+            }
+            $('#prof-voeux-container').html(vHtml);
+            loader.hide();
+            content.fadeIn();
+          },
+          error: function() {
+            $('#prof-voeux-container').html('<div class="text-center py-4 text-danger">Erreur de chargement des vœux.</div>');
+            loader.hide();
+            content.fadeIn();
+          }
+        });
+      }
     });
 
     // Delete

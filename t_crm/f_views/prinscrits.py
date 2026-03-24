@@ -301,10 +301,10 @@ def ApiLoadRequiredDocs(request):
         obj_pre = Prospets.objects.get(id = id_preinscrit)
 
         if obj_pre.is_double:
-            fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id = id_preinscrit, is_confirmed = True)
+            fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id=id_preinscrit, is_confirmed=True)
             formation1 = fiche_voeux_double.specialite.specialite1.formation
             formation2 = fiche_voeux_double.specialite.specialite2.formation
-            files = DossierInscription.objects.filter(Q(formation = formation1) and Q(formation = formation2)).values('id','label','is_required')
+            files = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2)).values('id', 'label', 'is_required')
         else:
             specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
             formation_id = specialites.specialite.formation.id
@@ -466,16 +466,16 @@ def check_all_required_doc_double(request):
         # required_docs_formation1 = DossierInscription.objects.filter(formation = formation1, is_required=True)
         # required_docs_formation2 = DossierInscription.objects.filter(formation = formation2, is_required=True)
 
-        required_docs = DossierInscription.objects.filter(Q(formation = formation1) and Q(formation=formation2))
+        required_docs = DossierInscription.objects.filter((Q(formation=formation1) | Q(formation=formation2)), is_required=True)
 
-        provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id = prospect_id, id_document__in = required_docs).exclude(file="")
+        provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id=prospect_id, id_document__in=required_docs).exclude(file="")
 
-        missings_docs = required_docs.exclude(id__in=provided_docs.values_list("id_document_id", flat=True))
+        missing_docs = required_docs.exclude(id__in=provided_docs.values_list("id_document_id", flat=True))
 
-        if missings_docs.exists():
-            return JsonResponse({"success" : False, "missing_docs" : list(missings_docs.values("id","label"))})
+        if missing_docs.exists():
+            return JsonResponse({"success": False, "missing_docs": list(missing_docs.values("id", "label"))})
         
-        return JsonResponse({"status" : True, "missing_docs" : []})
+        return JsonResponse({"success": True, "missing_docs": []})
 
     else:
         return JsonResponse({"status":"error"})
@@ -545,7 +545,7 @@ def get_prospects_incomplets():
             continue  
 
         
-        docs_requis = DossierInscription.objects.filter(formation=formation)
+        docs_requis = DossierInscription.objects.filter(formation=formation, is_required=True)
         total_docs = docs_requis.count()
 
 
@@ -598,7 +598,7 @@ def get_prospects_incomplets_double():
             continue  
 
         
-        docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation = formation2))
+        docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True)
         total_docs = docs_requis.count()
 
 
@@ -656,7 +656,7 @@ def ApiGetDossierDetails(request):
             
             if formation:
                 # Documents requis pour cette formation
-                docs_requis = DossierInscription.objects.filter(formation=formation)
+                docs_requis = DossierInscription.objects.filter(formation=formation, is_required=True)
                 total_docs = docs_requis.count()
                 
                 # Documents déjà uploadés par le prospect
@@ -726,7 +726,7 @@ def ApiGetDossierDetailsDouble(request):
                 
                 if formation1 and formation2:
                    
-                    docs_requis = DossierInscription.objects.filter(Q(formation=formation1)|Q(formation = formation2))
+                    docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True)
                     total_docs = docs_requis.count()
                     
                     docs_fournis_qs = DocumentsDemandeInscription.objects.filter(
