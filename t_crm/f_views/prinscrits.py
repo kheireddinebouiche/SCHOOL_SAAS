@@ -1,6 +1,7 @@
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from ..models import *
+from ..models import Derogations
 from ..forms import *
 from django.contrib import messages
 from t_tresorerie.models import *
@@ -817,6 +818,9 @@ def ApiCancelPreinscrit(request):
         else:
             FicheDeVoeux.objects.filter(prospect=preinscrit).delete()
 
+        # Supprimer la demande de dérogation associée
+        Derogations.objects.filter(demandeur=preinscrit).delete()
+
         return JsonResponse({'status': 'success', 'message': 'La préinscription a été annulée avec succès.'})
 
     except Prospets.DoesNotExist:
@@ -834,9 +838,15 @@ def ApiReactivatePreinscrit(request):
 
             # [NOUVEAU] Vérification STRICTE AVANT réactivation
             if preinscrit.is_double:
-                has_voeux = FicheVoeuxDouble.objects.filter(prospect=preinscrit).exists()
+                voeux = FicheVoeuxDouble.objects.filter(prospect=preinscrit)
+                has_voeux = voeux.exists()
+                if has_voeux:
+                    voeux.update(is_confirmed=True)
             else:
-                has_voeux = FicheDeVoeux.objects.filter(prospect=preinscrit).exists()
+                voeux = FicheDeVoeux.objects.filter(prospect=preinscrit)
+                has_voeux = voeux.exists()
+                if has_voeux:
+                    voeux.update(is_confirmed=True)
 
             if not has_voeux:
                 return JsonResponse({
