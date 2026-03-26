@@ -42,58 +42,82 @@ def redirect_to_tenant(request, tenant_slug):
     
     return redirect('tenant_selection')
 
+from django.http import StreamingHttpResponse
+import json
+import time
+import traceback
+
+@login_required(login_url='login')
 def new_tenant(request):
     form = NewTenantForm()
     userForm = NewUser()
 
-    if request.method == 'POST':
-        form = NewTenantForm(request.POST)
-        userForm = NewUser(request.POST)
-        if form.is_valid() and userForm.is_valid():
+    if request.method == 'POST' and request.headers.get('x-streaming'):
+        def stream_creation():
+            yield json.dumps({'status': 'info', 'message': 'Démarrage de la création...'}) + '\n'
+            
+            form = NewTenantForm(request.POST)
+            userForm = NewUser(request.POST)
+            
+            if not (form.is_valid() and userForm.is_valid()):
+                errors = {**form.errors, **userForm.errors}
+                yield json.dumps({'status': 'error', 'message': 'Validation échouée', 'details': errors}) + '\n'
+                return
 
-            nom = form.cleaned_data.get('nom')
-            adresse = form.cleaned_data.get('adresse')
-            telephone = form.cleaned_data.get('telephone')
+            try:
+                nom = form.cleaned_data.get('nom').lower().replace(' ', '_')
+                adresse = form.cleaned_data.get('adresse')
+                telephone = form.cleaned_data.get('telephone')
+                username = userForm.cleaned_data.get('username')
+                email = userForm.cleaned_data.get('email')
+                password = userForm.cleaned_data.get('password')
 
-            username = userForm.cleaned_data.get('username')
-            email = userForm.cleaned_data.get('email')
-            password = userForm.cleaned_data.get('password')
-
-            current_site = get_current_site(request)
-            domain_name = current_site.domain.split(':')[0]
-
-            tenant = Institut(
-                schema_name = nom,
-                nom = nom,
-                telephone = telephone,
-                adresse = adresse,
-                tenant_type = 'second',
-
-            )
-            tenant.save()
-
-            domain = Domaine(domain=f"{tenant.schema_name}.{domain_name}", tenant=tenant, is_primary=True)
-            domain.save()
-           
-            with schema_context(tenant.schema_name):
-                # Create default user
-                default_user = User.objects.create_superuser(
-
-                    username=username,
-                    email=email,
-                    password=password
-
+                # Step 1: Create Institut
+                yield json.dumps({'status': 'info', 'message': f'Étape 1/3 : Création de l\'institut et du schéma "{nom}"...'}) + '\n'
+                tenant = Institut(
+                    schema_name=nom,
+                    nom=nom,
+                    telephone=telephone,
+                    adresse=adresse,
+                    tenant_type='second'
                 )
-                default_user.save()
+                tenant.save() # This triggers schema creation in django-tenants
+                yield json.dumps({'status': 'success', 'message': 'Institut et schéma créés.'}) + '\n'
 
-            messages.success(request,'Le compte à été crée avec succès')
+                # Step 2: Register Domain
+                yield json.dumps({'status': 'info', 'message': 'Étape 2/3 : Enregistrement du domaine...'}) + '\n'
+                current_site = get_current_site(request)
+                domain_name = current_site.domain.split(':')[0]
+                domain = Domaine(domain=f"{tenant.schema_name}.{domain_name}", tenant=tenant, is_primary=True)
+                domain.save()
+                yield json.dumps({'status': 'success', 'message': f'Domaine {domain.domain} enregistré.'}) + '\n'
 
-            return redirect('index')
-        
+                # Step 3: Create Superuser in new schema
+                yield json.dumps({'status': 'info', 'message': 'Étape 3/3 : Initialisation de l\'administrateur...'}) + '\n'
+                with schema_context(tenant.schema_name):
+                    default_user = User.objects.create_superuser(
+                        username=username,
+                        email=email,
+                        password=password
+                    )
+                yield json.dumps({'status': 'success', 'message': 'Administrateur créé avec succès.'}) + '\n'
 
+                yield json.dumps({'status': 'complete', 'message': 'Tout est prêt ! Redirection...'}) + '\n'
+
+            except Exception as e:
+                error_trace = traceback.format_exc()
+                yield json.dumps({
+                    'status': 'error', 
+                    'message': f'Erreur critique : {str(e)}',
+                    'traceback': error_trace
+                }) + '\n'
+
+        return StreamingHttpResponse(stream_creation(), content_type='application/x-ndjson')
+
+    # Standard GET request
     context = {
-        'form' : form,
-        'userForm' : userForm,
+        'form': form,
+        'userForm': userForm,
     }
     return render(request, 'public_folder/new_tenant.html', context)
 
