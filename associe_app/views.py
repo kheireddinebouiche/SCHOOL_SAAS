@@ -801,6 +801,111 @@ def preview_tenant_table_reset(request):
             
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
 
+@login_required(login_url='login')
+def delete_tenant(request, tenant_id):
+    """
+    Securely delete a tenant (Institut) and its associated data (schema, domains).
+    This action is irreversible.
+    """
+    if request.method == 'POST':
+        tenant = get_object_or_404(Institut, id=tenant_id)
+        
+        # Safety check: Prevent deleting public schema
+        if tenant.schema_name == 'public':
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'Le schéma public ne peut pas être supprimé.'
+            }, status=403)
+            
+        try:
+            name = tenant.nom
+            schema = tenant.schema_name
+            
+            # 1. Delete the Institut instance (this should trigger domains deletion if CASCADE)
+            # and potentially the schema if configured, but we'll do it explicitly to be sure.
+            tenant.delete()
+            
+            # 2. Explicitly drop the schema (django-tenants doesn't always do it on instance delete)
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE;')
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'L\'institut "{name}" et son schéma "{schema}" ont été supprimés avec succès.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Erreur lors de la suppression de l\'institut: {str(e)}'
+            })
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+@login_required(login_url='login')
+def list_orphaned_schemas(request):
+    """
+    Lists all PostgreSQL schemas that are NOT in the Institut table 
+    and are NOT system schemas.
+    """
+    from django.db import connection
+    
+    # 1. Get all schemas from DB
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT schema_name 
+            FROM information_schema.schemata 
+            WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast')
+            AND schema_name NOT LIKE 'pg_temp_%'
+            AND schema_name NOT LIKE 'pg_toast_temp_%'
+            ORDER BY schema_name;
+        """)
+        db_schemas = [row[0] for row in cursor.fetchall()]
+    
+    # 2. Get all schemas registered in Institut model
+    registered_schemas = set(Institut.objects.values_list('schema_name', flat=True))
+    
+    # 3. Identify orphaned schemas
+    orphaned_schemas = [s for s in db_schemas if s not in registered_schemas]
+    
+    return render(request, 'associe_app/schema_management.html', {
+        'orphaned_schemas': orphaned_schemas,
+    })
+
+@login_required(login_url='login')
+def delete_orphaned_schema(request):
+    """
+    Permanently delete an orphaned PostgreSQL schema.
+    """
+    if request.method == 'POST':
+        schema = request.POST.get('schema')
+        
+        # Safety checks
+        system_schemas = {'public', 'information_schema', 'pg_catalog', 'pg_toast'}
+        if not schema or schema in system_schemas or schema.startswith('pg_'):
+            return JsonResponse({'status': 'error', 'message': 'Action non autorisée sur ce schéma.'}, status=403)
+            
+        # Ensure it's not actually registered
+        if Institut.objects.filter(schema_name=schema).exists():
+             return JsonResponse({'status': 'error', 'message': 'Ce schéma est actuellement utilisé par un institut actif.'}, status=400)
+
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(f'DROP SCHEMA "{schema}" CASCADE;')
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Le schéma "{schema}" a été supprimé avec succès.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Erreur lors de la suppression du schéma : {str(e)}'
+            })
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
 # --- Postes Budgetaires Views ---
 
 from .models import PostesBudgetaire

@@ -1,0 +1,211 @@
+{% extends 'public_folder/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+    <!-- Header Section -->
+    <div class="d-flex align-items-center justify-content-between mb-5">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'associe_app:tenant_data_list' %}" class="text-secondary">Gestion des Instituts</a></li>
+                    <li class="breadcrumb-item active fw-bold text-primary">Schémas Orphelins</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold mb-0 text-dark">Gestion des Schémas de Base de Données</h2>
+            <p class="text-muted mb-0">Identifiez et nettoyez les schémas PostgreSQL qui n'ont plus d'institut associé.</p>
+        </div>
+        <div class="avatar-inst bg-primary-subtle text-primary" style="width: 56px; height: 56px;">
+            <i class="ri-database-2-line fs-24"></i>
+        </div>
+    </div>
+
+    <!-- Alert Note -->
+    <div class="alert alert-warning border-0 shadow-sm rounded-4 p-4 mb-5">
+        <div class="d-flex align-items-center">
+            <div class="flex-shrink-0 me-3">
+                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                    <i class="ri-error-warning-fill fs-24"></i>
+                </div>
+            </div>
+            <div>
+                <h5 class="alert-heading fw-bold mb-1">Attention : Action Irréversible</h5>
+                <p class="mb-0 text-dark opacity-75">La suppression d'un schéma effacera <strong>toutes les tables et toutes les données</strong> contenues dans celui-ci. Assurez-vous qu'aucune donnée importante n'y subsiste avant de procéder.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row (Optional placeholder for future expansion like size) -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="glass-card p-4 text-center">
+                <h6 class="text-muted text-uppercase small fw-bold mb-2">Schémas Orphelins</h6>
+                <h2 class="fw-bold mb-0 text-primary">{{ orphaned_schemas|length }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schemas Table -->
+    <div class="glass-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-secondary small fw-bold text-uppercase" style="width: 80px;">#</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase">Nom du Schéma</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase">État</th>
+                        <th class="pe-4 py-3 text-secondary small fw-bold text-uppercase text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for schema in orphaned_schemas %}
+                    <tr id="schema-row-{{ forloop.index }}">
+                        <td class="ps-4 py-4 text-muted">{{ forloop.index }}</td>
+                        <td class="py-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light text-dark rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <i class="ri-table-line fs-18"></i>
+                                </div>
+                                <span class="fw-bold fs-15">{{ schema }}</span>
+                            </div>
+                        </td>
+                        <td class="py-4">
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill small fw-bold">
+                                Orphelin
+                            </span>
+                        </td>
+                        <td class="pe-4 py-4 text-end">
+                            <button class="btn btn-outline-danger btn-sm px-4 rounded-pill fw-bold hover-scale" 
+                                    onclick="confirmDeleteSchema('{{ schema|escapejs }}', 'schema-row-{{ forloop.index }}')">
+                                <i class="ri-delete-bin-line me-1"></i> Supprimer
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-5 text-center">
+                            <div class="py-4">
+                                <lord-icon src="https://cdn.lordicon.com/lupuorrc.json" trigger="loop" colors="primary:#0f766e,secondary:#0d9488" style="width:70px;height:70px"></lord-icon>
+                                <h5 class="mt-4 fw-bold text-muted">Aucun schéma orphelin détecté</h5>
+                                <p class="text-muted small">Votre base de données est parfaitement propre !</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Deletion Modal -->
+<div class="modal fade" id="deleteSchemaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold text-white"><i class="ri-error-warning-fill me-2"></i>Confirmation de Nettoyage</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-inst mx-auto mb-3 bg-danger-subtle text-danger" style="width: 60px; height: 60px;">
+                    <i class="ri-delete-bin-2-fill fs-24"></i>
+                </div>
+                <h4 class="fw-bold mb-3">Supprimer le schéma <span id="targetSchemaName" class="text-danger"></span> ?</h4>
+                
+                <div class="bg-light p-3 rounded-3 mb-4 text-start">
+                    <p class="small text-muted mb-2 fw-bold text-uppercase">Veuillez saisir le nom exact pour confirmer :</p>
+                    <input type="text" id="confirmSchemaInput" class="form-control form-control-lg border-2" placeholder="Nom du schéma...">
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light w-100 rounded-pill fw-bold" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger w-100 rounded-pill fw-bold" disabled onclick="executeSchemaDeletion()">
+                        Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    }
+    .hover-scale {
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .hover-scale:hover {
+        transform: scale(1.05);
+    }
+    .avatar-inst {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+    }
+</style>
+
+<script>
+    let currentSchema = null;
+    let currentRowId = null;
+
+    function confirmDeleteSchema(schemaName, rowId) {
+        currentSchema = schemaName;
+        currentRowId = rowId;
+        
+        $('#targetSchemaName').text(schemaName);
+        $('#confirmSchemaInput').val('').removeClass('is-valid is-invalid');
+        $('#confirmDeleteBtn').prop('disabled', true);
+        
+        new bootstrap.Modal(document.getElementById('deleteSchemaModal')).show();
+    }
+
+    document.getElementById('confirmSchemaInput').addEventListener('input', function(e) {
+        if (e.target.value.trim() === currentSchema) {
+            $(this).addClass('is-valid').removeClass('is-invalid');
+            $('#confirmDeleteBtn').prop('disabled', false);
+        } else {
+            $(this).removeClass('is-valid');
+            $('#confirmDeleteBtn').prop('disabled', true);
+        }
+    });
+
+    function executeSchemaDeletion() {
+        if (!currentSchema) return;
+
+        const btn = $('#confirmDeleteBtn');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Suppression...');
+
+        $.ajax({
+            url: "{% url 'associe_app:delete_orphaned_schema' %}",
+            type: 'POST',
+            data: {
+                'schema': currentSchema,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: (res) => {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    $(`#${currentRowId}`).fadeOut(500, function() {
+                        $(this).remove();
+                        if ($('tbody tr').length === 0) location.reload();
+                    });
+                    bootstrap.Modal.getInstance(document.getElementById('deleteSchemaModal')).hide();
+                } else {
+                    alertify.error(res.message);
+                    btn.prop('disabled', false).text('Supprimer définitivement');
+                }
+            },
+            error: () => {
+                alertify.error("Une erreur est survenue.");
+                btn.prop('disabled', false).text('Supprimer définitivement');
+            }
+        });
+    }
+</script>
+{% endblock %}

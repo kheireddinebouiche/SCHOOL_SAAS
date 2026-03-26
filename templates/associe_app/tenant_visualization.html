@@ -154,6 +154,12 @@
                         <h2 class="mb-0 text-white fw-bold display-6">Visualisation Institut</h2>
                         <p class="text-white-50 mt-2 mb-0 opacity-75">Gérez et inspectez les catégories et prospects par établissement.</p>
                     </div>
+                    <div class="col-md-5 text-end">
+                        <a href="{% url 'associe_app:schema_management' %}" class="btn btn-light rounded-pill px-4 fw-bold hover-lift">
+                            <i class="ri-database-2-line me-2"></i> Gérer les schémas orphelins
+                        </a>
+                    </div>
+
                 </div>
             </div>
 
@@ -165,8 +171,14 @@
                             <!-- Grid View -->
                             <div class="row g-4 p-4">
                                 {% for tenant in tenants %}
-                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                 <div class="col-xl-3 col-lg-4 col-md-6" id="tenant-card-{{ tenant.id }}">
                                     <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative hover-lift">
+                                        <!-- Delete Button top right -->
+                                        <button class="btn btn-link text-danger position-absolute top-0 end-0 m-2 p-2 hover-scale" 
+                                                title="Supprimer l'institut"
+                                                onclick="openDeleteModal('{{ tenant.id }}', '{{ tenant.nom|escapejs }}', '{{ tenant.schema_name|escapejs }}')">
+                                            <i class="ri-delete-bin-line fs-18"></i>
+                                        </button>
                                         
                                         <div class="card-body p-4 text-center">
                                             <div class="avatar-inst mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.5rem;">
@@ -211,6 +223,40 @@
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold text-white"><i class="ri-error-warning-fill me-2"></i>Suppression Irréversible</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-inst mx-auto mb-3 bg-danger-subtle text-danger" style="width: 60px; height: 60px;">
+                    <i class="ri-delete-bin-2-fill fs-24"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Supprimer l'institut <span id="deleteModalTenantName" class="text-danger"></span> ?</h4>
+                <p class="text-muted mb-4">
+                    Cette action supprimera également le schéma <strong id="deleteModalSchemaName"></strong> et <strong>toutes les données associées</strong>. <br>
+                    Cette opération est <span class="text-danger fw-bold">définitive et irréversible</span>.
+                </p>
+                
+                <div class="bg-light p-3 rounded-3 mb-4 text-start">
+                    <label class="form-label small fw-bold text-uppercase text-muted">Veuillez saisir le nom du schéma pour confirmer :</label>
+                    <input type="text" id="confirmSchemaInput" class="form-control form-control-lg border-2" placeholder="Tapez le nom du schéma ici...">
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light w-100 rounded-pill fw-bold" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger w-100 rounded-pill fw-bold" disabled onclick="executeTenantDeletion()">
+                        Confirmer la suppression
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .hover-lift {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -240,6 +286,73 @@
             },
             error: () => {
                 alertify.error("Erreur lors de la mise à jour du type.");
+            }
+        });
+    }
+
+    let tenantToDeleteId = null;
+    let tenantToDeleteSchema = null;
+
+    function openDeleteModal(tenantId, tenantName, schemaName) {
+        tenantToDeleteId = tenantId;
+        tenantToDeleteSchema = schemaName;
+        
+        $('#deleteModalTenantName').text(tenantName);
+        $('#deleteModalSchemaName').text(schemaName);
+        $('#confirmSchemaInput').val('').removeClass('is-valid is-invalid');
+        $('#confirmDeleteBtn').prop('disabled', true);
+        
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteTenantModal'));
+        deleteModal.show();
+    }
+
+    // Modal input listener
+    document.getElementById('confirmSchemaInput').addEventListener('input', function(e) {
+        const val = e.target.value.trim();
+        if (val === tenantToDeleteSchema) {
+            $(this).addClass('is-valid').removeClass('is-invalid');
+            $('#confirmDeleteBtn').prop('disabled', false);
+        } else {
+            $(this).removeClass('is-valid');
+            $('#confirmDeleteBtn').prop('disabled', true);
+        }
+    });
+
+    function executeTenantDeletion() {
+        if (!tenantToDeleteId) return;
+        
+        const btn = $('#confirmDeleteBtn');
+        const originalHtml = btn.html();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Suppression...');
+
+        // Use the proper URL name from associe_app:delete_tenant
+        const deleteUrl = "{% url 'associe_app:delete_tenant' 0 %}".replace('0', tenantToDeleteId);
+
+        $.ajax({
+            url: deleteUrl,
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: (res) => {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    $(`#tenant-card-${tenantToDeleteId}`).fadeOut(500, function() {
+                        $(this).remove();
+                        // If no more tenants, show empty state
+                        if ($('.tenant-card').length === 0 && $('#tenants-grid').length > 0) {
+                            location.reload(); 
+                        }
+                    });
+                    bootstrap.Modal.getInstance(document.getElementById('deleteTenantModal')).hide();
+                } else {
+                    alertify.error(res.message);
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            },
+            error: (err) => {
+                alertify.error("Une erreur critique est survenue lors de la suppression.");
+                btn.prop('disabled', false).html(originalHtml);
             }
         });
     }

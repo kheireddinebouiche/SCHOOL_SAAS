@@ -46,7 +46,10 @@ from .views import (
     update_tenant_type,
     reset_tenant_table,
     tenant_workspace,
-    preview_tenant_table_reset
+    preview_tenant_table_reset,
+    delete_tenant,
+    list_orphaned_schemas,
+    delete_orphaned_schema
 )
 
 
@@ -59,6 +62,9 @@ urlpatterns = [
 
     # Tenant Visualization
     path('tenants/', tenant_data_list, name='tenant_data_list'),
+    path('tenants/delete/<int:tenant_id>/', delete_tenant, name='delete_tenant'),
+    path('tenants/schemas/', list_orphaned_schemas, name='schema_management'),
+    path('tenants/schemas/delete/', delete_orphaned_schema, name='delete_orphaned_schema'),
     path('tenants/<int:tenant_id>/workspace/', tenant_workspace, name='tenant_workspace'),
     path('tenants/categories/<int:tenant_id>/', get_tenant_categories, name='get_tenant_categories'),
     path('tenants/purge/<int:tenant_id>/', purge_tenant_categories, name='purge_tenant_categories'),
