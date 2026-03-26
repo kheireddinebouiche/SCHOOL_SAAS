@@ -1150,6 +1150,16 @@
                                     <label for="nombreTranches" class="form-label fw-medium">Nombre de tranches</label>
                                     <input type="number" class="form-control border-0 bg-light py-2" id="nombreTranches" min="1" value="3">
                                 </div>
+                                <div class="mb-3">
+                                    <label for="frais_inscription_special" class="form-label fw-medium">Frais d'inscription</label>
+                                    <input type="number" class="form-control border-0 bg-light py-2" id="frais_inscription_special" min="0" placeholder="0.00">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="entite_special_select" class="form-label fw-medium">Entité</label>
+                                    <select class="form-control border-0 bg-light py-2" id="entite_special_select">
+                                        <option value="">Veuillez sélectionner une entité</option>
+                                    </select>
+                                </div>
                                 <div class="mt-auto">
                                     <button class="btn btn-warning w-100" id="genererTranchesBtn">
                                         <i class="ri-refresh-line me-1"></i>Générer les tranches
@@ -1978,7 +1988,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="datePaiement">Date de paiement <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #e9ecef !important; color: #6c757d !important; pointer-events: none;" readonly />
+                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #f8f9fa !important;" />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="montantPaiement">Montant <span class="text-danger">*</span></label>
@@ -3305,11 +3315,18 @@
                     
                     // Ajouter les frais d'inscription comme première ligne si > 0
                     if (data.voeux.frais_inscription > 0) {
-                        echeancierHtml += '<tr>';
+                        // Utiliser l'entité de frais d'inscription depuis le backend
+                        let entite_id_frais = data.special_echeancier_frais_inscription_entite_id;
+                        let entite_nom_frais = data.special_echeancier_frais_inscription_entite_nom;
+
+                        echeancierHtml += '<tr data-entite-id="' + (entite_id_frais || '') + '">';
                         echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
                         echeancierHtml += '<td>'+date_frais_inscription+'</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(frais_inscription).toFixed(2) + ' DA</span></td>';
+                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
                         
+                        if (data.remise && data.remise.remise_approuver) {
+                            echeancierHtml += '<td class="prix-final-cell" style="display: none;"><span class="fw-bold text-success">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
+                        }
                         echeancierHtml += '</tr>';
                     }
                     
@@ -3388,18 +3405,18 @@
                        
                     }else if (data.echeancier_special_state_approuvel){
 
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
-                        document.getElementById('echeancierSpecialNotification').style.setProperty('display', "flex", "important");
+                        document.getElementById('echeancierExamenNotificationf').style.setProperty("display", "none", "important");
+                        document.getElementById('applicedEcheancierSpecial').style.setProperty("display", "none", "important");
+                        document.getElementById('echeancierSpecialNotification').style.setProperty("display", "flex", "important");
 
                     }else if(data.has_special_echeancier && !data.echeancier_special_state_approuvel) {
 
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "flex", "important");
+                        document.getElementById('echeancierExamenNotificationf').style.setProperty("display", "flex", "important");
                     }else{
                         
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
-                        document.getElementById('echeancierSpecialNotification').style.setProperty('display', "none", "important");
+                        document.getElementById('echeancierExamenNotificationf').style.setProperty("display", "none", "important");
+                        document.getElementById('applicedEcheancierSpecial').style.setProperty("display", "none", "important");
+                        document.getElementById('echeancierSpecialNotification').style.setProperty("display", "none", "important");
                     }
 
                     if(data.has_due_paiement){
@@ -3444,16 +3461,18 @@
                     }
                     
                     // Ajouter les autres échéances
-                    $.each(data.echeancier, function(index, echeance){ 
-                        var label = "Tranche " + (index + 1);
+                    $.each(data.echeancier, function(index, echeance){
+                        echeancierHtml += '<tr data-entite-id="' + (echeance.entite_id || '') + '">';
+                        echeancierHtml += '<td>' + echeance.value + '</td>';
+                        echeancierHtml += '<td>' + echeance.date_echeancier + '</td>';
+                        echeancierHtml += '<td>' + parseFloat(echeance.montant_tranche).toFixed(2) + ' DA</td>';
                         
-                        echeancierHtml += '<tr>';
-                        echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
-                        echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
-                        if(hasReduction && reductionApprouved) {
-                            var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
-                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
+                        if (data.remise && data.remise.remise_approuver) {
+                            var montantFinal = parseFloat(echeance.montant_tranche);
+                            if (echeance.value.toLowerCase().indexOf("inscription") === -1) {
+                                montantFinal = montantFinal - (montantFinal * parseFloat(data.remise.valeur) / 100);
+                            }
+                            echeancierHtml += '<td class="prix-final-cell" style="display: none;"><span class="fw-bold text-success">' + montantFinal.toFixed(2) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     });
@@ -3863,7 +3882,24 @@
             $('#modalSpecialite').text($('#specialite').text());
             $('#modalPromo').text($('#promo').text());
             $('#modalPrixFormation').text($('#prix_formation').text());
+            loadEntitesSpecial();
         });
+
+        function loadEntitesSpecial(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiGetEntite' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner une entité</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.designation+"</option>";
+                    });
+
+                    $('#entite_special_select').html(option);
+                }
+            });
+        }
         
         // Générer les tranches
         $(document).on('click', '#genererTranchesBtn', function(){
@@ -4002,12 +4038,16 @@
             // Get other required data
             var prospectId = clientId; // Use the stored client ID
             var nombreTranches = $('#nombreTranches').val();
+            var fraisInscription = $('#frais_inscription_special').val();
+            var entiteId = $('#entite_special_select').val();
             
             // Prepare data for API call
             var data = {
                 prospect_id: prospectId,
                 nombre_tranches: nombreTranches,
-                echeancier_lines: echeancierLines
+                echeancier_lines: echeancierLines,
+                frais_inscription: fraisInscription,
+                entite_id: entiteId
             };
             
             // Get CSRF token
@@ -4078,7 +4118,8 @@
                         'libelle': libelle,
                         'date_echeance': date,
                         'montant': montant,
-                        'montant_final': montantFinal
+                        'montant_final': montantFinal,
+                        'entite_id': $(this).data('entite-id')
                     });
                 }
             });
@@ -5560,6 +5601,28 @@
  
 
   
+    // ========== BLOCAGE DATE PAIEMENT (Paramètre Financier) ==========
+    var nouveauPaiementEl = document.getElementById('nouveauPaiementModal');
+    if (nouveauPaiementEl) {
+        nouveauPaiementEl.addEventListener('show.bs.modal', function () {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGetParametreFinancier' %}",
+                type: 'GET',
+                success: function(data) {
+                    var $dt = $('#datePaiement');
+                    if (data.bloquer_date_paiement) {
+                        var today = new Date().toISOString().split('T')[0];
+                        $dt.val(today).prop('readonly', true)
+                           .css({'background-color':'#e9ecef','color':'#6c757d','pointer-events':'none'});
+                    } else {
+                        $dt.prop('readonly', false)
+                           .css({'background-color':'#f8f9fa','color':'','pointer-events':''});
+                    }
+                }
+            });
+        });
+    }
+    // ==================================================================
     </script>
 
 

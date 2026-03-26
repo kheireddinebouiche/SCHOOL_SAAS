@@ -28,6 +28,9 @@ def ListeEcheancierSpecial(request):
             },
             'is_validate': echeancier.is_validate,
             'is_approuved': echeancier.is_approuved,
+            'frais_inscription': str(echeancier.frais_inscription) if echeancier.frais_inscription else "0",
+            'entite': echeancier.entite.designation if echeancier.entite else "Non définie",
+            'entite_id': echeancier.entite.id if echeancier.entite else None,
             'created_at': echeancier.created_at.strftime('%Y-%m-%d %H:%M:%S') if echeancier.created_at else None,
             'updated_at': echeancier.updated_at.strftime('%Y-%m-%d %H:%M:%S') if echeancier.updated_at else None,
         })
@@ -75,6 +78,9 @@ def ApiListEcheancierSpecial(request):
                 },
                 'is_validate': echeancier.is_validate,
                 'is_approuved': echeancier.is_approuved,
+                'frais_inscription': str(echeancier.frais_inscription) if echeancier.frais_inscription else "0",
+                'entite': echeancier.entite.designation if echeancier.entite else "Non définie",
+                'entite_id': echeancier.entite.id if echeancier.entite else None,
                 'created_at': echeancier.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'updated_at': echeancier.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'lines': lines_data
@@ -135,18 +141,46 @@ def ApiValidateEcheancierSpecial(request):
     })
 
 @login_required(login_url="institut_app:login")
+@csrf_exempt
 @transaction.atomic
 def ApiApproveEcheancierSpecial(request):
-    if request.method == "GET":
-        echeancierId = request.GET.get('echeancierId')
-        obj = EcheancierSpecial.objects.get(id = echeancierId)
-        obj.is_approuved = True
-        obj.save()
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            echeancier_id = data.get('echeancier_id')
+            frais_inscription = data.get('frais_inscription')
+            entite_id = data.get('entite_id')
 
-        return JsonResponse({"status" : "success"})
-    else:
+            if not echeancier_id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'ID de l\'échéancier manquant'
+                })
 
-        return JsonResponse({"status" : "error"})
+            obj = EcheancierSpecial.objects.get(id=echeancier_id)
+            obj.is_approuved = True
+            
+            if frais_inscription is not None:
+                obj.frais_inscription = Decimal(str(frais_inscription))
+            
+            if entite_id:
+                obj.entite_id = entite_id
+                
+            obj.save()
+
+            return JsonResponse({"status": "success", "message": "Échéancier approuvé avec succès"})
+        except EcheancierSpecial.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Échéancier non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Erreur lors de l\'approbation: {str(e)}'
+            })
+    
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 def ApiRejectEcheancierSpecial(request):
@@ -197,6 +231,8 @@ def ApiStoreEcheancierSpecial(request):
         prospect_id = data.get('prospect_id')
         nombre_tranches = data.get('nombre_tranches')
         echeancier_lines = data.get('echeancier_lines')
+        frais_inscription = data.get('frais_inscription')
+        entite_id = data.get('entite_id')
 
         # # Validate required fields
         if not prospect_id or not nombre_tranches or not echeancier_lines:
@@ -209,6 +245,8 @@ def ApiStoreEcheancierSpecial(request):
         echeancier_special = EcheancierSpecial.objects.create(
             prospect_id=prospect_id,
             nombre_tranche=nombre_tranches,
+            frais_inscription=Decimal(str(frais_inscription)) if frais_inscription else None,
+            entite_id=entite_id if entite_id else None,
             is_validate=False,
             is_approuved=False
         )

@@ -1163,6 +1163,16 @@
                                     <label for="nombreTranches" class="form-label fw-medium">Nombre de tranches</label>
                                     <input type="number" class="form-control border-0 bg-light py-2" id="nombreTranches" min="1" value="3">
                                 </div>
+                                <div class="mb-3">
+                                    <label for="frais_inscription_special" class="form-label fw-medium">Frais d'inscription</label>
+                                    <input type="number" class="form-control border-0 bg-light py-2" id="frais_inscription_special" min="0" placeholder="0.00">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="entite_special_select" class="form-label fw-medium">Entité</label>
+                                    <select class="form-control border-0 bg-light py-2" id="entite_special_select">
+                                        <option value="">Veuillez sélectionner une entité</option>
+                                    </select>
+                                </div>
                                 <div class="mt-auto">
                                     <button class="btn btn-warning w-100" id="genererTranchesBtn">
                                         <i class="ri-refresh-line me-1"></i>Générer les tranches
@@ -1984,7 +1994,7 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="datePaiement">Date de paiement <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #e9ecef !important; color: #6c757d !important; pointer-events: none;" readonly />
+                                        <input type="date" class="form-control border-0 py-2" id="datePaiement" required style="background-color: #f8f9fa !important;" />
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-medium" for="montantPaiement">Montant <span class="text-danger">*</span></label>
@@ -3261,11 +3271,13 @@
                     
                     // Ajouter les frais d'inscription comme première ligne si > 0
                     if (data.voeux.frais_inscription > 0) {
-                        echeancierHtml += '<tr>';
+                        let entite_id_frais = data.special_echeancier_frais_inscription_entite_id;
+                        let entite_nom_frais = data.special_echeancier_frais_inscription_entite_nom;
+
+                        echeancierHtml += '<tr data-entite-id="' + (entite_id_frais || '') + '">';
                         echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
                         echeancierHtml += '<td>'+date_frais_inscription+'</td>';
                         echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
-                        
                         echeancierHtml += '</tr>';
                     }
                     
@@ -3404,11 +3416,11 @@
                     $.each(data.echeancier, function(index, echeance){ 
                         var label = "Tranche " + (index + 1);
                         
-                        echeancierHtml += '<tr>';
+                        echeancierHtml += '<tr data-entite-id="' + (echeance.entite_id || '') + '">';
                         echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
                         echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
                         echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
-                        echeancierHtml += "<td style='display: none;'>"+echeance.entite+"</td>";
+                        echeancierHtml += "<td style='display: none;'>"+(echeance.entite_nom || '')+"</td>";
 
                         if(hasReduction && reductionApprouved) {
                             var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
@@ -3782,13 +3794,14 @@
                     var libelle = $(this).find('td:eq(0)').text();
                     var date = $(this).find('td:eq(1)').text();
                     var montant = $(this).find('td:eq(2)').text();
-                    var entite = $(this).find('td:eq(3)').text();
+                    var entite_nom = $(this).find('td:eq(3)').text();
+                    var entite_id = $(this).data('entite-id');
                     
-                    echeancesHtml += '<tr>';
+                    echeancesHtml += '<tr data-entite-id="' + (entite_id || '') + '">';
                     echeancesHtml += '<td>' + libelle + '</td>';
                     echeancesHtml += '<td>' + date + '</td>';
                     echeancesHtml += '<td>' + montant + '</td>';
-                    echeancesHtml += '<td style="display:none;">' + entite + '</td>';
+                    echeancesHtml += '<td style="display:none;">' + (entite_nom || '') + '</td>';
 
                     
                     // Ajouter le prix final si une réduction est appliquée
@@ -3816,7 +3829,24 @@
             $('#modalSpecialite').text($('#specialite').text());
             $('#modalPromo').text($('#promo').text());
             $('#modalPrixFormation').text($('#prix_formation').text());
+            loadEntitesSpecial();
         });
+
+        function loadEntitesSpecial(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiGetEntite' %}",
+                dataType:"JSON",
+                type: "GET",
+                success : function(data){
+                    var option="<option value=''>Veuillez sélectionner une entité</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.designation+"</option>";
+                    });
+
+                    $('#entite_special_select').html(option);
+                }
+            });
+        }
         
         // Générer les tranches
         $(document).on('click', '#genererTranchesBtn', function(){
@@ -4036,12 +4066,16 @@
             // Get other required data
             var prospectId = clientId; // Use the stored client ID
             var nombreTranches = $('#nombreTranches').val();
+            var fraisInscription = $('#frais_inscription_special').val();
+            var entiteId = $('#entite_special_select').val();
             
             // Prepare data for API call
             var data = {
                 prospect_id: prospectId,
                 nombre_tranches: nombreTranches,
-                echeancier_lines: echeancierLines
+                echeancier_lines: echeancierLines,
+                frais_inscription: fraisInscription,
+                entite_id: entiteId
             };
             
             // Get CSRF token
@@ -4100,11 +4134,11 @@
                 var libelle = $(this).find('td:eq(0)').text().trim();
                 var date = $(this).find('td:eq(1)').text().trim();
                 var montant = $(this).find('td:eq(2)').text().trim().replace(' DA', '');
-                var entite = $(this).find('td:eq(3)').text().trim();
+                var entite = $(this).data('entite-id') || $(this).find('td:eq(3)').text().trim();
                 
                 var montantFinal = montant; 
-                if (hasReduction && $(this).find('td:eq(3)').length > 0) {
-                    montantFinal = $(this).find('td:eq(3)').text().trim().replace(' DA', '');
+                if (hasReduction && $(this).find('td:eq(4)').length > 0) {
+                    montantFinal = $(this).find('td:eq(4)').text().trim().replace(' DA', '');
                 }
                 
                 // Ne pas ajouter les lignes vides
@@ -5602,6 +5636,28 @@
  
 
   
+    // ========== BLOCAGE DATE PAIEMENT (Paramètre Financier) ==========
+    var nouveauPaiementElDouble = document.getElementById('nouveauPaiementModal');
+    if (nouveauPaiementElDouble) {
+        nouveauPaiementElDouble.addEventListener('show.bs.modal', function () {
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiGetParametreFinancier' %}",
+                type: 'GET',
+                success: function(data) {
+                    var $dt = $('#datePaiement');
+                    if (data.bloquer_date_paiement) {
+                        var today = new Date().toISOString().split('T')[0];
+                        $dt.val(today).prop('readonly', true)
+                           .css({'background-color':'#e9ecef','color':'#6c757d','pointer-events':'none'});
+                    } else {
+                        $dt.prop('readonly', false)
+                           .css({'background-color':'#f8f9fa','color':'','pointer-events':''});
+                    }
+                }
+            });
+        });
+    }
+    // ==================================================================
 </script>
 
 

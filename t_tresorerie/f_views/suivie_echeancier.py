@@ -365,12 +365,16 @@ def ApiGetClientEcheancier(request):
             "client_id": obj.id,  # Add client ID to the response
         }
 
+        # Extraction des frais d'inscription depuis DuePaiements
+        frais_inscription_due = DuePaiements.objects.filter(client=obj, label__icontains="inscription").first()
+        frais_inscription_val = float(frais_inscription_due.montant_due) if frais_inscription_due else voeux.specialite.formation.frais_inscription
+
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.formation.prix_formation,
-            'frais_inscription' : voeux.specialite.formation.frais_inscription,
+            'frais_inscription' : frais_inscription_val,
             'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
@@ -571,12 +575,16 @@ def ApiGetClientEcheancierDouble(request):
             "client_id": obj.id,  # Add client ID to the response
         }
 
+        # Extraction des frais d'inscription depuis DuePaiements
+        frais_inscription_due = DuePaiements.objects.filter(client=obj, label__icontains="inscription").first()
+        frais_inscription_val = float(frais_inscription_due.montant_due) if frais_inscription_due else voeux.specialite.frais_inscription
+
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.prix,
-            'frais_inscription' : voeux.specialite.frais_inscription,
+            'frais_inscription' : frais_inscription_val,
             # 'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
             # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }

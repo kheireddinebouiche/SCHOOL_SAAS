@@ -1,6 +1,8 @@
 from django.db import models
 from t_etudiants.models import *
 from institut_app.models import *
+from institut_app.models import Entreprise
+
 from t_formations.models import *
 from t_crm.models import Prospets
 from django.contrib.auth.models import User
@@ -270,6 +272,10 @@ class EcheancierPaiementLine(models.Model):
 class EcheancierSpecial(models.Model):
     nombre_tranche = models.IntegerField(null=True, blank=True)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    
+    ##Attribution des frais d'inscription
+    frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
+    entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
 
     is_validate = models.BooleanField(default=False)
     is_approuved = models.BooleanField(default=False)
@@ -541,3 +547,33 @@ class SpecialiteCompte(models.Model):
 
     def __str__(self):
         return f"{self.specialite.label} - {self.compte.label}"
+
+
+class ParametreFinancier(models.Model):
+    """Singleton model for global financial parameters."""
+
+    bloquer_date_paiement = models.BooleanField(
+        default=True,
+        verbose_name="Bloquer la date de paiement",
+        help_text=(
+            "Si activé, la date de paiement dans le modal d'enregistrement est "
+            "pré-remplie avec la date du jour et verrouillée. "
+            "Si désactivé, l'agent peut choisir librement la date."
+        ),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Paramètre Financier"
+        verbose_name_plural = "Paramètres Financiers"
+
+    def __str__(self):
+        return "Paramètres Financiers"
+
+    @classmethod
+    def get_instance(cls):
+        """Always returns the single settings record, creating it if needed."""
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj

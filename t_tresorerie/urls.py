@@ -265,4 +265,8 @@ urlpatterns = [
     path('api/update-double-diplomation-price/', ApiUpdateDoubleDiplomationPrice, name="ApiUpdateDoubleDiplomationPrice"),
     path('api/list-payment-types/', ApiListePaymentTypes, name='ApiListePaymentTypes'),
     path('api/update-payment-type/', ApiUpdatePaymentType, name='ApiUpdatePaymentType'),
+
+    # Paramètres Financiers Généraux
+    path('api/get-parametre-financier/', ApiGetParametreFinancier, name='ApiGetParametreFinancier'),
+    path('api/update-parametre-financier/', ApiUpdateParametreFinancier, name='ApiUpdateParametreFinancier'),
 ]

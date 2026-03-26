@@ -58,7 +58,7 @@ def ApiLoadEcheancierDetails(request):
             'tranches': list(tranches),
             'entite' : echeancier.entite.id if echeancier.entite else None,
             'entite_label' : echeancier.entite.designation if echeancier.entite else None,
-            
+            'frais_inscription' : str(echeancier.frais_inscription) if echeancier.frais_inscription else "0.00",
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
@@ -77,52 +77,65 @@ def ApiSaveEcheancier(request):
             frais_inscription = request.POST.get('frais_inscription')
             entite_id = request.POST.get('entite')
 
+            # Helper to sanitize IDs from potential 'null'/'undefined' strings
+            def sanitize_id(val):
+                if val == "null" or val == "undefined" or not val or val == "0":
+                    return None
+                return val
+
+            modele_id = sanitize_id(modele_id)
+            formation_id = sanitize_id(formation_id)
+            entite_id = sanitize_id(entite_id)
+
             # Convertir les données JSON en objet Python
             import json
             tranches = json.loads(tranches_data)
+            
+            if not modele_id:
+                return JsonResponse({"status": "error", "message": "ID du modèle manquant"})
+
             modele = ModelEcheancier.objects.get(id = modele_id)
 
             # Check based on mode - if double diplomation, check against specialites, otherwise formation
             if is_double_diplomation:
-                has_already = EcheancierPaiement.objects.filter(formation_double_id=formation_id,model__promo=modele.promo).exists()
+                has_already = EcheancierPaiement.objects.filter(formation_double_id=formation_id, model__promo=modele.promo).exists()
             else:
                 # Check against formation as before
-                has_already = EcheancierPaiement.objects.filter(formation_id=formation_id,model__promo=modele.promo).exists()
+                has_already = EcheancierPaiement.objects.filter(formation_id=formation_id, model__promo=modele.promo).exists()
 
             if has_already:
                 return JsonResponse({"status": "error-head-already"})
 
             # Créer l'échéancier principal
             echeancier = EcheancierPaiement.objects.create(
-                model=ModelEcheancier.objects.get(id=modele_id),
+                model_id=modele_id,
                 is_active=True, 
                 frais_inscription=frais_inscription,
+                entite_id=entite_id
             )
 
-            if entite_id:
-                echeancier.entite = Entreprise.objects.get(id=entite_id)
-
             # Set formation or specialites based on mode
-            if is_double_diplomation :
-                echeancier.formation_double = DoubleDiplomation.objects.get(id = formation_id)
+            if is_double_diplomation:
+                echeancier.formation_double_id = formation_id
             else:
-                echeancier.formation = Formation.objects.get(id=formation_id)
+                echeancier.formation_id = formation_id
 
             echeancier.save()
 
             if is_double_diplomation:
                 # Créer les lignes d'échéancier
                 for tranche in tranches:
+                    spec_id = sanitize_id(tranche.get('specialite_id'))
+                        
                     EcheancierPaiementLine.objects.create(
                         echeancier=echeancier,
                         taux=tranche['pourcentage'],
                         value=tranche['libelle'],
                         montant_tranche=tranche['montant_echeance'],
                         date_echeancier=tranche['date'] if tranche['date'] else None,
-                        entite_id = tranche['specialite_id'] if tranche['specialite_id'] else None,
+                        entite_id = spec_id,
                     )
             else:
-
                  # Créer les lignes d'échéancier
                 for tranche in tranches:
                     EcheancierPaiementLine.objects.create(
@@ -131,7 +144,6 @@ def ApiSaveEcheancier(request):
                         value=tranche['libelle'],
                         montant_tranche=tranche['montant_echeance'],
                         date_echeancier=tranche['date'] if tranche['date'] else None,
-                        
                     )
 
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
@@ -216,6 +228,7 @@ def ApiUpdateModeleEcheancier(request):
     promo = request.POST.get('promo')
     description = request.POST.get('description')
     nbtranche = request.POST.get('nbtranche')
+    doubleDiplomation = request.POST.get('doubleDiplomation')
 
     modelEcheance = ModelEcheancier.objects.get(id = echeancierId)
 
@@ -223,6 +236,7 @@ def ApiUpdateModeleEcheancier(request):
     modelEcheance.promo = Promos.objects.get(id = promo)
     modelEcheance.description = description
     modelEcheance.nombre_tranche = nbtranche
+    modelEcheance.is_double_diplomation = doubleDiplomation == "true"
 
     try:
         modelEcheance.save()
@@ -338,9 +352,15 @@ def ApiUpdateEcheancier(request):
             # Récupérer l'échéancier existant
             echeancier = EcheancierPaiement.objects.get(id=echeancier_id)
             
-            # Mettre à jour seulement le statut
-            echeancier.is_active = bool(int(is_active))  # Convertir '1'/'0' en booléen
+            echeancier.is_active = bool(int(is_active))  # Convert '1'/'0' to boolean
             echeancier.entite = Entreprise.objects.get(id = entite)
+            
+            frais_inscription = request.POST.get('frais_inscription')
+            if frais_inscription and frais_inscription.strip():
+                echeancier.frais_inscription = Decimal(frais_inscription)
+            else:
+                echeancier.frais_inscription = 0
+            
             # Sauvegarder les modifications
             echeancier.save()
             

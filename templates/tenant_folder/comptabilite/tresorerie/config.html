@@ -156,6 +156,42 @@
                 </div>
             </div>
 
+            <!-- =============== PARAMÈTRES GÉNÉRAUX =============== -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="ri-shield-keyhole-line text-warning fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">Paramètres Généraux</h5>
+                                <p class="text-muted mb-0 small">Règles de saisie et de contrôle des paiements</p>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+
+                        <div class="d-flex align-items-center justify-content-between py-2 px-3 rounded-3 bg-light">
+                            <div>
+                                <p class="fw-semibold mb-0">Blocage de la date de paiement</p>
+                                <small class="text-muted">
+                                    Si activé, la date de paiement dans le modal d'enregistrement sera
+                                    pré-remplie avec la date du jour et verrouillée.
+                                    Si désactivé, l'agent peut saisir librement la date.
+                                </small>
+                            </div>
+                            <div class="ms-4 form-check form-switch fs-4">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="toggleBloquerDate" style="width:3rem; height:1.5rem; cursor:pointer;">
+                            </div>
+                        </div>
+
+                        <div id="parametre-status" class="mt-2 small text-muted ps-3"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ============ FIN PARAMÈTRES GÉNÉRAUX ============= -->
+
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card glass-card border-0 mb-4">
@@ -651,6 +687,13 @@
             $('#doublePriceModal').modal('show');
         });
 
+        // Auto-calcul Montant Global
+        $(document).on('input', '#double_prix1_edit, #double_prix2_edit', function(){
+            var p1 = parseFloat($('#double_prix1_edit').val()) || 0;
+            var p2 = parseFloat($('#double_prix2_edit').val()) || 0;
+            $('#double_prix_edit').val(p1 + p2);
+        });
+
         $('#btnUpdateDoublePrice').click(function(){
             $.ajax({
                 url: "{% url 't_tresorerie:ApiUpdateDoubleDiplomationPrice' %}",
@@ -674,5 +717,40 @@
         });
 
     });
+
+    // ============== PARAMÈTRE : Blocage date paiement ==============
+    function loadParametreFinancier() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiGetParametreFinancier' %}",
+            type: 'GET',
+            success: function(data) {
+                $('#toggleBloquerDate').prop('checked', data.bloquer_date_paiement);
+            }
+        });
+    }
+    loadParametreFinancier();
+
+    $('#toggleBloquerDate').on('change', function() {
+        var val = $(this).is(':checked');
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiUpdateParametreFinancier' %}",
+            type: 'POST',
+            data: {
+                'bloquer_date_paiement': val,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+                if (res.status === 'success') {
+                    var msg = res.bloquer_date_paiement
+                        ? '<i class="ri-lock-line me-1 text-success"></i>Date de paiement <strong>verrouillée</strong> — enregistré.'
+                        : '<i class="ri-lock-unlock-line me-1 text-warning"></i>Date de paiement <strong>libre</strong> — enregistré.';
+                    $('#parametre-status').html(msg).show();
+                    setTimeout(function(){ $('#parametre-status').fadeOut(500, function(){ $(this).html('').show(); }); }, 3000);
+                }
+            }
+        });
+    });
+    // ===============================================================
+
 </script>
 {% endblock content %}

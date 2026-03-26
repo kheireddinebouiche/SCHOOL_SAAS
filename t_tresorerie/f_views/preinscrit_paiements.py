@@ -48,7 +48,7 @@ def ApiGetPaiementRequestDetails(request):
         }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
-            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier)  
+            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier, i.get('entite_id'))  
                
              
         return JsonResponse({"status":"success"})
@@ -107,7 +107,7 @@ def ApiGetPaiementRequestDetailsDouble(request):
 
 ### Fonction qui stock les echeanciers de paiements
 @transaction.atomic
-def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
+def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier, entite_id=None):
     try:
         last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
         ordre = (last.ordre + 1) if last else 1
@@ -123,7 +123,7 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier):
             promo_id = promo,
             type = "frais_f",
             ref_echeancier_id = echeancier,
-            entite = EcheancierPaiement.objects.get(id=echeancier).entite if echeancier else None,
+            entite_id = entite_id if entite_id else (EcheancierPaiement.objects.get(id=echeancier).entite.id if echeancier and EcheancierPaiement.objects.get(id=echeancier).entite else None),
         )
         return JsonResponse({"status": "success"})
     except Exception as e:
