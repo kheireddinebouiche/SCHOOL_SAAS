@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core import serializers
 import json
 import re
+from t_crm.models import FicheVoeuxDouble
 
 
 @login_required(login_url="institut_app:login")
@@ -68,6 +69,18 @@ def ApiListEcheancierSpecial(request):
                     'updated_at': line.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
                 })
             
+            # Get double degree info if applicable
+            double_degree_data = {}
+            if echeancier.prospect.is_double:
+                voeux = FicheVoeuxDouble.objects.filter(prospect=echeancier.prospect, is_confirmed=True).first()
+                if voeux and voeux.specialite:
+                    double_degree_data = {
+                        'formation_1_label': voeux.specialite.specialite1.formation.nom if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation else "",
+                        'specialite_1_label': voeux.specialite.specialite1.label if voeux.specialite.specialite1 else "Spécialité 1",
+                        'formation_2_label': voeux.specialite.specialite2.formation.nom if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation else "",
+                        'specialite_2_label': voeux.specialite.specialite2.label if voeux.specialite.specialite2 else "Spécialité 2",
+                    }
+
             echeanciers_data.append({
                 'id': echeancier.id,
                 'nombre_tranche': echeancier.nombre_tranche,
@@ -75,7 +88,9 @@ def ApiListEcheancierSpecial(request):
                     'id': echeancier.prospect.id,
                     'nom': echeancier.prospect.nom,
                     'prenom': echeancier.prospect.prenom,
+                    'is_double': echeancier.prospect.is_double,
                 },
+                'double_degree_data': double_degree_data,
                 'is_validate': echeancier.is_validate,
                 'is_approuved': echeancier.is_approuved,
                 'frais_inscription': str(echeancier.frais_inscription) if echeancier.frais_inscription else "0",

@@ -115,7 +115,6 @@
     }
 
 </style>
-</style>
 
 <!-- ============================================================== -->
 <!-- Start right Content here -->
@@ -276,7 +275,7 @@
         <div class="modal-content modal-premium">
             <div class="modal-header modal-header-premium">
                 <div class="d-flex align-items-center">
-                    <div class="avatar-premium bg-white bg-opacity-20 me-3">
+                    <div class="avatar-premium me-3" style="background: rgba(255, 255, 255, 0.2);">
                         <i class="ri-file-list-3-line text-white"></i>
                     </div>
                     <div>
@@ -511,9 +510,12 @@
                                     '<span class="badge badge-soft-success">Approuvé</span>' : 
                                     '<span class="badge badge-soft-warning">En attente</span>';
                                     
+                                var doubleMention = echeancier.prospect.is_double ? 
+                                    '<br><span class="badge badge-soft-danger mt-1" style="font-size: 0.65rem;"><i class="ri-links-line me-1"></i>Double Diplomation</span>' : '';
+
                                 html += '<tr>';
                                 html += '<td class="fw-bold text-primary">#' + echeancier.id + '</td>';
-                                html += '<td class="fw-semibold">' + echeancier.prospect.nom + ' ' + echeancier.prospect.prenom + '</td>';
+                                html += '<td class="fw-semibold">' + echeancier.prospect.nom + ' ' + echeancier.prospect.prenom + doubleMention + '</td>';
                                 html += '<td>' + echeancier.nombre_tranche + '</td>';
                                 html += '<td class="text-primary fw-bold">' + echeancier.frais_inscription + ' DA</td>';
                                 html += '<td><span class="badge badge-soft-info">' + echeancier.entite + '</span></td>';
@@ -586,7 +588,9 @@
                             window.currentEcheancier = echeancier; // Store for approval modal
                             // Fill modal with echeancier details
                             $('#detailId').text(echeancier.id);
-                            $('#detailClient').text(echeancier.prospect.nom + ' ' + echeancier.prospect.prenom);
+                            var doubleMention = echeancier.prospect.is_double ? 
+                                ' <span class="badge badge-soft-danger" style="font-size: 0.65rem;">Double Diplomation</span>' : '';
+                            $('#detailClient').html(echeancier.prospect.nom + ' ' + echeancier.prospect.prenom + doubleMention);
                             $('#detailNombreTranches').text(echeancier.nombre_tranche);
                             
                             var validationText = echeancier.is_validate ? 
@@ -612,15 +616,59 @@
                             // Calculate total amount
                             var totalMontant = 0;
                             var linesHtml = '';
-                            $.each(echeancier.lines, function(index, line) {
-                                totalMontant += parseFloat(line.montant_tranche);
-                                linesHtml += '<tr>';
-                                linesHtml += '<td>' + (index + 1) + '</td>';
-                                linesHtml += '<td>' + (line.taux || 'N/A') + '%</td>';
-                                linesHtml += '<td>' + parseFloat(line.montant_tranche).toFixed(2) + ' DA</td>';
-                                linesHtml += '<td>' + (line.date_echeancier || 'N/A') + '</td>';
-                                linesHtml += '</tr>';
-                            });
+                            
+                            if (echeancier.prospect.is_double && echeancier.double_degree_data) {
+                                var group1 = [];
+                                var group2 = [];
+                                var currentGroup = 1;
+                                
+                                $.each(echeancier.lines, function(index, line) {
+                                    totalMontant += parseFloat(line.montant_tranche);
+                                    if (index > 0 && line.value === 'Tranche 1') {
+                                        currentGroup = 2;
+                                    }
+                                    if (currentGroup === 1) group1.push(line);
+                                    else group2.push(line);
+                                });
+
+                                // Header 1
+                                linesHtml += '<tr class="table-light"><td colspan="4" class="fw-bold text-dark italic"><i class="ri-direction-line me-1"></i> ' + 
+                                             echeancier.double_degree_data.formation_1_label + ' - ' + 
+                                             echeancier.double_degree_data.specialite_1_label + '</td></tr>';
+                                $.each(group1, function(i, line) {
+                                    linesHtml += '<tr>';
+                                    linesHtml += '<td class="ps-4"><span class="badge bg-soft-primary text-primary">' + line.value + '</span></td>';
+                                    linesHtml += '<td>' + (line.taux || 'N/A') + '%</td>';
+                                    linesHtml += '<td>' + parseFloat(line.montant_tranche).toFixed(2) + ' DA</td>';
+                                    linesHtml += '<td>' + (line.date_echeancier || 'N/A') + '</td>';
+                                    linesHtml += '</tr>';
+                                });
+
+                                // Header 2
+                                if (group2.length > 0) {
+                                    linesHtml += '<tr class="table-light"><td colspan="4" class="fw-bold text-dark italic"><i class="ri-direction-line me-1"></i> ' + 
+                                                 echeancier.double_degree_data.formation_2_label + ' - ' + 
+                                                 echeancier.double_degree_data.specialite_2_label + '</td></tr>';
+                                    $.each(group2, function(i, line) {
+                                        linesHtml += '<tr>';
+                                        linesHtml += '<td class="ps-4"><span class="badge bg-soft-primary text-primary">' + line.value + '</span></td>';
+                                        linesHtml += '<td>' + (line.taux || 'N/A') + '%</td>';
+                                        linesHtml += '<td>' + parseFloat(line.montant_tranche).toFixed(2) + ' DA</td>';
+                                        linesHtml += '<td>' + (line.date_echeancier || 'N/A') + '</td>';
+                                        linesHtml += '</tr>';
+                                    });
+                                }
+                            } else {
+                                $.each(echeancier.lines, function(index, line) {
+                                    totalMontant += parseFloat(line.montant_tranche);
+                                    linesHtml += '<tr>';
+                                    linesHtml += '<td>' + (line.value || (index + 1)) + '</td>';
+                                    linesHtml += '<td>' + (line.taux || 'N/A') + '%</td>';
+                                    linesHtml += '<td>' + parseFloat(line.montant_tranche).toFixed(2) + ' DA</td>';
+                                    linesHtml += '<td>' + (line.date_echeancier || 'N/A') + '</td>';
+                                    linesHtml += '</tr>';
+                                });
+                            }
                             
                             $('#totalMontant').text(totalMontant.toFixed(2) + ' DA');
                             $('#linesTableBody').html(linesHtml);

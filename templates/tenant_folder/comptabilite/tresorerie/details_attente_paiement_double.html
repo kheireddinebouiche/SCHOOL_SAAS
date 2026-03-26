@@ -3868,6 +3868,10 @@
             var prix2 = 0;
             var entite1 = "";
             var entite2 = "";
+            var formation1Label = "";
+            var formation2Label = "";
+            var specialite1Label = "Prix 1";
+            var specialite2Label = "Prix 2";
 
             // Vérifier si prix_specialite est un tableau
             if (Array.isArray(prix_specialite)) {
@@ -3895,6 +3899,10 @@
                 prix2 = parseFloat(prix_specialite.prix_2 || prix_specialite[1] || prix_specialite.prix2 || 0) || 0;
                 entite1 = prix_specialite.entite_1 || prix_specialite.entite1 || prix_specialite.entite || "";
                 entite2 = prix_specialite.entite_2 || prix_specialite.entite2 || prix_specialite.entite || "";
+                formation1Label = prix_specialite.formation_1_label || "";
+                formation2Label = prix_specialite.formation_2_label || "";
+                specialite1Label = prix_specialite.specialite_1_label || specialite1Label;
+                specialite2Label = prix_specialite.specialite_2_label || specialite2Label;
             } else {
                 // Si c'est une valeur unique
                 prix1 = parseFloat(prix_specialite) || 0;
@@ -3919,6 +3927,9 @@
 
             // Générer les tranches pour le prix 1
             if (prix1 > 0) {
+                var label1Text = formation1Label ? formation1Label + " - " + specialite1Label : specialite1Label;
+                html += '<tr class="table-light"><td colspan="4" class="fw-bold text-primary py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label1Text + '</td></tr>';
+                
                 for (var i = 1; i <= nombreTranches; i++) {
                     var basePercentage = Math.floor(100 / nombreTranches);
                     var remainder = 100 % nombreTranches;
@@ -3928,8 +3939,9 @@
                     // Calculate index for percentage array based on existing entries
                     var currentIndex = previousPercentages.length;
                     previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
+                    
                     html += '<tr>';
-                    html += '<td class="tranche-cell-special"><span class="badge bg-primary">Prix 1 - Tranche ' + i + '</span></td>';
+                    html += '<td class="tranche-cell-special ps-4"><span class="badge bg-soft-primary text-primary border border-primary-subtle">Tranche ' + i + '</span></td>';
                     html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
                     html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
                     html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
@@ -3940,6 +3952,9 @@
 
             // Générer les tranches pour le prix 2
             if (prix2 > 0) {
+                var label2Text = formation2Label ? formation2Label + " - " + specialite2Label : specialite2Label;
+                html += '<tr class="table-light"><td colspan="4" class="fw-bold text-success py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label2Text + '</td></tr>';
+
                 for (var i = 1; i <= nombreTranches; i++) {
                     var basePercentage = Math.floor(100 / nombreTranches);
                     var remainder = 100 % nombreTranches;
@@ -3949,8 +3964,9 @@
                     // Calculate index for percentage array based on existing entries
                     var currentIndex = previousPercentages.length;
                     previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
+                    
                     html += '<tr>';
-                    html += '<td class="tranche-cell-special"><span class="badge bg-success">Prix 2 - Tranche ' + i + '</span></td>';
+                    html += '<td class="tranche-cell-special ps-4"><span class="badge bg-soft-success text-success border border-success-subtle">Tranche ' + i + '</span></td>';
                     html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
                     html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
                     html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
@@ -4037,14 +4053,20 @@
 
             $('#specialEcheancierTable tr').each(function() {
                 var $row = $(this);
+                
+                // Skip header rows (Formation - Specialty)
+                if ($row.hasClass('table-light')) {
+                    return true; // Continue to next row
+                }
+
                 var taux = $row.find('td:nth-child(2)').text().replace(' %', ''); // Get percentage from the 2nd column
                 var nom_tranche = $row.find('.tranche-cell-special').text();
-                var montant = $row.find('.montant-cell').text().replace(' DA', '');
+                var montant = $row.find('.montant-cell').text().replace(' DA', '').replace(/\s/g, ''); // Handle spaces in amount
                 var date = $row.find('input[type="date"]').val();
                 var entite = $row.find('td:nth-child(5)').text(); // Get entity from the 5th column (now hidden)
 
                 // Validate required fields
-                if (!taux || !montant || !date) {
+                if ((!taux && taux !== 0) || !montant || !date) {
                     isValid = false;
                     return false; // Break the loop
                 }

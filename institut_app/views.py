@@ -247,13 +247,18 @@ def FinanceDashboard(request):
     # Get last 6 months
     today = datetime.now()
     monthly_stats = []
-    
+    current_month_date = today
     for i in range(6):
-        month_date = today - timedelta(days=i*30) # approx
-        month_start = datetime(month_date.year, month_date.month, 1)
+        month_start = datetime(current_month_date.year, current_month_date.month, 1)
         # End of month
-        next_month = month_start + timedelta(days=32)
-        month_end = datetime(next_month.year, next_month.month, 1) - timedelta(days=1)
+        if month_start.month == 12:
+            next_month_start = datetime(month_start.year + 1, 1, 1)
+        else:
+            next_month_start = datetime(month_start.year, month_start.month + 1, 1)
+        month_end = next_month_start - timedelta(days=1)
+        
+        # Ensure we use aware datetimes if needed or just handle as is (depends on project settings)
+        # But here we just need the range.
         
         # Revenue: Sum of Paiements in this month
         revenue = Paiements.objects.filter(
@@ -271,13 +276,18 @@ def FinanceDashboard(request):
         margin = (profit / revenue * 100) if revenue > 0 else 0
         
         monthly_stats.append({
-            'period': month_start.strftime('%B %Y'),
-            'revenue': revenue,
-            'expenses': expenses,
-            'profit': profit,
-            'margin': margin,
+            'period': month_start.strftime('%b %Y'),
+            'revenue': float(revenue),
+            'expenses': float(expenses),
+            'profit': float(profit),
+            'margin': float(margin),
             'is_positive': profit >= 0
         })
+        # Move to previous month
+        current_month_date = month_start - timedelta(days=1)
+
+    # Reverse to chronological order (past to present)
+    monthly_stats.reverse()
 
     # 3. Full Payment Situation (History)
     # Aggregate Paiements by Year-Month

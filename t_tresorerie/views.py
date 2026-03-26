@@ -566,8 +566,12 @@ def ApiGetDetailsDemandePaiementDouble(request):
 
         specialite_data_price = {
             'prix_1' : voeux.specialite.prix_spec1,
+            'formation_1_label' : voeux.specialite.specialite1.formation.nom if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation else "",
+            'specialite_1_label' : voeux.specialite.specialite1.label if voeux.specialite.specialite1 else "Spécialité 1",
             'entite_1' : voeux.specialite.specialite1.formation.entite_legal.id if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation and voeux.specialite.specialite1.formation.entite_legal else None,
             'prix_2' : voeux.specialite.prix_spec2,
+            'formation_2_label' : voeux.specialite.specialite2.formation.nom if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation else "",
+            'specialite_2_label' : voeux.specialite.specialite2.label if voeux.specialite.specialite2 else "Spécialité 2",
             'entite_2' : voeux.specialite.specialite2.formation.entite_legal.id if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation and voeux.specialite.specialite2.formation.entite_legal else None,
         }
 
