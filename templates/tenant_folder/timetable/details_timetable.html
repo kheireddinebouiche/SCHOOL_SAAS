@@ -368,11 +368,11 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                  <button class="btn btn-success btn-label waves-effect waves-light" type="button">
+                  <button class="btn btn-success btn-label waves-effect waves-light" type="button" id="validateTimetableBtn">
                     <i class="ri-checkbox-circle-line label-icon align-middle fs-16 me-2"></i>
                     Valider
                   </button>
-                  <button class="btn btn-danger btn-label waves-effect waves-light" type="button">
+                  <button class="btn btn-danger btn-label waves-effect waves-light" type="button" id="deleteTimetableBtn">
                     <i class="ri-delete-bin-line label-icon align-middle fs-16 me-2"></i>
                     Supprimer
                   </button>
@@ -907,11 +907,42 @@
             // Le fermeture de la modal de confirmation est maintenant faite dans le success
         }
       });
-
     });
-  });
+
+    // Logic for Valider and Supprimer (restored)
+    $('#validateTimetableBtn').on('click', function() {
+        if (confirm("Voulez-vous valider cet emploi du temps ?")) {
+            $.ajax({
+                url: "{% url 't_timetable:ApiValidateTimetable' %}",
+                type: "GET",
+                data: { 'id_emploie': "{{ timetable.id }}" },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert(res.message || "Erreur lors de la validation.");
+                    }
+                }
+            });
+        }
+    });
+
+    $('#deleteTimetableBtn').on('click', function() {
+        if (confirm("Êtes-vous sûr de vouloir supprimer cet emploi du temps ?")) {
+            $.ajax({
+                url: "{% url 't_timetable:ApiDeleteTimeTable' %}",
+                type: "GET",
+                data: { 'id': "{{ timetable.id }}" },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        window.location.href = "{% url 't_timetable:ListeDesEmploie' %}";
+                    } else {
+                        alert(res.message || "Erreur lors de la suppression.");
+                    }
+                }
+            });
+        }
+    });
+});
 </script>
-
-
-
-{% endblock content %}  
+{% endblock content %}
