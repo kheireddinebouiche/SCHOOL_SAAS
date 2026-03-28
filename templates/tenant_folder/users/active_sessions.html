@@ -1,113 +1,235 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
 
-{% block title %} Gestion des Sessions Actives {% endblock title %}
+{% block title %} Sessions Actives {% endblock title %}
 
 {% block content %}
-<div class="main-content">
-    <div class="page-content bg-light">
-        <div class="container-fluid">
-            <!-- page title -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                <i class="ri-shield-user-line text-primary"></i>
-                            </div>
-                            <h4 class="mb-0 text-primary">Sessions Actives</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<style>
+  :root {
+    --primary-teal: #3c7dde;
+    --secondary-teal: #2a6bcc;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+    --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  }
+  .glass-card { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 1.5rem; box-shadow: var(--glass-shadow); }
+  .icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.5rem; }
+  .stat-card { background: #ffffff !important; border: none !important; box-shadow: var(--premium-shadow); border-radius: 1.25rem !important; transition: all 0.3s; }
+  .stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+  .bg-soft-primary { background: rgba(60, 125, 222, 0.1) !important; color: #3c7dde !important; }
+  .bg-soft-success { background: rgba(16, 185, 129, 0.1) !important; color: #059669 !important; }
+  .bg-soft-danger { background: rgba(220, 53, 69, 0.1) !important; color: #dc3545 !important; }
+  .bg-primary-teal { background-color: var(--primary-teal) !important; color: white !important; }
+  .filter-bar { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--premium-shadow); border-radius: 12px; }
+  .search-input-group { position: relative; }
+  .search-input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #adb5bd; }
+  .search-input-group .form-control { padding-left: 42px; border-radius: 10px; border: 1px solid #e9ecef; background-color: #fff !important; }
+  .table th { font-weight: 600; color: var(--primary-teal); border-bottom: 2px solid #edf2f7; }
+  .table td { vertical-align: middle; }
+  .form-check-input:checked { background-color: var(--primary-teal); border-color: var(--primary-teal); }
+  .bulk-actions-bar { display: none; position: sticky; top: 20px; z-index: 1000; width: 100%; margin-bottom: 1.5rem; animation: slideDown 0.3s ease-out; }
+  @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .session-row:hover { background-color: rgba(60, 125, 222, 0.02); }
+</style>
 
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow border-0 rounded-3">
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="ps-4">Utilisateur</th>
-                                            <th>Email</th>
-                                            <th>Dernière Connexion</th>
-                                            <th>Expiration</th>
-                                            <th class="text-end pe-4">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for s in active_sessions %}
-                                        <tr id="session-{{ s.session_key }}">
-                                            <td class="ps-4">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-xs me-3">
-                                                        <div class="avatar-title rounded-circle bg-soft-info text-info">
-                                                            {{ s.user.username|slice:":1"|upper }}
-                                                        </div>
-                                                    </div>
-                                                    <span class="fw-medium text-dark">{{ s.user.username }}</span>
-                                                    {% if s.user == request.user %}
-                                                    <span class="badge bg-success bg-opacity-10 text-success ms-2">Vous</span>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                            <td>{{ s.user.email }}</td>
-                                            <td>{{ s.last_login|date:"d/m/Y H:i" }}</td>
-                                            <td>
-                                                <span class="text-muted small">{{ s.expire_date|date:"d/m/Y H:i" }}</span>
-                                            </td>
-                                            <td class="text-end pe-4">
-                                                {% if s.user != request.user %}
-                                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="showTerminateModal('{{ s.session_key }}', '{{ s.user.username }}')">
-                                                    <i class="ri-logout-box-r-line me-1"></i>Déconnecter
-                                                </button>
-                                                {% else %}
-                                                <span class="text-muted small italic">Session actuelle</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="5" class="text-center py-5 text-muted">
-                                                <i class="ri-user-line fs-1 d-block mb-3"></i>
-                                                <h5>Aucune session active trouvée</h5>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+
+      <!-- Glass Header -->
+      <div class="row mb-4 mt-2">
+        <div class="col-12">
+          <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="icon-box bg-soft-primary me-3">
+                <i class="ri-shield-user-line"></i>
+              </div>
+              <div>
+                <h4 class="fw-bold mb-1">Sessions Actives</h4>
+                <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb m-0 bg-transparent p-0">
+                    <li class="breadcrumb-item text-muted">Administration</li>
+                    <li class="breadcrumb-item active fw-medium" style="color: var(--primary-teal)" aria-current="page">Sessions</li>
+                  </ol>
+                </nav>
+              </div>
             </div>
+            <div class="d-flex gap-2 align-items-center">
+              <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fs-12">
+                <i class="ri-checkbox-circle-line me-1"></i> Serveur Actif
+              </span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="row mb-4">
+        <div class="col-xl-4 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Sessions Actives</p>
+              <h2 class="fw-bold mb-0" style="color: var(--primary-teal)">{{ active_sessions|length }}</h2>
+            </div>
+            <div class="icon-box bg-soft-primary"><i class="ri-shield-user-line"></i></div>
+          </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Session Courante</p>
+              <h2 class="fw-bold mb-0 text-success">1</h2>
+            </div>
+            <div class="icon-box bg-soft-success"><i class="ri-user-line"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div id="bulkActionsBar" class="bulk-actions-bar">
+        <div class="glass-card bg-primary-teal border-0 p-3 shadow-lg">
+          <div class="d-flex align-items-center justify-content-between text-white flex-wrap gap-2">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-pill px-3 py-1 me-3">
+                <span id="selectedCount" class="fw-bold">0</span> sélectionnés
+              </div>
+              <h6 class="mb-0 fw-medium">Actions groupées :</h6>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-danger btn-sm rounded-pill px-3" id="bulkTerminate">
+                <i class="ri-logout-box-r-line me-1"></i> Déconnecter la sélection
+              </button>
+              <button class="btn btn-link text-white text-decoration-none ms-2" id="clearSelection">
+                <i class="ri-refresh-line me-1"></i> Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar p-3 mb-4">
+        <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+          <div class="search-input-group flex-grow-1">
+            <i class="ri-search-line"></i>
+            <input type="text" id="sessionSearch" class="form-control" placeholder="Rechercher un utilisateur...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Sessions Table -->
+      <div class="glass-card overflow-hidden">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="bg-light bg-opacity-50">
+                <tr>
+                  <th class="border-0 px-4 py-3" style="width: 50px;">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAll"></div>
+                  </th>
+                  <th class="border-0 py-3">Utilisateur</th>
+                  <th class="border-0 py-3">Email</th>
+                  <th class="border-0 py-3">Dernière Connexion</th>
+                  <th class="border-0 py-3">Expiration</th>
+                  <th class="border-0 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sessionsTableBody">
+                {% for s in active_sessions %}
+                <tr class="session-row" id="session-{{ s.session_key }}" data-username="{{ s.user.username|lower }}">
+                  <td class="px-4">
+                    <div class="form-check">
+                      {% if s.user != request.user %}
+                      <input class="form-check-input row-checkbox" type="checkbox" value="{{ s.session_key }}">
+                      {% else %}
+                      <input class="form-check-input" type="checkbox" disabled title="Votre session">
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="icon-box bg-soft-primary me-3" style="width:38px;height:38px;font-size:1rem;">
+                        {{ s.user.username|slice:":1"|upper }}
+                      </div>
+                      <div>
+                        <span class="fw-medium text-dark">{{ s.user.username }}</span>
+                        {% if s.user == request.user %}
+                        <span class="badge bg-success-subtle text-success ms-2 rounded-pill px-2">Vous</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-muted small">{{ s.user.email }}</td>
+                  <td>
+                    <div class="d-flex align-items-center text-muted small">
+                      <i class="ri-calendar-line me-1"></i>
+                      {{ s.last_login|date:"d/m/Y H:i" }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-muted small rounded-pill px-3">{{ s.expire_date|date:"d/m/Y H:i" }}</span>
+                  </td>
+                  <td class="text-center">
+                    {% if s.user != request.user %}
+                    <button class="btn btn-danger btn-sm rounded-pill px-3" onclick="showTerminateModal('{{ s.session_key }}', '{{ s.user.username }}')">
+                      <i class="ri-logout-box-r-line me-1"></i>Déconnecter
+                    </button>
+                    {% else %}
+                    <span class="badge bg-light text-muted rounded-pill px-3">Session courante</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-5">
+                    <div class="icon-box bg-soft-primary mx-auto mb-4" style="width:64px;height:64px;font-size:2rem;">
+                      <i class="ri-user-line"></i>
+                    </div>
+                    <h5 class="text-muted mb-0">Aucune session active</h5>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
+  </div>
 </div>
 
 <!-- Terminate Session Modal -->
 <div class="modal fade" id="terminateModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
-                <h5 class="modal-title fw-semibold text-danger">
-                    <i class="ri-alert-line me-2"></i>Confirmer la déconnexion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="mb-0">Êtes-vous sûr de vouloir déconnecter l'utilisateur <strong id="modalUsername"></strong> ?</p>
-                <p class="text-muted small mt-2 mb-0">Cette action prendra effet immédiatement et l'utilisateur devra se reconnecter.</p>
-            </div>
-            <div class="modal-footer border-0 bg-light px-4 py-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-danger" id="confirmTerminateBtn">
-                    <i class="ri-logout-box-r-line me-1"></i>Déconnecter
-                </button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="icon-box bg-danger bg-opacity-10 me-3" style="width:44px;height:44px;font-size:1.2rem;">
+            <i class="ri-alert-line text-danger"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-danger mb-0">Confirmer la déconnexion</h5>
+            <p class="text-muted small mb-0">Cette action prendra effet immédiatement</p>
+          </div>
         </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="mb-1">Êtes-vous sûr de vouloir déconnecter l'utilisateur <strong id="modalUsername"></strong> ?</p>
+        <p class="text-muted small mt-2 mb-0">L'utilisateur devra se reconnecter pour accéder à la plateforme.</p>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3">
+        <div class="hstack gap-2 justify-content-end">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal"><i class="ri-close-line me-1"></i>Annuler</button>
+          <button type="button" class="btn btn-danger px-4" id="confirmTerminateBtn">
+            <i class="ri-logout-box-r-line me-1"></i>Déconnecter
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
@@ -115,6 +237,33 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSessionKey = null;
     const terminateModal = new bootstrap.Modal(document.getElementById('terminateModal'));
 
+    // Search filter
+    document.getElementById('sessionSearch').addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        document.querySelectorAll('.session-row').forEach(function(row) {
+            row.style.display = row.dataset.username.includes(term) ? '' : 'none';
+        });
+    });
+
+    // Bulk Actions
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = this.checked);
+        updateBulkBar();
+    });
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-checkbox')) updateBulkBar();
+    });
+    function updateBulkBar() {
+        const count = document.querySelectorAll('.row-checkbox:checked').length;
+        document.getElementById('selectedCount').textContent = count;
+        document.getElementById('bulkActionsBar').style.display = count > 0 ? 'block' : 'none';
+    }
+    document.getElementById('clearSelection').addEventListener('click', function() {
+        document.querySelectorAll('.row-checkbox, #selectAll').forEach(cb => cb.checked = false);
+        updateBulkBar();
+    });
+
+    // Single Terminate
     window.showTerminateModal = function(sessionKey, username) {
         currentSessionKey = sessionKey;
         document.getElementById('modalUsername').textContent = username;
@@ -122,38 +271,44 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     document.getElementById('confirmTerminateBtn').addEventListener('click', function() {
-        if (currentSessionKey) {
-            terminateSession(currentSessionKey);
+        if (currentSessionKey) terminateSession([currentSessionKey]);
+    });
+
+    // Bulk Terminate
+    document.getElementById('bulkTerminate').addEventListener('click', function() {
+        const keys = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+        if (keys.length > 0) {
+            if (confirm(`Déconnecter ${keys.length} utilisateur(s) ?`)) {
+                keys.forEach(key => terminateSession([key], true));
+                document.querySelectorAll('.row-checkbox, #selectAll').forEach(cb => cb.checked = false);
+                updateBulkBar();
+            }
         }
     });
 
-    function terminateSession(sessionKey) {
-        fetch("{% url 'institut_app:terminate_session' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                session_key: sessionKey
+    function terminateSession(sessionKeys, silent = false) {
+        sessionKeys.forEach(function(sessionKey) {
+            fetch("{% url 'institut_app:terminate_session' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ session_key: sessionKey })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            terminateModal.hide();
-            if (data.status === 'success') {
-                document.getElementById('session-' + sessionKey).remove();
-                alertify.success(data.message);
-            } else {
-                alertify.error(data.message);
-            }
-            currentSessionKey = null;
-        })
-        .catch(error => {
-            terminateModal.hide();
-            console.error('Error:', error);
-            alertify.error("Une erreur s'est produite.");
-            currentSessionKey = null;
+            .then(r => r.json())
+            .then(data => {
+                if (!silent) terminateModal.hide();
+                if (data.status === 'success') {
+                    const row = document.getElementById('session-' + sessionKey);
+                    if (row) row.remove();
+                    if (!silent) alertify.success(data.message);
+                } else {
+                    if (!silent) alertify.error(data.message);
+                }
+                currentSessionKey = null;
+            })
+            .catch(error => {
+                if (!silent) { terminateModal.hide(); alertify.error("Une erreur s'est produite."); }
+                currentSessionKey = null;
+            });
         });
     }
 });

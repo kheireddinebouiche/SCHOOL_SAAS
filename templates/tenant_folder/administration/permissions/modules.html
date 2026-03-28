@@ -4,90 +4,166 @@
 
 {% block content %}
 <style>
-  .search-box {
-    position: relative;
+  :root {
+    --primary-teal: #3c7dde;
+    --secondary-teal: #2a6bcc;
+    --primary-gradient: linear-gradient(135deg, #3c7dde 0%, #163F6C 100%);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+    --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   }
-  .search-box .search-icon {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
+
+  .text-primary-teal { color: var(--primary-teal) !important; }
+  .bg-primary-teal { background-color: var(--primary-teal) !important; color: white !important; }
+  .btn-primary-teal { 
+    background-color: var(--primary-teal) !important; 
+    border-color: var(--primary-teal) !important; 
+    color: white !important; 
+    transition: all 0.3s;
   }
+  .btn-primary-teal:hover { 
+    background-color: var(--secondary-teal) !important; 
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(60, 125, 222, 0.2);
+  }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--glass-shadow);
+  }
+
+  .icon-box {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.5rem;
+  }
+
+  /* Filter Bar Harmonization */
+  .filter-bar {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--premium-shadow);
+      border-radius: 12px;
+  }
+
+  .search-input-group {
+      position: relative;
+  }
+  .search-input-group i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #adb5bd;
+  }
+  .search-input-group .form-control {
+      padding-left: 42px;
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+      background-color: #fff !important;
+  }
+
+  /* Bulk Actions Bar */
+  .bulk-actions-bar {
+    display: none;
+    position: sticky;
+    top: 20px;
+    z-index: 1000;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .stat-card {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: var(--premium-shadow);
+    border-radius: 1.25rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .bg-soft-primary { background: rgba(60, 125, 222, 0.1) !important; color: #3c7dde !important; }
+  .bg-soft-success { background: rgba(16, 185, 129, 0.1) !important; color: #059669 !important; }
+  .bg-soft-warning { background: rgba(245, 158, 11, 0.1) !important; color: #d97706 !important; }
+  .bg-soft-info { background: rgba(13, 148, 136, 0.1) !important; color: #0d9488 !important; }
+
+  /* Module Card (Grid View) */
+  .module-card {
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      background: #fff;
+      height: 100%;
+  }
+  .module-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  }
+  .card-accent-bar { height: 4px; width: 100%; }
+
+  .btn-rounded { border-radius: 10px; }
+  .btn-pill { border-radius: 50px; }
+
   .table th {
     font-weight: 600;
-    background-color: #f8f9fa;
+    color: var(--primary-teal);
+    background-color: transparent !important;
+    border-bottom: 2px solid #edf2f7;
   }
-  .table td {
-    vertical-align: middle;
-  }
-  .badge {
-    padding: 0.5em 1em;
-    font-weight: 500;
-  }
-  .dropdown-item {
-    padding: 0.5rem 1rem;
-  }
-  .dropdown-item i {
-    width: 1.2rem;
-  }
-  .btn-group .btn {
-    padding: 0.375rem 0.75rem;
-  }
-  .modal-header .btn-close:focus {
-    box-shadow: none;
+  .table td { vertical-align: middle; }
+  
+  /* Select2/Checkboxes Styling */
+  .form-check-input:checked {
+      background-color: var(--primary-teal);
+      border-color: var(--primary-teal);
   }
 
-  /* Module status badges */
-  .status-active {
-    background-color: #d4edda;
-    color: #155724;
-  }
-  .status-inactive {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-
-  /* Fix dropdown z-index issue */
-  .table-responsive {
-    overflow-x: visible;
-  }
-
-  .table td.text-end {
-    position: relative;
-    overflow: visible;
-  }
-
-  .table .dropdown-menu {
-    z-index: 1050;
-    position: absolute;
-  }
+  .breadcrumb-item + .breadcrumb-item::before { color: #adb5bd; }
 </style>
 
 <div class="main-content">
   <div class="page-content bg-light">
     <div class="container-fluid">
       <!-- start page title -->
-      <div class="row mb-3">
+      <div class="row mb-4 mt-2">
         <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+          <div class="glass-card p-4 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="fas fa-cube text-info"></i>
+              <div class="icon-box bg-soft-primary me-3">
+                <i class="ri-apps-2-line"></i>
               </div>
-              <h4 class="mb-0 text-info">Gestion des Modules</h4>
+              <div>
+                <h4 class="fw-bold mb-1">Gestion des Modules</h4>
+                <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb m-0 bg-transparent p-0">
+                    <li class="breadcrumb-item text-muted">Administration</li>
+                    <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Modules</li>
+                  </ol>
+                </nav>
+              </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);">Configuration</a>
-                  </li>
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);">Administration</a>
-                  </li>
-                  <li class="breadcrumb-item active">Modules</li>
-                </ol>
-              </nav>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-primary btn-rounded px-4" id="addModuleBtnTop">
+                <i class="ri-add-line align-bottom me-1"></i> Nouveau Module
+              </button>
             </div>
           </div>
         </div>
@@ -95,154 +171,170 @@
       <!-- end page title -->
       
       <div class="row">
-        <!-- KPIs Section -->
-        <div class="col-12 mb-4">
-          <div class="row g-3">
-            <!-- Total Modules -->
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
+      <!-- Bulk Actions Bar -->
+      <div id="bulkActionsBar" class="bulk-actions-bar">
+          <div class="glass-card bg-primary-teal border-0 p-3 shadow-lg">
+              <div class="d-flex align-items-center justify-content-between text-white flex-wrap gap-2">
                   <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                      <i class="ri-cube-line text-primary fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="mb-1 text-muted">Total Modules</h5>
-                      <h3 class="mb-0 fw-bold" id="totalModules">0</h3>
-                    </div>
+                      <div class="bg-white bg-opacity-20 rounded-pill px-3 py-1 me-3">
+                          <span id="selectedCount" class="fw-bold">0</span> sélectionnés
+                      </div>
+                      <h6 class="mb-0 fw-medium">Actions groupées :</h6>
                   </div>
-                </div>
+                  <div class="d-flex gap-2">
+                      <button class="btn btn-light btn-sm rounded-pill px-3" id="bulkActivate">
+                          <i class="ri-check-line me-1 text-success"></i> Activer
+                      </button>
+                      <button class="btn btn-light btn-sm rounded-pill px-3" id="bulkDeactivate">
+                          <i class="ri-close-line me-1 text-warning"></i> Désactiver
+                      </button>
+                      <button class="btn btn-danger btn-sm rounded-pill px-3" id="bulkDelete">
+                          <i class="ri-delete-bin-line me-1"></i> Supprimer
+                      </button>
+                      <button class="btn btn-link text-white text-decoration-none ms-2" id="clearSelection">
+                          <i class="ri-refresh-line me-1"></i> Annuler
+                      </button>
+                  </div>
               </div>
-            </div>
+          </div>
+      </div>
 
-            <!-- Modules Actifs -->
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0 bg-success bg-opacity-10 rounded-circle p-3 me-3">
-                      <i class="ri-check-line text-success fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="mb-1 text-muted">Actifs</h5>
-                      <h3 class="mb-0 fw-bold" id="activeModules">0</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <!-- Statistics Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Total Modules</p>
+              <h2 class="fw-bold mb-0 text-primary" id="totalModules">0</h2>
             </div>
-
-            <!-- Modules Inactifs -->
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded-circle p-3 me-3">
-                      <i class="ri-close-line text-warning fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="mb-1 text-muted">Inactifs</h5>
-                      <h3 class="mb-0 fw-bold" id="inactiveModules">0</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Types de Modules -->
-            <div class="col-md-3">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0 bg-info bg-opacity-10 rounded-circle p-3 me-3">
-                      <i class="ri-apps-line text-info fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="mb-1 text-muted">Types</h5>
-                      <h3 class="mb-0 fw-bold" id="moduleTypes">0</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="icon-box bg-soft-primary">
+              <i class="ri-cube-line"></i>
             </div>
           </div>
         </div>
+        
+        <div class="col-xl-3 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Actifs</p>
+              <h2 class="fw-bold mb-0 text-success" id="activeModules">0</h2>
+            </div>
+            <div class="icon-box bg-soft-success">
+              <i class="ri-check-line"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Inactifs</p>
+              <h2 class="fw-bold mb-0 text-warning" id="inactiveModules">0</h2>
+            </div>
+            <div class="icon-box bg-soft-warning">
+              <i class="ri-close-line"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+          <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Types de Modules</p>
+              <h2 class="fw-bold mb-0 text-info" id="moduleTypes">0</h2>
+            </div>
+            <div class="icon-box bg-soft-info">
+              <i class="ri-apps-line"></i>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-filter text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Filtres</h5>
-                </div>
-
-                <div class="d-flex align-items-center gap-3">
-                  <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
-                    <i class="fas fa-search text-muted search-icon"></i>
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="filter-bar p-3 mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                  <div class="search-input-group flex-grow-1">
+                    <i class="ri-search-line"></i>
+                    <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un module...">
                   </div>
-                  <select id="filter-module-status" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="">Tous les statuts</option>
-                    <option value="active">Actifs</option>
-                    <option value="inactive">Inactifs</option>
-                  </select>
-
-                  <select id="date_filter-module" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="">Trier par date</option>
-                    <option value="-created_at">Date (récent)</option>
-                    <option value="created_at">Date (ancien)</option>
-                  </select>
-
-                  <div class="btn-group">
-                    <button id="importModuleBtn" type="button" class="btn btn-outline-secondary rounded-pill me-2">
-                        <i class="ri-upload-cloud-line me-1"></i> Importer
-                    </button>
-                    <button id="exportModuleBtn" type="button" class="btn btn-outline-secondary rounded-pill me-2">
-                        <i class="ri-download-cloud-line me-1"></i> Exporter
-                    </button>
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select id="filter-module-status" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
+                      <option value="">Tous les statuts</option>
+                      <option value="active">Actifs</option>
+                      <option value="inactive">Inactifs</option>
+                    </select>
+                    <select id="date_filter-module" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
+                      <option value="">Trier par date</option>
+                      <option value="-created_at">Date (récent)</option>
+                      <option value="created_at">Date (ancien)</option>
+                    </select>
+                    <div class="vr mx-1 d-none d-md-block" style="height: 24px;"></div>
+                    <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group">
+                      <button type="button" class="btn btn-white border-0 px-3 active" id="btn-list-view" title="Vue Liste">
+                        <i class="ri-list-check"></i>
+                      </button>
+                      <button type="button" class="btn btn-white border-0 px-3" id="btn-grid-view" title="Vue Grille">
+                        <i class="ri-grid-fill"></i>
+                      </button>
+                    </div>
+                    <div class="dropdown ms-2">
+                      <button class="btn btn-soft-secondary btn-rounded px-3" type="button" data-bs-toggle="dropdown">
+                        <i class="ri-more-2-fill"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 glass-card">
+                        <li><a class="dropdown-item" href="#" id="importModuleBtn"><i class="ri-upload-cloud-line me-2 text-primary"></i> Importer</a></li>
+                        <li><a class="dropdown-item" href="#" id="exportModuleBtn"><i class="ri-download-cloud-line me-2 text-success"></i> Exporter</a></li>
+                      </ul>
+                    </div>
                   </div>
-                  <input type="file" id="importModuleInput" accept=".json" style="display: none;">
-
-                  <button id="addModuleBtn" type="button" class="btn btn-primary rounded-pill">
-                    <i class="ri-add-line me-1"></i> Nouveau module
-                  </button>
                 </div>
               </div>
-            </div>
-            <div class="card-body p-3" id="cardContentBody">
-              <div class="table-responsive" style="overflow-x: visible;">
-                <table id="example" class="table table-hover align-middle mb-0">
-                  <thead class="bg-light">
-                    <tr>
-                      <th class="border-0 rounded-start">Nom</th>
-                      <th class="border-0">Description</th>
-                      <th class="border-0">Statut</th>
-                      <th class="border-0">Date de création</th>
-                      <th class="border-0">Dernière modification</th>
-                      <th class="border-0 rounded-end text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="listeModules" class="border-top-0">
-                    <!-- Module rows will be populated by JavaScript -->
-                  </tbody>
-                </table>
 
-                <!-- Empty state -->
-                <div id="noModulesMessage" class="text-center py-5" style="display: none;">
+              <!-- Content Area -->
+              <div id="moduleContentBody">
+                <!-- List View -->
+                <div id="listView" class="glass-card mb-4 overflow-hidden">
+                  <div class="card-body p-0">
+                    <div class="table-responsive" style="overflow-x: visible;">
+                      <table id="example" class="table table-hover align-middle mb-0 mt-0">
+                        <thead class="bg-light bg-opacity-50">
+                          <tr>
+                            <th class="border-0 px-4 py-3" style="width: 40px;">
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                              </div>
+                            </th>
+                            <th class="border-0 py-3">Module</th>
+                            <th class="border-0 py-3">Description</th>
+                            <th class="border-0 py-3 text-center">Statut</th>
+                            <th class="border-0 py-3">Date de création</th>
+                            <th class="border-0 py-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="listeModules" class="border-top-0"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Grid View -->
+                <div id="gridView" class="row g-4 d-none mb-4"></div>
+
+                <!-- Empty State -->
+                <div id="noModulesMessage" class="text-center py-5 glass-card mb-4" style="display: none;">
                   <div class="avatar-lg mx-auto mb-4 bg-light-subtle rounded-circle d-flex align-items-center justify-content-center">
                     <i class="ri-cube-line text-muted fs-1"></i>
                   </div>
                   <h5 class="mb-2">Aucun module trouvé</h5>
                   <p class="text-muted mb-4">Il n'y a aucun module enregistré pour le moment</p>
-                  <button id="addModuleEmptyStateBtn" class="btn btn-primary">
+                  <button id="addModuleEmptyStateBtn" class="btn btn-primary btn-rounded px-4">
                     <i class="ri-add-line me-1"></i> Créer un module
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
       </div>
     </div>
     <!-- container-fluid -->
@@ -621,119 +713,186 @@
 </div>
 
 <script>
-  $(document).ready(function(){
-    // Load initial modules data (this would typically come from an API)
-    function loadModules() {
-      // Show loading state while fetching data
-      $('#listeModules').empty();
-      $('#noModulesMessage').hide();
+  $(document).ready(function() {
+    var originalData = [];
 
+    // Initialize View
+    function setView(viewType) {
+        if (viewType === 'grid') {
+            $('#gridView').removeClass('d-none');
+            $('#listView').addClass('d-none');
+            $('#btn-grid-view').addClass('active');
+            $('#btn-list-view').removeClass('active');
+        } else {
+            $('#gridView').addClass('d-none');
+            $('#listView').removeClass('d-none');
+            $('#btn-grid-view').removeClass('active');
+            $('#btn-list-view').addClass('active');
+        }
+    }
+
+    $('#btn-grid-view').on('click', function() { setView('grid'); });
+    $('#btn-list-view').on('click', function() { setView('list'); });
+    setView('list');
+
+    // Bulk Actions Management
+    $(document).on('change', '.row-checkbox', function() {
+        updateBulkActionsBar();
+    });
+
+    $('#selectAll').on('change', function() {
+        $('.row-checkbox').prop('checked', $(this).is(':checked'));
+        updateBulkActionsBar();
+    });
+
+    function updateBulkActionsBar() {
+        var selectedCount = $('.row-checkbox:checked').length;
+        $('#selectedCount').text(selectedCount);
+        if (selectedCount > 0) {
+            $('#bulkActionsBar').fadeIn();
+        } else {
+            $('#bulkActionsBar').fadeOut();
+        }
+    }
+
+    $('#clearSelection').on('click', function() {
+        $('.row-checkbox, #selectAll').prop('checked', false);
+        updateBulkActionsBar();
+    });
+    // Load initial modules data
+    function loadModules() {
       $.ajax({
         url : "{% url 'institut_app:ApiListeModules' %}",
         dataType: "JSON",
         type : "GET",
         success: function(data){
-          var modules = data;
-
-          var tbody = $('#listeModules');
-          tbody.empty();
-
-          var activeCount = 0;
-          var inactiveCount = 0;
-
-          if (modules.length === 0) {
-            // Show empty state message
-            $('#listeModules').hide();
-            $('#noModulesMessage').show();
-          } else {
-            // Hide empty state message and show table
-            $('#noModulesMessage').hide();
-            $('#listeModules').show();
-
-            modules.forEach(function(module) {
-              if (module.is_active) {
-                activeCount++;
-              } else {
-                inactiveCount++;
-              }
-
-              var statusClass = module.is_active ? 'status-active' : 'status-inactive';
-              var statusText = module.is_active ? 'Actif' : 'Inactif';
-              var statusIcon = module.is_active ? 'ri-check-line' : 'ri-close-line';
-
-              var row = `
-                <tr data-module-id="${module.id}">
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <i class="ri-cube-line text-primary me-2"></i>
-                      <div>
-                        <span class="fw-semibold">${module.name_display}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>${module.description || '--'}</td>
-                  <td>
-                    <span class="badge ${statusClass}">
-                      <i class="${statusIcon} me-1"></i>
-                      ${statusText}
-                    </span>
-                  </td>
-                  <td>${module.created_at}</td>
-                  <td>${module.updated_at}</td>
-                  <td class="text-end">
-                    <div class="dropdown d-inline-block">
-                      <button class="btn btn-soft-primary btn-sm dropdown-toggle shadow-none" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
-                        <i class="ri-more-2-fill"></i>
-                      </button>
-                      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 p-2" style="min-width: 200px;">
-                        <li>
-                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 edit-module" data-module-id="${module.id}">
-                            <i class="ri-edit-line text-primary me-2"></i>Modifier
-                          </a>
-                        </li>
-                        <li>
-                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 toggle-status" data-module-id="${module.id}">
-                            <i class="ri-toggle-line text-info me-2"></i>Changer statut
-                          </a>
-                        </li>
-                        <li>
-                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 configure-permissions" data-module-id="${module.id}">
-                            <i class="ri-settings-3-line text-warning me-2"></i>Configurer les permissions
-                          </a>
-                        </li>
-                        <li>
-                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 view-permissions" data-module-id="${module.id}">
-                            <i class="ri-list-check text-info me-2"></i>Liste des permissions
-                          </a>
-                        </li>
-                        <li><hr class="dropdown-divider my-1"></li>
-                        <li>
-                          <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-module" data-module-id="${module.id}">
-                            <i class="ri-delete-bin-line me-2"></i>Supprimer
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-              `;
-              tbody.append(row);
-            });
-          }
-
-          // Update KPIs
-          $('#totalModules').text(modules.length);
-          $('#activeModules').text(activeCount);
-          $('#inactiveModules').text(inactiveCount);
-          $('#moduleTypes').text(modules.length);
+          originalData = data;
+          applyFilters();
         },
         error: function(xhr, status, error) {
-          // In case of error, show empty state
-          $('#listeModules').hide();
           $('#noModulesMessage').show();
           console.error("Error loading modules: " + error);
         }
       });
+    }
+
+    function renderData(data) {
+      var tbody = $('#listeModules');
+      var gridView = $('#gridView');
+      tbody.empty();
+      gridView.empty();
+
+      // Stats
+      var activeCount = 0;
+      var inactiveCount = 0;
+      originalData.forEach(function(m) {
+          if (m.is_active) activeCount++;
+          else inactiveCount++;
+      });
+      $('#totalModules').text(originalData.length);
+      $('#activeModules').text(activeCount);
+      $('#inactiveModules').text(inactiveCount);
+      $('#moduleTypes').text(originalData.length);
+
+      if (data.length === 0) {
+        $('#moduleContentBody > div:not(#noModulesMessage)').addClass('d-none');
+        $('#noModulesMessage').show();
+      } else {
+        $('#noModulesMessage').hide();
+        if ($('#btn-grid-view').hasClass('active')) {
+            $('#gridView').removeClass('d-none');
+        } else {
+            $('#listView').removeClass('d-none');
+        }
+
+        data.forEach(function(module) {
+          var statusClass = module.is_active ? 'success' : 'danger';
+          var statusBadge = `<span class="badge bg-${statusClass}-subtle text-${statusClass} border border-${statusClass} border-opacity-25 px-3 rounded-pill">${module.is_active ? 'Actif' : 'Inactif'}</span>`;
+          
+          // List View Row
+          var row = `
+            <tr data-module-id="${module.id}">
+              <td class="px-4">
+                <div class="form-check">
+                  <input class="form-check-input row-checkbox" type="checkbox" value="${module.id}">
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="icon-box bg-soft-primary me-3" style="width: 35px; height: 35px; font-size: 1rem;">
+                    <i class="ri-cube-line"></i>
+                  </div>
+                  <span class="fw-bold">${module.name_display}</span>
+                </div>
+              </td>
+              <td class="small text-muted">${module.description || '--'}</td>
+              <td class="text-center">${statusBadge}</td>
+              <td class="small">${module.created_at}</td>
+              <td class="text-center">
+                <div class="dropdown">
+                  <button class="btn btn-soft-primary btn-sm rounded-pill" type="button" data-bs-toggle="dropdown">
+                    <i class="ri-more-2-fill"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2">
+                    <li><a class="dropdown-item edit-module" href="#" data-module-id="${module.id}"><i class="ri-edit-line text-primary me-2"></i> Modifier</a></li>
+                    <li><a class="dropdown-item toggle-status" href="#" data-module-id="${module.id}"><i class="ri-toggle-line text-info me-2"></i> Statut</a></li>
+                    <li><a class="dropdown-item configure-permissions" href="#" data-module-id="${module.id}"><i class="ri-settings-3-line text-warning me-2"></i> Permissions</a></li>
+                    <li><hr class="dropdown-divider my-1 opacity-50"></li>
+                    <li><a class="dropdown-item text-danger delete-module" href="#" data-module-id="${module.id}"><i class="ri-delete-bin-line me-2"></i> Supprimer</a></li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+          `;
+          tbody.append(row);
+
+          // Grid View Card
+          var card = `
+            <div class="col-xxl-3 col-md-4 col-sm-6">
+              <div class="module-card glass-card d-flex flex-column h-100 position-relative">
+                <div class="position-absolute top-0 start-0 p-3" style="z-index: 2;">
+                  <div class="form-check">
+                    <input class="form-check-input row-checkbox" type="checkbox" value="${module.id}">
+                  </div>
+                </div>
+                <div class="card-accent-bar bg-${statusClass}"></div>
+                <div class="card-body p-4 pt-5">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="avatar-sm">
+                      <div class="avatar-title bg-soft-primary text-primary rounded-3 fs-3">
+                        <i class="ri-cube-line"></i>
+                      </div>
+                    </div>
+                    ${statusBadge}
+                  </div>
+                  <h5 class="fw-bold mb-1">${module.name_display}</h5>
+                  <p class="text-muted small mb-3 text-truncate-2" style="height: 40px;">${module.description || 'Aucune description'}</p>
+                  
+                  <div class="mt-auto">
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-primary-teal btn-rounded btn-sm flex-grow-1 fw-bold edit-module" data-module-id="${module.id}">
+                        Modifier
+                      </button>
+                      <div class="dropdown">
+                        <button class="btn btn-soft-secondary btn-rounded btn-sm px-2" type="button" data-bs-toggle="dropdown">
+                          <i class="ri-more-2-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 glass-card p-2">
+                          <li><a class="dropdown-item configure-permissions" href="#" data-module-id="${module.id}"><i class="ri-settings-3-line text-warning me-2"></i> Permissions</a></li>
+                          <li><a class="dropdown-item toggle-status" href="#" data-module-id="${module.id}"><i class="ri-toggle-line text-info me-2"></i> Statut</a></li>
+                          <li><hr class="dropdown-divider opacity-50"></li>
+                          <li><a class="dropdown-item text-danger delete-module" href="#" data-module-id="${module.id}"><i class="ri-delete-bin-line me-2"></i> Supprimer</a></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          gridView.append(card);
+        });
+      }
     }
     
     // Load modules on page load
@@ -741,44 +900,31 @@
     
     // Handle table filtering
     $('#table-filter').on('input', function() {
-      var searchTerm = $(this).val().toLowerCase();
-      $('#listeModules tr').each(function() {
-        var $row = $(this);
-        var rowText = $row.text().toLowerCase();
-        
-        if (rowText.indexOf(searchTerm) > -1) {
-          $row.show();
-        } else {
-          $row.hide();
-        }
-      });
+      applyFilters();
     });
     
     // Handle status filter
     $('#filter-module-status').on('change', function() {
-      var statusFilter = $(this).val();
-      $('#listeModules tr').each(function() {
-        var $row = $(this);
-        var isActive = $row.find('span.status-active').length > 0;
-        var isInactive = $row.find('span.status-inactive').length > 0;
-        
-        if (statusFilter === 'active') {
-          if (isActive) {
-            $row.show();
-          } else {
-            $row.hide();
-          }
-        } else if (statusFilter === 'inactive') {
-          if (isInactive) {
-            $row.show();
-          } else {
-            $row.hide();
-          }
-        } else {
-          $row.show();
-        }
-      });
+      applyFilters();
     });
+
+    function applyFilters() {
+      var searchTerm = $('#table-filter').val().toLowerCase();
+      var statusFilter = $('#filter-module-status').val();
+
+      var filteredData = originalData.filter(function(module) {
+        var rowText = (module.name_display + module.name + (module.description || '')).toLowerCase();
+        var matchesSearch = rowText.indexOf(searchTerm) > -1;
+        var matchesStatus = true;
+
+        if (statusFilter === 'active') matchesStatus = module.is_active;
+        else if (statusFilter === 'inactive') matchesStatus = !module.is_active;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      renderData(filteredData);
+    }
     
     // Handle sort filter
     $('#date_filter-module').on('change', function() {
