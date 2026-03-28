@@ -308,3 +308,5 @@ TINYMCE_DEFAULT_CONFIG = {
     'object_resizing' : True,
     'forced_root_block': False,  
 }
+
+# Trigger reload

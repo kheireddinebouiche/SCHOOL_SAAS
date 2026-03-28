@@ -35,10 +35,46 @@ def listSpecialites(request):
 
 @login_required(login_url="institut_app:login")
 def listFormations(request):
-    formations = Formation.objects.all()
+    # Optimisation avec prefetch_related pour éviter les requêtes N+1
+    formations = Formation.objects.all().prefetch_related(
+        'formation_specilite', 
+        'formation_specilite__modules_set',
+        'dossierinscription_set'
+    )
+    
+    any_missing = False
+    for f in formations:
+        f.missing_info = []
+        # Vérification des champs de base
+        if not f.type_formation: f.missing_info.append("Type")
+        if not f.prix_formation or f.prix_formation == 0: f.missing_info.append("Prix")
+        if not f.frais_inscription or f.frais_inscription == 0: f.missing_info.append("Frais")
+        if not f.duree: f.missing_info.append("Durée")
+        if not f.partenaire: f.missing_info.append("Partenaire")
+        if not f.entite_legal: f.missing_info.append("Entité")
+        if not f.description: f.missing_info.append("Description")
+        if not f.qualification: f.missing_info.append("Qualification")
+        
+        # Vérification du Dossier d'Inscription
+        if not f.dossierinscription_set.exists():
+            f.missing_info.append("Dossier")
+
+        # Vérification de l'architecture (Spécialités et Modules)
+        specs = f.formation_specilite.all()
+        if not specs:
+            f.missing_info.append("Spécialités")
+        else:
+            for s in specs:
+                if not s.modules_set.exists():
+                    f.missing_info.append(f"Modules ({s.label})")
+        
+        if f.missing_info:
+            any_missing = True
+
     context = {
         'liste': formations,
         'tenant' : request.tenant,
+        'has_any_missing': any_missing
     }
     return render(request, 'tenant_folder/formations/liste_des_formations.html', context)
 
