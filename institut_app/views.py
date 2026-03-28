@@ -854,11 +854,11 @@ def GetMyProfile(request):
 
 @login_required(login_url='institut_app:login')    
 def UpdateMyProfile(request):
-    form = ProfileUpdateForm(instance=request.user.profile)
+    form = UserProfileEditForm(instance=request.user)
     if request.method == "POST":
-        form = ProfileUpdateForm(request.POST, request.FILES)
+        form = UserProfileEditForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
-            
+            form.save()
             messages.success(request, "Votre profile a été mis à jour avec succès")
             return redirect('institut_app:profile')
         else:

@@ -125,3 +125,18 @@ class ProfileUpdateForm(forms.ModelForm):
           
             'image' : forms.ClearableFileInput(attrs={'class' : 'form-control'})
         }
+
+class UserProfileEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name']
+        labels = {
+            'email': 'Adresse email',
+            'first_name': 'Prénom',
+            'last_name': 'Nom',
+        }
+        widgets = {
+            'email' : forms.EmailInput(attrs={'class' : 'form-control'}),
+            'first_name' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'last_name' : forms.TextInput(attrs={'class' : 'form-control'}),
+        }
