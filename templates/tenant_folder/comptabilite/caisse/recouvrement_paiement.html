@@ -70,6 +70,47 @@
         justify-content: center;
         border-radius: 12px;
     }
+
+    /* Empty State */
+    .empty-state-container {
+        display: none;
+        animation: fadeInUp 0.4s ease;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .empty-state-icon-wrapper {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.15));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        border: 2px dashed rgba(99,102,241,0.25);
+    }
+    .empty-state-icon-wrapper i {
+        font-size: 3rem;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+    .empty-state-subtitle {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        max-width: 380px;
+        margin: 0 auto 1.75rem;
+        line-height: 1.6;
+    }
 </style>
 
 <div class="main-content">
@@ -189,24 +230,42 @@
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0" id="recouvrementTable">
-                                    <thead>
-                                        <tr>
-                                            <th>N° Paiement</th>
-                                            <th>Reçu le</th>
-                                            <th>Client</th>
-                                            <th>Entité</th>
-                                            <th>Montant</th>
-                                            <th>Mode</th>
-                                            <th>Référence</th>
-                                            <th class="text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Data populated via AJAX -->
-                                    </tbody>
-                                </table>
+                            <!-- Table -->
+                            <div id="tableWrapper">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="recouvrementTable">
+                                        <thead>
+                                            <tr>
+                                                <th>N° Paiement</th>
+                                                <th>Reçu le</th>
+                                                <th>Client</th>
+                                                <th>Entité</th>
+                                                <th>Montant</th>
+                                                <th>Mode</th>
+                                                <th>Référence</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Data populated via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div class="empty-state-container text-center py-5" id="emptyStateContainer">
+                                <div class="empty-state-icon-wrapper">
+                                    <i class="ri-inbox-2-line"></i>
+                                </div>
+                                <h5 class="empty-state-title">Aucun paiement en attente</h5>
+                                <p class="empty-state-subtitle">
+                                    Il n'y a actuellement aucun paiement par chèque ou virement en attente de recouvrement.
+                                    <br>Toutes les opérations ont été traitées avec succès.
+                                </p>
+                                <button class="btn btn-soft-primary rounded-pill px-4" id="emptyStateRefreshBtn">
+                                    <i class="ri-refresh-line me-1"></i> Actualiser
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -324,17 +383,28 @@
     }
 
     function loadRecouvrementData() {
+        // Show a loading shimmer on the table
+        let tableBody = $('#recouvrementTable tbody');
+        tableBody.html('<tr><td colspan="8" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Chargement en cours...</td></tr>');
+        $('#tableWrapper').show();
+        $('#emptyStateContainer').hide();
+
         $.ajax({
             url: "{% url 't_tresorerie:ApiListRecouvrementPaiements' %}",
             type: 'GET',
             success: function(data) {
-                let tableBody = $('#recouvrementTable tbody');
                 tableBody.empty();
 
                 if (data.length === 0) {
-                    tableBody.append('<tr><td colspan="8" class="text-center py-4 text-muted">Aucun paiement en attente de recouvrement</td></tr>');
+                    // Hide table, show premium empty state
+                    $('#tableWrapper').hide();
+                    $('#emptyStateContainer').css('display', 'block');
                     return;
                 }
+
+                // Data exists: show table, hide empty state
+                $('#tableWrapper').show();
+                $('#emptyStateContainer').hide();
 
                 data.forEach(function(item) {
                     let badgeClass = item.mode_paiement.toLowerCase().includes('chèque') ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
@@ -346,13 +416,13 @@
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0 avatar-xs me-2">
                                         <div class="avatar-title bg-soft-info text-info rounded-circle font-size-12">
-                                            ${item.client.charAt(0)}
+                                            ${item.client.charAt(0).toUpperCase()}
                                         </div>
                                     </div>
                                     <div class="flex-grow-1">${item.client}</div>
                                 </div>
                             </td>
-                            <td>${item.entite}</td>
+                            <td><span class="badge badge-soft-info">${item.entite}</span></td>
                             <td><span class="fw-bold">${item.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</span></td>
                             <td><span class="badge ${badgeClass}">${item.mode_paiement}</span></td>
                             <td><code class="text-dark">${item.reference}</code></td>
@@ -369,7 +439,7 @@
                     tableBody.append(row);
                 });
 
-                $(document).on('click', '.recouvrement-btn', function() {
+                $(document).off('click', '.recouvrement-btn').on('click', '.recouvrement-btn', function() {
                     const id = $(this).data('id');
                     const type = $(this).data('type');
                     const date = $(this).data('date');
@@ -382,9 +452,18 @@
                 });
             },
             error: function() {
+                tableBody.empty();
+                $('#tableWrapper').hide();
+                $('#emptyStateContainer').css('display', 'block');
                 alertify.error('Erreur lors du chargement des données');
             }
         });
     }
+
+    // Refresh button inside empty state
+    $(document).on('click', '#emptyStateRefreshBtn', function() {
+        loadRecouvrementData();
+        loadStats();
+    });
 </script>
 {% endblock extra_js %}

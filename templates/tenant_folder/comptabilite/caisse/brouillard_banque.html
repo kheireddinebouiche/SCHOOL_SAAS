@@ -209,6 +209,10 @@
                       {% endfor %}
                     </select>
 
+                    <select class="form-select btn-rounded" id="entiteFilter" style="width: 180px;">
+                      <option value="0">Toutes les entités</option>
+                    </select>
+
                     <select class="form-select btn-rounded" id="typeFilter" style="width: 150px;">
                       <option value="0">Tous types</option>
                       <option value="entree">Entrées</option>
@@ -260,6 +264,19 @@
     var currentSearchTerm = '';
     var currentTypeFilter = '0';
 
+    // Helper function to format money with thousands separator
+    function formatMoney(amount) {
+      if (typeof amount === 'string') {
+        amount = parseFloat(amount);
+      }
+      if (isNaN(amount)) return '0.00';
+      
+      return amount.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2
+      }).replace(/\./g, ' '); 
+    }
+
     function loadItems(){
       $.ajax({
         url : "{% url 't_tresorerie:brouillard_banck_json' %}?year={{ selected_year }}",
@@ -268,6 +285,18 @@
         success: function(response){
           // Store all data for filtering
           allBrouillardData = response.mouvements || [];
+
+          // Dynamically populate entity filter
+          var entities = {};
+          var entiteFilter = $('#entiteFilter');
+          entiteFilter.find('option:not(:first)').remove();
+          
+          $.each(allBrouillardData, function(i, item){
+            if(item.entite_id && item.entite_name && !entities[item.entite_id]){
+              entities[item.entite_id] = item.entite_name;
+              entiteFilter.append(`<option value="${item.entite_id}">${item.entite_name}</option>`);
+            }
+          });
 
           // Apply all filters
           applyFilters();
@@ -287,6 +316,7 @@
       var dateFrom = $('#dateFrom').val();
       var dateTo = $('#dateTo').val();
       var typeFilter = $('#typeFilter').val();
+      var entiteFilter = $('#entiteFilter').val();
 
       // Start with all data
       var filteredData = allBrouillardData.slice();
@@ -296,6 +326,8 @@
         filteredData = filteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -305,6 +337,13 @@
       if (typeFilter !== '0') {
         filteredData = filteredData.filter(function(transaction) {
           return transaction.type === typeFilter;
+        });
+      }
+
+      // Apply entity filter
+      if (entiteFilter !== '0') {
+        filteredData = filteredData.filter(function(transaction) {
+          return transaction.entite_id == entiteFilter;
         });
       }
 
@@ -372,7 +411,7 @@
 
         // For filtered data, we need to recalculate the running balance based on the filtered transactions
         // Only do this if we're applying filters (not just showing all data)
-        var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#dateFrom').val() || $('#dateTo').val();
+        var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || $('#dateFrom').val() || $('#dateTo').val();
         var recalculatedFilteredData = [];
 
         if (isFiltered) {
@@ -431,9 +470,9 @@
         var soldeTotal = filteredData.length > 0 ? filteredData[filteredData.length - 1].solde : 0;
 
         // Update statistics cards
-        $('#soldeTotal').text(soldeTotal.toFixed(2) + ' DZD');
-        $('#totalEntrees').text(totalEntrees.toFixed(2) + ' DZD');
-        $('#totalSorties').text(totalSorties.toFixed(2) + ' DZD');
+        $('#soldeTotal').text(formatMoney(soldeTotal) + ' DZD');
+        $('#totalEntrees').text(formatMoney(totalEntrees) + ' DZD');
+        $('#totalSorties').text(formatMoney(totalSorties) + ' DZD');
         $('#totalOperations').text(totalOperations);
 
         // Create HTML for each date group
@@ -490,23 +529,23 @@
                   <div class="d-flex gap-3">
                     <div class="text-center">
                       <div class="text-info small">Solde initial</div>
-                      <div class="fw-bold text-info">${initialBalance.toFixed(2)} DZD</div>
+                      <div class="fw-bold text-info">${formatMoney(initialBalance)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-success small">Entrées</div>
-                      <div class="fw-bold">${entreesTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold">${formatMoney(entreesTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-danger small">Sorties</div>
-                      <div class="fw-bold">${sortiesTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold">${formatMoney(sortiesTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-primary small">Net</div>
-                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${netTotal.toFixed(2)} DZD</div>
+                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(netTotal)} DZD</div>
                     </div>
                     <div class="text-center">
                       <div class="text-warning small">Solde final</div>
-                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${finalBalance.toFixed(2)} DZD</div>
+                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(finalBalance)} DZD</div>
                     </div>
                   </div>
                 </div>
@@ -519,6 +558,7 @@
                       <tr>
                         <th class="border-0 rounded-start">Libellé</th>
                         <th class="border-0">Client/Fournisseur</th>
+                        <th class="border-0">Entité</th>
                         <th class="border-0">Type</th>
                         <th class="border-0">Montant</th>
                         <th class="border-0">Solde</th>
@@ -534,8 +574,8 @@
               '<span class="badge bg-primary">Encaissement</span>' :
               '<span class="badge bg-danger">Décaissement</span>';
             var montantText = transaction.type === 'entree' ?
-              '<span class="text-success fw-bold">+' + transaction.montant + ' DZD</span>' :
-              '<span class="text-danger fw-bold">-' + transaction.montant + ' DZD</span>';
+              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + ' DZD</span>' :
+              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + ' DZD</span>';
 
             var transactionRow = `
               <tr>
@@ -546,7 +586,12 @@
                 </td>
                 <td>
                   <div class="text-body">
-                    ${transaction.order_to}
+                    ${transaction.order_to || '-'}
+                  </div>
+                </td>
+                <td>
+                  <div class="text-body">
+                    <span class="badge badge-soft-info">${transaction.entite_name || 'N/A'}</span>
                   </div>
                 </td>
                 <td>
@@ -561,7 +606,7 @@
                 </td>
                 <td>
                   <div class="text-body">
-                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${transaction.solde.toFixed(2)} DZD</span>
+                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(transaction.solde)} DZD</span>
                   </div>
                 </td>
                 <td class="text-end">
@@ -638,6 +683,10 @@
       applyFilters();
     });
 
+    $('#entiteFilter').on('change', function() {
+      applyFilters();
+    });
+
     $('#filterByDate').on('click', function() {
       applyFilters();
     });
@@ -661,6 +710,8 @@
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -671,6 +722,14 @@
       if (typeFilter !== '0') {
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return transaction.type === typeFilter;
+        });
+      }
+
+      // Apply entity filter
+      var entiteFilter = $('#entiteFilter').val();
+      if (entiteFilter !== '0') {
+        exportFilteredData = exportFilteredData.filter(function(transaction) {
+          return transaction.entite_id == entiteFilter;
         });
       }
 
@@ -700,7 +759,7 @@
       }
 
       // If filtering was applied, we need to recalculate balances for export
-      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || dateFrom || dateTo;
+      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || dateFrom || dateTo;
       var exportData = [];
 
       if (isFiltered) {
@@ -742,7 +801,7 @@
 
       // Create worksheet from filtered data
       var ws_data = [
-        ['Date', 'Libellé', 'Client/Fournisseur', 'Type', 'Montant', 'Solde']
+        ['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']
       ];
 
       // Add filtered data to the worksheet
@@ -756,19 +815,20 @@
           transaction.date,
           transaction.nom,
           transaction.order_to,
+          transaction.entite_name || 'N/A',
           typeLabel,
           montantText,
-          transaction.solde.toFixed(2) + ' DZD'
+          formatMoney(transaction.solde) + ' DZD'
         ]);
       });
 
       var ws = XLSX.utils.aoa_to_sheet(ws_data);
 
       // Add the worksheet to the workbook
-      XLSX.utils.book_append_sheet(wb, ws, "Brouillard de caisse");
+      XLSX.utils.book_append_sheet(wb, ws, "Brouillard de banque");
 
       // Generate and download the Excel file
-      XLSX.writeFile(wb, "brouillard_caisse_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+      XLSX.writeFile(wb, "brouillard_banque_" + new Date().toISOString().slice(0, 10) + ".xlsx");
     });
 
     // Export to PDF functionality
@@ -784,6 +844,8 @@
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -823,7 +885,7 @@
       }
 
       // If filtering was applied, we need to recalculate balances for export
-      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || dateFrom || dateTo;
+      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || dateFrom || dateTo;
       var exportData = [];
 
       if (isFiltered) {
@@ -865,7 +927,7 @@
 
       // Add title
       doc.setFontSize(18);
-      doc.text('Brouillard de caisse', 20, 20);
+      doc.text('Brouillard de banque', 20, 20);
 
       // Add date range if specified
       var dateFrom = $('#dateFrom').val();
@@ -896,9 +958,10 @@
             transaction.date,
             transaction.nom,
             transaction.order_to,
+            transaction.entite_name || 'N/A',
             typeLabel,
             montantText,
-            transaction.solde.toFixed(2) + ' DZD'
+            formatMoney(transaction.solde) + ' DZD'
           ]);
         });
       }
@@ -906,7 +969,7 @@
       // Add the table using autoTable
       if (tableData.length > 0) {
         doc.autoTable({
-          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Type', 'Montant', 'Solde']],
+          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']],
           body: tableData,
           startY: 40,
           theme: 'grid',
@@ -925,7 +988,7 @@
       }
 
       // Save the PDF
-      doc.save('brouillard_caisse_' + new Date().toISOString().slice(0, 10) + '.pdf');
+      doc.save('brouillard_banque_' + new Date().toISOString().slice(0, 10) + '.pdf');
     });
   });
 </script>

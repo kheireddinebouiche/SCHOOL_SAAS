@@ -209,6 +209,10 @@
                       {% endfor %}
                     </select>
 
+                    <select class="form-select btn-rounded" id="entiteFilter" style="width: 180px;">
+                      <option value="0">Toutes les entités</option>
+                    </select>
+
                     <select class="form-select btn-rounded" id="typeFilter" style="width: 150px;">
                       <option value="0">Tous types</option>
                       <option value="entree">Entrées</option>
@@ -285,6 +289,18 @@
           // Store all data for filtering
           allBrouillardData = response.mouvements || [];
 
+          // Dynamically populate entity filter
+          var entities = {};
+          var entiteFilter = $('#entiteFilter');
+          entiteFilter.find('option:not(:first)').remove();
+          
+          $.each(allBrouillardData, function(i, item){
+            if(item.entite_id && item.entite_name && !entities[item.entite_id]){
+              entities[item.entite_id] = item.entite_name;
+              entiteFilter.append(`<option value="${item.entite_id}">${item.entite_name}</option>`);
+            }
+          });
+
           // Apply all filters
           applyFilters();
         },
@@ -303,6 +319,7 @@
       var dateFrom = $('#dateFrom').val();
       var dateTo = $('#dateTo').val();
       var typeFilter = $('#typeFilter').val();
+      var entiteFilter = $('#entiteFilter').val();
 
       // Start with all data
       var filteredData = allBrouillardData.slice();
@@ -312,6 +329,8 @@
         filteredData = filteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -321,6 +340,13 @@
       if (typeFilter !== '0') {
         filteredData = filteredData.filter(function(transaction) {
           return transaction.type === typeFilter;
+        });
+      }
+
+      // Apply entity filter
+      if (entiteFilter !== '0') {
+        filteredData = filteredData.filter(function(transaction) {
+          return transaction.entite_id == entiteFilter;
         });
       }
 
@@ -388,7 +414,7 @@
 
         // For filtered data, we need to recalculate the running balance based on the filtered transactions
         // Only do this if we're applying filters (not just showing all data)
-        var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#dateFrom').val() || $('#dateTo').val();
+        var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || $('#dateFrom').val() || $('#dateTo').val();
         var recalculatedFilteredData = [];
 
         if (isFiltered) {
@@ -535,6 +561,7 @@
                       <tr>
                         <th class="border-0 rounded-start">Libellé</th>
                         <th class="border-0">Client/Fournisseur</th>
+                        <th class="border-0">Entité</th>
                         <th class="border-0">Type</th>
                         <th class="border-0">Montant</th>
                         <th class="border-0">Solde</th>
@@ -562,7 +589,12 @@
                 </td>
                 <td>
                   <div class="text-body">
-                    ${transaction.order_to}
+                    ${transaction.order_to || '-'}
+                  </div>
+                </td>
+                <td>
+                  <div class="text-body">
+                    <span class="badge badge-soft-info">${transaction.entite_name || 'N/A'}</span>
                   </div>
                 </td>
                 <td>
@@ -654,6 +686,10 @@
       applyFilters();
     });
 
+    $('#entiteFilter').on('change', function() {
+      applyFilters();
+    });
+
     $('#filterByDate').on('click', function() {
       applyFilters();
     });
@@ -677,6 +713,8 @@
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -687,6 +725,14 @@
       if (typeFilter !== '0') {
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return transaction.type === typeFilter;
+        });
+      }
+
+      // Apply entity filter
+      var entiteFilter = $('#entiteFilter').val();
+      if (entiteFilter !== '0') {
+        exportFilteredData = exportFilteredData.filter(function(transaction) {
+          return transaction.entite_id == entiteFilter;
         });
       }
 
@@ -716,7 +762,7 @@
       }
 
       // If filtering was applied, we need to recalculate balances for export
-      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || dateFrom || dateTo;
+      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || dateFrom || dateTo;
       var exportData = [];
 
       if (isFiltered) {
@@ -758,7 +804,7 @@
 
       // Create worksheet from filtered data
       var ws_data = [
-        ['Date', 'Libellé', 'Client/Fournisseur', 'Type', 'Montant', 'Solde']
+        ['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']
       ];
 
       // Add filtered data to the worksheet
@@ -772,6 +818,7 @@
           transaction.date,
           transaction.nom,
           transaction.order_to,
+          transaction.entite_name || 'N/A',
           typeLabel,
           montantText,
           formatMoney(transaction.solde) + ' DZD'
@@ -800,6 +847,8 @@
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return (
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -810,6 +859,14 @@
       if (typeFilter !== '0') {
         exportFilteredData = exportFilteredData.filter(function(transaction) {
           return transaction.type === typeFilter;
+        });
+      }
+
+      // Apply entity filter
+      var entiteFilter = $('#entiteFilter').val();
+      if (entiteFilter !== '0') {
+        exportFilteredData = exportFilteredData.filter(function(transaction) {
+          return transaction.entite_id == entiteFilter;
         });
       }
 
@@ -839,7 +896,7 @@
       }
 
       // If filtering was applied, we need to recalculate balances for export
-      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || dateFrom || dateTo;
+      var isFiltered = currentSearchTerm || $('#typeFilter').val() !== '0' || $('#entiteFilter').val() !== '0' || dateFrom || dateTo;
       var exportData = [];
 
       if (isFiltered) {
@@ -912,6 +969,7 @@
             transaction.date,
             transaction.nom,
             transaction.order_to,
+            transaction.entite_name || 'N/A',
             typeLabel,
             montantText,
             formatMoney(transaction.solde) + ' DZD'
@@ -922,7 +980,7 @@
       // Add the table using autoTable
       if (tableData.length > 0) {
         doc.autoTable({
-          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Type', 'Montant', 'Solde']],
+          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']],
           body: tableData,
           startY: 40,
           theme: 'grid',

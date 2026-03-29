@@ -79,7 +79,8 @@ def brouillard_caisse_json(request):
             F('prospect__nom'), Value(' '), F('prospect__prenom'),
             output_field=CharField()
         ),
-        entite_name=F('due_paiements__ref_echeancier__entite__designation')
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id')
     )
 
     # ---- 1b. AutreProduit (Entrées en espèce) ----
@@ -94,7 +95,8 @@ def brouillard_caisse_json(request):
             F('client__nom'), Value(' '), F('client__prenom'),
             output_field=CharField()
         ),
-        entite_name=F('entite__designation')
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id')
     )
 
     # ---- 1c. Consulting Paiement (Entrées en espèce) ----
@@ -111,7 +113,8 @@ def brouillard_caisse_json(request):
                 F('facture__client__nom'), Value(' '), F('facture__client__prenom'),
                 output_field=CharField()
             ),
-            entite_name=F('facture__entreprise__designation')
+            entite_name=F('facture__entreprise__designation'),
+            mapped_entite_id=F('facture__entreprise__id')
         )
 
     # ---- 2. Dépenses (Sorties en espèce) ----
@@ -128,7 +131,8 @@ def brouillard_caisse_json(request):
             default=Value('Inconnu'),
             output_field=CharField()
         ),
-        entite_name=F('entite__designation')
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id')
     )
 
     # ---- 3. Fusion et tri chronologique ----
@@ -156,7 +160,9 @@ def brouillard_caisse_json(request):
             "nom": mv['nom'],
             "montant": montant,
             "solde": solde,
-            "order_to": mv['order_to']
+            "order_to": mv['order_to'],
+            "entite_name": mv.get('entite_name'),
+            "entite_id": mv.get('mapped_entite_id')
         })
 
     return JsonResponse({
@@ -197,7 +203,8 @@ def brouillard_banck_json(request):
             F('prospect__nom'), Value(' '), F('prospect__prenom'),
             output_field=CharField()
         ),
-        entite_name=F('due_paiements__ref_echeancier__entite__designation'),
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id'),
         mode=F('mode_paiement')
     )
 
@@ -214,6 +221,7 @@ def brouillard_banck_json(request):
             output_field=CharField()
         ),
         entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id'),
         mode=F('mode_paiement')
     )
 
@@ -232,6 +240,7 @@ def brouillard_banck_json(request):
                 output_field=CharField()
             ),
             entite_name=F('facture__entreprise__designation'),
+            mapped_entite_id=F('facture__entreprise__id'),
             mode=F('mode_paiement')
         )
 
@@ -250,6 +259,7 @@ def brouillard_banck_json(request):
             output_field=CharField()
         ),
         entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id'),
         mode=F('mode_paiement')
     )
 
@@ -275,7 +285,9 @@ def brouillard_banck_json(request):
             "nom": mv['nom'],
             "montant": montant,
             "solde": solde,
-            "order_to": mv['order_to']
+            "order_to": mv['order_to'],
+            "entite_name": mv.get('entite_name'),
+            "entite_id": mv.get('mapped_entite_id')
         })
 
     return JsonResponse({
