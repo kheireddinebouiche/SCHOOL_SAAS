@@ -113,15 +113,22 @@ class BankAccount(models.Model):
     def __str__(self):
         return self.bank_code
 
-class Settings(models.Model):
-    
+class GlobalConfiguration(models.Model):
+    crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name="Paramètre"
-        verbose_name_plural="Paramètres"
+        verbose_name="Configuration Globale"
+        verbose_name_plural="Configurations Globales"
 
     def __str__(self):
-        return self.tenant.nom
+        return f"Configuration Globale"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+
     
 class SalleClasse(models.Model):
     label = models.CharField(max_length=100, null=True)

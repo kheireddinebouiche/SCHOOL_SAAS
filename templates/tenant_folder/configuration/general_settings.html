@@ -1,0 +1,210 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %}Configuration Globale | {{ tenant.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Theme Harmony Styles */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        transition: all 0.3s ease;
+    }
+
+    .icon-box {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { 
+        background: rgba(59, 130, 246, 0.1); 
+        color: #3b82f6; 
+    }
+
+    .setting-section {
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .setting-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .custom-switch-lg .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+        cursor: pointer;
+    }
+
+    .custom-switch-lg .form-check-input:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Header Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3 text-primary">
+                                <i class="ri-settings-3-line fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Configuration Globale</h4>
+                                <p class="text-muted mb-0">Paramètres et fonctionnalités du système pour {{ tenant.nom }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="{% url 'institut_app:index' %}">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Paramètres</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-8">
+                    <div class="card glass-card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-transparent border-bottom p-4">
+                            <h5 class="mb-0 fw-bold"><i class="ri-shield-check-line me-2 text-primary"></i>Préférences des Modules</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- CRM Section -->
+                            <div class="setting-section">
+                                <div class="d-flex align-items-start justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box primary me-3" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                            <i class="ri-customer-service-2-line"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-1">Module Relation Client (CRM)</h6>
+                                            <p class="text-muted small mb-0">Gérez les comportements automatiques du module CRM.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 ps-5">
+                                    <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 border">
+                                        <div>
+                                            <span class="fw-semibold d-block">Notifications Automatiques</span>
+                                            <small class="text-muted">Envoi de alertes en cas de validation ou dérogation.</small>
+                                        </div>
+                                        <div class="form-check form-switch custom-switch-lg">
+                                            <input class="form-check-input" type="checkbox" id="crm_notifications_enabled" 
+                                                   {% if config.crm_notifications_enabled %}checked{% endif %}
+                                                   onchange="updateSetting('crm_notifications_enabled', this.checked)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placeholder for further settings -->
+                            <div class="setting-section">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-box bg-light text-muted me-3" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                        <i class="ri-lock-line"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 opacity-50">Module Scolarité</h6>
+                                        <p class="text-muted small mb-0">Paramètres bientôt disponibles.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small italic">Dernière mise à jour : <span id="last_updated" class="fw-bold text-primary">{{ config.updated_at|date:"d/m/Y H:i" }}</span></span>
+                                <span class="status-badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="ri-checkbox-circle-line me-1"></i> Système Synchrone
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4">
+                    <div class="card glass-card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4 text-center">
+                            <div class="bg-primary bg-opacity-10 rounded-4 p-4 mb-4 d-inline-block">
+                                <i class="ri-information-line fs-1 text-primary"></i>
+                            </div>
+                            <h5 class="fw-bold mb-3">Centre d'aide</h5>
+                            <p class="text-muted">Besoin d'aide pour configurer votre plateforme ? Consultez notre documentation ou contactez le support.</p>
+                            <button class="btn btn-primary w-100 rounded-pill py-2 mt-2">
+                                <i class="ri-book-read-line me-1"></i> Documentation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateSetting(name, value) {
+    // Show loading feedback
+    if (typeof alertify !== 'undefined') {
+        alertify.set('notifier','position', 'top-right');
+    }
+    
+    $.ajax({
+        url: '{% url "institut_app:api_update_global_settings" %}',
+        type: 'POST',
+        data: {
+            'setting_name': name,
+            'setting_value': value,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                if (typeof alertify !== 'undefined') {
+                    alertify.success('<i class="ri-checkbox-circle-line me-1"></i> ' + response.message);
+                }
+                const now = new Date();
+                const formatted = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                $('#last_updated').text(formatted);
+            } else {
+                if (typeof alertify !== 'undefined') {
+                    alertify.error('<i class="ri-error-warning-line me-1"></i> ' + response.message);
+                }
+            }
+        },
+        error: function(err) {
+            if (typeof alertify !== 'undefined') {
+                alertify.error('<i class="ri-error-warning-line me-1"></i> Une erreur est survenue.');
+            }
+            console.error(err);
+        }
+    });
+}
+</script>
+{% endblock %}

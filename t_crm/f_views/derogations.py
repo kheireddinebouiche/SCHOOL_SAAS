@@ -11,6 +11,7 @@ from django.utils.dateformat import format
 from django.utils.dateformat import format
 from institut_app.decorators import *
 from institut_app.utils_notifications import send_notification_to_module_level
+from institut_app.models import GlobalConfiguration
 from django.urls import reverse
 
 
@@ -69,7 +70,10 @@ def ApiStoreDerogation(request):
     try:
         link = reverse('t_crm:liste_derogations')
         message = f"Nouvelle demande de dérogation de {preinscrit.nom} {preinscrit.prenom}"
-        send_notification_to_module_level('crm', [2, 3], message, link)
+        
+        config = GlobalConfiguration.get_solo()
+        if config.crm_notifications_enabled:
+            send_notification_to_module_level('crm', [2, 3], message, link)
     except Exception as e:
         print(f"Error sending notification: {e}")
 

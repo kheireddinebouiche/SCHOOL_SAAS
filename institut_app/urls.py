@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
+from .f_views.config import general_settings_view, api_update_global_settings
 
 app_name="institut_app"
 
@@ -137,6 +138,11 @@ urlpatterns = [
     path('direction/dispatch-budget/<slug:campaign_slug>/', budget_campaign_dispatch, name="dispatch_budget"),
     path('direction/extension-budget/<slug:campaign_slug>/', request_extension, name="request_extension"),
     path('direction/suivi-realisation-budget/<slug:campaign_slug>/', budget_campaign_realization, name="budget_campaign_realization"),
+    
+    ########################################## Configuration Globale ##########################################
+    path('configuration/generale/', general_settings_view, name="general_settings"),
+    path('api/update-global-settings/', api_update_global_settings, name="api_update_global_settings"),
+    ########################################## Configuration Globale ##########################################
 ]
 
 
