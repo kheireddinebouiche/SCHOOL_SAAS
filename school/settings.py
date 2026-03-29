@@ -106,7 +106,7 @@ if not DEBUG:
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://:1230042690@aZeRTy@127.0.0.1:6379/1",
+            "LOCATION": "redis://:1230042690%40aZeRTy@127.0.0.1:6379/1",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             }
@@ -156,7 +156,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [("redis://:1230042690%40aZeRTy@127.0.0.1:6379/1")],
             },
         },
     }
