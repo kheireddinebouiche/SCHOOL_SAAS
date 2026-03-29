@@ -30,14 +30,31 @@ def ListeDesPrinscrits(request):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
-    liste = Prospets.objects.filter(is_double = True, statut = "prinscrit").exclude(context='con').values('id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
-    liste = Prospets.objects.filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut= "convertit")).exclude(context='con').values('slug','statut','id', 'nin', 'nom', 'prenom', 'type_prospect','email','telephone','canal','created_at','etat','entreprise')
-    for i in liste:
-        i_obj = Prospets.objects.get(id=i['id'])
-        i['etat_label'] = i_obj.get_etat_display()
-        i['type_prospect_label'] = i_obj.get_type_prospect_display()
-        i['statut_label'] = i_obj.get_statut_display()
-    return JsonResponse(list(liste), safe=False)
+    qs = Prospets.objects.filter(
+        Q(statut="prinscrit") | Q(statut="instance") | Q(statut="convertit")
+    ).exclude(context='con').order_by('-created_at')
+    
+    liste = []
+    for obj in qs:
+        liste.append({
+            'slug': obj.slug,
+            'statut': obj.statut,
+            'id': obj.id,
+            'nin': obj.nin,
+            'nom': obj.nom or "",
+            'prenom': obj.prenom or "",
+            'type_prospect': obj.type_prospect,
+            'email': obj.email or "",
+            'telephone': obj.telephone or "",
+            'canal': obj.canal,
+            'created_at': obj.created_at,
+            'etat': obj.etat,
+            'entreprise': obj.entreprise or "",
+            'etat_label': obj.get_etat_display(),
+            'type_prospect_label': obj.get_type_prospect_display(),
+            'statut_label': obj.get_statut_display(),
+        })
+    return JsonResponse(liste, safe=False)
 
 @login_required(login_url='institut_app:login')
 def DetailsPrinscrit(request, pk):
