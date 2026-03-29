@@ -28,6 +28,53 @@ def ListeDesPrinscrits(request):
 
     return render(request,'tenant_folder/crm/preinscrits/liste-des-preinscrits.html', context)
 
+def get_missing_docs_list(prospect):
+    """Refined helper to get missing required documents for a prospect."""
+    missing_docs = []
+    try:
+        if prospect.is_double:
+            fiche = FicheVoeuxDouble.objects.filter(prospect=prospect).first()
+            if not fiche: 
+                return []
+            
+            formation1 = fiche.specialite.specialite1.formation
+            formation2 = fiche.specialite.specialite2.formation
+            
+            required_docs = DossierInscription.objects.filter(
+                (Q(formation=formation1) | Q(formation=formation2)), 
+                is_required=True
+            )
+            
+            provided_docs = DocumentsDemandeInscription.objects.filter(
+                prospect=prospect, 
+                fiche_voeux_double=fiche,
+                file__isnull=False
+            ).values_list("id_document_id", flat=True)
+            
+            missing_docs_qs = required_docs.exclude(id__in=provided_docs)
+        else:
+            fiche = FicheDeVoeux.objects.filter(prospect=prospect).first()
+            if not fiche: 
+                return []
+                
+            formation = fiche.specialite.formation
+            if not formation:
+                return []
+                
+            required_docs = DossierInscription.objects.filter(formation=formation, is_required=True)
+            
+            provided_docs = DocumentsDemandeInscription.objects.filter(
+                prospect=prospect, 
+                fiche_voeux=fiche,
+                file__isnull=False
+            ).values_list("id_document_id", flat=True)
+            
+            missing_docs_qs = required_docs.exclude(id__in=provided_docs)
+            
+        return [doc.label for doc in missing_docs_qs]
+    except Exception:
+        return []
+
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
     qs = Prospets.objects.filter(
@@ -36,6 +83,9 @@ def ApiLoadPrinscrits(request):
     
     liste = []
     for obj in qs:
+        # Get missing documents
+        missing_docs = get_missing_docs_list(obj)
+        
         liste.append({
             'slug': obj.slug,
             'statut': obj.statut,
@@ -53,6 +103,7 @@ def ApiLoadPrinscrits(request):
             'etat_label': obj.get_etat_display(),
             'type_prospect_label': obj.get_type_prospect_display(),
             'statut_label': obj.get_statut_display(),
+            'missing_docs': missing_docs,
         })
     return JsonResponse(liste, safe=False)
 

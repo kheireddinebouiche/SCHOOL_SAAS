@@ -942,8 +942,17 @@
               lastMonthYear = currentMonthYear;
           }
 
+          // Missing documents notification
+          var missingDocsHtml = "";
+          if (item.missing_docs && item.missing_docs.length > 0) {
+              var docsList = item.missing_docs.join(", ");
+              missingDocsHtml = `<span class="ms-2 text-danger animate__animated animate__pulse animate__infinite" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Documents manquants:</b><br>${item.missing_docs.join("<br>")}">
+                  <i class="ri-error-warning-fill fs-5"></i>
+              </span>`;
+          }
+
           row += "<tr class='align-middle'>";
-          row += "<td><a href='/crm/details-preinscrit/" + item.id + "/' class='fw-medium link-primary'>" + item.nom + " " + item.prenom + "</a></td>";
+          row += "<td><div class='d-flex align-items-center'><a href='/crm/details-preinscrit/" + item.id + "/' class='fw-medium link-primary'>" + item.nom + " " + item.prenom + "</a>" + missingDocsHtml + "</div></td>";
           row += "<td>" + (item.entreprise ? "<span class='d-flex align-items-center'><i class='ri-building-line text-muted me-2'></i>" + item.entreprise + "</span>" : "<span class='text-muted'>-</span>") + "</td>";
           row += "<td>" + item.telephone + "</td>";
           row += "<td>" + item.email + "</td>";
@@ -982,6 +991,12 @@
 
       $("#listeItem").html(row);
       updateStatistics(data);
+
+      // Re-initialize tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
 
       // If current view is card view, also render the card view to keep data in sync
       if (currentView === 'card') {
@@ -1058,10 +1073,18 @@
           cards += '<div class="card-body card-body-prospect">';
           
           // Header
+          // Missing documents for card
+          var missingDocsCardHtml = "";
+          if (item.missing_docs && item.missing_docs.length > 0) {
+              missingDocsCardHtml = `<span class="text-danger ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Docs manquants:</b><br>${item.missing_docs.join("<br>")}">
+                  <i class="ri-error-warning-fill fs-5"></i>
+              </span>`;
+          }
+
           cards += '<div class="prospect-header">';
           cards += '<div class="prospect-avatar ' + colorClass + '">' + initials + '</div>';
           cards += '<div class="prospect-main-info">';
-          cards += '<h5 class="prospect-name"><a href="/crm/details-preinscrit/' + item.id + '/">' + item.nom + ' ' + item.prenom + '</a></h5>';
+          cards += '<div class="d-flex align-items-center"><h5 class="prospect-name mb-0"><a href="/crm/details-preinscrit/' + item.id + '/">' + item.nom + ' ' + item.prenom + '</a></h5>' + missingDocsCardHtml + '</div>';
           cards += '<p class="prospect-company">' + (item.entreprise ? '<i class="ri-building-line me-1"></i>' + item.entreprise : '<span class="text-muted">Pas d\'entreprise</span>') + '</p>';
           cards += '</div>';
           
@@ -1110,6 +1133,12 @@
       }
 
       $("#cardViewContainer").html(cards);
+
+      // Re-initialize tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
     }
 
     // Load prospects when the document is ready
