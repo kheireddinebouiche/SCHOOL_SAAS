@@ -431,6 +431,14 @@
                   <!-- Cards will be injected here via JS -->
                 </div>
 
+                <!-- Pagination controls container -->
+                <div id="paginationContainer" class="d-flex justify-content-between align-items-center p-3 border border-light glass-card mb-4" style="display: none;">
+                  <div class="text-muted small fw-medium" id="paginationInfo"></div>
+                  <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-rounded mb-0" id="paginationControls"></ul>
+                  </nav>
+                </div>
+
                 <!-- Empty state -->
                 <div id="noUsersMessage" class="text-center py-5 glass-card mb-4" style="display: none;">
                   <div class="avatar-lg mx-auto mb-4 bg-light-subtle rounded-circle d-flex align-items-center justify-content-center">
@@ -802,6 +810,9 @@
 <script>
   $(document).ready(function() {
     var originalData = [];
+    var filteredDataState = [];
+    var currentPage = 1;
+    var itemsPerPage = 8; // Default to 8 (2 rows of 4 in grid)
 
     // Load users on page load
     loadUsers();
@@ -871,8 +882,11 @@
       if (data.length === 0) {
         $('#userContentBody > div:not(#noUsersMessage)').addClass('d-none');
         $('#noUsersMessage').show();
+        $('#paginationContainer').hide();
       } else {
         $('#noUsersMessage').hide();
+        $('#paginationContainer').show();
+        
         // Show current view container
         if ($('#btn-grid-view').hasClass('active')) {
           $('#gridView').removeClass('d-none');
@@ -880,7 +894,11 @@
           $('#listView').removeClass('d-none');
         }
 
-        $.each(data, function(index, user) {
+        var startIndex = (currentPage - 1) * itemsPerPage;
+        var endIndex = Math.min(startIndex + itemsPerPage, data.length);
+        var pageData = data.slice(startIndex, endIndex);
+
+        $.each(pageData, function(index, user) {
           var statusClass = user.is_active ? 'success' : 'danger';
           var roleClass = user.is_staff ? 'primary' : 'secondary';
           
@@ -985,8 +1003,56 @@
           `;
           gridView.append(card);
         });
+
+        renderPaginationControls(data.length);
       }
     }
+
+    function renderPaginationControls(totalItems) {
+      var totalPages = Math.ceil(totalItems / itemsPerPage);
+      var startIndex = (currentPage - 1) * itemsPerPage + 1;
+      var endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+      
+      $('#paginationInfo').text(`Affichage de ${startIndex} à ${endIndex} sur ${totalItems} utilisateurs`);
+      
+      var controls = $('#paginationControls');
+      controls.empty();
+
+      if (totalPages <= 1) return;
+
+      var prevDisabled = currentPage === 1 ? 'disabled' : '';
+      controls.append(`<li class="page-item ${prevDisabled}"><a class="page-link cursor-pointer" onclick="changeUsersPage(${currentPage - 1})">Précédent</a></li>`);
+
+      var startPage = Math.max(1, currentPage - 2);
+      var endPage = Math.min(totalPages, currentPage + 2);
+
+      if (startPage > 1) {
+        controls.append(`<li class="page-item"><a class="page-link cursor-pointer" onclick="changeUsersPage(1)">1</a></li>`);
+        if (startPage > 2) controls.append(`<li class="page-item disabled"><a class="page-link">...</a></li>`);
+      }
+
+      for (var i = startPage; i <= endPage; i++) {
+        var activeClass = i === currentPage ? 'active' : '';
+        controls.append(`<li class="page-item ${activeClass}"><a class="page-link cursor-pointer" onclick="changeUsersPage(${i})">${i}</a></li>`);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) controls.append(`<li class="page-item disabled"><a class="page-link">...</a></li>`);
+        controls.append(`<li class="page-item"><a class="page-link cursor-pointer" onclick="changeUsersPage(${totalPages})">${totalPages}</a></li>`);
+      }
+
+      var nextDisabled = currentPage === totalPages ? 'disabled' : '';
+      controls.append(`<li class="page-item ${nextDisabled}"><a class="page-link cursor-pointer" onclick="changeUsersPage(${currentPage + 1})">Suivant</a></li>`);
+    }
+
+    window.changeUsersPage = function(page) {
+      // Calculate total pages from current filtered data
+      var totalPages = Math.ceil(filteredDataState.length / itemsPerPage);
+      if (page >= 1 && page <= totalPages) {
+        currentPage = page;
+        renderData(filteredDataState);
+      }
+    };
 
     // View user details
     $(document).on('click', '.view-user', function(e) {
@@ -1297,7 +1363,7 @@
       var statusFilter = $('#filter-user-status').val();
       var staffFilter = $('#filter-staff-status').val();
 
-      var filteredData = originalData.filter(function(user) {
+      filteredDataState = originalData.filter(function(user) {
         var rowText = (user.username + user.first_name + user.last_name + user.email).toLowerCase();
         
         var showRow = true;
@@ -1324,7 +1390,8 @@
         return showRow;
       });
 
-      renderData(filteredData);
+      currentPage = 1;
+      renderData(filteredDataState);
     }
 
     // Handle add user button from empty state
