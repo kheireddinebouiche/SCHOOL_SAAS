@@ -148,7 +148,7 @@
           <div class="glass-card overflow-hidden mb-4">
             <div class="card-body p-0">
               <div class="table-responsive" style="overflow-x: visible;">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="attributionsTable">
                   <thead class="bg-light bg-opacity-50">
                     <tr>
                       <th class="border-0 px-4 py-3" style="width:40px;">
@@ -164,6 +164,13 @@
                   </thead>
                   <tbody id="listeAttributions" class="border-top-0"></tbody>
                 </table>
+              </div>
+              <!-- Pagination controls container -->
+              <div id="paginationContainer" class="d-flex justify-content-between align-items-center p-3 border-top">
+                <div class="text-muted small" id="paginationInfo"></div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-rounded mb-0" id="paginationControls"></ul>
+                </nav>
               </div>
             </div>
 
@@ -428,8 +435,17 @@
   </div>
 </div>
 
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
   $(document).ready(function() {
+    // Pagination state
+    var allAttributionsData = [];
+    var filteredAttributionsData = [];
+    var currentPage = 1;
+    var itemsPerPage = 10;
+
     // Bulk Actions
     $(document).on('change', '.row-checkbox', updateBulkActionsBar);
     $('#selectAll').on('change', function() {
@@ -448,6 +464,148 @@
 
 
 
+    // Render table with pagination
+    function renderTable() {
+      var tbody = $('#listeAttributions');
+      tbody.empty();
+
+      if (filteredAttributionsData.length === 0) {
+        $('#noAttributionsMessage').show();
+        $('#attributionsTable').hide();
+        $('#paginationContainer').hide();
+        return;
+      }
+      
+      $('#noAttributionsMessage').hide();
+      $('#attributionsTable').show();
+      $('#paginationContainer').show();
+
+      var startIndex = (currentPage - 1) * itemsPerPage;
+      var endIndex = Math.min(startIndex + itemsPerPage, filteredAttributionsData.length);
+      var pageData = filteredAttributionsData.slice(startIndex, endIndex);
+
+      pageData.forEach(function(attribution) {
+        var row = `
+          <tr data-attribution-id="${attribution.id}">
+            <td class="px-4"><div class="form-check"><input class="form-check-input row-checkbox" type="checkbox" value="${attribution.id}"></div></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="icon-box bg-soft-primary me-3" style="width:38px;height:38px;font-size:1rem;"><i class="ri-user-line"></i></div>
+                <div>
+                  <h6 class="mb-0 fw-bold">${attribution.user.first_name} ${attribution.user.last_name}</h6>
+                  <small class="text-muted">@${attribution.user.username}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-apps-line"></i></div>
+                <span class="fw-medium">${attribution.module.name}</span>
+              </div>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary rounded-pill px-3"><i class="ri-shield-user-line me-1"></i>${attribution.role.name}</span></td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-account-circle-line"></i></div>
+                <span>${attribution.assigned_by.first_name} ${attribution.assigned_by.last_name}</span>
+              </div>
+            </td>
+            <td><div class="d-flex align-items-center text-muted small"><i class="ri-calendar-line me-1"></i>${attribution.assigned_at}</div></td>
+            <td class="text-center">
+              <div class="dropdown">
+                <button class="btn btn-soft-primary btn-sm rounded-pill" type="button" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
+                  <li><a href="#" class="dropdown-item edit-attribution" data-attribution-id="${attribution.id}"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>
+                  <li><a href="#" class="dropdown-item view-permissions" data-attribution-id="${attribution.id}"><i class="ri-eye-line text-info me-2"></i>Permissions</a></li>
+                  <li><hr class="dropdown-divider my-1 opacity-50"></li>
+                  <li><a href="#" class="dropdown-item text-danger delete-attribution" data-attribution-id="${attribution.id}"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+        `;
+        tbody.append(row);
+      });
+
+      renderPaginationControls();
+    }
+
+    function renderPaginationControls() {
+      var totalPages = Math.ceil(filteredAttributionsData.length / itemsPerPage);
+      var startIndex = (currentPage - 1) * itemsPerPage + 1;
+      var endIndex = Math.min(currentPage * itemsPerPage, filteredAttributionsData.length);
+      
+      $('#paginationInfo').text(`Affichage de ${startIndex} à ${endIndex} sur ${filteredAttributionsData.length} entrées`);
+      
+      var controls = $('#paginationControls');
+      controls.empty();
+
+      if (totalPages <= 1) return;
+
+      var prevDisabled = currentPage === 1 ? 'disabled' : '';
+      controls.append(`<li class="page-item ${prevDisabled}"><a class="page-link cursor-pointer" onclick="changePage(${currentPage - 1})">Précédent</a></li>`);
+
+      // For simplicity, just display all pages if totalPages is small, else display simple numbers
+      var startPage = Math.max(1, currentPage - 2);
+      var endPage = Math.min(totalPages, currentPage + 2);
+
+      if (startPage > 1) {
+        controls.append(`<li class="page-item"><a class="page-link cursor-pointer" onclick="changePage(1)">1</a></li>`);
+        if (startPage > 2) controls.append(`<li class="page-item disabled"><a class="page-link">...</a></li>`);
+      }
+
+      for (var i = startPage; i <= endPage; i++) {
+        var activeClass = i === currentPage ? 'active' : '';
+        controls.append(`<li class="page-item ${activeClass}"><a class="page-link cursor-pointer" onclick="changePage(${i})">${i}</a></li>`);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) controls.append(`<li class="page-item disabled"><a class="page-link">...</a></li>`);
+        controls.append(`<li class="page-item"><a class="page-link cursor-pointer" onclick="changePage(${totalPages})">${totalPages}</a></li>`);
+      }
+
+      var nextDisabled = currentPage === totalPages ? 'disabled' : '';
+      controls.append(`<li class="page-item ${nextDisabled}"><a class="page-link cursor-pointer" onclick="changePage(${currentPage + 1})">Suivant</a></li>`);
+    }
+
+    window.changePage = function(page) {
+      var totalPages = Math.ceil(filteredAttributionsData.length / itemsPerPage);
+      if (page >= 1 && page <= totalPages) {
+        currentPage = page;
+        renderTable();
+      }
+    };
+
+    function applyFilters() {
+      var searchTerm = $('#table-filter').val().toLowerCase();
+      var userFilter = $('#filter-user').val();
+      var moduleFilter = $('#filter-module').val();
+      var roleFilter = $('#filter-role').val();
+
+      filteredAttributionsData = allAttributionsData.filter(function(attribution) {
+        // Search term matches
+        var rowText = [
+          attribution.user.first_name, 
+          attribution.user.last_name, 
+          attribution.user.username,
+          attribution.module.name,
+          attribution.role.name,
+          attribution.assigned_by.first_name,
+          attribution.assigned_by.last_name
+        ].join(' ').toLowerCase();
+
+        var matchesSearch = searchTerm === '' || rowText.indexOf(searchTerm) > -1;
+        var matchesUser = userFilter === '' || attribution.user.id.toString() === userFilter;
+        var matchesModule = moduleFilter === '' || attribution.module.id.toString() === moduleFilter;
+        var matchesRole = roleFilter === '' || attribution.role.id.toString() === roleFilter;
+
+        return matchesSearch && matchesUser && matchesModule && matchesRole;
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
     // Load initial attributions data
     function loadAttributions() {
       $('#listeAttributions').empty();
@@ -459,66 +617,25 @@
         type: "GET",
         dataType: "JSON",
         success: function(response) {
-          var tbody = $('#listeAttributions');
-          tbody.empty();
-
           if (response.status === 'success' && response.data && response.data.length > 0) {
-            $('#noAttributionsMessage').hide();
-
-            response.data.forEach(function(attribution) {
-              var row = `
-                <tr data-attribution-id="${attribution.id}">
-                  <td class="px-4"><div class="form-check"><input class="form-check-input row-checkbox" type="checkbox" value="${attribution.id}"></div></td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <div class="icon-box bg-soft-primary me-3" style="width:38px;height:38px;font-size:1rem;"><i class="ri-user-line"></i></div>
-                      <div>
-                        <h6 class="mb-0 fw-bold">${attribution.user.first_name} ${attribution.user.last_name}</h6>
-                        <small class="text-muted">@${attribution.user.username}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-apps-line"></i></div>
-                      <span class="fw-medium">${attribution.module.name}</span>
-                    </div>
-                  </td>
-                  <td><span class="badge bg-primary-subtle text-primary rounded-pill px-3"><i class="ri-shield-user-line me-1"></i>${attribution.role.name}</span></td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-account-circle-line"></i></div>
-                      <span>${attribution.assigned_by.first_name} ${attribution.assigned_by.last_name}</span>
-                    </div>
-                  </td>
-                  <td><div class="d-flex align-items-center text-muted small"><i class="ri-calendar-line me-1"></i>${attribution.assigned_at}</div></td>
-                  <td class="text-center">
-                    <div class="dropdown">
-                      <button class="btn btn-soft-primary btn-sm rounded-pill" type="button" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>
-                      <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
-                        <li><a href="#" class="dropdown-item edit-attribution" data-attribution-id="${attribution.id}"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>
-                        <li><a href="#" class="dropdown-item view-permissions" data-attribution-id="${attribution.id}"><i class="ri-eye-line text-info me-2"></i>Permissions</a></li>
-                        <li><hr class="dropdown-divider my-1 opacity-50"></li>
-                        <li><a href="#" class="dropdown-item text-danger delete-attribution" data-attribution-id="${attribution.id}"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-              `;
-              tbody.append(row);
-            });
+            allAttributionsData = response.data;
+            applyFilters();
 
             $('#totalAttributions').text(response.data.length);
             $('#usersWithRoles').text(new Set(response.data.map(i => i.user.id)).size);
             $('#configuredModules').text(new Set(response.data.map(i => i.module.id)).size);
             $('#assignedRoles').text(response.data.length);
           } else {
-            $('#noAttributionsMessage').show();
+            allAttributionsData = [];
+            filteredAttributionsData = [];
+            renderTable();
             $('#totalAttributions, #usersWithRoles, #configuredModules, #assignedRoles').text(0);
           }
         },
         error: function() {
-          $('#noAttributionsMessage').show();
+          allAttributionsData = [];
+          filteredAttributionsData = [];
+          renderTable();
           $('#totalAttributions, #usersWithRoles, #configuredModules, #assignedRoles').text(0);
           alertify.error("Erreur lors du chargement des attributions");
         }
@@ -528,20 +645,9 @@
     // Load attributions on page load
     loadAttributions();
 
-    // Handle table filtering
-    $('#table-filter').on('input', function() {
-      var searchTerm = $(this).val().toLowerCase();
-      $('#listeAttributions tr').each(function() {
-        var $row = $(this);
-        var rowText = $row.text().toLowerCase();
-
-        if (rowText.indexOf(searchTerm) > -1) {
-          $row.show();
-        } else {
-          $row.hide();
-        }
-      });
-    });
+    // Handle table filtering globally via applyFilters
+    $('#table-filter').on('input', applyFilters);
+    $('#filter-user, #filter-module, #filter-role').on('change', applyFilters);
 
     // Handle add attribution button click
     $('#addAttributionBtn, #addAttributionEmptyStateBtn').on('click', function() {
