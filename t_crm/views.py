@@ -595,8 +595,8 @@ def ApiLoadProspectDetails(request):
 @transaction.atomic
 def ApiUpdatePropectDetails(request):
     id_prospect = request.POST.get('id_prospect')
-    last_name = request.POST.get('nom')
-    first_name = request.POST.get('prenom')
+    last_name = request.POST.get('nom').upper()
+    first_name = request.POST.get('prenom').capitalize()
     email = request.POST.get('email')
     telephone = request.POST.get('telephone')
     canal = request.POST.get('canal')

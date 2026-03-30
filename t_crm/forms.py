@@ -93,6 +93,18 @@ class NewProspecFormParticulier(forms.ModelForm):
             'is_double' : forms.CheckboxInput(attrs={"class" : "form-control",'id':'IdSelectDoubleDiplomation'})
         }
 
+    def clean_nom(self):
+        nom = self.cleaned_data.get('nom')
+        if nom:
+            return nom.upper()
+        return nom
+
+    def clean_prenom(self):
+        prenom = self.cleaned_data.get('prenom')
+        if prenom:
+            return prenom.capitalize()
+        return prenom
+
 class NewProspecFormEntreprise(forms.ModelForm):
     class Meta:
         model = Prospets
