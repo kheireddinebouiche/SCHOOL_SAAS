@@ -4,64 +4,90 @@
 
 {% block content %}
 <style>
-  .search-box {
-    position: relative;
+  /* Premium Glass-Card Styles */
+  :root {
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.4);
+      --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+      --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   }
-  .search-box .search-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none; /* Prevents the icon from interfering with clicks */
+
+  .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 16px;
   }
-  .search-box input {
-    padding-left: 40px; /* Make sure text doesn't overlap with icon */
+
+  .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--premium-shadow);
+      transition: transform 0.3s ease;
   }
-  .table th {
-    font-weight: 600;
-    background-color: #f8f9fa;
+  .stat-card:hover {
+      transform: translateY(-3px);
   }
-  .table td {
-    vertical-align: middle;
+
+  .icon-box {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 1.5rem;
   }
-  .badge {
-    padding: 0.5em 1em;
-    font-weight: 500;
+
+  /* Filter Bar */
+  .filter-bar {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--premium-shadow);
+      border-radius: 12px;
   }
-  .dropdown-item {
-    padding: 0.5rem 1rem;
+
+  .search-input-group {
+      position: relative;
   }
-  .dropdown-item i {
-    width: 1.2rem;
+  .search-input-group i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #adb5bd;
   }
-  .btn-group .btn {
-    padding: 0.375rem 0.75rem;
+  .search-input-group .form-control {
+      padding-left: 42px;
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+      background-color: #fff !important;
   }
-  .modal-header .btn-close:focus {
-    box-shadow: none;
+
+  .search-input-group .form-control:focus {
+      border-color: #3b7ddd;
+      box-shadow: 0 0 0 0.2rem rgba(59, 125, 221, 0.1);
   }
-  
-  /* Fix dropdown z-index issue */
-  .table-responsive {
-    overflow-x: visible;
+
+  .btn-soft-primary {
+      background-color: rgba(59, 125, 221, 0.1);
+      color: #3b7ddd;
+      border: none;
   }
-  
-  .table td.text-end {
-    position: relative;
-    overflow: visible;
+  .btn-soft-primary:hover {
+      background-color: #3b7ddd;
+      color: #fff;
   }
-  
-  .table .dropdown-menu {
-    z-index: 1050;
-    position: absolute;
-  }
-  .attendance-checkbox-cell {
-    width: 30px;
-    text-align: center;
-  }
-  
+
   .attendance-checkbox-cell input[type="checkbox"] {
-    margin: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
   }
   
   .attendance-present {
@@ -74,14 +100,11 @@
     color: #dc3545;
   }
   
-  .attendance-late {
-    background-color: rgba(255, 193, 7, 0.1);
-    color: #ffc107;
+  .module-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
-  
-  .attendance-justified {
-    background-color: rgba(0, 123, 255, 0.1);
-    color: #007bff;
+  .module-card:hover {
+    transform: translateY(-5px);
   }
 </style>
 
@@ -89,122 +112,60 @@
   <div class="page-content bg-light">
     <div class="container-fluid">
       <!-- start page title -->
-      <div class="row mb-3">
+      <div class="row mb-4 mt-2">
         <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+          <div class="glass-card p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                <i class="ri-calendar-check-line text-info"></i>
+              <div class="icon-box bg-info bg-opacity-10 text-info me-3">
+                <i class="ri-calendar-check-line"></i>
               </div>
-              <h4 class="mb-0 text-info">Détails Registre de Présence</h4>
-            </div>
-            <div class="page-title-right">
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                <li class="breadcrumb-item">
-                  <a href="javascript: void(0);">Présences</a>
-                </li>
-                <li class="breadcrumb-item">
-                  <a href="{% url 't_etudiants:liste_registres' %}">Registres</a>
-                </li>
-                <li class="breadcrumb-item active">Détails</li>
-              </ol>
+              <div>
+                <h4 class="fw-bold mb-1">Détails Registre de Présence</h4>
+                <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb m-0 bg-transparent p-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Présences</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 't_etudiants:liste_registres' %}" class="text-muted">Registres</a></li>
+                    <li class="breadcrumb-item active text-info fw-medium" aria-current="page">Détails</li>
+                  </ol>
+                </nav>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <!-- end page title -->
       
-      <!-- Statistics Cards -->
-      <div class="row mb-4">
-        <div class="col-xl-4 col-md-6">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1">Total Modules</p>
-                  <h4 class="mb-0" id="totalModules">0</h4>
-                </div>
-                <div class="flex-shrink-0">
-                  <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center">
-                    <i class="ri-book-open-line text-primary fs-4"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="col-xl-4 col-md-6">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1">Enseignants</p>
-                  <h4 class="mb-0" id="totalTeachers">0</h4>
-                </div>
-                <div class="flex-shrink-0">
-                  <div class="avatar-sm rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center">
-                    <i class="ri-user-line text-warning fs-4"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="col-xl-4 col-md-6">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-1">Sessions</p>
-                  <h4 class="mb-0" id="totalSessions">0</h4>
-                </div>
-                <div class="flex-shrink-0">
-                  <div class="avatar-sm rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center">
-                    <i class="ri-time-line text-success fs-4"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
       
       <!-- Register Details Section -->
       <div class="row mb-4">
         <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-info-circle text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Détails du Registre</h5>
+          <div class="glass-card mb-4 overflow-hidden">
+            <div class="card-header bg-transparent border-0 p-4">
+              <div class="d-flex align-items-center">
+                <div class="icon-box bg-info bg-opacity-10 text-info me-2" style="width: 32px; height: 32px; font-size: 1.1rem;">
+                  <i class="ri-info-i"></i>
                 </div>
+                <h5 class="mb-0 fw-bold text-dark">Informations du Registre</h5>
               </div>
             </div>
-            <div class="card-body p-4">
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Nom du registre</label>
-                    <h6 class="mb-0">{{ registre.label|default:"Non spécifié" }}</h6>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Groupe</label>
-                    <h6 class="mb-0">{{ registre.groupe.nom|default:"Non spécifié" }}</h6>
-                  </div>
+            <div class="card-body p-4 pt-0">
+              <div class="row g-4">
+                <div class="col-md-3">
+                  <span class="text-muted small d-block mb-1">Nom du registre</span>
+                  <h6 class="fw-bold mb-0">{{ registre.label|default:"Non spécifié" }}</h6>
                 </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Semestre</label>
-                    <h6 class="mb-0">{{ registre.get_semestre_display|default:"Non spécifié" }}</h6>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label text-muted">Date de création</label>
-                    <h6 class="mb-0">{{ registre.created_at|date:"d M Y"|default:"Non spécifié" }}</h6>
-                  </div>
+                <div class="col-md-3">
+                  <span class="text-muted small d-block mb-1">Groupe</span>
+                  <h6 class="fw-bold mb-0 text-primary">{{ registre.groupe.nom|default:"Non spécifié" }}</h6>
+                </div>
+                <div class="col-md-3">
+                  <span class="text-muted small d-block mb-1">Semestre</span>
+                  <h6 class="fw-bold mb-0">{{ registre.get_semestre_display|default:"Non spécifié" }}</h6>
+                </div>
+                <div class="col-md-3">
+                  <span class="text-muted small d-block mb-1">Date de création</span>
+                  <h6 class="fw-bold mb-0">{{ registre.created_at|date:"d M Y"|default:"Non spécifié" }}</h6>
                 </div>
               </div>
             </div>
@@ -212,109 +173,94 @@
         </div>
       </div>
       
-      <div class="row mb-4">
-        <div class="col-lg-12">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 class="mb-0 text-info">Modules et Enseignants</h4>
-              <p class="text-muted mb-0">Gestion des modules et leurs enseignants pour ce registre</p>
+      <!-- Barre de filtres (Filter Bar) -->
+      <div class="filter-bar p-3 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          
+          <!-- Left side: Label -->
+          <div class="d-flex align-items-center">
+            <div class="icon-box bg-info bg-opacity-10 text-info me-2" style="width: 38px; height: 38px; font-size: 1.2rem;">
+              <i class="ri-book-open-line"></i>
             </div>
-            <button class="btn btn-info px-4" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+            <div>
+              <h6 class="mb-0 fw-bold text-dark">Modules et Enseignants</h6>
+              <p class="text-muted small mb-0">Gestion pour ce registre</p>
+            </div>
+          </div>
+
+          <!-- Right side: Filters -->
+          <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2 flex-grow-1">
+            <div class="search-input-group" style="min-width: 250px;">
+              <i class="ri-search-line"></i>
+              <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control">
+            </div>
+
+            <select id="filter-module" class="form-select border-0 shadow-sm rounded-pill px-3 py-2 bg-white w-auto" style="min-width: 200px;">
+              <option value="">Filtrer par module</option>
+            </select>
+            
+            <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addModuleModal">
               <i class="ri-add-line me-1"></i> Ajouter Module
             </button>
           </div>
         </div>
       </div>
-      
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-filter text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Filtres</h5>
-                </div>
-
-                <div class="d-flex align-items-center gap-3">
-                  <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill ps-4" style="width: 220px;"/>
-                    <i class="fas fa-search text-muted search-icon"></i>
-                  </div>
-
-                  <select id="filter-module" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="">Filtrer par module</option>
-                  </select>
-
-                </div>
-              </div>
-            </div>
-            <div class="card-body p-3" id="cardContentBody">
+            <div class="p-0" id="cardContentBody">
               <div class="row g-4" id="listeItem">
                 {% if listes %}
                   {% for liste in listes %}
-                    <div class="col-md-6 col-lg-4">
-                      <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body p-4">
-                          <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="avatar-sm rounded-circle bg-light text-info d-flex align-items-center justify-content-center me-3">
+                    <div class="col-md-6 col-xl-3">
+                      <div class="glass-card module-card h-100">
+                        <div class="card-body p-3">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center">
                               <i class="ri-book-line fs-5"></i>
                             </div>
                             <div class="dropdown">
-                              <button class="btn btn-soft-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <button class="btn btn-ghost-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="ri-more-fill align-middle"></i>
                               </button>
-                              <div class="dropdown-menu dropdown-menu-end">
-                                <a class="dropdown-item edit-module-btn" href="#" data-id="{{ liste.id }}" data-nom="{{ liste.module.id }}" data-enseignant="{{ liste.teacher.id }}" data-heures="{{ liste.nb_heure }}" data-type="{{ liste.type }}" data-salle="{{ liste.room }}" data-horaire="{{ liste.jour }} - {{ liste.heure_debut }} à {{liste.heure_fin}}">
-                                  <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
+                              <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-4">
+                                <a class="dropdown-item px-3 py-2 edit-module-btn" href="#" data-id="{{ liste.id }}" data-nom="{{ liste.module.id }}" data-enseignant="{{ liste.teacher.id }}" data-heures="{{ liste.nb_heure }}" data-type="{{ liste.type }}" data-salle="{{ liste.room }}" data-horaire="{{ liste.jour }} - {{ liste.heure_debut }} à {{liste.heure_fin}}">
+                                  <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Modifier
                                 </a>
-                                <a class="dropdown-item delete-module-btn" href="#" data-id="{{ liste.id }}">
-                                  <i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer
+                                <a class="dropdown-item px-3 py-2 delete-module-btn" href="#" data-id="{{ liste.id }}">
+                                  <i class="ri-delete-bin-line align-bottom me-2 text-danger"></i> Supprimer
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#" data-id="{{liste.id}}" id="details_btn">
+                                <a class="dropdown-item px-3 py-2 btn-view-details" href="#" data-id="{{liste.id}}">
                                   <i class="ri-eye-line align-bottom me-2 text-info"></i> Voir détails
                                 </a>
                               </div>
                             </div>
                           </div>
 
-                          <h6 class="card-title text-truncate mb-2">{{ liste.module.label }}</h6>
+                          <h6 class="card-title fw-bold text-dark mb-2 text-truncate">{{ liste.module.label }}</h6>
 
-                          <div class="d-flex align-items-center mb-2">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-user-line text-muted fs-16"></i>
+                          <div class="vstack gap-2">
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-user-line me-2 fs-16"></i>
+                              <small>{{ liste.teacher.nom }} {{ liste.teacher.prenom }}</small>
                             </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">{{ liste.teacher.nom }} {{ liste.teacher.prenom }}</p>
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-time-line me-2 fs-16"></i>
+                              <small>{{ liste.jour }} - {{ liste.heure_debut }} à {{ liste.heure_fin }}</small>
                             </div>
-                          </div>
-
-                          <div class="d-flex align-items-center mb-2">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-time-line text-muted fs-16"></i>
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-building-line me-2 fs-16"></i>
+                              <small>{{ liste.room }}</small>
                             </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">{{ liste.jour }} - {{ liste.heure_debut }} à {{ liste.heure_fin }}</p>
-                            </div>
-                          </div>
-
-
-                          <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-building-line text-muted fs-16"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">{{ liste.room }}</p>
+                            <div class="d-flex align-items-center mt-1">
+                               <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill text-uppercase" style="font-size: 0.7rem;">{{ liste.type }}</span>
                             </div>
                           </div>
                         </div>
 
-                        <div class="card-footer bg-transparent border-top-dashed py-2">
+                        <div class="card-footer bg-transparent border-top border-light py-2 px-3">
                           <div class="d-flex align-items-center justify-content-between">
-                            <span class="text-muted">Heures: {{ liste.heure_debut }} - {{liste.heure_fin}}</span>
-                            <a class="btn btn-info btn-sm btn-view-details" data-id="{{liste.id}}" id="details_btn" href="#">
-                              <i class="ri-eye-line align-middle me-1"></i> Voir détails
+                            <span class="text-muted small">Vol: <span class="fw-bold text-dark">{{ liste.nb_heure }}h</span></span>
+                            <a class="btn btn-soft-primary btn-sm rounded-pill btn-view-details" data-id="{{liste.id}}" href="#" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                              Détails <i class="ri-arrow-right-line ms-1"></i>
                             </a>
                           </div>
                         </div>
@@ -1027,42 +973,30 @@
       }
     });
 
-    function updateStatistics(data) {
-      // Count total records
-      const totalModules = data.length;
-      // Count unique teachers
-      const teachers = [...new Set(data.map(item => item.enseignant))];
-      const totalTeachers = teachers.length;
-      // Count sessions
-      const totalSessions = data.filter(item => item.type).length;
-      
-      $('#totalModules').text(totalModules);
-      $('#totalTeachers').text(totalTeachers);
-      $('#totalSessions').text(totalSessions);
-    }
+
 
     function loadModules() {
       // Convert template data to a format for client-side filtering
       var templateData = [];
-      $('#listeItem .card').each(function() {
+      $('#listeItem .glass-card').each(function() {
         var $card = $(this);
         // Check if this is not the "no data" element
         var module = $card.find('.card-title').text().trim();
         if (module !== '' && module !== 'Aucun module trouvé') {
           templateData.push({
             module: module,
-            enseignant: $card.find('.ri-user-line').closest('.d-flex').find('.text-muted').text().trim(),
-            heures: $card.find('.card-footer .text-muted').text().replace('Heures: ', '').trim(),
+            enseignant: $card.find('.ri-user-line').parent().find('small').text().trim(),
+            heures: $card.find('.card-footer .text-dark').text().trim(),
             type: $card.find('.badge').text().trim(),
-            salle: $card.find('.ri-building-line').closest('.d-flex').find('.text-muted').text().trim(),
-            horaire: $card.find('.ri-time-line').closest('.d-flex').find('.text-muted').text().trim(),
+            salle: $card.find('.ri-building-line').parent().find('small').text().trim(),
+            horaire: $card.find('.ri-time-line').parent().find('small').text().trim(),
             id: $card.find('.delete-module-btn').data('id') || 0 // Get ID from delete button
           });
         }
       });
 
       originalData = templateData;
-      updateStatistics(originalData);
+
       populateModuleFilter(originalData);
     }
     
@@ -1136,76 +1070,58 @@
           </div>`;
       } else {
         $.each(data, function(index, item) {
-          html += `<div class="col-md-6 col-lg-4">
-                      <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body p-4">
-                          <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="avatar-sm rounded-circle bg-light text-info d-flex align-items-center justify-content-center me-3">
+          html += `<div class="col-md-6 col-xl-3">
+                      <div class="glass-card module-card h-100">
+                        <div class="card-body p-3">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="avatar-sm rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center">
                               <i class="ri-book-line fs-5"></i>
                             </div>
                             <div class="dropdown">
-                              <button class="btn btn-soft-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <button class="btn btn-ghost-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="ri-more-fill align-middle"></i>
                               </button>
-                              <div class="dropdown-menu dropdown-menu-end">
-                                <a class="dropdown-item edit-module-btn" href="#" data-id="${item.id}" data-nom="${item.module}" data-enseignant="${item.enseignant}" data-heures="${item.heures}" data-type="${item.type}" data-salle="${item.salle}" data-horaire="${item.horaire}">
-                                  <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
+                              <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-4">
+                                <a class="dropdown-item px-3 py-2 edit-module-btn" href="#" data-id="${item.id}" data-nom="${item.module}" data-enseignant="${item.enseignant}" data-heures="${item.heures}" data-type="${item.type}" data-salle="${item.salle}" data-horaire="${item.horaire}">
+                                  <i class="ri-pencil-line align-bottom me-2 text-muted"></i> Modifier
                                 </a>
-                                <a class="dropdown-item delete-module-btn" href="#" data-id="${item.id}">
-                                  <i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer
+                                <a class="dropdown-item px-3 py-2 delete-module-btn" href="#" data-id="${item.id}">
+                                  <i class="ri-delete-bin-line align-bottom me-2 text-danger"></i> Supprimer
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#" data-id="${item.id}" id="details_btn">
+                                <a class="dropdown-item px-3 py-2 btn-view-details" href="#" data-id="${item.id}">
                                   <i class="ri-eye-line align-bottom me-2 text-info"></i> Voir détails
                                 </a>
                               </div>
                             </div>
                           </div>
 
-                          <h6 class="card-title text-truncate mb-2">${item.module}</h6>
+                          <h6 class="card-title fw-bold text-dark mb-2 text-truncate">${item.module}</h6>
 
-                          <div class="d-flex align-items-center mb-2">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-user-line text-muted fs-16"></i>
+                          <div class="vstack gap-2">
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-user-line me-2 fs-16"></i>
+                              <small class="text-truncate">${item.enseignant}</small>
                             </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">${item.enseignant}</p>
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-time-line me-2 fs-16"></i>
+                              <small>${item.horaire}</small>
                             </div>
-                          </div>
-
-                          <div class="d-flex align-items-center mb-2">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-time-line text-muted fs-16"></i>
+                            <div class="d-flex align-items-center text-muted">
+                              <i class="ri-building-line me-2 fs-16"></i>
+                              <small>${item.salle}</small>
                             </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">${item.horaire}</p>
-                            </div>
-                          </div>
-
-                          <div class="d-flex align-items-center mb-2">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-capsule-line text-muted fs-16"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                              <span class="badge bg-success-subtle text-success border border-success-subtle mb-0">${item.type}</span>
-                            </div>
-                          </div>
-
-                          <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-2">
-                              <i class="ri-building-line text-muted fs-16"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                              <p class="text-muted mb-0">${item.salle}</p>
+                            <div class="d-flex align-items-center mt-1">
+                               <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill text-uppercase" style="font-size: 0.65rem;">${item.type}</span>
                             </div>
                           </div>
                         </div>
 
-                        <div class="card-footer bg-transparent border-top-dashed py-2">
+                        <div class="card-footer bg-transparent border-top border-light py-2 px-3">
                           <div class="d-flex align-items-center justify-content-between">
-                            <span class="text-muted">Heures: ${item.heures}</span>
-                            <a class="btn btn-info btn-sm btn-view-details" data-id="${item.id}" id="details_btn" href="#">
-                              <i class="ri-eye-line align-middle me-1"></i> Voir détails
+                            <span class="text-muted small">Vol: <span class="fw-bold text-dark">${item.heures}</span></span>
+                            <a class="btn btn-soft-primary btn-sm rounded-pill btn-view-details" data-id="${item.id}" href="#" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                              Détails <i class="ri-arrow-right-line ms-1"></i>
                             </a>
                           </div>
                         </div>
@@ -1215,7 +1131,6 @@
       }
 
       $("#listeItem").html(html);
-      updateStatistics(data);
     }
     
     // Client-side search functionality
@@ -1504,7 +1419,7 @@
     });
     
 
-    $(document).on('click','#details_btn', function(){
+    $(document).on('click', '.btn-view-details', function(){
       var id_ligne_registre = $(this).data('id');
       loadDatas(id_ligne_registre);
       $('#detailsModal').data('id_ligne_registre',id_ligne_registre);

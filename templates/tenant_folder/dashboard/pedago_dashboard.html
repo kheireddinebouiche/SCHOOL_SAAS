@@ -4,34 +4,58 @@
 {% block content %}
 <style>
     :root {
-        --primary-color: #4361ee;
-        --secondary-color: #3f37c9;
-        --accent-color: #4895ef;
-        --success-color: #4cc9f0;
-        --warning-color: #f72585;
-        --info-color: #480ca8;
-        --danger-color: #ef233c;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        --primary-gradient: linear-gradient(135deg, #3b7ddd 0%, #4b91f1 100%);
     }
 
-    .modern-card {
-        border-radius: 16px;
-        border: none;
-        background: white;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.12);
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
-        margin-bottom: 1.5rem;
     }
-    
-    .modern-card:hover {
+
+    .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     }
-    
-    .card-header-modern {
-        background: transparent;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        padding: 1.25rem 1.5rem;
+
+    .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: translateX(-100%);
+        transition: 0.6s;
+    }
+
+    .stat-card:hover::before {
+        transform: translateX(100%);
     }
 
     .icon-box {
@@ -42,47 +66,67 @@
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
-        transition: all 0.3s ease;
     }
 
-    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); }
-    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: var(--success-color); }
-    .icon-box.warning { background: rgba(247, 37, 133, 0.1); color: var(--warning-color); }
-    .icon-box.info { background: rgba(72, 149, 239, 0.1); color: var(--accent-color); }
-    .icon-box.danger { background: rgba(239, 35, 60, 0.1); color: var(--danger-color); }
+    .bg-soft-primary { background-color: rgba(59, 125, 221, 0.1); color: #3b7ddd; }
+    .bg-soft-success { background-color: rgba(28, 187, 140, 0.1); color: #1cbb8c; }
+    .bg-soft-info { background-color: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+    .bg-soft-warning { background-color: rgba(252, 185, 44, 0.1); color: #fcb92c; }
+    .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
 
-    .table-modern {
-        border-collapse: separate;
-        border-spacing: 0 8px;
+    .table-modern thead th {
+        background: rgba(248, 249, 250, 0.5);
+        border: none;
+        color: #495057;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 1rem;
     }
-    
-    .table-modern tbody tr {
-        background: white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        transition: transform 0.2s;
-        border-radius: 8px;
+
+    .table-modern tbody td {
+        padding: 1rem;
+        border-color: rgba(0, 0, 0, 0.05);
+        vertical-align: middle;
     }
-    
-    .table-modern tbody tr:hover {
-        transform: scale(1.002);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+
+    .stat-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #343a40;
+        margin-bottom: 0;
     }
 </style>
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
             <!-- Page Title -->
-            <div class="row mb-4 mt-2">
+            <div class="row mb-4">
                 <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3 border-0">
+                    <div class="glass-card p-4 d-flex align-items-center justify-content-between">
                          <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
-                                <i class="ri-book-open-line text-primary"></i>
+                            <div class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                                <i class="ri-book-open-line text-primary fs-24"></i>
                             </div>
-                            <h4 class="mb-0 text-primary fw-bold">Tableau de Bord Pédagogique</h4>
+                            <div>
+                                <h4 class="mb-0 fw-bold text-dark">Tableau de Bord Pédagogique</h4>
+                                <p class="text-muted mb-0 small">Vue d'ensemble de l'activité académique</p>
+                            </div>
                         </div>
-                        <div class="page-title-right">
+                        <div class="d-none d-sm-block">
                             <ol class="breadcrumb m-0 bg-transparent">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Institut</a></li>
                                 <li class="breadcrumb-item"><a href="javascript: void(0);">Pédagogie</a></li>
                                 <li class="breadcrumb-item active">Dashboard</li>
                             </ol>
@@ -94,85 +138,77 @@
             <!-- KPI Cards -->
             <div class="row g-4 mb-4">
                 <div class="col-xl-3 col-md-6">
-                    <div class="card modern-card h-100">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="icon-box primary me-3">
-                                    <i class="ri-team-line"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h5 class="text-muted text-uppercase fs-11 fw-bold mb-1">Total Groupes</h5>
-                                    <h2 class="mb-0 fw-bold fs-24">{{ total_groups }}</h2>
-                                </div>
+                    <div class="stat-card h-100">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <span class="stat-label">Total Groupes</span>
+                                <h2 class="stat-value">{{ total_groups }}</h2>
                             </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fs-11">
-                                    <i class="ri-checkbox-circle-line align-middle me-1"></i> {{ active_groups }} Actifs
-                                </span>
+                            <div class="icon-box bg-soft-primary">
+                                <i class="ri-team-line"></i>
                             </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-soft-success rounded-pill fs-11">
+                                <i class="ri-checkbox-circle-line align-middle me-1"></i> {{ active_groups }} Actifs
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-3 col-md-6">
-                    <div class="card modern-card h-100">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="icon-box info me-3">
-                                    <i class="ri-user-follow-line"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h5 class="text-muted text-uppercase fs-11 fw-bold mb-1">Total Étudiants</h5>
-                                    <h2 class="mb-0 fw-bold fs-24">{{ total_students }}</h2>
-                                </div>
+                    <div class="stat-card h-100">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <span class="stat-label">Étudiants Inscrits</span>
+                                <h2 class="stat-value">{{ total_students }}</h2>
                             </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 fs-11">
-                                    <i class="ri-information-line align-middle me-1"></i> Inscrits
-                                </span>
+                            <div class="icon-box bg-soft-info">
+                                <i class="ri-user-follow-line"></i>
                             </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-soft-info rounded-pill fs-11">
+                                <i class="ri-group-line align-middle me-1"></i> Total Inscrits
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-3 col-md-6">
-                    <div class="card modern-card h-100">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="icon-box warning me-3">
-                                    <i class="ri-calendar-check-line"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h5 class="text-muted text-uppercase fs-11 fw-bold mb-1">Emplois du temps</h5>
-                                    <h2 class="mb-0 fw-bold fs-24">{{ active_timetables }}</h2>
-                                </div>
+                    <div class="stat-card h-100">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <span class="stat-label">Emplois du temps</span>
+                                <h2 class="stat-value">{{ active_timetables }}</h2>
                             </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 fs-11">
-                                    <i class="ri-check-line align-middle me-1"></i> Validés
-                                </span>
+                            <div class="icon-box bg-soft-warning">
+                                <i class="ri-calendar-check-line"></i>
                             </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-soft-warning rounded-pill fs-11">
+                                <i class="ri-check-line align-middle me-1"></i> Validés
+                            </span>
                         </div>
                     </div>
                 </div>
                 
                  <div class="col-xl-3 col-md-6">
-                    <div class="card modern-card h-100">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="icon-box success me-3">
-                                    <i class="ri-time-line"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h5 class="text-muted text-uppercase fs-11 fw-bold mb-1">Cours aujourd'hui</h5>
-                                    <h2 class="mb-0 fw-bold fs-24">{{ todays_sessions|length }}</h2>
-                                </div>
+                    <div class="stat-card h-100">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <span class="stat-label">Cours Aujourd'hui</span>
+                                <h2 class="stat-value">{{ todays_sessions|length }}</h2>
                             </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fs-11">
-                                    <i class="ri-calendar-2-line align-middle me-1"></i> {{ today_label }}
-                                </span>
+                            <div class="icon-box bg-soft-success">
+                                <i class="ri-time-line"></i>
                             </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-soft-success rounded-pill fs-11">
+                                <i class="ri-calendar-2-line align-middle me-1"></i> {{ today_label }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -181,28 +217,28 @@
             <!-- Charts Section -->
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
-                    <div class="card modern-card h-100">
-                        <div class="card-header card-header-modern">
-                            <h5 class="card-title mb-0 flex-grow-1 text-uppercase fs-11 fw-bold text-muted">
+                    <div class="glass-card h-100">
+                        <div class="card-header bg-transparent border-bottom border-light p-3">
+                            <h5 class="card-title mb-0 text-uppercase fs-11 fw-bold text-muted">
                                 <i class="ri-pie-chart-2-fill me-2 text-primary"></i>
-                                Répartition des étudiants par spécialité
+                                Répartition des Étudiants par Spécialité
                             </h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div id="specialityChart" class="apex-charts" dir="ltr"></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-4">
-                    <div class="card modern-card h-100">
-                        <div class="card-header card-header-modern">
-                            <h5 class="card-title mb-0 flex-grow-1 text-uppercase fs-11 fw-bold text-muted">
+                    <div class="glass-card h-100">
+                        <div class="card-header bg-transparent border-bottom border-light p-3">
+                            <h5 class="card-title mb-0 text-uppercase fs-11 fw-bold text-muted">
                                 <i class="ri-building-4-fill me-2 text-warning"></i>
                                 Utilisation des Salles
                             </h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div id="roomChart" class="apex-charts" dir="ltr"></div>
                         </div>
                     </div>
@@ -213,21 +249,21 @@
             <div class="row g-4 mb-4">
                 <!-- Today's Classes -->
                 <div class="col-xl-6">
-                    <div class="card modern-card h-100 mb-0">
-                        <div class="card-header card-header-modern d-flex align-items-center">
-                            <h5 class="card-title mb-0 flex-grow-1 text-uppercase fs-11 fw-bold text-muted">
+                    <div class="glass-card h-100 mb-0">
+                        <div class="card-header bg-transparent border-bottom border-light p-3 d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0 text-uppercase fs-11 fw-bold text-muted">
                                 <i class="ri-calendar-event-fill me-2 text-success"></i>
                                 Cours de la journée ({{ today_label }})
                             </h5>
-                            <a href="#" class="btn btn-sm btn-soft-primary rounded-pill px-3">Voir calendrier</a>
+                            <a href="#" class="btn btn-sm btn-soft-primary rounded-pill px-3">Tout voir</a>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle table-modern mb-0">
-                                    <thead class="bg-light sticky-top">
+                                <table class="table align-middle table-modern mb-0">
+                                    <thead>
                                         <tr>
                                             <th class="ps-4">Horaire</th>
-                                            <th>Cours</th>
+                                            <th>Détails du Cours</th>
                                             <th>Groupe</th>
                                             <th>Salle</th>
                                         </tr>
@@ -236,23 +272,27 @@
                                         {% for session in todays_sessions %}
                                         <tr>
                                             <td class="ps-4">
-                                                <span class="badge bg-soft-primary text-primary">{{ session.heure_debut|time:"H:i" }} - {{ session.heure_fin|time:"H:i" }}</span>
+                                                <span class="badge bg-soft-primary text-primary rounded-pill">{{ session.heure_debut|time:"H:i" }} - {{ session.heure_fin|time:"H:i" }}</span>
                                             </td>
                                             <td>
-                                                <h6 class="mb-0 fw-bold">{{ session.cours.label|default:session.cours }}</h6>
-                                                <small class="text-muted">{{ session.formateur.nom|default:"Non assigné" }}</small>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold text-dark">{{ session.cours.label|default:session.cours }}</span>
+                                                    <span class="text-muted small"><i class="ri-user-star-line me-1"></i>{{ session.formateur.nom|default:"Non assigné" }}</span>
+                                                </div>
                                             </td>
-                                            <td class="fw-medium text-dark">{{ session.timetable.groupe.nom }}</td>
                                             <td>
-                                                <span class="badge bg-soft-info text-info border border-info-subtle">{{ session.salle.nom }}</span>
+                                                <span class="fw-medium">{{ session.timetable.groupe.nom }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-soft-info text-dark border border-soft-info rounded-pill px-2">{{ session.salle.nom }}</span>
                                             </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
                                             <td colspan="4" class="text-center py-5">
-                                                <div class="empty-state">
-                                                    <i class="ri-calendar-check-line ri-2x text-muted mb-2"></i>
-                                                    <p class="text-muted mb-0">Aucun cours prévu aujourd'hui</p>
+                                                <div class="py-4">
+                                                    <i class="ri-calendar-todo-line fs-2 text-muted mb-2"></i>
+                                                    <p class="text-muted">Aucun cours programmé pour aujourd'hui</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -266,55 +306,62 @@
 
                 <!-- Recent Groups -->
                 <div class="col-xl-6">
-                    <div class="card modern-card h-100 mb-0">
-                        <div class="card-header card-header-modern d-flex align-items-center">
-                            <h5 class="card-title mb-0 flex-grow-1 text-uppercase fs-11 fw-bold text-muted">
+                    <div class="glass-card h-100 mb-0">
+                        <div class="card-header bg-transparent border-bottom border-light p-3 d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0 text-uppercase fs-11 fw-bold text-muted">
                                 <i class="ri-history-line me-2 text-info"></i>
-                                Derniers Groupes mis à jour
+                                Activité des Groupes
                             </h5>
                             <a href="{% url 'institut_app:ListGroupePage' %}" class="btn btn-sm btn-soft-primary rounded-pill px-3">Voir tout</a>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle table-modern mb-0">
-                                    <thead class="bg-light sticky-top">
+                                <table class="table align-middle table-modern mb-0">
+                                    <thead>
                                         <tr>
                                             <th class="ps-4">Groupe</th>
                                             <th>Spécialité</th>
                                             <th>Statut</th>
-                                            <th>Action</th>
+                                            <th class="text-end pe-4">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for group in recent_groups %}
                                         <tr>
                                             <td class="ps-4">
-                                                <h6 class="mb-0 fw-bold text-dark">{{ group.nom }}</h6>
-                                                <small class="text-muted">{{ group.annee_scolaire }}</small>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold text-dark">{{ group.nom }}</span>
+                                                    <span class="text-muted small">{{ group.annee_scolaire }}</span>
+                                                </div>
                                             </td>
-                                            <td class="fw-medium text-muted">{{ group.specialite.label }}</td>
+                                            <td><span class="text-muted">{{ group.specialite.label }}</span></td>
                                             <td>
                                                 {% if group.etat == 'valider' %}
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Validé</span>
+                                                    <span class="badge bg-soft-success rounded-pill">Validé</span>
                                                 {% elif group.etat == 'brouillon' %}
-                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">Brouillon</span>
+                                                    <span class="badge bg-soft-secondary rounded-pill">Brouillon</span>
                                                 {% elif group.etat == 'inscription' %}
-                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Inscription</span>
+                                                    <span class="badge bg-soft-warning rounded-pill">Inscription</span>
                                                 {% elif group.etat == 'enc' %}
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">En cours</span>
+                                                    <span class="badge bg-soft-primary rounded-pill">En cours</span>
                                                 {% else %}
-                                                    <span class="badge bg-dark-subtle text-dark border border-dark-subtle rounded-pill">{{ group.get_etat_display }}</span>
+                                                    <span class="badge bg-soft-dark rounded-pill">{{ group.get_etat_display }}</span>
                                                 {% endif %}
                                             </td>
-                                            <td>
-                                                <a href="/scolarite/groupes/details-groupe/{{group.id}}/" class="btn btn-sm btn-soft-info rounded-circle">
-                                                    <i class="ri-eye-line"></i>
+                                            <td class="text-end pe-4">
+                                                <a href="/scolarite/groupes/details-groupe/{{group.id}}/" class="btn btn-icon btn-sm btn-soft-primary rounded-circle">
+                                                    <i class="ri-arrow-right-line"></i>
                                                 </a>
                                             </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="4" class="text-center py-5 text-muted">Aucun groupe récent</td>
+                                            <td colspan="4" class="text-center py-5">
+                                                <div class="py-4">
+                                                    <i class="ri-group-line fs-2 text-muted mb-2"></i>
+                                                    <p class="text-muted">Aucun groupe récent trouvé</p>
+                                                </div>
+                                            </td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>

@@ -341,6 +341,10 @@
         color: #3b7ddd;
         margin-bottom: 4px;
         display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 90%;
     }
 
     .matrix-session-info {
@@ -357,7 +361,6 @@
         width: 16px;
     }
 
-    /* Primary card delete button on hover */
     .matrix-session-delete {
         background: #fff;
         border-radius: 50%;
@@ -369,6 +372,29 @@
         box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
         top: -5px;
         right: -5px;
+        position: absolute;
+        cursor: pointer;
+    }
+
+    .matrix-session-edit {
+        background: #fff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+        top: -5px;
+        right: 18px;
+        position: absolute;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .matrix-session-edit i {
+        font-size: 12px;
+        color: #0d6efd;
     }
 
     .matrix-session-delete i {
@@ -592,7 +618,7 @@
 
 <!-- Modal for adding course session -->
 <div class="modal fade" id="addSessionModal" tabindex="-1" aria-labelledby="addSessionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl" style="max-width: 1350px;">
     <div class="modal-content rounded-4 shadow-lg border-0">
       <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
         <div class="d-flex align-items-center">
@@ -629,55 +655,102 @@
         </div>
         
         <form id="addSessionForm">
-          <div class="row g-3">
-            <div class="col-lg-6">
-              <label class="form-label fw-medium" for="session_module">Module <span class="text-danger">*</span></label>
-              <select class="form-select border-0 bg-light py-2" id="session_module" name="module" required>
-                <option value="">Sélectionnez un module</option>
-                {% for cours in modules %}
-                  <option value="{{cours.module.code}}">{{ cours.module.code }} - {{ cours.module.label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-lg-6">
-              <label class="form-label fw-medium" for="session_professeur">Professeur <span class="text-danger">*</span></label>
-              <select class="form-select border-0 bg-light py-2" id="session_professeur" name="professeur" required>
-                <option value="">Sélectionnez un professeur</option>
-                
-              </select>
-            </div>
-            <!-- Teacher availability section - shown when teacher is selected -->
-            <div class="col-lg-12" id="teacherAvailabilitySection" style="display: none;">
-              <div class="card border-info border-1 bg-light mt-3">
-                <div class="card-header bg-info bg-opacity-10 p-2">
-                  <h6 class="card-title mb-0 text-info d-flex align-items-center">
-                    <i class="ri-user-settings-line me-2"></i>Disponibilité de l'enseignant
-                  </h6>
+          <input type="hidden" id="edit_session_id" name="edit_session_id" value="">
+          
+          <!-- Bannière horizontale d'information de session en mode édition -->
+          <div class="row mb-4 d-none" id="currentSessionInfoBar">
+             <div class="col-12">
+                <div class="alert alert-light border border-primary border-opacity-25 shadow-sm rounded-4 d-flex align-items-center justify-content-between p-3 mb-0">
+                   <div class="d-flex align-items-center gap-4 flex-wrap">
+                      <div class="d-flex align-items-center text-primary fw-bold">
+                         <i class="ri-bookmark-3-fill fs-4 me-2"></i> Modification :
+                      </div>
+                      <div>
+                         <span class="d-flex align-items-center text-muted small fw-medium text-uppercase mb-1" style="font-size: 0.65rem;"><i class="ri-book-read-line me-1"></i> Module Actuel</span>
+                         <span class="fw-bold text-dark fs-6" id="info_module_label">-</span>
+                      </div>
+                      <div class="border-start ps-4">
+                         <span class="d-flex align-items-center text-muted small fw-medium text-uppercase mb-1" style="font-size: 0.65rem;"><i class="ri-user-star-line me-1"></i> Formateur</span>
+                         <span class="fw-bold text-dark fs-6" id="info_prof_label">-</span>
+                      </div>
+                      <div class="border-start ps-4">
+                         <span class="d-flex align-items-center text-muted small fw-medium text-uppercase mb-1" style="font-size: 0.65rem;"><i class="ri-time-line me-1"></i> Créneau programmé</span>
+                         <span class="fw-bold text-dark fs-6 text-capitalize" id="info_jour_label">-</span>
+                         <span class="badge bg-primary bg-opacity-10 text-primary ms-1" id="info_horaire_label">-</span>
+                      </div>
+                      <div class="border-start ps-4">
+                         <span class="d-flex align-items-center text-muted small fw-medium text-uppercase mb-1" style="font-size: 0.65rem;"><i class="ri-map-pin-line me-1"></i> Salle Réservée</span>
+                         <span class="badge bg-danger text-white rounded-pill px-3 fw-bold" id="info_salle_label">-</span>
+                      </div>
+                   </div>
+                   <div class="ms-3 text-end">
+                      <span class="badge bg-warning text-dark px-3 py-2"><i class="ri-error-warning-line me-1"></i>Redéfinissez la totalité des paramètres</span>
+                   </div>
                 </div>
-                <div class="card-body p-2">
-                  <div class="row g-2">
-                    <div class="col-md-12">
-                      <div class="info-item">
-                        <div class="table-responsive">
-                          <table class="table table-sm table-bordered small mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th class="text-center" style="width: 30%;">Jour</th>
-                                <th class="text-center" style="width: 40%;">Disponibilité</th>
-                                <th class="text-center" style="width: 30%;">Affectation</th>
-                              </tr>
-                            </thead>
-                            <tbody id="teacherWorkload">
-                              <tr>
-                                <td colspan="3" class="text-center text-muted">Aucun</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                          <div id="teacherAvailabilityLoader" class="d-none text-center py-2">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                              <span class="visually-hidden">Chargement...</span>
+             </div>
+          </div>
+
+          <div class="row g-4">
+            <!-- Colonne de gauche: Formulaire principal -->
+            <div class="col-lg-6 border-end d-flex flex-column gap-3" id="formColumnContainer">
+              <h6 class="text-primary fw-bold mb-0" id="formColumnTitle"><i class="ri-settings-4-line me-2"></i>Paramètres de la séance</h6>
+              
+              <div>
+                <label class="form-label fw-medium text-muted small text-uppercase" for="session_module">Module <span class="text-danger">*</span></label>
+                <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                  <span class="input-group-text bg-white border-0 pe-1"><i class="ri-book-read-line text-primary fs-5"></i></span>
+                  <select class="form-select border-0 bg-white py-2" id="session_module" name="module" required>
+                    <option value="">Sélectionnez un module</option>
+                    {% for cours in modules %}
+                      <option value="{{cours.module.code}}">{{ cours.module.code }} - {{ cours.module.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label fw-medium text-muted small text-uppercase" for="session_professeur">Professeur <span class="text-danger">*</span></label>
+                <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                  <span class="input-group-text bg-white border-0 pe-1"><i class="ri-user-star-line text-success fs-5"></i></span>
+                  <select class="form-select border-0 bg-white py-2" id="session_professeur" name="professeur" required>
+                    <option value="">Sélectionnez un professeur</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Teacher availability section - shown when teacher is selected -->
+              <div id="teacherAvailabilitySection" style="display: none;">
+                <div class="card border-info border-1 bg-light">
+                  <div class="card-header bg-info bg-opacity-10 p-2">
+                    <h6 class="card-title mb-0 text-info d-flex align-items-center">
+                      <i class="ri-user-settings-line me-2"></i>Disponibilité de l'enseignant
+                    </h6>
+                  </div>
+                  <div class="card-body p-2">
+                    <div class="row g-2">
+                      <div class="col-md-12">
+                        <div class="info-item">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-bordered small mb-0">
+                              <thead class="table-light">
+                                <tr>
+                                  <th class="text-center" style="width: 30%;">Jour</th>
+                                  <th class="text-center" style="width: 40%;">Disponibilité</th>
+                                  <th class="text-center" style="width: 30%;">Affectation</th>
+                                </tr>
+                              </thead>
+                              <tbody id="teacherWorkload">
+                                <tr>
+                                  <td colspan="3" class="text-center text-muted">Aucun</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <div id="teacherAvailabilityLoader" class="d-none text-center py-2">
+                              <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                              </div>
+                              <small class="text-muted ms-2">Chargement des disponibilités...</small>
                             </div>
-                            <small class="text-muted ms-2">Chargement des disponibilités...</small>
                           </div>
                         </div>
                       </div>
@@ -685,48 +758,59 @@
                   </div>
                 </div>
               </div>
-            </div>
-           
-          <div class="row g-3 mt-2">
-             <div class="col-lg-6">
-              <label class="form-label fw-medium" for="session_jour">Jour <span class="text-danger">*</span></label>
-              <select class="form-select border-0 bg-light py-2" id="session_jour" name="jour" required>
-                <option value="">Sélectionnez un jour</option>
-                {% for jour in jour_data.jours_travail %}
-                  <option value="{{ jour }}">{{ jour|capfirst }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-lg-6">
-              <label class="form-label fw-medium" for="session_horaire">Horaire <span class="text-danger">*</span></label>
-              <select class="form-select border-0 bg-light py-2" id="session_horaire" name="horaire" required>
-                <option value="">Sélectionnez un horaire</option>
-                {% for horaire in horaire_data.plages_horaires %}
-                  <option data-heure-debut="{{horaire.heure_debut}}" data-heure-fin="{{horaire.heure_fin}}" value="{{ horaire.id }}">{{ horaire.nom_creneau }} ({{ horaire.heure_debut }} - {{ horaire.heure_fin }})</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-            
-          </div>
-          <div class="row g-3 mt-2">
-            <div class="col-lg-12">
-              <label class="form-label fw-medium" for="session_salle">Salle <span class="text-danger">*</span></label>
-              <input type="hidden" id="session_salle" name="salle" value="" required>
-              <div id="salles_disponibles_container">
-                <div id="salle_loader" class="d-none text-center mt-3">
-                  <div class="spinner-border spinner-border-sm text-primary" role="status">
-                    <span class="visually-hidden">Chargement...</span>
+             
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label class="form-label fw-medium text-muted small text-uppercase" for="session_jour">Jour <span class="text-danger">*</span></label>
+                  <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text bg-white border-0 pe-1"><i class="ri-calendar-event-line text-warning fs-5"></i></span>
+                    <select class="form-select border-0 bg-white py-2" id="session_jour" name="jour" required>
+                      <option value="">Jour</option>
+                      {% for jour in jour_data.jours_travail %}
+                        <option value="{{ jour }}">{{ jour|capfirst }}</option>
+                      {% endfor %}
+                    </select>
                   </div>
-                  <small class="text-muted ms-2">Chargement des salles disponibles...</small>
                 </div>
-                <div id="salles_cards" class="row g-3">
-                  <div class="col-12">
-                    <div class="alert alert-info">Veuillez sélectionner un horaire pour voir les salles disponibles</div>
+                <div class="col-sm-6">
+                  <label class="form-label fw-medium text-muted small text-uppercase" for="session_horaire">Horaire <span class="text-danger">*</span></label>
+                  <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text bg-white border-0 pe-1"><i class="ri-time-line text-info fs-5"></i></span>
+                    <select class="form-select border-0 bg-white py-2" id="session_horaire" name="horaire" required>
+                      <option value="">Horaire</option>
+                      {% for horaire in horaire_data.plages_horaires %}
+                        <option data-heure-debut="{{horaire.heure_debut}}" data-heure-fin="{{horaire.heure_fin}}" value="{{ horaire.id }}">{{ horaire.heure_debut }} - {{ horaire.heure_fin }}</option>
+                      {% endfor %}
+                    </select>
                   </div>
                 </div>
               </div>
-            </div>
+            </div> <!-- End Left Column -->
+
+            <!-- Colonne de droite: Salles -->
+            <div class="col-lg-6" id="sallesColumnContainer">
+              <div class="d-flex align-items-center mb-3">
+                 <i class="ri-map-pin-line text-danger fs-4 me-2"></i>
+                 <h6 class="text-danger fw-bold mb-0">Salles disponibles <span class="text-muted small fw-normal">(Sélectionnez-en une)</span></h6>
+              </div>
+              <input type="hidden" id="session_salle" name="salle" value="" required>
+              <div id="salles_disponibles_container" style="max-height: 550px; overflow-y: auto; padding-right: 15px; overflow-x: hidden;">
+                <div id="salle_loader" class="d-none text-center mt-4">
+                  <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                  </div>
+                  <small class="text-muted ms-2 d-block mt-2">Recherche des salles disponibles...</small>
+                </div>
+                <div id="salles_cards" class="row g-2">
+                  <div class="col-12">
+                    <div class="alert alert-info border-0 bg-info bg-opacity-10 text-center py-4">
+                      <i class="ri-calendar-check-line fs-1 text-info mb-2 d-block"></i>
+                      Veuillez d'abord sélectionner un <strong>Jour</strong> et un <strong>Horaire</strong> pour afficher les salles libres.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div> <!-- End Right Column -->
           </div>
           
           <!-- Error message container -->
@@ -933,12 +1017,15 @@
                 
                 if (cell.length > 0) {
                   var cardHtml = '';
-                  cardHtml += '<div class="matrix-session-card" title="' + p.cours__label + '">';
-                  cardHtml += '  <span class="matrix-session-title">' + p.cours__code + '</span>';
+                  cardHtml += '<div class="matrix-session-card" title="' + p.cours__code + '">';
+                  cardHtml += '  <span class="matrix-session-title">' + p.cours__label + '</span>';
                   cardHtml += '  <span class="matrix-session-info"><i class="ri-user-line me-1"></i>' + p.formateur__nom + ' ' + p.formateur__prenom.charAt(0) + '.</span>';
                   cardHtml += '  <span class="matrix-session-info"><i class="ri-map-pin-line me-1"></i>' + p.salle__code + '</span>';
                   
                   if (!p.timetable__is_validated) {
+                    cardHtml += '  <div class="matrix-session-edit edit-session" data-session-id="' + p.id + '">';
+                    cardHtml += '    <i class="ri-pencil-line"></i>';
+                    cardHtml += '  </div>';
                     cardHtml += '  <div class="matrix-session-delete delete-session" data-session-id="' + p.id + '">';
                     cardHtml += '    <i class="ri-close-circle-fill"></i>';
                     cardHtml += '  </div>';
@@ -981,10 +1068,8 @@
         return;
       }
 
-      $.ajax({
-        url: '{% url "t_timetable:save_session" %}',
-        type: 'POST',
-        data: {
+      var actionUrl = $('#edit_session_id').val() ? '{% url "t_timetable:ApiEditCoursSession" %}' : '{% url "t_timetable:save_session" %}';
+      var params = {
           'session_module' : session_module,
           'session_professeur' : session_professeur,
           'session_jour' : session_jour,
@@ -993,7 +1078,15 @@
           'session_salle' : session_salle,
           'pk' : timetable,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
+      };
+      if ($('#edit_session_id').val()) {
+          params['session_id'] = $('#edit_session_id').val();
+      }
+
+      $.ajax({
+        url: actionUrl,
+        type: 'POST',
+        data: params,
         success: function(response) {
           if (response.status === 'success') {
             alertify.success(response.message);
@@ -1025,11 +1118,56 @@
     });
 
     
-    $(document).on('click', '.delete-session', function() {
+    $(document).on('click', '.delete-session', function(e) {
+      e.stopPropagation();
       var sessionId = $(this).data('session-id');
       console.log(sessionId);
       $('#confirmDeleteSessionBtn').data('session-id', sessionId);
       $('#deleteSessionModal').modal('show');
+    });
+
+    $(document).on('click', '.edit-session', function(e) {
+      e.stopPropagation(); 
+      var sessionId = $(this).data('session-id');
+      
+      // Update modal UI for editing
+      $('#addSessionModalLabel').text("Modifier la séance");
+      $('#saveSessionBtn').html('<i class="ri-save-line me-2"></i>Mettre à jour la séance');
+      $('#edit_session_id').val(sessionId);
+      $('#addSessionError').addClass('d-none');
+      
+      // Fetch session details
+      $.ajax({
+        url: '{% url "t_timetable:ApiGetCoursSessionDetails" %}',
+        type: 'GET',
+        data: { 'session_id': sessionId },
+        success: function(response) {
+          if (response.status === 'success') {
+            // Afficher la barre horizontale et garder l'affichage en 2 colonnes larges
+            $('#currentSessionInfoBar').removeClass('d-none');
+            $('#formColumnTitle').html('<i class="ri-settings-4-line me-2"></i>Nouveaux paramètres');
+            
+            // Remplir les informations de texte affichées dans la nouvelle colonne
+            $('#info_module_label').text(response.module_label || response.module);
+            $('#info_prof_label').text(response.professeur_nom || response.professeur);
+            $('#info_jour_label').text(response.jour);
+            $('#info_horaire_label').text(response.heure_debut + ' - ' + response.heure_fin);
+            $('#info_salle_label').text(response.salle_nom || response.salle);
+
+            // Ne PAS pré-remplir le formulaire (la lune de miel est terminée, on veut un formulaire vide)
+            $('#session_module').val('').trigger('change');
+            $('#session_jour').val('');
+            $('#session_horaire').val('');
+            $('#session_salle').val('');
+            $('#session_professeur').html('<option value="">Sélectionnez un professeur</option>');
+            $('#teacherAvailabilitySection').hide();
+
+            $('#addSessionModal').modal('show');
+          } else {
+            alertify.error(response.message);
+          }
+        }
+      });
     });
     
     
@@ -1329,6 +1467,17 @@
           $('#session_professeur').html('<option value="">Sélectionnez un professeur</option>'); // Reset teacher list as it depends on module
           $('#session_salle').val('');
           
+          // Reset edit mode if no edit trigger was clicked
+          if(event.relatedTarget && event.relatedTarget.getAttribute && event.relatedTarget.getAttribute('data-bs-target') === '#addSessionModal') {
+             $('#addSessionModalLabel').text("Ajouter une nouvelle séance");
+             $('#saveSessionBtn').html('<i class="ri-save-line me-2"></i>Enregistrer la séance');
+             $('#edit_session_id').val('');
+             
+             // Reset UI layout
+             $('#currentSessionInfoBar').addClass('d-none');
+             $('#formColumnTitle').html('<i class="ri-settings-4-line me-2"></i>Paramètres de la séance');
+          }
+
           // Hide alerts and sections
           $('#teacherAvailabilitySection').hide();
           $('#sharedSessionAlert').addClass('d-none');
@@ -1353,8 +1502,13 @@
             option += "<option value="+p.formateur__id+">"+p.formateur__nom+' '+p.formateur__prenom+"</option>";
           });
           $('#session_professeur').html(option);
-          // Hide the availability section when module changes (since teacher selection will be reset)
           $('#teacherAvailabilitySection').hide();
+          
+          // Preselect logic for EDIT MODE
+          if (window.editSessionProfesseur) {
+              $('#session_professeur').val(window.editSessionProfesseur).trigger('change');
+              window.editSessionProfesseur = null;
+          }
         },
       })
     });
@@ -1618,8 +1772,8 @@
 
             if (response.salles && response.salles.length > 0) {
               $.each(response.salles, function(index, salle) {
-                cardsHtml += '<div class="col-md-6 col-lg-4">' +
-                             '<div class="card room-card" data-room-id="' + salle.id + '">' +
+                cardsHtml += '<div class="col-sm-6 col-md-12 col-lg-6">' +
+                             '<div class="card room-card h-100" data-room-id="' + salle.id + '">' +
                                '<div class="card-header room-card-header">' +
                                  '<div class="d-flex justify-content-between align-items-center">' +
                                    '<h6 class="card-title mb-0">' + salle.nom + '</h6>' +
@@ -1655,6 +1809,30 @@
               var roomId = $(this).data('room-id');
               $('#session_salle').val(roomId);
             });
+            
+            // Preselect logic for EDIT MODE
+            if (window.editSessionSalle) {
+               var rcard = $('.room-card[data-room-id="' + window.editSessionSalle + '"]');
+               if (rcard.length > 0) {
+                 $('.room-card').removeClass('selected');
+                 rcard.addClass('selected');
+                 $('#session_salle').val(window.editSessionSalle);
+               } else {
+                 // Even if room is missing, force value
+                 $('#session_salle').val(window.editSessionSalle);
+               }
+               window.editSessionSalle = null;
+            } else {
+               // Only check existing hidden input if not preselecting explicitly
+               var preSelectedRoom = $('#session_salle').val();
+               if (preSelectedRoom && preSelectedRoom !== "") {
+                  var rcard = $('.room-card[data-room-id="' + preSelectedRoom + '"]');
+                  if (rcard.length > 0) {
+                    $('.room-card').removeClass('selected');
+                    rcard.addClass('selected');
+                  }
+               }
+            }
           }
         },
         error: function(xhr, status, error) {

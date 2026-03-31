@@ -268,6 +268,171 @@ def save_session(request):
     return JsonResponse({"status" : "success", "message" : "Cours plannifier avec succès"})
 
 
+@login_required(login_url="institut_app:login")
+def ApiGetCoursSessionDetails(request):
+    """
+    Retourne les détails d'une séance de cours pour la pré-remplir dans le formulaire de modification.
+    """
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        return JsonResponse({"status": "error", "message": "ID de séance manquant"})
+
+    session = get_object_or_404(TimetableEntry, id=session_id)
+    
+    # On doit trouver le vrai horaire.id via heure_debut et heure_fin
+    data = {
+        "status": "success",
+        "id": session.id,
+        "module": session.cours.code if session.cours else "",
+        "module_label": session.cours.label if session.cours else "",
+        "professeur": session.formateur.id if session.formateur else "",
+        "professeur_nom": f"{session.formateur.nom} {session.formateur.prenom}" if session.formateur else "",
+        "jour": session.jour,
+        "heure_debut": session.heure_debut.strftime("%H:%M") if session.heure_debut else "",
+        "heure_fin": session.heure_fin.strftime("%H:%M") if session.heure_fin else "",
+        "salle": session.salle.id if session.salle else "",
+        "salle_nom": session.salle.nom if session.salle else ""
+    }
+    return JsonResponse(data)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiEditCoursSession(request):
+    """
+    Modifie une séance de cours existante.
+    """
+    session_id = request.POST.get('session_id')
+    session_module = request.POST.get('session_module')
+    session_professeur = request.POST.get('session_professeur')
+    session_jour = request.POST.get('session_jour')
+    heure_debut = request.POST.get('heure_debut')
+    heure_fin = request.POST.get('heure_fin')
+    session_salle = request.POST.get('session_salle')
+    timetable_id = request.POST.get('pk')
+    
+    if not session_id:
+        return JsonResponse({"status": "error", "message": "Identifiant de la séance manquant."})
+
+    # Récupérer l'objet Timetable et la Session
+    timetable = get_object_or_404(Timetable, id=timetable_id)
+    current_session = get_object_or_404(TimetableEntry, id=session_id)
+    current_specialite = timetable.groupe.specialite
+    
+    # --- LOGIQUE DOUBLE DIPLOMATION ---
+    is_shared_session = False
+    partner_specialite = None
+    
+    double_diplomation = DoubleDiplomation.objects.filter(
+        Q(specialite1=current_specialite) | Q(specialite2=current_specialite)
+    ).first()
+    
+    if double_diplomation:
+        if double_diplomation.specialite1 == current_specialite:
+            partner_specialite = double_diplomation.specialite2
+        else:
+            partner_specialite = double_diplomation.specialite1
+            
+        is_shared_module = CorrepondanceModule.objects.filter(
+            formation=double_diplomation,
+            modules__code=session_module
+        ).exists()
+        
+        if is_shared_module:
+            is_shared_session = True
+
+    # --- VERIFICATIONS DISPONIBILITE ---
+
+    # A. Formateur
+    teacher_conflicts = TimetableEntry.objects.filter(
+        formateur_id=session_professeur,
+        jour=session_jour,
+        heure_debut__lt=heure_fin, 
+        heure_fin__gt=heure_debut,
+        timetable__status="enc"
+    ).exclude(id=session_id)
+    
+    for conflict in teacher_conflicts:
+        is_valid_conflict = False
+        
+        if is_shared_session and partner_specialite:
+            if partner_specialite:
+                 is_equivalent = CorrepondanceModule.objects.filter(
+                    formation=double_diplomation,
+                    modules=conflict.cours 
+                 ).exists() and CorrepondanceModule.objects.filter(
+                    formation=double_diplomation,
+                    modules__code=session_module
+                 ).exists()
+
+                 if is_equivalent and conflict.timetable.groupe.specialite == partner_specialite:
+                    is_valid_conflict = True
+        
+        if not is_valid_conflict:
+            return JsonResponse({"status": "error", "message": "Le formateur est déjà pris sur cette plage horaire."})
+
+    # B. Salle
+    room_conflicts = TimetableEntry.objects.filter(
+        salle_id=session_salle,
+        jour=session_jour,
+        heure_debut__lt=heure_fin, 
+        heure_fin__gt=heure_debut,
+        timetable__status="enc"
+    ).exclude(id=session_id)
+    
+    for conflict in room_conflicts:
+         is_valid_conflict = False
+         
+         if is_shared_session and partner_specialite:
+             is_equivalent = CorrepondanceModule.objects.filter(
+                formation=double_diplomation,
+                modules=conflict.cours 
+             ).exists() and CorrepondanceModule.objects.filter(
+                formation=double_diplomation,
+                modules__code=session_module
+             ).exists()
+
+             if is_equivalent and conflict.timetable.groupe.specialite == partner_specialite:
+                 is_valid_conflict = True
+                 
+         if not is_valid_conflict:
+             return JsonResponse({"status": "error", "message": "La salle est déjà prise sur cette plage horaire."})
+
+    # C. Disponibilité déclarée (horaires de travail)
+    is_available, availability_message = checkFormateurDispoByStoredAvailability(session_professeur, session_jour, heure_debut, heure_fin)
+    if not is_available:
+        return JsonResponse({"status": "error", "message": availability_message})
+    
+    # D. Autres vérifications métier
+    # Verify module affectation (excluding current session)
+    assigned_teacher = TimetableEntry.objects.filter(
+        timetable_id=timetable_id,
+        cours__code=session_module
+    ).exclude(id=session_id).first()
+    if assigned_teacher and assigned_teacher.formateur and assigned_teacher.formateur.id != int(session_professeur):
+        return JsonResponse({"status": "error", "message": "Le module a déjà été affecté à un autre formateur"})
+    
+    # Verify same time slot (excluding current session)
+    if TimetableEntry.objects.filter(
+        heure_debut=heure_debut,
+        heure_fin=heure_fin,
+        jour=session_jour,
+        timetable_id=timetable_id,
+    ).exclude(id=session_id).exists():
+        return JsonResponse({"status":"error","message": "Une séance est déjà programmée pour le même créneau horaire"})
+    
+    # Mise a jour
+    current_session.cours = Modules.objects.get(code=session_module)
+    current_session.salle_id = session_salle
+    current_session.formateur_id = session_professeur
+    current_session.jour = session_jour
+    current_session.heure_debut = heure_debut
+    current_session.heure_fin = heure_fin
+    current_session.save()
+
+    return JsonResponse({"status" : "success", "message" : "La séance a été modifiée avec succès"})
+
+
 ### FONCTION PERMETANT DE CONFIGURER LES LIGNES DE LEMPLOIE DU TEMPS ###
 @login_required(login_url="institut_app:login")
 def timetable_edit(request, pk):

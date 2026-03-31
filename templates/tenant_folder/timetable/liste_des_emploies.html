@@ -4,441 +4,339 @@
 
 {% block content %}
 <style>
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --primary-gradient: linear-gradient(135deg, #3b7ddd 0%, #4b91f1 100%);
+  }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .glass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.12);
+  }
+
+  /* Search box modernization */
   .search-box {
     position: relative;
+    width: 220px;
   }
   .search-box .search-icon {
     position: absolute;
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
+    color: #6c757d;
   }
-  .table th {
+  .search-box input {
+    padding-right: 40px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .table-modern thead th {
+    background: rgba(248, 249, 250, 0.5);
+    border: none;
+    color: #495057;
     font-weight: 600;
-    background-color: #f8f9fa;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
   }
-  .table td {
+
+  .table-modern tbody td {
+    padding: 1rem;
+    border-color: rgba(0, 0, 0, 0.05);
     vertical-align: middle;
   }
-  .badge {
-    padding: 0.5em 1em;
-    font-weight: 500;
-  }
-  .dropdown-item {
-    padding: 0.5rem 1rem;
-  }
-  .dropdown-item i {
-    width: 1.2rem;
-  }
-  .btn-group .btn {
-    padding: 0.375rem 0.75rem;
-  }
-  .modal-header .btn-close:focus {
-    box-shadow: none;
-  }
-  
-  /* Prospect type cards */
-  .prospect-type-card {
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-  }
-  
-  .prospect-type-card:hover {
-    transform: translateY(-5px);
-    border-color: #dc3545;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-  }
-  
-  /* Fix dropdown z-index issue */
-  .table-responsive {
-    overflow-x: visible;
-  }
-  
-  .table td.text-end {
-    position: relative;
-    overflow: visible;
-  }
-  
-  .table .dropdown-menu {
-    z-index: 1050;
-    position: absolute;
-  }
-  
-  /* Specific fix for timetable dropdown */
-  .timetable-item {
-    position: relative;
-    z-index: 1;
-  }
-  
-  .timetable-item:hover {
-    z-index: 2;
-    position: relative;
-  }
-  
-  .timetable-item .dropdown-menu {
-    z-index: 1060 !important;
-  }
-  
-  /* Timetable specific styles */
-  .timetable-item {
-    transition: transform 0.3s ease;
-  }
-  
-  .timetable-item:hover {
-    transform: translateY(-3px);
-  }
-  
-  /* Custom dropdown button without caret */
-  .dropdown-toggle-no-caret {
-    position: relative;
-  }
 
-  .dropdown-toggle-no-caret::after {
-    display: none !important;
-  }
+  .badge-soft-primary { background-color: rgba(59, 125, 221, 0.1); color: #3b7ddd; }
+  .badge-soft-success { background-color: rgba(28, 187, 140, 0.1); color: #1cbb8c; }
+  .badge-soft-info { background-color: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+  .badge-soft-warning { background-color: rgba(252, 185, 44, 0.1); color: #fcb92c; }
+  .badge-soft-danger { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+  .badge-soft-secondary { background-color: rgba(108, 117, 125, 0.1); color: #6c757d; }
 
-  /* Modern View Toggle Styles */
+  /* Modern View Toggle (preservation of logic) */
   .view-toggle-container {
     position: relative;
     display: inline-block;
     height: 38px;
   }
-
   .view-toggle {
     position: relative;
     display: flex;
-    background: #e9ecef;
+    background: rgba(233, 236, 239, 0.6);
     border-radius: 50px;
-    padding: 4px;
+    padding: 2px;
     height: 100%;
+    backdrop-filter: blur(5px);
   }
-
-  .view-radio {
-    display: none;
-  }
-
+  .view-radio { display: none; }
   .view-toggle-btn {
     position: relative;
     z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem 1rem;
+    padding: 0 16px;
     border-radius: 50px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 0.8rem;
+    font-weight: 600;
     color: #495057;
     cursor: pointer;
     transition: all 0.3s ease;
-    white-space: nowrap;
-    height: calc(100% - 8px);
-    line-height: 1.2;
-    margin: 4px 0;
+    height: 100%;
+    margin: 0;
   }
-
-  .view-toggle-btn:hover {
-    color: #0d6efd;
-  }
-
-  .view-radio:checked + .view-toggle-btn {
-    color: white;
-    font-weight: 600;
-  }
-
+  .view-radio:checked + .view-toggle-btn { color: white; }
   .toggle-indicator {
     position: absolute;
-    top: 4px;
-    left: 4px;
-    height: calc(100% - 8px);
+    top: 2px;
+    left: 2px;
+    height: calc(100% - 4px);
     width: calc(33.33% - 2px);
-    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    background: var(--primary-gradient);
     border-radius: 50px;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 125, 221, 0.3);
   }
+  #cardView:checked ~ .toggle-indicator { transform: translateX(0); }
+  #tableView:checked ~ .toggle-indicator { transform: translateX(calc(100% + 1px)); }
+  #groupedView:checked ~ .toggle-indicator { transform: translateX(calc(200% + 2px)); }
 
-  /* Toggle Handling for 3 items */
-  #cardView:checked ~ .toggle-indicator {
-    transform: translateX(0);
-  }
-
-  #tableView:checked ~ .toggle-indicator {
-    transform: translateX(calc(100% + 4px));
-  }
-  
-  #groupedView:checked ~ .toggle-indicator {
-    transform: translateX(calc(200% + 8px));
-  }
-
-  /* Timeline styles for help modal */
-  .timeline-item {
-    position: relative;
-  }
-
-  .timeline-item:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    height: calc(100% - 30px);
-    width: 2px;
-    background-color: #e9ecef;
-    transform: translateX(-50%);
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .view-toggle-btn {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8rem;
-    }
-
-    .view-toggle-container {
-      height: 34px;
-    }
-
-    .timeline-item::after {
-      display: none;
-    }
-  }
+  /* Dropdown positioning fixes */
+  .table-responsive { overflow-x: visible !important; }
+  .dropdown-menu { border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 </style>
 
 <div class="main-content">
   <div class="page-content bg-light">
     <div class="container-fluid">
       <!-- start page title -->
-      <div class="row mb-3">
+      <div class="row mb-4">
         <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+          <div class="glass-card p-4 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="fas fa-calendar-alt text-info"></i>
+              <div class="avatar-md bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                <i class="ri-calendar-event-line text-info fs-24"></i>
               </div>
-              <h4 class="mb-0 text-info">Liste des Emplois du Temps</h4>
+              <div>
+                <h4 class="mb-0 fw-bold text-dark">Gestion des Emplois du Temps</h4>
+                <p class="text-muted mb-0 small">Consultez et organisez les horaires de cours</p>
+              </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);">Emploi du Temps</a>
-                  </li>
-                  <li class="breadcrumb-item active">Liste des emplois</li>
-                </ol>
-              </nav>
+            <div class="d-none d-sm-block">
+              <ol class="breadcrumb m-0 bg-transparent text-end">
+                <li class="breadcrumb-item"><a href="javascript: void(0);">Scolarité</a></li>
+                <li class="breadcrumb-item active">Emplois du Temps</li>
+              </ol>
             </div>
           </div>
         </div>
       </div>
       <!-- end page title -->
 
-      <div class="row">
+      <div class="row mb-4">
         <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-filter text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Filtres</h5>
-                </div>
-
-                <div class="d-flex align-items-center gap-3">
+          <div class="glass-card">
+            <div class="card-body p-3">
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex flex-wrap align-items-center gap-3">
                   <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill" style="width: 220px;"/>
-                    <i class="fas fa-search text-muted search-icon"></i>
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control rounded-pill border-0 shadow-sm"/>
+                    <i class="ri-search-line search-icon"></i>
                   </div>
-                  <select id="filter-timetable" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Filtrer par classe</option>
+                  
+                  <select id="filter-timetable" class="form-select rounded-pill border-0 shadow-sm" style="width: 200px;">
+                    <option value="0">Toutes les classes</option>
                     {% for classe in classes %}
                       <option value="{{ classe.id }}">{{ classe.nom }}</option>
                     {% endfor %}
                   </select>
 
-                  <select id="date_filter-timetable" class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Filtrer par période</option>
+                  <select id="date_filter-timetable" class="form-select rounded-pill border-0 shadow-sm" style="width: 200px;">
+                    <option value="0">Période : Toutes</option>
                     <option value="annee_scolaire">Année scolaire</option>
-                    <option value="periode">Période</option>
+                    <option value="periode">Semestre</option>
                   </select>
 
-                  <!-- Modern Toggle Button for View Mode -->
                   <div class="view-toggle-container">
                     <div class="view-toggle">
                       <input type="radio" class="view-radio" name="viewMode" id="cardView" autocomplete="off" checked value="card">
                       <label class="view-toggle-btn" for="cardView">
-                        <i class="ri-grid-fill me-1"></i>
-                        Vue Carte
+                        <i class="ri-grid-fill me-1"></i> Cartes
                       </label>
 
                       <input type="radio" class="view-radio" name="viewMode" id="tableView" autocomplete="off" value="table">
                       <label class="view-toggle-btn" for="tableView">
-                        <i class="ri-table-line me-1"></i>
-                        Vue Tableau
+                        <i class="ri-table-line me-1"></i> Tableau
                       </label>
 
                       <input type="radio" class="view-radio" name="viewMode" id="groupedView" autocomplete="off" value="grouped">
                       <label class="view-toggle-btn" for="groupedView">
-                        <i class="ri-group-2-line me-1"></i>
-                        Vue Groupée
+                        <i class="ri-group-2-line me-1"></i> Groupé
                       </label>
 
                       <div class="toggle-indicator"></div>
                     </div>
                   </div>
+                </div>
 
-                  <a href="{% url 't_timetable:CreateTimeTable' %}" id="newTimetableBtn" type="button" class="btn btn-primary rounded-pill">
-                    <i class="ri-add-line me-1"></i> Nouvel emploi du temps
+                <div class="d-flex align-items-center gap-2">
+                  <a href="{% url 't_timetable:CreateTimeTable' %}" id="newTimetableBtn" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <i class="ri-add-line me-1"></i> Créer
                   </a>
-
-                  <!-- Aide Button -->
-                  <button type="button" class="btn btn-outline-info rounded-pill" data-bs-toggle="modal" data-bs-target="#timetableHelpModal">
-                    <i class="ri-question-line me-1"></i> Aide
+                  <button type="button" class="btn btn-soft-info btn-icon rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#timetableHelpModal" title="Aide">
+                    <i class="ri-question-line"></i>
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
             <div class="card-body p-3" id="cardContentBody">
               <!-- Card View (Default now) -->
-               <div id="cardViewContainer">
+              <div id="cardViewContainer">
                 {% if timetables %}
-                <div class="row g-3">
+                <div class="row g-4">
                   {% for timetable in timetables %}
                   <div class="col-md-6 col-xl-4">
-                    <div class="card h-100 border transition-hover shadow-sm hover-shadow-md">
-                      <div class="card-header bg-white border-bottom-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start">
-                        <div>
-                          <h5 class="card-title mb-1 text-info" title="{{ timetable.label }}">{{ timetable.label }}</h5>
-                          <p class="text-muted small mb-0"> <i class="ri-group-line "></i> {{ timetable.groupe.nom }}</p>
-                        </div>
-                        <div class="dropdown">
-                          <button class="btn btn-ghost-secondary btn-icon btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="ri-more-2-fill fs-5"></i>
-                          </button>
-                          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                             {% if timetable.is_configured %}
-                                  <li>
-                                    <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-eye-line text-primary me-3"></i>
-                                      <span>Voir</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.is_configured %}
-                                  <li>
-                                    <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-settings-line text-warning me-3"></i>
-                                      <span>Configurer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.status == "ter" and timetable.is_configured %}
-                                  <li>
-                                    <button data-status='{{timetable.status}}' data-id='{{timetable.id}}' class="btnCkeckValidation dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-calendar-schedule-line text-info me-3"></i>
-                                      <span>Planification</span>
-                                    </button>
-                                  </li>
-                                  {% endif %}
-                                  <li><hr class="dropdown-divider my-1 mx-3"></li>
-
-                                  {% if timetable.status == "enc" %}
-                                  <li>
-                                    <a class="PauseBtn dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-warning" data-id='{{timetable.id}}' href="#">
-                                      <i class="ri-pause-circle-line me-3"></i>
-                                      <span>Pause</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.status == "ter" and not timetable.status == "bro" %}
-                                  <li>
-                                    <a class="ClotureBtn dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger"  data-id='{{timetable.id}}'  href="#">
-                                      <i class="ri-lock-line me-3"></i>
-                                      <span>Clôturer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if timetable.is_configured and timetable.status in "bro,pau" %}
-                                  <li>
-                                    <a class="ActiveBtn dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success"  data-id='{{timetable.id}}'  href="#">
-                                      <i class="ri-lock-line me-3"></i>
-                                      <span>Activer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-
-                                  <li>
-                                    <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}">
-                                      <i class="ri-delete-bin-line me-3"></i>
-                                      <span>Supprimer</span>
-                                    </a>
-                                  </li>
-                          </ul>
-                        </div>
-                      </div>
-                      <div class="card-body px-3 py-2">
-                        <div class="mb-3">
-                           <div class="d-flex justify-content-between mb-1">
-                              <span class="badge bg-light text-dark border">{{ timetable.annee_scolaire }}</span>
-                              <span class="badge bg-primary-subtle text-primary">{{ timetable.get_semestre_display }}</span>
-                           </div>
-                        </div>
-
-                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">Statut:</small>
-                            <div>
-                              {% if timetable.status == "bro" %}
-                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                  <i class="ri-draft-line me-1"></i>Brouillon
-                                </span>
-                              {% elif timetable.status == "enc" %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                  <i class="ri-run-line me-1"></i>En cours
-                                </span>
-                              {% elif timetable.status == "pau" %}
-                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                  <i class="ri-pause-line me-1"></i>En pause
-                                </span>
-                              {% elif timetable.status == "ter" %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                  <i class="ri-check-double-line me-1"></i>Clôturé
-                                </span>
-                              {% endif %}
+                    <div class="glass-card h-100 p-0 overflow-hidden">
+                      <div class="p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                          <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                              <i class="ri-calendar-line fs-18"></i>
                             </div>
-                         </div>
-                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">Config:</small>
                             <div>
+                              <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 200px;" title="{{ timetable.label }}">{{ timetable.label }}</h6>
+                              <span class="text-muted small"><i class="ri-group-line me-1"></i>{{ timetable.groupe.nom }}</span>
+                            </div>
+                          </div>
+                          <div class="dropdown">
+                            <button class="btn btn-ghost-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                              <i class="ri-more-2-fill fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
                                {% if timetable.is_configured %}
-                                <span class="badge bg-info-subtle text-info border border-info-subtle">
-                                  <i class="ri-checkbox-circle-line me-1"></i>Terminée
-                                </span>
-                              {% else %}
-                                  <span class="badge bg-light text-muted border">
-                                  <i class="ri-indeterminate-circle-line me-1"></i>Non configuré
-                                </span>
-                              {% endif %}
+                               <li>
+                                 <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
+                                   <i class="ri-eye-line text-primary me-2"></i> Voir
+                                 </a>
+                               </li>
+                               {% endif %}
+                               {% if not timetable.is_configured %}
+                               <li>
+                                 <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
+                                   <i class="ri-settings-line text-warning me-2"></i> Configurer
+                                 </a>
+                               </li>
+                               {% endif %}
+                               {% if not timetable.status == "ter" and timetable.is_configured %}
+                               <li>
+                                 <button data-status='{{timetable.status}}' data-id='{{timetable.id}}' class="btnCkeckValidation dropdown-item d-flex align-items-center px-3 py-2">
+                                   <i class="ri-calendar-schedule-line text-info me-2"></i> Planification
+                                 </button>
+                               </li>
+                               {% endif %}
+                               <li><hr class="dropdown-divider my-1"></li>
+                               {% if timetable.status == "enc" %}
+                               <li>
+                                 <button class="PauseBtn dropdown-item d-flex align-items-center px-3 py-2 text-warning" data-id='{{timetable.id}}'>
+                                   <i class="ri-pause-circle-line me-2"></i> Pause
+                                 </button>
+                               </li>
+                               {% endif %}
+                               {% if not timetable.status == "ter" and not timetable.status == "bro" %}
+                               <li>
+                                 <button class="ClotureBtn dropdown-item d-flex align-items-center px-3 py-2 text-danger" data-id='{{timetable.id}}'>
+                                   <i class="ri-lock-line me-2"></i> Clôturer
+                                 </button>
+                               </li>
+                               {% endif %}
+                               {% if timetable.is_configured and timetable.status in "bro,pau" %}
+                               <li>
+                                 <button class="ActiveBtn dropdown-item d-flex align-items-center px-3 py-2 text-success" data-id='{{timetable.id}}'>
+                                   <i class="ri-play-circle-line me-2"></i> Activer
+                                 </button>
+                               </li>
+                               {% endif %}
+                               <li>
+                                 <button class="dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}">
+                                   <i class="ri-delete-bin-line me-2"></i> Supprimer
+                                 </button>
+                               </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div class="row g-2 mb-4">
+                          <div class="col-6">
+                            <div class="p-2 bg-light bg-opacity-50 rounded-3 text-center">
+                              <span class="d-block text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">Année</span>
+                              <span class="fw-bold text-dark small">{{ timetable.annee_scolaire }}</span>
                             </div>
-                         </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="p-2 bg-light bg-opacity-50 rounded-3 text-center">
+                              <span class="d-block text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">Période</span>
+                              <span class="fw-bold text-primary small">{{ timetable.get_semestre_display }}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                         {% if timetable.description %}
-                         <div class="mt-3 bg-light rounded p-2 border border-dashed">
-                            <p class="mb-0 small text-muted text-truncate" title="{{ timetable.description }}">
-                               <i class="ri-text me-1"></i> {{ timetable.description }}
-                            </p>
-                         </div>
-                         {% endif %}
-
+                        <div class="space-y-3">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                             <span class="text-muted small">Statut</span>
+                             <div>
+                               {% if timetable.status == "bro" %}
+                                 <span class="badge badge-soft-warning"><i class="ri-draft-line me-1"></i>Brouillon</span>
+                               {% elif timetable.status == "enc" %}
+                                 <span class="badge badge-soft-success"><i class="ri-external-link-line me-1"></i>En cours</span>
+                               {% elif timetable.status == "pau" %}
+                                 <span class="badge badge-soft-warning"><i class="ri-pause-line me-1"></i>En pause</span>
+                               {% elif timetable.status == "ter" %}
+                                 <span class="badge badge-soft-danger"><i class="ri-lock-2-line me-1"></i>Clôturé</span>
+                               {% endif %}
+                             </div>
+                          </div>
+                          <div class="d-flex justify-content-between align-items-center">
+                             <span class="text-muted small">Configuration</span>
+                             <div>
+                                {% if timetable.is_configured %}
+                                 <span class="badge badge-soft-info"><i class="ri-checkbox-circle-line me-1"></i>Terminée</span>
+                               {% else %}
+                                 <span class="badge badge-soft-secondary"><i class="ri-indeterminate-circle-line me-1"></i>En attente</span>
+                               {% endif %}
+                             </div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="card-footer bg-white py-2 px-3 border-top-0">
-                         <div class="d-flex align-items-center justify-content-between">
-                            <small class="text-muted">
-                               <i class="ri-calendar-line me-1"></i> {{ timetable.date_creation|date:"d M Y" }}
-                            </small>
+
+                      <div class="bg-light bg-opacity-50 p-3 d-flex align-items-center justify-content-between border-top border-white border-opacity-20">
+                         <div class="d-flex align-items-center">
+                            <i class="ri-time-line text-muted me-2" style="font-size: 14px;"></i>
+                            <span class="text-muted small">{{ timetable.date_creation|date:"d M Y" }}</span>
+                         </div>
+                         <div>
                             {% if timetable.is_validated %}
-                              <i class="ri-lock-line text-success" title="Validé" data-bs-toggle="tooltip"></i>
+                              <span class="badge bg-success-subtle text-success rounded-pill px-2" style="font-size: 10px;">VALIDÉ</span>
                             {% else %}
-                               <i class="ri-lock-unlock-line text-muted" title="Non validé" data-bs-toggle="tooltip"></i>
+                              <span class="badge bg-secondary-subtle text-muted rounded-pill px-2" style="font-size: 10px;">NON VALIDÉ</span>
                             {% endif %}
                          </div>
                       </div>
@@ -448,365 +346,176 @@
                 </div>
                 {% else %}
                   <div class="text-center py-5">
-                      <div class="avatar-sm mx-auto mb-4">
-                          <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                              <i class="ri-layout-grid-line"></i>
-                          </div>
+                      <div class="avatar-lg bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4">
+                        <i class="ri-calendar-todo-line fs-48 text-muted"></i>
                       </div>
-                      <h5 class="mb-2">Aucun emploi du temps trouvé</h5>
-                      <p class="text-muted mb-0">Commencez par en créer un nouveau.</p>
+                      <h5 class="fw-bold">Aucun emploi du temps</h5>
+                      <p class="text-muted">Commencez par créer votre premier emploi du temps pour cette classe.</p>
+                      <a href="{% url 't_timetable:CreateTimeTable' %}" class="btn btn-primary rounded-pill px-4 mt-2">
+                        <i class="ri-add-line me-1"></i> Nouveau
+                      </a>
                   </div>
                 {% endif %}
+              </div>
                </div>
 
               <!-- Table View (Hidden by default) -->
               <div id="tableViewContainer" style="display: none;">
-                <div class="table-responsive" style="overflow-x: visible;">
-                  <table id="timetableTable" class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                      <tr>
-                        <th class="border-0 rounded-start">Nom</th>
-                        <th class="border-0">Groupe</th>
-                        <th class="border-0">Année scolaire</th>
-                        <th class="border-0">Semestre</th>
-                        <th class="border-0">Statut</th>
-                        <th class="border-0">Programmation</th>
-                        <th class="border-0">Date de création</th>
-                        <th class="border-0 rounded-end text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="timetableListBody">
-                      {% if timetables %}
-                        {% for timetable in timetables %}
-                          <tr class="align-middle timetable-item">
-                            <td>
-                              <div class="d-flex align-items-center">
-                                {% if timetable.is_validated %}
-                                  <i class="ri-lock-line text-success me-2" title="Emploi du temps validé"></i>
-                                {% else %}
-                                  <i class="ri-lock-unlock-line text-muted me-2" title="Emploi du temps non validé"></i>
-                                {% endif %}
-                                <div class="flex-grow-1">
-                                  <h6 class="mb-0 fw-semibold">{{ timetable.label }}</h6>
-                                  <p class="mb-0 text-muted small">{{ timetable.description|default:"Aucune description" }}</p>
-                                  {% if not timetable.is_configured %}
-                                    <span class="badge bg-warning-subtle text-warning px-2 py-1 mt-1">
-                                      <i class="ri-settings-line me-1"></i>Non configuré
-                                    </span>
-                                  {% endif %}
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div class="fw-medium">
-                                <span class="text-info fw-semibold">{{ timetable.groupe.nom }}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <div class="text-body">{{ timetable.annee_scolaire }}</div>
-                            </td>
-                            <td>
-                              <div class="text-body"><span class='badge bg-primary'>{{ timetable.get_semestre_display }}</span></div>
-                            </td>
-                            <td>
-                              {% if timetable.status == "bro" %}
-                                <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                  <i class="ri-check-line me-1"></i>Brouillon
-                                </span>
-                              {% endif %}
-                              {% if timetable.status == "enc" %}
-                              <span class="badge bg-success-subtle text-success px-2 py-1">
-                                <i class="ri-check-line me-1"></i>En cours
-                              </span>
-                              {% endif %}
-                              {% if timetable.status == "pau" %}
-                              <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                <i class="ri-rest-time-line me-1"></i>En pause
-                              </span>
-                              {% endif %}
-                              {% if timetable.status == "ter" %}
-                              <span class="badge bg-danger-subtle text-danger px-2 py-1">
-                                <i class="ri-check-line me-1"></i>Clôturé
-                              </span>
-                              {% endif %}
-                            </td>
-                            <td>
-                              {% if timetable.is_configured %}
-                                <span class="badge bg-success-subtle text-success px-2 py-1">
-                                  <i class="ri-check-line me-1"></i>Configuration terminée
-                                </span>
-                              {% else %}
-                                  <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                  <i class="ri-check-line me-1"></i>En cours de configuration
-                                </span>
-                              {% endif %}
-
-                            </td>
-                            <td>
-                              <div class="text-body">{{ timetable.date_creation|date:"d M Y" }}</div>
-                            </td>
-                            <td class="text-end">
-                              <div class="dropdown d-inline-block">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-{{timetable.id}}" data-bs-toggle="dropdown" aria-expanded="false">
-                                  <i class="ri-more-2-fill align-middle"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-{{timetable.id}}" style="z-index: 1060 !important;">
-                                  
-                                  {% if timetable.is_configured %}
-                                  <li>
-                                    <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-eye-line text-primary me-3"></i>
-                                      <span>Voir</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.is_configured %}
-                                  <li>
-                                    <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-settings-line text-warning me-3"></i>
-                                      <span>Configurer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.status == "ter" and timetable.is_configured %}
-                                  <li>
-                                    <button data-status='{{timetable.status}}' data-id='{{timetable.id}}' class="btnCkeckValidation dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                      <i class="ri-calendar-schedule-line text-info me-3"></i>
-                                      <span>Planification</span>
-                                    </button>
-                                  </li>
-                                  {% endif %}
-                                  <li><hr class="dropdown-divider my-1 mx-3"></li>
-
-                                  {% if timetable.status == "enc" %}
-                                  <li>
-                                    <a class="PauseBtn dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-warning" data-id='{{timetable.id}}' href="#">
-                                      <i class="ri-pause-circle-line me-3"></i>
-                                      <span>Pause</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if not timetable.status == "ter" and not timetable.status == "bro" %}
-                                  <li>
-                                    <a class="ClotureBtn dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger"  data-id='{{timetable.id}}'  href="#">
-                                      <i class="ri-lock-line me-3"></i>
-                                      <span>Clôturer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-                                  {% if timetable.is_configured and timetable.status in "bro,pau" %}
-                                  <li>
-                                    <a id="ActiveBtn"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
-                                      <i class="ri-lock-line me-3"></i>
-                                      <span>Activer</span>
-                                    </a>
-                                  </li>
-                                  {% endif %}
-
-                                  <li>
-                                    <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}">
-                                      <i class="ri-delete-bin-line me-3"></i>
-                                      <span>Supprimer</span>
-                                    </a>
-                                  </li>
-                                </ul>
-                              </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      {% else %}
+                <div class="glass-card overflow-hidden">
+                  <div class="table-responsive">
+                    <table id="timetableTable" class="table table-modern align-middle mb-0">
+                      <thead>
                         <tr>
-                          <td colspan="8" class="text-center text-muted">
-                            <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                                <div class="avatar-sm mb-4">
-                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                                        <i class="ri-calendar-todo-line"></i>
-                                    </div>
-                                </div>
-                                <h5 class="mb-2">Aucun emploi du temps trouvé</h5>
-                                <p class="text-muted mb-0">Il n'y a aucun emploi du temps enregistré pour le moment</p>
-                            </div>
-                          </td>
+                          <th>Nom & Description</th>
+                          <th>Groupe</th>
+                          <th>Année</th>
+                          <th>Semestre</th>
+                          <th>Statut</th>
+                          <th>Date Création</th>
+                          <th class="text-center">Actions</th>
                         </tr>
-                      {% endif %}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody id="timetableListBody">
+                        {% if timetables %}
+                          {% for timetable in timetables %}
+                            <tr class="timetable-item">
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
+                                    {% if timetable.is_validated %}
+                                      <i class="ri-lock-line text-success"></i>
+                                    {% else %}
+                                      <i class="ri-lock-unlock-line text-muted"></i>
+                                    {% endif %}
+                                  </div>
+                                  <div>
+                                    <h6 class="mb-0 fw-bold">{{ timetable.label }}</h6>
+                                    <p class="mb-0 text-muted small text-truncate" style="max-width: 200px;">{{ timetable.description|default:"-" }}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span class="fw-semibold text-dark">{{ timetable.groupe.nom }}</span>
+                              </td>
+                              <td>{{ timetable.annee_scolaire }}</td>
+                              <td>
+                                <span class="badge badge-soft-primary">{{ timetable.get_semestre_display }}</span>
+                              </td>
+                              <td>
+                                {% if timetable.status == "bro" %}
+                                  <span class="badge badge-soft-warning">Brouillon</span>
+                                {% elif timetable.status == "enc" %}
+                                  <span class="badge badge-soft-success">En cours</span>
+                                {% elif timetable.status == "pau" %}
+                                  <span class="badge badge-soft-warning">En pause</span>
+                                {% elif timetable.status == "ter" %}
+                                  <span class="badge badge-soft-danger">Clôturé</span>
+                                {% endif %}
+                              </td>
+                              <td>
+                                <span class="text-muted small">{{ timetable.date_creation|date:"d M Y" }}</span>
+                              </td>
+                              <td class="text-center">
+                                <div class="dropdown">
+                                  <button class="btn btn-soft-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                                    <i class="ri-more-2-fill"></i>
+                                  </button>
+                                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                                    {% if timetable.is_configured %}
+                                    <li><a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item px-3 py-2"><i class="ri-eye-line text-primary me-2"></i> Voir</a></li>
+                                    {% endif %}
+                                    {% if not timetable.is_configured %}
+                                    <li><a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item px-3 py-2"><i class="ri-settings-line text-warning me-2"></i> Configurer</a></li>
+                                    {% endif %}
+                                    <li><button data-status='{{timetable.status}}' data-id='{{timetable.id}}' class="btnCkeckValidation dropdown-item px-3 py-2"><i class="ri-calendar-schedule-line text-info me-2"></i> Planifier</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}"><i class="ri-delete-bin-line me-2"></i> Supprimer</button></li>
+                                  </ul>
+                                </div>
+                              </td>
+                            </tr>
+                          {% endfor %}
+                        {% else %}
+                          <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">Aucun emploi du temps trouvé</td>
+                          </tr>
+                        {% endif %}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
               <!-- Grouped View (Hidden by default) -->
               <div id="groupedViewContainer" style="display: none;">
                 {% if timetables %}
-                  {% regroup timetables by groupe.annee_scolaire as timetables_by_year %}
+                  {% regroup timetables by annee_scolaire as timetables_by_year %}
                   {% for year_group in timetables_by_year %}
-                    <div class="card mb-3 border-0">
-                      <div class="card-header bg-light p-3">
-                        <h5 class="mb-0 text-info">
-                          <i class="ri-calendar-2-line me-2"></i>
-                          Année Scolaire: {{ year_group.grouper }}
-                        </h5>
+                    <div class="glass-card mb-4 overflow-hidden">
+                      <div class="card-header bg-primary bg-opacity-10 p-3 border-0">
+                        <h6 class="mb-0 fw-bold text-primary">
+                          <i class="ri-calendar-2-line me-2"></i> Année Scolaire : {{ year_group.grouper }}
+                        </h6>
                       </div>
-                      <div class="card-body p-0">
-                        <div class="table-responsive">
-                          <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
-                              <tr>
-                                <th class="border-0 rounded-start">Nom</th>
-                                <th class="border-0">Groupe</th>
-                                <th class="border-0">Semestre</th>
-                                <th class="border-0">Statut</th>
-                                <th class="border-0">Programmation</th>
-                                <th class="border-0">Date de création</th>
-                                <th class="border-0 rounded-end text-center">Actions</th>
+                      <div class="table-responsive">
+                        <table class="table table-modern align-middle mb-0">
+                          <thead>
+                            <tr>
+                              <th>Nom</th>
+                              <th>Groupe</th>
+                              <th>Semestre</th>
+                              <th>Statut</th>
+                              <th class="text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for timetable in year_group.list %}
+                              <tr class="timetable-item">
+                                <td>
+                                  <div class="d-flex align-items-center">
+                                    <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2">
+                                      <i class="ri-calendar-line text-muted"></i>
+                                    </div>
+                                    <span class="fw-bold text-dark">{{ timetable.label }}</span>
+                                  </div>
+                                </td>
+                                <td>{{ timetable.groupe.nom }}</td>
+                                <td><span class="badge badge-soft-primary">{{ timetable.get_semestre_display }}</span></td>
+                                <td>
+                                  {% if timetable.status == "bro" %}
+                                    <span class="badge badge-soft-warning">Brouillon</span>
+                                  {% elif timetable.status == "enc" %}
+                                    <span class="badge badge-soft-success">En cours</span>
+                                  {% elif timetable.status == "pau" %}
+                                    <span class="badge badge-soft-warning">En pause</span>
+                                  {% elif timetable.status == "ter" %}
+                                    <span class="badge badge-soft-danger">Clôturé</span>
+                                  {% endif %}
+                                </td>
+                                <td class="text-center">
+                                  <div class="dropdown">
+                                    <button class="btn btn-soft-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                                      <i class="ri-more-2-fill"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                                      <li><a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item px-3 py-2"><i class="ri-eye-line text-primary me-2"></i> Voir</a></li>
+                                      <li><button class="dropdown-item px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}"><i class="ri-delete-bin-line me-2"></i> Supprimer</button></li>
+                                    </ul>
+                                  </div>
+                                </td>
                               </tr>
-                            </thead>
-                            <tbody>
-                              {% for timetable in year_group.list %}
-                                <tr class="align-middle timetable-item">
-                                  <td>
-                                    <div class="d-flex align-items-center">
-                                      {% if timetable.is_validated %}
-                                        <i class="ri-lock-line text-success me-2" title="Emploi du temps validé"></i>
-                                      {% else %}
-                                        <i class="ri-lock-unlock-line text-muted me-2" title="Emploi du temps non validé"></i>
-                                      {% endif %}
-                                      <div class="flex-grow-1">
-                                        <h6 class="mb-0 fw-semibold">{{ timetable.label }}</h6>
-                                        <p class="mb-0 text-muted small">{{ timetable.description|default:"Aucune description" }}</p>
-                                        {% if not timetable.is_configured %}
-                                          <span class="badge bg-warning-subtle text-warning px-2 py-1 mt-1">
-                                            <i class="ri-settings-line me-1"></i>Non configuré
-                                          </span>
-                                        {% endif %}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="fw-medium">
-                                      <span class="text-info fw-semibold">{{ timetable.groupe.nom }}</span>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div class="text-body"><span class='badge bg-primary'>{{ timetable.get_semestre_display }}</span></div>
-                                  </td>
-                                  <td>
-                                    {% if timetable.status == "bro" %}
-                                      <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                        <i class="ri-check-line me-1"></i>Brouillon
-                                      </span>
-                                    {% endif %}
-                                    {% if timetable.status == "enc" %}
-                                    <span class="badge bg-success-subtle text-success px-2 py-1">
-                                      <i class="ri-check-line me-1"></i>En cours
-                                    </span>
-                                    {% endif %}
-                                    {% if timetable.status == "pau" %}
-                                    <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                      <i class="ri-rest-time-line me-1"></i>En pause
-                                    </span>
-                                    {% endif %}
-                                    {% if timetable.status == "ter" %}
-                                    <span class="badge bg-danger-subtle text-danger px-2 py-1">
-                                      <i class="ri-check-line me-1"></i>Clôturé
-                                    </span>
-                                    {% endif %}
-                                  </td>
-                                  <td>
-                                    {% if timetable.is_configured %}
-                                      <span class="badge bg-success-subtle text-success px-2 py-1">
-                                        <i class="ri-check-line me-1"></i>Configuration terminée
-                                      </span>
-                                    {% else %}
-                                        <span class="badge bg-warning-subtle text-warning px-2 py-1">
-                                        <i class="ri-check-line me-1"></i>En cours de configuration
-                                      </span>
-                                    {% endif %}
-
-                                  </td>
-                                  <td>
-                                    <div class="text-body">{{ timetable.date_creation|date:"d M Y" }}</div>
-                                  </td>
-                                  <td class="text-end">
-                                    <div class="dropdown d-inline-block">
-                                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButtonGrouped-{{timetable.id}}" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="ri-more-2-fill align-middle"></i>
-                                      </button>
-                                      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButtonGrouped-{{timetable.id}}" style="z-index: 1060 !important;">
-                                        <li>
-                                          <a href="{% url 't_timetable:timetable_view' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                            <i class="ri-eye-line text-primary me-3"></i>
-                                            <span>Voir</span>
-                                          </a>
-                                        </li>
-                                        {% if not timetable.is_configured %}
-                                        <li>
-                                          <a href="{% url 't_timetable:timetable_configure' timetable.id %}" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                            <i class="ri-settings-line text-warning me-3"></i>
-                                            <span>Configurer</span>
-                                          </a>
-                                        </li>
-                                        {% endif %}
-                                        {% if not timetable.status == "ter" %}
-                                        <li>
-                                          <button id="btnCkeckValidationGrouped" data-status='{{timetable.status}}' data-id='{{timetable.id}}' class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">
-                                            <i class="ri-calendar-schedule-line text-info me-3"></i>
-                                            <span>Planification</span>
-                                          </button>
-                                        </li>
-                                        {% endif %}
-                                        <li><hr class="dropdown-divider my-1 mx-3"></li>
-
-                                        {% if timetable.status == "enc" %}
-                                        <li>
-                                          <a id="PauseBtnGrouped" data-id='{{timetable.id}}' href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-warning">
-                                            <i class="ri-pause-circle-line me-3"></i>
-                                            <span>Pause</span>
-                                          </a>
-                                        </li>
-                                        {% endif %}
-                                        {% if not timetable.status == "ter" and not timetable.status == "bro" %}
-                                        <li>
-                                          <a id="ClotureBtnGrouped"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger">
-                                            <i class="ri-lock-line me-3"></i>
-                                            <span>Clôturer</span>
-                                          </a>
-                                        </li>
-                                        {% endif %}
-                                        {% if timetable.status == "bro" or timetable.status == "pau" %}
-                                        <li>
-                                          <a id="ActiveBtnGrouped"  data-id='{{timetable.id}}'  href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-success">
-                                            <i class="ri-lock-line me-3"></i>
-                                            <span>Activer</span>
-                                          </a>
-                                        </li>
-                                        {% endif %}
-
-                                        <li>
-                                          <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 text-danger delete-timetable" data-id="{{timetable.id}}" data-status="{{timetable.status}}">
-                                            <i class="ri-delete-bin-line me-3"></i>
-                                            <span>Supprimer</span>
-                                          </a>
-                                        </li>
-                                      </ul>
-                                    </div>
-                                  </td>
-                                </tr>
-                              {% endfor %}
-                            </tbody>
-                          </table>
-                        </div>
+                            {% endfor %}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   {% endfor %}
                 {% else %}
                   <div class="text-center py-5">
-                    <div class="avatar-sm mx-auto mb-4">
-                      <div class="avatar-title bg-light text-muted rounded-circle fs-1">
-                        <i class="ri-calendar-todo-line"></i>
-                      </div>
+                    <div class="avatar-lg bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4">
+                      <i class="ri-calendar-todo-line fs-48 text-muted"></i>
                     </div>
-                    <h5 class="mb-2">Aucun emploi du temps trouvé</h5>
-                    <p class="text-muted mb-0">Il n'y a aucun emploi du temps enregistré pour le moment</p>
+                    <h5 class="fw-bold">Aucun emploi du temps</h5>
                   </div>
                 {% endif %}
               </div>
@@ -822,202 +531,92 @@
 
 
 <!-- Pause Modal -->
-<div class="modal fade" id="pauseModal" tabindex="-1" aria-labelledby="pauseModalLabel" aria-hidden="true">
+<div class="modal fade" id="pauseModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-warning flex-grow-1" id="pauseModalLabel">
-          <i class="ri-pause-circle-line me-2"></i>Mettre en pause l'emploi du temps
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0">
+        <h5 class="modal-title fw-bold text-warning"><i class="ri-pause-circle-line me-2"></i>Mise en pause</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-pause-circle-line text-warning" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-warning">Mise en pause</h4>
-          <p class="text-muted mt-3">L'emploi du temps sera mis en pause. Les cours planifiés ne seront pas accessibles jusqu'à la réactivation.</p>
-          <div class="alert alert-warning bg-warning bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-error-warning-line text-warning fs-5 me-2"></i>
-              <div>
-                <strong>Attention</strong><br>
-                La mise en pause ne supprime pas les données. L'emploi du temps pourra être réactivé ultérieurement.
-              </div>
-            </div>
-          </div>
+      <div class="modal-body text-center p-4">
+        <div class="avatar-lg bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+          <i class="ri-pause-line fs-1"></i>
         </div>
+        <h4 class="fw-bold">Confirmer la mise en pause ?</h4>
+        <p class="text-muted">L'emploi du temps sera suspendu. Les cours planifiés ne seront plus visibles temporairement.</p>
       </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-warning text-white px-4" id="ConfirmPauseBtn">Confirmer la pause</button>
+      <div class="modal-footer border-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-warning text-white rounded-pill px-4" id="ConfirmPauseBtn">Confirmer</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Cloturer Modal -->
-<div class="modal fade" id="cloturerModal" tabindex="-1" aria-labelledby="cloturerModalLabel" aria-hidden="true">
+<div class="modal fade" id="cloturerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-danger flex-grow-1" id="cloturerModalLabel">
-          <i class="ri-lock-line me-2"></i>Clôturer l'emploi du temps
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger"><i class="ri-lock-line me-2"></i>Clôture</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-lock-line text-danger" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-danger">Clôture de l'emploi du temps</h4>
-          <p class="text-muted mt-3">L'emploi du temps sera clôturé définitivement. Les cours planifiés ne seront plus accessibles.</p>
-          <div class="alert alert-danger bg-danger bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-error-warning-line text-danger fs-5 me-2"></i>
-              <div>
-                <strong>Action irréversible</strong><br>
-                La clôture est permanente et ne peut pas être annulée. Toutes les données liées seront archivées.
-              </div>
-            </div>
-          </div>
+      <div class="modal-body text-center p-4">
+        <div class="avatar-lg bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+          <i class="ri-lock-password-line fs-1"></i>
         </div>
+        <h4 class="fw-bold">Clôturer l'emploi du temps ?</h4>
+        <p class="text-muted">Cette action est <strong>irréversible</strong>. L'emploi du temps sera archivé définitivement.</p>
       </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-danger px-4" id="ConfirmeClotureBtn">Confirmer la clôture</button>
+      <div class="modal-footer border-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4" id="ConfirmeClotureBtn">Clôturer définitivement</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Activer Modal -->
-<div class="modal fade" id="activerModal" tabindex="-1" aria-labelledby="activerModalLabel" aria-hidden="true">
+<div class="modal fade" id="activerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-success bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-success flex-grow-1" id="activerModalLabel">
-          <i class="ri-check-line me-2"></i>Activer l'emploi du temps
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-success bg-opacity-10 border-0 pb-0">
+        <h5 class="modal-title fw-bold text-success"><i class="ri-play-circle-line me-2"></i>Activation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-check-line text-success" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-success">Activation de l'emploi du temps</h4>
-          <p class="text-muted mt-3">L'emploi du temps sera activé. Les cours planifiés seront à nouveau accessibles.</p>
-          <div class="alert alert-success bg-success bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-checkbox-circle-line text-success fs-5 me-2"></i>
-              <div>
-                <strong>Prêt à l'emploi</strong><br>
-                L'emploi du temps sera mis à jour avec le statut actif et accessible par tous les utilisateurs concernés.
-              </div>
-            </div>
-          </div>
+      <div class="modal-body text-center p-4">
+        <div class="avatar-lg bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+          <i class="ri-play-line fs-1"></i>
         </div>
+        <h4 class="fw-bold">Activer l'emploi du temps ?</h4>
+        <p class="text-muted">L'emploi du temps redeviendra actif et visible pour tous les utilisateurs.</p>
       </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-success px-4" id="ConfirmeActivateBtn">Confirmer l'activation</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Schedule Classes Warning Modal -->
-<div class="modal fade" id="scheduleWarningModal" tabindex="-1" aria-labelledby="scheduleWarningModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-warning flex-grow-1" id="scheduleWarningModalLabel">
-          <i class="ri-error-warning-line me-2"></i>Emploi du temps non validé
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-error-warning-line text-warning" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-warning">Validation requise</h4>
-          <p class="text-muted mt-3">Pour pouvoir planifier les cours, l'emploi du temps doit être validé (créé).</p>
-          <div class="alert alert-warning bg-warning bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-error-warning-line text-warning fs-5 me-2"></i>
-              <div>
-                <strong>Attention</strong><br>
-                Veuillez d'abord créer et valider l'emploi du temps avant de pouvoir planifier les cours.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Fermer</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Timetable in Use Warning Modal -->
-<div class="modal fade" id="timetableInUseWarningModal" tabindex="-1" aria-labelledby="timetableInUseWarningModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-warning flex-grow-1" id="timetableInUseWarningModalLabel">
-          <i class="ri-alert-line me-2"></i>Emploi du temps en cours d'utilisation
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-alert-line text-warning" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-warning">Avertissement important</h4>
-          <p class="text-muted mt-3">Cet emploi du temps est actuellement en cours d'utilisation.</p>
-          <div class="alert alert-warning bg-warning bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-error-warning-line text-warning fs-5 me-2"></i>
-              <div>
-                <strong>Attention</strong><br>
-                La suppression de cet emploi du temps pourrait causer une incohérence dans les données. Les cours planifiés et les horaires associés seront affectés.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center gap-2">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+      <div class="modal-footer border-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-success rounded-pill px-4" id="ConfirmeActivateBtn">Activer</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Delete Timetable Modal -->
-<div class="modal fade" id="deleteTimetableModal" tabindex="-1" aria-labelledby="deleteTimetableModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteTimetableModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0 d-flex align-items-center">
-        <h5 class="modal-title fw-bold text-danger flex-grow-1" id="deleteTimetableModalLabel">
-          <i class="ri-delete-bin-line me-2"></i>Supprimer l'emploi du temps
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-danger bg-opacity-10 border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger"><i class="ri-delete-bin-line me-2"></i>Suppression</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body px-4 pt-0 pb-4">
-        <div class="text-center py-3">
-          <i class="ri-delete-bin-line text-danger" style="font-size: 48px;"></i>
-          <h4 class="mt-3 fw-bold text-danger">Suppression de l'emploi du temps</h4>
-          <p class="text-muted mt-3">Êtes-vous sûr de vouloir supprimer cet emploi du temps ? Cette action est irréversible.</p>
-          <div class="alert alert-danger bg-danger bg-opacity-10 border-0 alert-dismissible fade show" role="alert">
-            <div class="d-flex align-items-center">
-              <i class="ri-error-warning-line text-danger fs-5 me-2"></i>
-              <div>
-                <strong>Action irréversible</strong><br>
-                La suppression est permanente et ne peut pas être annulée. Toutes les données liées seront supprimées définitivement.
-              </div>
-            </div>
-          </div>
+      <div class="modal-body text-center p-4">
+        <div class="avatar-lg bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 64px; height: 64px;">
+          <i class="ri-delete-bin-6-line fs-1"></i>
         </div>
+        <h4 class="fw-bold">Supprimer cet élément ?</h4>
+        <p class="text-muted">Toutes les données associées seront supprimées définitivement.</p>
       </div>
-      <div class="modal-footer bg-light border-0 rounded-bottom justify-content-center">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-danger px-4" id="confirmDeleteTimetableBtn">Confirmer la suppression</button>
+      <div class="modal-footer border-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmDeleteTimetableBtn">Supprimer</button>
       </div>
     </div>
   </div>
