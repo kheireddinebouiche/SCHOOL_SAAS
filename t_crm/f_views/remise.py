@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
+from t_tresorerie.models import DuePaiements
 from django.utils.dateformat import format
 
 
@@ -24,7 +25,16 @@ def AipLoadRemise(request):
 
 @login_required(login_url="institut_app:login")
 def ApiLoadProspectParticulier(request):
-    prospect = Prospets.objects.filter(type_prospect = 'particulier').filter(Q(statut = "visiteur") | Q(statut = "prinscrit")).exclude(context='con').values('slug','id','nom','prenom','date_naissance','statut','nin','created_at')
+    # Filter for 'particulier' prospects in 'instance de paiement' status
+    # exclude those who explicitly have a remaining debt in DuePaiements
+    prospect = Prospets.objects.filter(
+        type_prospect='particulier', 
+        statut='instance'
+    ).exclude(
+        id__in=DuePaiements.objects.filter(montant_restant__gt=0).values_list('client_id', flat=True)
+    ).exclude(
+        context='con'
+    ).values('slug','id','nom','prenom','date_naissance','statut','nin','created_at')
 
     for i in prospect:
         i_obj = Prospets.objects.get(id= i['id'])

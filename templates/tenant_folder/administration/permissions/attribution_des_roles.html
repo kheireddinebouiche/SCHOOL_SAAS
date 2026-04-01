@@ -30,8 +30,21 @@
   .table-responsive { overflow-x: visible; }
   .table .dropdown-menu { z-index: 1050; position: absolute; }
   .form-check-input:checked { background-color: var(--primary-teal); border-color: var(--primary-teal); }
-  .bulk-actions-bar { display: none; position: sticky; top: 20px; z-index: 1000; width: 100%; margin-bottom: 1.5rem; animation: slideDown 0.3s ease-out; }
-  @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .bulk-actions-bar { 
+    display: none; 
+    position: fixed; 
+    bottom: 40px; 
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000; 
+    width: auto; 
+    min-width: 400px;
+    max-width: 90%; 
+    margin-bottom: 0;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.15) !important;
+    animation: slideUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+  @keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
   .btn-rounded { border-radius: 10px; }
 </style>
 
@@ -69,14 +82,19 @@
         <div class="glass-card bg-primary-teal border-0 p-3 shadow-lg">
           <div class="d-flex align-items-center justify-content-between text-white flex-wrap gap-2">
             <div class="d-flex align-items-center">
-              <div class="bg-white bg-opacity-20 rounded-pill px-3 py-1 me-3">
-                <span id="selectedCount" class="fw-bold">0</span> sélectionnés
+              <div class="bg-white rounded-pill px-3 py-1 me-3 shadow-sm">
+                <span id="selectedCount" class="fw-bold" style="color: var(--primary-teal)">0</span> 
+                <span class="small fw-semibold" style="color: var(--primary-teal)">sélectionnés</span>
               </div>
-              <h6 class="mb-0 fw-medium">Actions groupées :</h6>
+              <h6 class="mb-0 fw-bold text-white">Actions groupées :</h6>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-danger btn-sm rounded-pill px-3" id="bulkDelete"><i class="ri-delete-bin-line me-1"></i> Supprimer</button>
-              <button class="btn btn-link text-white text-decoration-none ms-2" id="clearSelection"><i class="ri-refresh-line me-1"></i> Annuler</button>
+              <button class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm fw-medium" id="bulkDelete">
+                <i class="ri-delete-bin-line me-1"></i> Supprimer
+              </button>
+              <button class="btn btn-link text-white text-decoration-none ms-2 fw-medium d-flex align-items-center" id="clearSelection">
+                <i class="ri-refresh-line me-1"></i> Annuler
+              </button>
             </div>
           </div>
         </div>
@@ -488,34 +506,50 @@
       var endIndex = Math.min(startIndex + itemsPerPage, filteredAttributionsData.length);
       var pageData = filteredAttributionsData.slice(startIndex, endIndex);
 
+      var lastUserId = null;
       pageData.forEach(function(attribution) {
-        var row = `
-          <tr data-attribution-id="${attribution.id}">
-            <td class="px-4"><div class="form-check"><input class="form-check-input row-checkbox" type="checkbox" value="${attribution.id}"></div></td>
-            <td>
-              <div class="d-flex align-items-center">
-                <div class="icon-box bg-soft-primary me-3" style="width:38px;height:38px;font-size:1rem;"><i class="ri-user-line"></i></div>
-                <div>
-                  <h6 class="mb-0 fw-bold">${attribution.user.first_name} ${attribution.user.last_name}</h6>
-                  <small class="text-muted">@${attribution.user.username}</small>
+        // Group header for user
+        if (attribution.user.id !== lastUserId) {
+          var userHeader = `
+            <tr class="table-light border-bottom-0">
+              <td colspan="7" class="py-2 px-4 shadow-none">
+                <div class="d-flex align-items-center">
+                  <div class="icon-box bg-soft-primary me-3" style="width:32px;height:32px;font-size:0.9rem;border-radius:8px;">
+                    <i class="ri-user-line"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fw-bold text-dark">${attribution.user.first_name} ${attribution.user.last_name}</h6>
+                    <small class="text-muted">@${attribution.user.username}</small>
+                  </div>
                 </div>
-              </div>
+              </td>
+            </tr>
+          `;
+          tbody.append(userHeader);
+          lastUserId = attribution.user.id;
+        }
+
+        var row = `
+          <tr data-attribution-id="${attribution.id}" data-user-name="${attribution.user.first_name} ${attribution.user.last_name}" data-module-name="${attribution.module.name}" class="border-top-0">
+            <td class="px-4 border-top-0"><div class="form-check"><input class="form-check-input row-checkbox" type="checkbox" value="${attribution.id}"></div></td>
+            <td class="border-top-0 text-center" style="width: 50px;">
+              <i class="ri-corner-down-right-line text-muted opacity-50"></i>
             </td>
-            <td>
+            <td class="border-top-0">
               <div class="d-flex align-items-center">
                 <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-apps-line"></i></div>
                 <span class="fw-medium">${attribution.module.name}</span>
               </div>
             </td>
-            <td><span class="badge bg-primary-subtle text-primary rounded-pill px-3"><i class="ri-shield-user-line me-1"></i>${attribution.role.name}</span></td>
-            <td>
+            <td class="border-top-0"><span class="badge bg-primary-subtle text-primary rounded-pill px-3"><i class="ri-shield-user-line me-1"></i>${attribution.role.name}</span></td>
+            <td class="border-top-0">
               <div class="d-flex align-items-center">
-                <div class="icon-box bg-soft-info me-2" style="width:32px;height:32px;font-size:0.9rem;"><i class="ri-account-circle-line"></i></div>
-                <span>${attribution.assigned_by.first_name} ${attribution.assigned_by.last_name}</span>
+                <div class="icon-box bg-soft-info me-2" style="width:28px;height:28px;font-size:0.8rem;"><i class="ri-account-circle-line"></i></div>
+                <span class="small">${attribution.assigned_by.first_name} ${attribution.assigned_by.last_name}</span>
               </div>
             </td>
-            <td><div class="d-flex align-items-center text-muted small"><i class="ri-calendar-line me-1"></i>${attribution.assigned_at}</div></td>
-            <td class="text-center">
+            <td class="border-top-0"><div class="d-flex align-items-center text-muted small"><i class="ri-calendar-line me-1"></i>${attribution.assigned_at}</div></td>
+            <td class="text-center border-top-0">
               <div class="dropdown">
                 <button class="btn btn-soft-primary btn-sm rounded-pill" type="button" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
@@ -604,6 +638,15 @@
         var matchesRole = roleFilter === '' || attribution.role.id.toString() === roleFilter;
 
         return matchesSearch && matchesUser && matchesModule && matchesRole;
+      });
+
+      // Sort by user name (Last Name + First Name)
+      filteredAttributionsData.sort(function(a, b) {
+        var nameA = (a.user.last_name + ' ' + a.user.first_name).toLowerCase();
+        var nameB = (b.user.last_name + ' ' + b.user.first_name).toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
       });
 
       currentPage = 1;
@@ -712,8 +755,8 @@
       e.preventDefault();
       var attributionId = $(this).data('attribution-id');
       var $row = $(this).closest('tr');
-      var userName = $row.find('td:eq(0)').text();
-      var moduleName = $row.find('td:eq(1)').text();
+      var userName = $row.data('user-name') || "";
+      var moduleName = $row.data('module-name') || "";
 
       // Update the modal content
       $('#deleteModalMessage').html(`

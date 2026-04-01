@@ -87,7 +87,9 @@ def ApiSpecialiteByPromo(request):
         result[sid] = {
             "specialite_id": sid,
             "specialite_label": v["specialite__label"],
+            "formation_label": v["specialite__formation__nom"],
             "nombre_etudiants": v["nombre"],
+            "nombre_double": 0,
         }
 
     # =====================================================
@@ -95,7 +97,11 @@ def ApiSpecialiteByPromo(request):
     # =====================================================
     voeux_doubles = (
         FicheVoeuxDouble.objects
-        .select_related("specialite", "specialite__specialite1", "specialite__specialite2")
+        .select_related(
+            "specialite", 
+            "specialite__specialite1", "specialite__specialite1__formation",
+            "specialite__specialite2", "specialite__specialite2__formation"
+        )
         .filter(
             promo__code=promoCode,
             is_confirmed=True,
@@ -113,11 +119,14 @@ def ApiSpecialiteByPromo(request):
 
             if spec.id in result:
                 result[spec.id]["nombre_etudiants"] += 1
+                result[spec.id]["nombre_double"] += 1
             else:
                 result[spec.id] = {
                     "specialite_id": spec.id,
                     "specialite_label": spec.label,
+                    "formation_label": spec.formation.nom if spec.formation else "N/A",
                     "nombre_etudiants": 1,
+                    "nombre_double": 1,
                 }
 
     # =====================================================

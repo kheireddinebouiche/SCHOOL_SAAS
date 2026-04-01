@@ -399,9 +399,8 @@
                   <table class="table table-hover mb-0">
                     <thead class="table-light">
                       <tr>
-                        <th style="width: 35%;">Module</th>
-                        <th style="width: 35%;">Permission</th>
-                        <th class="text-center" style="width: 15%;">Statut</th>
+                        <th style="width: 30%;">Module</th>
+                        <th style="width: 55%;">Permissions</th>
                         <th class="text-center" style="width: 15%;">Actions</th>
                       </tr>
                     </thead>
@@ -1064,33 +1063,54 @@
           $('#rolePermissionsList').empty();
 
           if (data.status === "success" && data.permissions && data.permissions.length > 0) {
-            data.permissions.forEach(function(permission) {
-              var checked = permission.is_granted ? 'checked' : '';
-              var statusBadge = permission.is_granted ?
-                '<span class="badge bg-success"><i class="ri-check-line me-1"></i>Accordée</span>' :
-                '<span class="badge bg-secondary"><i class="ri-close-line me-1"></i>Non accordée</span>';
+            // Group permissions by module
+            var grouped = {};
+            data.permissions.forEach(function(p) {
+                if (!grouped[p.module_name]) grouped[p.module_name] = [];
+                grouped[p.module_name].push(p);
+            });
+
+            Object.keys(grouped).forEach(function(moduleName) {
+              var permissions = grouped[moduleName];
+              var permissionsHtml = '<div class="d-flex flex-wrap gap-3">';
+              
+              permissions.forEach(function(permission) {
+                var checked = permission.is_granted ? 'checked' : '';
+                var statusClass = permission.is_granted ? 'text-success' : 'text-muted';
+                
+                permissionsHtml += `
+                  <div class="permission-item p-2 rounded-3 border bg-light bg-opacity-50 d-flex align-items-center mb-2" style="min-width: 200px;">
+                    <div class="form-check form-switch me-3">
+                      <input class="form-check-input role-permission-toggle" type="checkbox" ${checked} data-permission-id="${permission.id}" role="switch">
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="fw-medium mb-0 small ${statusClass}">${permission.permission_name}</div>
+                    </div>
+                    <div class="ms-2 d-flex gap-1">
+                      <button type="button" class="btn btn-ghost-primary btn-sm p-0 edit-role-permission" data-permission-id="${permission.id}" style="width: 24px; height: 24px;">
+                        <i class="ri-edit-line fs-14"></i>
+                      </button>
+                      <button type="button" class="btn btn-ghost-danger btn-sm p-0 delete-role-permission" data-permission-id="${permission.id}" style="width: 24px; height: 24px;">
+                        <i class="ri-delete-bin-line fs-14"></i>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              });
+              
+              permissionsHtml += '</div>';
+
               var row = `
-                <tr data-permission-id="${permission.id}">
-                  <td>${permission.module_name}</td>
-                  <td>${permission.permission_name}</td>
-                  <td class="text-center">
-                    <div class="form-check form-switch d-flex justify-content-center">
-                      <input class="form-check-input role-permission-toggle" type="checkbox" ${checked} data-permission-id="${permission.id}" role="switch" title="Accorder/Retirer la permission">
-                    </div>
-                    <div class="mt-1 d-none d-md-block">
-                      ${statusBadge}
+                <tr class="module-group-row">
+                  <td class="align-top pt-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box bg-soft-warning me-2" style="width:32px; height:32px; font-size: 1rem;">
+                            <i class="ri-folder-shield-2-line"></i>
+                        </div>
+                        <span class="fw-bold text-dark">${moduleName}</span>
                     </div>
                   </td>
-                  <td class="text-center">
-                    <div class="btn-group" role="group">
-                      <button type="button" class="btn btn-sm btn-outline-primary edit-role-permission" data-permission-id="${permission.id}" title="Modifier">
-                        <i class="ri-edit-line"></i>
-                      </button>
-                      <button type="button" class="btn btn-sm btn-outline-danger delete-role-permission" data-permission-id="${permission.id}" title="Supprimer">
-                        <i class="ri-delete-bin-line"></i>
-                      </button>
-                    </div>
-                  </td>
+                  <td colspan="2">${permissionsHtml}</td>
                 </tr>
               `;
               $('#rolePermissionsList').append(row);
@@ -1296,68 +1316,70 @@
       });
     });
 
-    // Handle edit role permission
-    $(document).on('click', '.edit-role-permission', function() {
+    // Handle edit role permission (Inline edit)
+    $(document).on('click', '.edit-role-permission', function(e) {
+      e.preventDefault();
       var permissionId = $(this).data('permission-id');
-      var $row = $(this).closest('tr');
-      var module = $row.find('td:eq(0)').text();
-      var permission = $row.find('td:eq(1)').text();
+      var $item = $(this).closest('.permission-item');
+      var $moduleRow = $(this).closest('tr.module-group-row');
+      
+      // Get current values
+      var moduleLabel = $moduleRow.find('.fw-bold.text-dark').text().trim();
+      var permissionLabel = $item.find('.fw-medium').text().trim();
 
-      // Create and show edit form - Build options dynamically
+      // Store original HTML to restore on cancel
+      $item.data('original-html', $item.html());
+
+      // Create inline edit form
       var moduleOptions = '';
-      allModules.forEach(function(availableModule) {
-        var isSelected = '';
-        // Check if the current module matches the one being edited (compare with display name)
-        if (module === availableModule.name_display) {
-          isSelected = 'selected';
-        }
-        moduleOptions += '<option value="' + availableModule.name + '" ' + isSelected + '>' + availableModule.name_display + '</option>';
+      allModules.forEach(function(m) {
+          var isSelected = (moduleLabel === m.name_display) ? 'selected' : '';
+          moduleOptions += `<option value="${m.name}" ${isSelected}>${m.name_display}</option>`;
       });
 
-      var editForm = `
-        <tr class="edit-form-row" data-permission-id="${permissionId}">
-          <td>
-            <select class="form-select form-select-sm" name="editRolePermissionModule">
-              ${moduleOptions}
-            </select>
-          </td>
-          <td>
-            <select class="form-select form-select-sm" name="editRolePermissionType">
-              <option value="view" ${permission.includes('Visualiser') ? 'selected' : ''}>Visualiser</option>
-              <option value="add" ${permission.includes('Ajouter') ? 'selected' : ''}>Ajouter</option>
-              <option value="change" ${permission.includes('Modifier') ? 'selected' : ''}>Modifier</option>
-              <option value="delete" ${permission.includes('Supprimer') ? 'selected' : ''}>Supprimer</option>
-              <option value="export" ${permission.includes('Exporter') ? 'selected' : ''}>Exporter</option>
-              <option value="approuv" ${permission.includes('Approuver') ? 'selected' : ''}>Approuver</option>
-            </select>
-          </td>
-          <td class="text-center">
-            <div class="btn-group" role="group">
-              <button type="button" class="btn btn-sm btn-success save-edit-role-permission" title="Enregistrer">
-                <i class="ri-check-line"></i>
-              </button>
-              <button type="button" class="btn btn-sm btn-secondary cancel-edit-role-permission" title="Annuler">
-                <i class="ri-close-line"></i>
-              </button>
+      var editHtml = `
+        <div class="edit-form-inline w-100" data-permission-id="${permissionId}">
+          <div class="row g-1">
+            <div class="col-12 mb-1">
+              <select class="form-select form-select-sm" name="editRolePermissionModule" style="font-size: 11px;">
+                ${moduleOptions}
+              </select>
             </div>
-          </td>
-        </tr>
+            <div class="col-12 mb-1">
+              <select class="form-select form-select-sm" name="editRolePermissionType" style="font-size: 11px;">
+                <option value="view" ${permissionLabel.includes('Visualiser') ? 'selected' : ''}>Visualiser</option>
+                <option value="add" ${permissionLabel.includes('Ajouter') ? 'selected' : ''}>Ajouter</option>
+                <option value="change" ${permissionLabel.includes('Modifier') ? 'selected' : ''}>Modifier</option>
+                <option value="delete" ${permissionLabel.includes('Supprimer') ? 'selected' : ''}>Supprimer</option>
+                <option value="export" ${permissionLabel.includes('Exporter') ? 'selected' : ''}>Exporter</option>
+                <option value="approuv" ${permissionLabel.includes('Approuver') ? 'selected' : ''}>Approuver</option>
+              </select>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-1 mt-1">
+            <button type="button" class="btn btn-sm btn-success p-0 save-edit-role-permission" style="width: 24px; height: 24px;">
+              <i class="ri-check-line"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary p-0 cancel-edit-role-permission" style="width: 24px; height: 24px;">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+        </div>
       `;
 
-      // Replace the row with the edit form
-      $row.after(editForm);
-      $row.hide();
+      $item.html(editHtml);
+      $item.css('width', '220px');
     });
 
     // Handle save edited role permission
     $(document).on('click', '.save-edit-role-permission', function() {
-      var $editRow = $(this).closest('tr.edit-form-row');
-      var permissionId = $editRow.data('permission-id');
-      var module = $editRow.find('select[name="editRolePermissionModule"]').val();
-      var permissionType = $editRow.find('select[name="editRolePermissionType"]').val();
+      var $item = $(this).closest('.permission-item');
+      var $editForm = $item.find('.edit-form-inline');
+      var permissionId = $editForm.data('permission-id');
+      var module = $editForm.find('select[name="editRolePermissionModule"]').val();
+      var permissionType = $editForm.find('select[name="editRolePermissionType"]').val();
       var roleId = $('#permissionRoleId').val();
 
-      // Send the updated permission data to the server
       $.ajax({
         url: "{% url 'institut_app:ApiUpdateRolePermission' %}",
         type: "POST",
@@ -1372,35 +1394,31 @@
         success: function(response) {
           if (response.status === "success") {
             alertify.success(response.message);
-            // Reload permissions to show the updated one
             loadRolePermissions(roleId);
           } else {
-            alertify.error(response.message || "Erreur lors de la mise à jour de la permission");
+            alertify.error(response.message || "Erreur lors de la mise à jour");
           }
         },
-        error: function(xhr, status, error) {
-          console.error("Error updating role permission:", error);
-          alertify.error("Une erreur est survenue lors de la mise à jour de la permission");
+        error: function() {
+          alertify.error("Une erreur est survenue");
         }
       });
     });
 
     // Handle cancel edit role permission
     $(document).on('click', '.cancel-edit-role-permission', function() {
-      var $editRow = $(this).closest('tr.edit-form-row');
-      var $originalRow = $editRow.siblings(`tr[data-permission-id="${$editRow.data('permission-id')}"]`);
-
-      // Show the original row and remove the edit form
-      $originalRow.show();
-      $editRow.remove();
+      var $item = $(this).closest('.permission-item');
+      $item.html($item.data('original-html'));
+      $item.css('width', 'auto');
     });
 
     // Handle delete role permission - Open confirmation modal
     $(document).on('click', '.delete-role-permission', function() {
       var permissionId = $(this).data('permission-id');
-      var $row = $(this).closest('tr');
-      var module = $row.find('td:eq(0)').text();
-      var permission = $row.find('td:eq(1)').text();
+      var $item = $(this).closest('.permission-item');
+      var $moduleRow = $(this).closest('tr.module-group-row');
+      var module = $moduleRow.find('.fw-bold.text-dark').text().trim();
+      var permission = $item.find('.fw-medium').text().trim();
 
       // Store the permission ID for deletion confirmation
       $('.deleteRolePermissionModal').data('permission-id', permissionId);

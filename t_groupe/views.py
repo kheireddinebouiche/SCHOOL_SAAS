@@ -19,7 +19,9 @@ def NewGroupe(request):
         form = NewGroupeForms(request.POST)
         if form.is_valid():
             
-            form.save()
+            groupe = form.save(commit=False)
+            groupe.createdy = request.user
+            groupe.save()
 
             messages.success(request, "Groupe enregistré avec succès")
             return redirect('t_groupe:listegroupes')
@@ -84,6 +86,8 @@ def ApiCreateGroupe(request):
             start_date = start_date,
             end_date = end_date,
             specialite_id = _formSelectSpecialite,
+            createdy = request.user,
+
         )
         messages.success(request,"Le groupe a été créé avec succès")
         return JsonResponse({"status":"success"})
