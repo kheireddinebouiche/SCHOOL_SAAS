@@ -232,21 +232,32 @@ def ApiGetDetailsDemandePaiement(request):
 
         if remiseObj and remiseObj.remise_appliquer:
             
-            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            remise = remiseObj.remise_appliquer.remise
             is_approuved_remise = remiseObj.remise_appliquer.is_approuved
-            reduction_type = remiseObj.remise_appliquer.remise.label
+            reduction_type = remise.label
             id_reduction = remiseObj.remise_appliquer.id
-            is_appliced_remise = remiseObj.remise_appliquer.is_applicated
-
-            montant_remise = voeux.specialite.formation.prix_formation - ((remise_appliquer * voeux.specialite.formation.prix_formation ) / 100)
+            is_applicated_remise = remiseObj.remise_appliquer.is_applicated
+            
+            prix_formation = voeux.specialite.formation.prix_formation
+            
+            if remise.is_value:
+                # Fixed amount discount
+                montant_remise = prix_formation - (remise.montant or 0)
+                remise_valeur = remise.montant
+            else:
+                # Percentage discount
+                taux = remise.taux or 0
+                montant_remise = prix_formation - ((taux * prix_formation) / 100)
+                remise_valeur = taux
 
             remiseDatas = {
-                'valeur' : remise_appliquer,
+                'valeur' : remise_valeur,
+                'is_value' : remise.is_value,
                 'remise_approuver' : is_approuved_remise,
-                'remise_appliquer' : is_appliced_remise,
+                'remise_appliquer' : is_applicated_remise,
                 'type_remise' : reduction_type,
                 'montant_remise' : montant_remise,
-                'montant_sans_remise' : voeux.specialite.formation.prix_formation,
+                'montant_sans_remise' : prix_formation,
                 'id_applied_reduction' : id_reduction,
             }
 
@@ -427,21 +438,32 @@ def ApiGetDetailsDemandePaiementDouble(request):
 
         if remiseObj and remiseObj.remise_appliquer:
             
-            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            remise = remiseObj.remise_appliquer.remise
             is_approuved_remise = remiseObj.remise_appliquer.is_approuved
-            reduction_type = remiseObj.remise_appliquer.remise.label
+            reduction_type = remise.label
             id_reduction = remiseObj.remise_appliquer.id
-            is_appliced_remise = remiseObj.remise_appliquer.is_applicated
-
-            montant_remise = voeux.specialite.prix - ((remise_appliquer * voeux.specialite.prix ) / 100)
+            is_applicated_remise = remiseObj.remise_appliquer.is_applicated
+            
+            prix_formation = voeux.specialite.prix
+            
+            if remise.is_value:
+                # Fixed amount discount
+                montant_remise = prix_formation - (remise.montant or 0)
+                remise_valeur = remise.montant
+            else:
+                # Percentage discount
+                taux = remise.taux or 0
+                montant_remise = prix_formation - ((taux * prix_formation) / 100)
+                remise_valeur = taux
 
             remiseDatas = {
-                'valeur' : remise_appliquer,
+                'valeur' : remise_valeur,
+                'is_value' : remise.is_value,
                 'remise_approuver' : is_approuved_remise,
-                'remise_appliquer' : is_appliced_remise,
+                'remise_appliquer' : is_applicated_remise,
                 'type_remise' : reduction_type,
                 'montant_remise' : montant_remise,
-                'montant_sans_remise' : voeux.specialite.prix,
+                'montant_sans_remise' : prix_formation,
                 'id_applied_reduction' : id_reduction,
             }
 

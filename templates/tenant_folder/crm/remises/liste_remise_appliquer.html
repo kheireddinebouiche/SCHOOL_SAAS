@@ -249,6 +249,7 @@
                             <thead>
                                 <tr>
                                     <th class="ps-4">Réduction</th>
+                                    <th>Valeur</th>
                                     <th>Prospects concernés</th>
                                     <th>État</th>
                                     <th>Est Appliqué ?</th>
@@ -712,8 +713,16 @@
             year: 'numeric'
           });
             
+          var valeurDisplay = "";
+          if(item.remise__is_value) {
+            valeurDisplay = "<span class='fw-bold text-dark'>" + parseFloat(item.remise__montant).toLocaleString() + " DA</span>";
+          } else {
+            valeurDisplay = "<span class='fw-bold text-dark'>" + item.remise__taux + "%</span>";
+          }
+            
           row += '<tr class="align-middle">';
           row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + "</div></div></td>";
+          row += "<td>" + valeurDisplay + "</td>";
           
           
           if (item.prospects) {
@@ -821,7 +830,7 @@
         success : function(data){
           var row = "<option value='0'>Veuillez selectionner la remise</option>";
           $.each(data, function(index, item){
-            row += "<option value="+item.id+" data-justificatif="+item.has_to_justify+">"+item.label+"</option>";
+            row += "<option value='"+item.id+"' data-justificatif='"+item.has_to_justify+"' data-is-value='"+item.is_value+"' data-montant='"+item.montant+"' data-taux='"+item.taux+"'>"+item.label+"</option>";
           });
           $('#typeRemise').html(row);
         }
@@ -959,7 +968,9 @@
             $('#detailRemiseStatus').html(data.is_approuved ? 
               '<span class="badge badge-soft-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Approuvée</span>' : 
               '<span class="badge badge-soft-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>');
-            $('#detailRemiseTaux').text(data.taux + ' %');
+            
+            var detailValeur = data.is_value ? parseFloat(data.taux).toLocaleString() + ' DA' : data.taux + ' %';
+            $('#detailRemiseTaux').text(detailValeur);
             $('#detailRemiseDate').text(data.created_at);
             
             // Handle justification file
@@ -1007,7 +1018,8 @@
         },
         success : function(data){
           $('#detailLabelRemise').text(data.label || '-');
-          $('#detailTauxRemise').text(data.taux ? data.taux + '%' : '-');
+          var valeur = data.is_value ? parseFloat(data.taux).toLocaleString() + ' DA' : data.taux + '%';
+          $('#detailTauxRemise').text(valeur);
           $('#detailIsEnabled').text(data.is_enabled ? 'Oui' : 'Non');
           $('#detailHasToJustify').text(data.has_to_justify ? 'Oui' : 'Non');
           $('#detailDescriptionRemise').text(data.description || '-');

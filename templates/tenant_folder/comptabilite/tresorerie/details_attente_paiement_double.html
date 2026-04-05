@@ -3287,23 +3287,27 @@
                        
                         hasReduction = true;
                         
-
-                        prixFormationReduction = parseFloat(prixFormation-(prixFormation*(data.remise.valeur/100)));
+                        if (data.remise.is_value) {
+                            // Fixed amount discount
+                            prixFormationReduction = parseFloat(prixFormation - data.remise.valeur);
+                            $('#reductionAmount').text(formatComptable(data.remise.valeur) + " DA");
+                        } else {
+                            // Percentage discount
+                            prixFormationReduction = parseFloat(prixFormation - (prixFormation * (data.remise.valeur / 100)));
+                            $('#reductionAmount').text(data.remise.valeur + " %");
+                        }
 
                         $('#reductionType').text(data.remise.type_remise);
-                        $('#reductionAmount').text(data.remise.valeur+" %");
-                        $('#initialPrice').text(prixFormation);
-                        $('#finalPrice').text(parseFloat(prixFormationReduction));
+                        $('#initialPrice').text(formatComptable(prixFormation));
+                        $('#finalPrice').text(formatComptable(prixFormationReduction));
                         
                         if (data.remise.remise_approuver && data.remise.remise_appliquer){ 
                             reductionApprouved = true;
                             reductionAppliced = true;
                             $('#prixFinalHeader').show();
-                            $('[id^=prixFinal]').show();
                         }else{
                             reductionApprouved = false;
                             reductionAppliced = false;
-
                         }          
                         
                         HideReducNotif();
@@ -3423,8 +3427,17 @@
                         echeancierHtml += "<td style='display: none;'>"+(echeance.entite_nom || '')+"</td>";
 
                         if(hasReduction && reductionApprouved) {
-                            var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
-                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
+                            var montantReduction = parseFloat(echeance.montant_tranche);
+                            if (data.remise.is_value) {
+                                // Apply proportional reduction for fixed amount
+                                var ratio = (prixFormation - data.remise.valeur) / prixFormation;
+                                montantReduction = montantReduction * ratio;
+                            } else {
+                                // Apply percentage reduction
+                                montantReduction = montantReduction - (montantReduction * (data.remise.valeur / 100));
+                            }
+                            var displayStyle = (reductionApprouved && reductionAppliced) ? 'table-cell' : 'none';
+                            echeancierHtml += '<td class="prix-final-cell" style="display: ' + displayStyle + ';"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     });

@@ -10,6 +10,18 @@ from django.contrib.auth import get_user_model
 class UserSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="session_info")
     last_session_key = models.CharField(max_length=40, null=True, blank=True)
+    device_uuid = models.UUIDField(null=True, blank=True)
+    is_device_lock_enabled = models.BooleanField(default=True)
+
+class UserDeviceLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_logs")
+    device_uuid = models.UUIDField()
+    user_agent = models.TextField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -115,6 +127,10 @@ class BankAccount(models.Model):
 
 class GlobalConfiguration(models.Model):
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
+    session_timeout_minutes = models.PositiveIntegerField(default=5, verbose_name=_("Délai d'inactivité (minutes)"))
+    session_timeout_seconds = models.PositiveIntegerField(default=0, verbose_name=_("Délai d'inactivité (secondes)"))
+    session_timeout_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage de session actif"))
+    device_lock_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage par appareil actif"))
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -198,7 +214,8 @@ class Module(models.Model):
         ('rh',_('Ressources Humaines')),
         ('rem',_('Remise')),
         ('com',_('Communications')),
-        ('ger',_('Gérant'))
+        ('ger',_('Gérant')),
+        ('sta',_('Stage'))
     ]
 
     name = models.CharField(max_length=50, null=True, blank=True, choices=MODULES, unique=True, verbose_name=_("Module"))

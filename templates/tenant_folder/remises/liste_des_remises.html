@@ -210,7 +210,7 @@
                   <thead>
                     <tr>
                       <th class="ps-4">Label</th>
-                      <th>Taux</th>
+                      <th>Valeur</th>
                       <th>Crée le</th>
                       <th>Etat</th>
                       <th class="text-center pe-4">Actions</th>
@@ -269,12 +269,33 @@
                   <div class="form-text">Donnez un nom significatif à votre remise</div>
                 </div>
                 <div class="col-lg-12">
+                  <label class="form-label fw-medium">Type de remise</label>
+                  <div class="d-flex gap-3 mb-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="remiseType" id="typePercentage" value="False" checked>
+                      <label class="form-check-label" for="typePercentage">Pourcentage (%)</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="remiseType" id="typeFixed" value="True">
+                      <label class="form-check-label" for="typeFixed">Montant fixe (DA)</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-12" id="tauxGroup">
                   <label class="form-label fw-medium" for="remiseTaux">Taux de remise (%)</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-0"><i class="ri-percent-line text-muted"></i></span>
-                    <input type="number" class="form-control border-0 bg-light py-2" id="remiseTaux" name="taux" min="0" max="100" step="0.01" placeholder="Ex: 10, 15.5, 20..." required>
+                    <input type="number" class="form-control border-0 bg-light py-2" id="remiseTaux" name="taux" min="0" max="100" step="0.01" placeholder="Ex: 10, 15.5, 20...">
                   </div>
                   <div class="form-text">Entrez un pourcentage entre 0 et 100</div>
+                </div>
+                <div class="col-lg-12 d-none" id="montantGroup">
+                  <label class="form-label fw-medium" for="remiseMontant">Montant de remise (DA)</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="ri-money-dollar-circle-line text-muted"></i></span>
+                    <input type="number" class="form-control border-0 bg-light py-2" id="remiseMontant" name="montant" min="0" step="0.01" placeholder="Ex: 500, 1000...">
+                  </div>
+                  <div class="form-text">Entrez un montant fixe en DA</div>
                 </div>
                 <div class="col-lg-12">
                   <label class="form-label fw-medium" for="remiseLabel">Description</label>
@@ -350,10 +371,30 @@
                   </div>
                 </div>
                 <div class="col-lg-12">
+                  <label class="form-label fw-medium">Type de remise</label>
+                  <div class="d-flex gap-3 mb-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="updateRemiseType" id="updateTypePercentage" value="False">
+                      <label class="form-check-label" for="updateTypePercentage">Pourcentage (%)</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="updateRemiseType" id="updateTypeFixed" value="True">
+                      <label class="form-check-label" for="updateTypeFixed">Montant fixe (DA)</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-12" id="updateTauxGroup">
                   <label class="form-label fw-medium" for="updateRemiseTaux">Taux de remise (%)</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-0"><i class="ri-percent-line text-muted"></i></span>
-                    <input type="number" class="form-control border-0 bg-light py-2" id="updateRemiseTaux" name="taux" min="0" max="100" step="0.01" required>
+                    <input type="number" class="form-control border-0 bg-light py-2" id="updateRemiseTaux" name="taux" min="0" max="100" step="0.01">
+                  </div>
+                </div>
+                <div class="col-lg-12 d-none" id="updateMontantGroup">
+                  <label class="form-label fw-medium" for="updateRemiseMontant">Montant de remise (DA)</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="ri-money-dollar-circle-line text-muted"></i></span>
+                    <input type="number" class="form-control border-0 bg-light py-2" id="updateRemiseMontant" name="montant" min="0" step="0.01">
                   </div>
                 </div>
                 <div class="col-lg-12">
@@ -571,7 +612,7 @@
         // Fonction pour charger les remises
         function loadRemises(){
             $.ajax({
-                url: "{% url 't_remise:ApiListeRemise' %}",
+                url: "{% url 't_remise:api_liste_remise' %}",
                 dataType: "JSON",
                 type: "GET",
                 success: function(data){
@@ -581,10 +622,17 @@
 
                             var statusBagde = item.is_enabled ? "Activée" : "Désactivée";
                             var statusSpan = item.is_enabled ? "badge-soft-success" : "badge-soft-danger" ;
+                            
+                            var valeurDisplay = "";
+                            if(item.is_value) {
+                                valeurDisplay = "<span class='fw-bold text-dark'>" + parseFloat(item.montant).toLocaleString() + " DA</span>";
+                            } else {
+                                valeurDisplay = "<span class='fw-bold text-dark'>" + item.taux + "%</span>";
+                            }
 
                             row += "<tr class='align-middle'>";
                             row += "<td class='ps-4'><span class='fw-semibold'>" + item.label + "</span></td>";
-                            row += "<td><span class='fw-bold text-dark'>" + item.taux + "%</span></td>";
+                            row += "<td>" + valeurDisplay + "</td>";
                             row += "<td><span class='text-muted'>" + item.created_at.split("T")[0] + "</span></td>";
                             row += "<td><span class='badge "+statusSpan+" '>"+statusBagde+"</span></td>";
                             row += "<td class='text-center pe-4'>";
@@ -593,7 +641,7 @@
                             row += "<i class='ri-more-2-fill'></i>";
                             row += "</button>";
                             row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg'>";
-                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 edit-remise' data-description='"+item.description+"' data-justificatif='"+item.has_to_justify+"' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_enabled + "'>";
+                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 edit-remise' data-description='"+item.description+"' data-justificatif='"+item.has_to_justify+"' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_enabled + "' data-is-value='" + item.is_value + "' data-montant='" + item.montant + "'>";
                             row += "<i class='ri-edit-line text-primary me-2'></i>Modifier";
                             row += "</button></li>";
                             row += "<li><hr class='dropdown-divider my-1'></li>";
@@ -663,7 +711,7 @@
         // Fonction pour activer/désactiver une remise
         function ActivateRemise(remiseId) {
             $.ajax({
-              url : "{% url 't_remise:ApiActivateRemise' %}",
+                url : "{% url 't_remise:api_activate_remise' %}",
               dataType: 'JSON',
               type:'POST',
               data : {
@@ -685,7 +733,7 @@
         // Fonction pour activer/désactiver une remise
         function DeactivateRemise(remiseId) {
             $.ajax({
-              url : "{% url 't_remise:ApiDeactivateRemise' %}",
+              url : "{% url 't_remise:api_deactivate_remise' %}",
               dataType: 'JSON',
               type:'POST',
               data : {
@@ -710,12 +758,44 @@
             $('.deleteRemiseModal').modal('show');
         }
 
+        // Toggles for remise type in Create Modal
+        $('input[name="remiseType"]').change(function() {
+            if ($(this).val() === "True") {
+                $('#tauxGroup').addClass('d-none');
+                $('#montantGroup').removeClass('d-none');
+            } else {
+                $('#tauxGroup').removeClass('d-none');
+                $('#montantGroup').addClass('d-none');
+            }
+        });
+
+        // Toggles for remise type in Update Modal
+        $('input[name="updateRemiseType"]').change(function() {
+            if ($(this).val() === "True") {
+                $('#updateTauxGroup').addClass('d-none');
+                $('#updateMontantGroup').removeClass('d-none');
+            } else {
+                $('#updateTauxGroup').removeClass('d-none');
+                $('#updateMontantGroup').addClass('d-none');
+            }
+        });
+
         // Fonction pour modifier une remise
-        function UpdateRemise(remiseId, label, taux, has_justificatif,description) {
+        function UpdateRemise(remiseId, label, taux, has_justificatif, description, isValue, montant) {
             $('#updateRemiseId').val(remiseId);
             $('#updateRemiseLabel').val(label);
-            $('#updateRemiseTaux').val(taux);
-            if (has_justificatif === true) {
+            
+            if (isValue === true || isValue === "true" || isValue === "True") {
+                $('#updateTypeFixed').prop('checked', true).trigger('change');
+                $('#updateRemiseMontant').val(montant);
+                $('#updateRemiseTaux').val('');
+            } else {
+                $('#updateTypePercentage').prop('checked', true).trigger('change');
+                $('#updateRemiseTaux').val(taux);
+                $('#updateRemiseMontant').val('');
+            }
+
+            if (has_justificatif === true || has_justificatif === "true" || has_justificatif === "True") {
                 $('#updateJustificatif').val("True");
             } else {
                 $('#updateJustificatif').val("False");
@@ -724,14 +804,16 @@
             $('#updateRemiseModal').modal('show');
         }
 
-        function CreateRemise(label, taux, description, justificatif_requis){
+        function CreateRemise(label, taux, montant, isValue, description, justificatif_requis){
             $.ajax({
-                url : "{% url 't_remise:ApiCreateRemise' %}",
+                url : "{% url 't_remise:api_create_remise' %}",
                 dataType : "JSON",
                 type : "POST",
                 data : {
                     'label': label,
-                    'taux' : taux,                    
+                    'taux' : taux,
+                    'montant' : montant,
+                    'is_value' : isValue,
                     'description' : description,
                     'justificatif_requis' : justificatif_requis,
                     'csrfmiddlewaretoken': '{{ csrf_token }}',
@@ -775,16 +857,16 @@
             var isActive = $(this).data('active'); // Get the active status
             var justificatif = $(this).data('justificatif');
             var description = $(this).data('description');
+            var isValue = $(this).data('is-value');
+            var montant = $(this).data('montant');
 
-          
-            
             // Check if the discount is active
             if (isActive) {
                 // Show warning modal for active discounts
-                showActiveDiscountWarning(remiseId, label, taux);
+                showActiveDiscountWarning(remiseId, label, taux, justificatif, description, isValue, montant);
             } else {
                 // Directly open update modal for inactive discounts
-                UpdateRemise(remiseId, label, taux, justificatif, description);
+                UpdateRemise(remiseId, label, taux, justificatif, description, isValue, montant);
             }
         });
 
@@ -806,21 +888,35 @@
         $('#confirmDeleteRemiseBtn').click(function() {
             var remiseId = $('#deleteRemiseId').val();
            
-            
-            // Pour le moment, on ferme simplement la modale
-            $('.deleteRemiseModal').modal('hide');
-            loadRemises(); // Recharger la liste
-            applySearchFilter(); // Re-apply search filter
+            $.ajax({
+                url: "{% url 't_remise:api_delete_remise' %}",
+                type: "POST",
+                data: {
+                    'id_remise': remiseId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === "success") {
+                        alertify.success("Remise supprimée avec succès");
+                        $('.deleteRemiseModal').modal('hide');
+                        loadRemises();
+                    } else {
+                        alertify.error("Erreur lors de la suppression");
+                    }
+                }
+            });
         });
 
         // Gestionnaire d'événements pour le bouton de sauvegarde de création
         $('#saveRemiseBtn').click(function() {
             var remiseLabel = $('#remiseLabel').val();
+            var isValue = $('input[name="remiseType"]:checked').val();
             var remiseTaux = $('#remiseTaux').val();
+            var remiseMontant = $('#remiseMontant').val();
             var remisedescription = $('#remiseDescription').val();
             var justificatif = $('#remiseJustificatifRequis').val();
             
-            CreateRemise(remiseLabel, remiseTaux,remisedescription, justificatif);
+            CreateRemise(remiseLabel, remiseTaux, remiseMontant, isValue, remisedescription, justificatif);
             
             // Pour le moment, on ferme simplement la modale
             $('#createRemiseModal').modal('hide');
@@ -831,12 +927,37 @@
 
         // Gestionnaire d'événements pour le bouton de mise à jour
         $('#updateRemiseBtn').click(function() {
-            var formData = $('#updateRemiseForm').serialize();
-            
-            // Pour le moment, on ferme simplement la modale
-            $('#updateRemiseModal').modal('hide');
-            loadRemises(); // Recharger la liste
-            applySearchFilter(); // Re-apply search filter
+            var remiseId = $('#updateRemiseId').val();
+            var label = $('#updateRemiseLabel').val();
+            var isValue = $('input[name="updateRemiseType"]:checked').val();
+            var taux = $('#updateRemiseTaux').val();
+            var montant = $('#updateRemiseMontant').val();
+            var description = $('#updateDescription').val();
+            var justificatif = $('#updateJustificatif').val();
+
+            $.ajax({
+                url: "{% url 't_remise:api_update_remise' %}",
+                type: "POST",
+                data: {
+                    'id_remise': remiseId,
+                    'label': label,
+                    'is_value': isValue,
+                    'taux': taux,
+                    'montant': montant,
+                    'description': description,
+                    'justificatif_requis': justificatif,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === "success") {
+                        alertify.success("Remise mise à jour avec succès");
+                        $('#updateRemiseModal').modal('hide');
+                        loadRemises();
+                    } else {
+                        alertify.error("Erreur lors de la mise à jour");
+                    }
+                }
+            });
         });
 
         // Function to apply all filters
@@ -890,9 +1011,15 @@
         });
 
         // Modal for warning when editing active discounts
-        function showActiveDiscountWarning(remiseId, label, taux) {
+        function showActiveDiscountWarning(remiseId, label, taux, justificatif, description, isValue, montant) {
             $('#activeDiscountWarningModal').modal('show');
-            $('#confirmEditRemiseBtn').data('remiseId', remiseId).data('label', label).data('taux', taux);
+            $('#confirmEditRemiseBtn').data('remiseId', remiseId)
+                                     .data('label', label)
+                                     .data('taux', taux)
+                                     .data('justificatif', justificatif)
+                                     .data('description', description)
+                                     .data('is-value', isValue)
+                                     .data('montant', montant);
         }
 
         // Confirm editing after warning
@@ -900,7 +1027,11 @@
             var remiseId = $(this).data('remiseId');
             var label = $(this).data('label');
             var taux = $(this).data('taux');
-            UpdateRemise(remiseId, label, taux);
+            var justificatif = $(this).data('justificatif');
+            var description = $(this).data('description');
+            var isValue = $(this).data('is-value');
+            var montant = $(this).data('montant');
+            UpdateRemise(remiseId, label, taux, justificatif, description, isValue, montant);
             $('#activeDiscountWarningModal').modal('hide');
         });
 

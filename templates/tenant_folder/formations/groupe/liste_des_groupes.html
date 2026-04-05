@@ -170,7 +170,7 @@
           <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
             <div>
               <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Total Groupes</p>
-              <h2 class="fw-bold mb-0 text-primary" id="totalCount">0</h2>
+              <h2 class="fw-bold mb-0 text-primary" id="totalCount">{{ liste.paginator.count }}</h2>
             </div>
             <div class="icon-box bg-primary bg-opacity-10 text-primary">
               <i class="ri-community-line"></i>
@@ -323,8 +323,60 @@
               </div>
               
               <!-- Grid View Container -->
-              <div id="gridView" class="row g-4 mt-3">
+              <div id="gridView" class="row g-4 mt-3 px-3">
                 <!-- Cards will be injected here via JS -->
+              </div>
+
+              <!-- Pagination -->
+              <div class="px-4 py-3 border-top bg-light bg-opacity-50">
+                <div class="row align-items-center">
+                  <div class="col-sm-6">
+                    <div class="text-muted text-center text-sm-start small">
+                      Affichage de <span class="fw-semibold text-primary">{{ liste.start_index }}-{{ liste.end_index }}</span> sur <span class="fw-semibold">{{ liste.paginator.count }}</span> groupes
+                    </div>
+                  </div>
+                  <div class="col-sm-6 mt-3 mt-sm-0">
+                    <nav aria-label="Page navigation">
+                      <ul class="pagination pagination-separated justify-content-center justify-content-sm-end mb-0">
+                        {% if liste.has_previous %}
+                        <li class="page-item">
+                          <a href="?page={{ liste.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            <i class="ri-arrow-left-s-line"></i>
+                          </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                          <span class="page-link text-muted"><i class="ri-arrow-left-s-line"></i></span>
+                        </li>
+                        {% endif %}
+
+                        {% for i in liste.paginator.page_range %}
+                          {% if liste.number == i %}
+                          <li class="page-item active">
+                            <span class="page-link">{{ i }}</span>
+                          </li>
+                          {% elif i > liste.number|add:'-3' and i < liste.number|add:'3' %}
+                          <li class="page-item">
+                            <a href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">{{ i }}</a>
+                          </li>
+                          {% endif %}
+                        {% endfor %}
+
+                        {% if liste.has_next %}
+                        <li class="page-item">
+                          <a href="?page={{ liste.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="page-link">
+                            <i class="ri-arrow-right-s-line"></i>
+                          </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                          <span class="page-link text-muted"><i class="ri-arrow-right-s-line"></i></span>
+                        </li>
+                        {% endif %}
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -460,7 +512,7 @@
         }
       });
       
-      $('#totalCount').text(totalCount);
+      // $('#totalCount').text(totalCount); // Prevent overwriting the server-side total count
       $('#activeCount').text(activeCount);
       $('#inProgressCount').text(inProgressCount);
       $('#archivedCount').text(archivedCount);

@@ -8,12 +8,49 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from t_groupe.models import *
 from t_etudiants.models import *
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value, CharField
+from django.db.models.functions import Concat
+from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
 def PageSuivieCours(request):
-    return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html')
+    groupe_id = request.GET.get('groupe_id', '')
+    search_query = request.GET.get('q', '')
+
+    filters = Q()
+
+    if groupe_id and groupe_id != '0':
+        filters &= Q(registre__groupe_id=groupe_id)
+
+    if search_query:
+        filters &= (Q(module__label__icontains=search_query) | Q(module__code__icontains=search_query))
+
+    seances = (LigneRegistrePresence.objects
+               .filter(filters)
+               .annotate(
+                    total=Count('seance_module'),
+                    faites=Count('seance_module', filter=Q(seance_module__is_done=True)),
+                    group_key=Concat('registre__groupe__nom', Value('|'), 'registre__semestre', output_field=CharField())
+                )
+               .order_by('registre__groupe__nom', 'registre__semestre', 'module__label')
+            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites', 'group_key')
+    
+    groupes = Groupe.objects.all().values('id','nom').order_by('nom')
+
+    paginator = Paginator(seances, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'groupes': list(groupes),
+        'filters': {
+            'groupe_id': groupe_id,
+            'q': search_query,
+        }
+    }
+    return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html', context)
 
 @login_required(login_url="institut_app:login")
 def ApiGetCours(request):

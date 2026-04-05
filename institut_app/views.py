@@ -12,6 +12,7 @@ from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
 from django.db import transaction
 from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
 from t_crm.models import *
 from t_exam.models import *
 from t_tresorerie.models import DuePaiements
@@ -510,24 +511,74 @@ def login_view(request):
 
             if user is not None:
                 # Vérifier UserSession
+                # Get global config
+                from .models import GlobalConfiguration, UserSession
+                global_config = GlobalConfiguration.get_solo()
                 session_info, _ = UserSession.objects.get_or_create(user=user)
 
-                if session_info.last_session_key:
+                # 1. Vérification du verrouillage par appareil (Device Lock)
+                if global_config.device_lock_enabled and session_info.is_device_lock_enabled and session_info.device_uuid:
+                    device_lock_cookie = request.COOKIES.get('device_lock')
+                    if str(session_info.device_uuid) != device_lock_cookie:
+                        request.session["allow_blocked_page"] = True
+                        return redirect('institut_app:ShowBlockedConnexion')
+
+                # 2. Vérification de la session active (Optionnel mais conservé pour sécurité)
+                if global_config.device_lock_enabled and session_info.is_device_lock_enabled and session_info.last_session_key:
                     try:
                         session = Session.objects.get(session_key=session_info.last_session_key)
                         if session.expire_date > timezone.now():
-                            request.session["allow_blocked_page"] = True
-                            return redirect('institut_app:ShowBlockedConnexion')
+                            # Si on veut être vraiment strict comme demandé : bloquer
+                             request.session["allow_blocked_page"] = True
+                             return redirect('institut_app:ShowBlockedConnexion')
                     except Session.DoesNotExist:
                         pass
 
-                # Nouvelle connexion
+                # Login réussi
                 login(request, user)
+                
+                # Enregistrement de l'appareil si c'est la première fois ET que le verrouillage est actif
+                import uuid
+                if global_config.device_lock_enabled and session_info.is_device_lock_enabled and not session_info.device_uuid:
+                    session_info.device_uuid = uuid.uuid4()
+                
+                # Si le verrouillage est désactivé, on peut quand même loguer avec un UUID généré à la volée 
+                # (uniquement pour l'historique, pas pour le cookie permanent)
+                log_device_uuid = session_info.device_uuid or uuid.uuid4()
+                
+                # NOUVEAU : Enregistrer l'historique de connexion
+                from .models import UserDeviceLog
+                
+                # Helper pour récupérer l'IP
+                x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                if x_forwarded_for:
+                    ip = x_forwarded_for.split(',')[0]
+                else:
+                    ip = request.META.get('REMOTE_ADDR')
+
+                UserDeviceLog.objects.create(
+                    user=user,
+                    device_uuid=log_device_uuid,
+                    user_agent=request.META.get('HTTP_USER_AGENT'),
+                    ip_address=ip
+                )
+                
                 session_info.last_session_key = request.session.session_key
-                session_info.save(update_fields=["last_session_key"])
+                session_info.save()
 
                 messages.success(request, f"Bienvenue, {user.username} ! Vous êtes connecté.")
-                return redirect('institut_app:index')
+                response = redirect('institut_app:index')
+                
+                # Déposer le cookie de verrouillage (UNIQUEMENT si activé globalement ET par utilisateur)
+                if global_config.device_lock_enabled and session_info.is_device_lock_enabled:
+                    response.set_cookie(
+                        'device_lock', 
+                        str(session_info.device_uuid), 
+                        max_age=31536000, 
+                        httponly=True, 
+                        samesite='Lax'
+                    )
+                return response
 
             else:
                 messages.error(request, "Nom d'utilisateur ou mot de passe incorrect.")
@@ -1678,3 +1729,22 @@ def budget_campaign_realization(request, campaign_slug):
         )
     }
     return render(request, 'tenant_folder/budget/realization_budget.html', context)
+
+@csrf_exempt
+@login_required
+def ApiVerifyPassword(request):
+    """
+    Vérifie le mot de passe de l'utilisateur pour le déverrouillage de session.
+    """
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        if not password:
+            return JsonResponse({'status': 'error', 'message': 'Mot de passe requis.'}, status=400)
+        
+        user = request.user
+        if user.check_password(password):
+            return JsonResponse({'status': 'success', 'message': 'Déverrouillé avec succès.'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Mot de passe incorrect.'}, status=403)
+    
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)

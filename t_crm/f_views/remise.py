@@ -20,7 +20,7 @@ def ListeRemiseApplique(request):
 
 @login_required(login_url="institut_app:login")
 def AipLoadRemise(request):
-    remises = Remises.objects.filter(is_enabled= True).values('id','label','taux','has_to_justify')
+    remises = Remises.objects.filter(is_enabled= True).values('id','label','taux','has_to_justify', 'is_value', 'montant')
     return JsonResponse(list(remises), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -118,7 +118,7 @@ def ApiStoreApplicedReduction(request):
 
 @login_required(login_url="institut_app:login")
 def ApiloadRemiseAppliquer(request):
-    remises = RemiseAppliquer.objects.all().values('id','remise__label','is_approuved','is_applicated','created_at')
+    remises = RemiseAppliquer.objects.all().values('id','remise__label','remise__is_value','remise__montant','remise__taux','is_approuved','is_applicated','created_at')
     data = []
     for remise in remises:
         prospects = list(
@@ -127,6 +127,9 @@ def ApiloadRemiseAppliquer(request):
         data.append({
             'id': remise['id'],
             'label': remise['remise__label'],
+            'remise__is_value': remise['remise__is_value'],
+            'remise__montant': remise['remise__montant'],
+            'remise__taux': remise['remise__taux'],
             'is_approuved': remise['is_approuved'],
             'is_applicated': remise['is_applicated'],
             'created_at': remise['created_at'].strftime("%Y-%m-%d %H:%M:%S"),
@@ -151,7 +154,8 @@ def ApiLoadRemiseAppliquerDetails(request):
             data = {
                 'id': remise_appliquer.id,
                 'remise_name': remise_appliquer.remise.label,
-                'taux': str(remise_appliquer.remise.taux),
+                'taux': str(remise_appliquer.remise.montant) if remise_appliquer.remise.is_value else str(remise_appliquer.remise.taux),
+                'is_value': remise_appliquer.remise.is_value,
                 'is_approuved': remise_appliquer.is_approuved,
                 'created_at': remise_appliquer.created_at.strftime('%d/%m/%Y') if remise_appliquer.created_at else '-',
                 'fichie_justificatif': remise_appliquer.fichie_justificatif.url if remise_appliquer.fichie_justificatif else None,
@@ -186,7 +190,8 @@ def ApiGetReductionDetails(request):
         data = {
             'label' : object.label,
             'description' : object.description,
-            'taux' : object.taux,
+            'taux' : object.montant if object.is_value else object.taux,
+            'is_value' : object.is_value,
             'has_to_justify' : object.has_to_justify,
             'created_at': object.created_at.strftime("%Y-%m-%d"),
         }

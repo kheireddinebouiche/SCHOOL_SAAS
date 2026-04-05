@@ -6,6 +6,7 @@ from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime
 import json
+from ..models import UserSession, UserDeviceLog
 
 User = get_user_model()
 
@@ -17,11 +18,12 @@ def liste_users(request):
 def ApiListeUtilisateurs(request):
     if request.method == "GET":
         try:
-            # Get all users
+            # Get all users with session info
             users = User.objects.all()
             
             user_data = []
             for user in users:
+                session_info, _ = UserSession.objects.get_or_create(user=user)
                 user_data.append({
                     'id': user.id,
                     'username': user.username,
@@ -33,6 +35,7 @@ def ApiListeUtilisateurs(request):
                     'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S') if user.date_joined else '',
                     'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else '',
                     'is_superuser': user.is_superuser,
+                    'is_device_lock_enabled': session_info.is_device_lock_enabled,
                 })
             
             return JsonResponse(list(user_data), safe=False)
@@ -259,3 +262,82 @@ def ApiChangeUserPassword(request):
             return JsonResponse({"status": "error", "message": str(e)})
     else:
         return JsonResponse({"status": "error", "message": "Method not allowed"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiResetDeviceLock(request):
+    """
+    Réinitialise le verrouillage de l'appareil pour un utilisateur.
+    Permet à l'utilisateur de se connecter depuis un nouvel appareil.
+    """
+    if request.method == "POST":
+        user_id = request.POST.get('id')
+        if not user_id:
+            return JsonResponse({"status": "error", "message": "ID utilisateur requis"})
+        
+        try:
+            session_info, created = UserSession.objects.get_or_create(user_id=user_id)
+            session_info.device_uuid = None
+            session_info.last_session_key = None # On force aussi la déconnexion
+            session_info.save()
+            
+            return JsonResponse({
+                "status": "success", 
+                "message": "Le verrouillage de l'appareil a été réinitialisé. L'utilisateur peut maintenant se connecter sur un nouveau poste."
+            })
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def DeviceManagementPage(request):
+    """
+    Page affichant l'historique des appareils et des connexions.
+    """
+    
+    # On récupère tous les logs avec les infos utilisateur
+    logs = UserDeviceLog.objects.select_related('user').all()
+    
+    # Statistiques rapides
+    total_logs = logs.count()
+    unique_devices = UserDeviceLog.objects.values('device_uuid').distinct().count()
+    
+    context = {
+        'logs': logs,
+        'total_logs': total_logs,
+        'unique_devices': unique_devices,
+        'page_title': "Historique des Appareils"
+    }
+    return render(request, 'tenant_folder/users/device_management.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiToggleDeviceLock(request):
+    """
+    Active ou désactive le verrouillage par appareil pour un utilisateur.
+    """
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            
+            from django.contrib.auth.models import User
+            user = User.objects.get(id=user_id)
+            session_info, _ = UserSession.objects.get_or_create(user=user)
+            
+            # Basculer l'état
+            session_info.is_device_lock_enabled = not session_info.is_device_lock_enabled
+            session_info.save()
+            
+            status_text = "activé" if session_info.is_device_lock_enabled else "désactivé"
+            return JsonResponse({
+                "status": "success", 
+                "message": f"Le verrouillage par appareil a été {status_text} pour {user.username}.",
+                "is_enabled": session_info.is_device_lock_enabled
+            })
+        except User.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Utilisateur introuvable."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

@@ -89,7 +89,7 @@
 
   /* Fix dropdown z-index issue */
   .table-responsive {
-    overflow-x: visible;
+    overflow: visible !important;
   }
   
   .table td.text-end {
@@ -108,6 +108,17 @@
   }
   .room-item:hover {
     transform: translateY(-3px);
+    z-index: 10;
+  }
+  .room-item.dropdown-open {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+    transform: none !important;
+    z-index: 2000 !important;
+    position: relative;
+  }
+  
+  .room-item.dropdown-open td {
+    overflow: visible !important;
   }
 </style>
 
@@ -236,7 +247,7 @@
             </div>
           </div>
 
-          <div class="glass-card mb-4 overflow-hidden">
+          <div class="glass-card mb-4">
             <div class="card-body p-0" id="cardContentBody">
               <div class="table-responsive" style="overflow-x: visible;">
                 <table id="roomsTable" class="table table-hover align-middle mb-0">
@@ -536,6 +547,7 @@
     // Handle dropdown show events with proper positioning
     $(document).on('show.bs.dropdown', function(e) {
       var dropdownMenu = $(e.target).find('.dropdown-menu');
+      var row = $(e.target).closest('.room-item');
       if (dropdownMenu.length) {
         // Position dropdown absolutely to avoid table conflicts
         dropdownMenu.css({
@@ -546,6 +558,12 @@
           'right': '0'
         });
       }
+      row.addClass('dropdown-open');
+    });
+
+    $(document).on('hidden.bs.dropdown', function(e) {
+      var row = $(e.target).closest('.room-item');
+      row.removeClass('dropdown-open');
     });
     
     // Handle saving room

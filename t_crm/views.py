@@ -344,9 +344,8 @@ def InscriptionParticulier(request):
     if request.method == "POST":
         form = NewProspecFormParticulier(request.POST)
         if form.is_valid():
-            donnee = form.save()
-            donnee.type_prospect = "particulier"
-            donnee.context = "acc"
+            donnee = form.save(commit=False)
+            donnee.created_by = request.user
             donnee.save()
 
             type_select = form.cleaned_data.get('select_type')
@@ -405,10 +404,8 @@ def InscriptionEntreprise(request):
     if request.method == "POST":
         form = NewProspecFormEntreprise(request.POST)
         if form.is_valid():
-            donnee = form.save()
-            donnee.type_prospect = "entreprise"
-            donnee.context = "acc"
-            donnee.etat
+            donnee = form.save(commit=False)
+            donnee.created_by = request.user
             donnee.save()
             messages.success(request, "Prospect ajouté avec succès")
             return redirect('t_crm:ListeDesProspects')
@@ -578,6 +575,7 @@ def ApiLoadProspectDetails(request):
         'prenom': prospect.prenom,
         'email': prospect.email,
         'telephone': prospect.telephone,
+        'created_by': f"{prospect.created_by.username}" if prospect.created_by else "Système",
     }
     data.update({
         'canal': prospect.canal,

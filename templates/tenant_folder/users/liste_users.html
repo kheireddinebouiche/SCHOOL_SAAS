@@ -426,6 +426,7 @@
                             <th class="border-0 py-3">Email</th>
                             <th class="border-0 py-3 text-center">Staff</th>
                             <th class="border-0 py-3 text-center">Statut</th>
+                            <th class="border-0 py-3 text-center">Sécurité</th>
                             <th class="border-0 py-3">Inscrit le</th>
                             <th class="border-0 py-3 text-center">Actions</th>
                           </tr>
@@ -691,6 +692,47 @@
   </div>
 </div>
 
+<!-- Modal de confirmation de changement de sécurité appareil -->
+<div class="modal fade" id="toggleDeviceLockModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary bg-opacity-10">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon-box bg-primary text-white shadow-sm">
+            <i class="ri-shield-keyhole-line fs-20"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold text-primary mb-0">Sécurité Appareil</h5>
+            <small class="text-muted">Configuration d'accès</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="mb-4">
+          <div class="avatar-lg mx-auto bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+            <i class="ri-shield-flash-line text-primary display-4" id="lockModalIcon"></i>
+          </div>
+        </div>
+        <h4 class="fw-bold mb-3" id="lockModalTitle">Changer la sécurité ?</h4>
+        <p class="text-muted mb-3">Vous allez <span id="lockActionText" class="fw-bold"></span> le verrouillage par appareil pour <strong id="lockUserName"></strong>.</p>
+        
+        <div class="alert alert-info border-0 glass-card small mb-0">
+          <i class="ri-information-line me-2"></i>
+          <span id="lockHelpText"></span>
+        </div>
+      </div>
+      <div class="modal-footer bg-light justify-content-center">
+        <input type="hidden" id="lockTargetUserId">
+        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary px-4" id="confirmToggleLockBtn">
+          <i class="ri-check-line me-1"></i> Confirmer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de changement de mot de passe -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -914,6 +956,9 @@
           
           var isActiveBadge = `<span class="badge bg-${statusClass}">${user.is_active ? 'Actif' : 'Inactif'}</span>`;
           var isStaffBadge = `<span class="badge bg-${roleClass}">${user.is_staff ? 'Oui' : 'Non'}</span>`;
+          var isDeviceLockBadge = user.is_device_lock_enabled 
+            ? '<span class="badge bg-soft-success text-success" title="Verrouillage appareil actif"><i class="ri-shield-check-line me-1"></i>Sécurisé</span>' 
+            : '<span class="badge bg-soft-warning text-warning" title="Verrouillage appareil désactivé"><i class="ri-shield-flash-line me-1"></i>Libre</span>';
           
           // List View Row
           var row = `
@@ -939,6 +984,7 @@
               </td>
               <td class="text-center">${isStaffBadge}</td>
               <td class="text-center">${isActiveBadge}</td>
+              <td class="text-center">${isDeviceLockBadge}</td>
               <td>
                 <div class="d-flex align-items-center">
                   <i class="ri-time-line text-muted me-2"></i>
@@ -956,6 +1002,8 @@
                     <li><a href="#" class="dropdown-item change-password" data-user-id="${user.id}"><i class="ri-lock-password-line text-secondary me-2"></i> Mot de passe</a></li>
                     <li><hr class="dropdown-divider my-1 opacity-50"></li>
                     <li><a href="#" class="dropdown-item toggle-status" data-user-id="${user.id}"><i class="${user.is_active ? 'ri-lock-unlock-line text-warning' : 'ri-lock-line text-success'} me-2"></i> ${user.is_active ? 'Désactiver' : 'Activer'}</a></li>
+                    <li><a href="#" class="dropdown-item toggle-device-lock" data-user-id="${user.id}"><i class="${user.is_device_lock_enabled ? 'ri-shield-flash-line text-warning' : 'ri-shield-check-line text-success'} me-2"></i> ${user.is_device_lock_enabled ? 'Désactiver Sécurité' : 'Activer Sécurité'}</a></li>
+                    <li><a href="#" class="dropdown-item reset-device" data-user-id="${user.id}"><i class="ri-refresh-line text-warning me-2"></i> Réinitialiser Appareil</a></li>
                     <li><a href="#" class="dropdown-item text-danger delete-user" data-user-id="${user.id}"><i class="ri-delete-bin-line me-2"></i> Supprimer</a></li>
                   </ul>
                 </div>
@@ -1001,6 +1049,8 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 glass-card p-2">
                           <li><a class="dropdown-item edit-user" href="#" data-user-id="${user.id}"><i class="ri-edit-line me-2 text-primary"></i> Modifier</a></li>
                           <li><a class="dropdown-item change-password" href="#" data-user-id="${user.id}"><i class="ri-lock-password-line me-2 text-secondary"></i> Password</a></li>
+                          <li><a class="dropdown-item toggle-device-lock" href="#" data-user-id="${user.id}"><i class="${user.is_device_lock_enabled ? 'ri-shield-flash-line text-warning' : 'ri-shield-check-line text-success'} me-2"></i> ${user.is_device_lock_enabled ? 'Désactiver Sécurité' : 'Activer Sécurité'}</a></li>
+                          <li><a class="dropdown-item reset-device" href="#" data-user-id="${user.id}"><i class="ri-refresh-line me-2 text-warning"></i> Réinit. Appareil</a></li>
                           <li><hr class="dropdown-divider opacity-50"></li>
                           <li><a class="dropdown-item text-danger delete-user" href="#" data-user-id="${user.id}"><i class="ri-delete-bin-line me-2"></i> Supprimer</a></li>
                         </ul>
@@ -1278,6 +1328,105 @@
         error: function(xhr, status, error) {
           console.error("Error changing user status:", error);
           alertify.error("Une erreur est survenue lors du changement de statut de l'utilisateur.");
+        }
+      });
+    });
+
+    // Reset device lock
+    $(document).on('click', '.reset-device', function(e) {
+      e.preventDefault();
+      var userId = $(this).data('user-id');
+      
+      alertify.confirm("Réinitialiser l'appareil", 
+        "Voulez-vous vraiment réinitialiser le verrouillage d'appareil pour cet utilisateur ? Cela lui permettra de se connecter depuis un nouveau poste.",
+        function() {
+          $.ajax({
+            url: "{% url 'institut_app:ApiResetDeviceLock' %}",
+            type: "POST",
+            data: {
+              'id': userId,
+              'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            dataType: "JSON",
+            success: function(response) {
+              if (response.status === "success") {
+                alertify.success(response.message);
+                loadUsers();
+              } else {
+                alertify.error(response.message);
+              }
+            },
+            error: function() {
+              alertify.error("Erreur serveur lors de la réinitialisation.");
+            }
+          });
+        },
+        function() {
+          // Cancel
+        }
+      ).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+    });
+
+    // Toggle device lock security (Show Modal)
+    $(document).on('click', '.toggle-device-lock', function(e) {
+      e.preventDefault();
+      var userId = $(this).data('user-id');
+      var $row = $(this).closest('tr');
+      var username = $row.find('h6').first().text() || $(this).closest('.user-card').find('h5').first().text();
+      var isEnabled = $(this).text().includes('Désactiver');
+      
+      $('#lockTargetUserId').val(userId);
+      $('#lockUserName').text(username);
+      
+      if (isEnabled) {
+        $('#lockActionText').text('désactiver').removeClass('text-success').addClass('text-warning');
+        $('#lockModalTitle').text('Désactiver le verrouillage ?');
+        $('#lockHelpText').text("L'utilisateur pourra se connecter sans restriction depuis n'importe quel appareil.");
+        $('#lockModalIcon').attr('class', 'ri-shield-flash-line text-warning display-4');
+        $('#confirmToggleLockBtn').removeClass('btn-success').addClass('btn-warning');
+      } else {
+        $('#lockActionText').text('activer').removeClass('text-warning').addClass('text-success');
+        $('#lockModalTitle').text('Activer le verrouillage ?');
+        $('#lockHelpText').text("L'utilisateur sera limité à un seul appareil pour ses prochaines connexions.");
+        $('#lockModalIcon').attr('class', 'ri-shield-check-line text-success display-4');
+        $('#confirmToggleLockBtn').removeClass('btn-warning').addClass('btn-success');
+      }
+      
+      $('#toggleDeviceLockModal').modal('show');
+    });
+
+    // Confirm Toggle (Actual API call)
+    $('#confirmToggleLockBtn').on('click', function() {
+      var userId = $('#lockTargetUserId').val();
+      var btn = $(this);
+      
+      btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Traitement...');
+      
+      $.ajax({
+        url: "{% url 'institut_app:ApiToggleDeviceLock' %}",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+          'user_id': userId,
+        }),
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        dataType: "JSON",
+        success: function(response) {
+          if (response.status === "success") {
+            alertify.success(response.message);
+            $('#toggleDeviceLockModal').modal('hide');
+            loadUsers();
+          } else {
+            alertify.error(response.message);
+          }
+        },
+        error: function() {
+          alertify.error("Erreur serveur lors du changement de sécurité.");
+        },
+        complete: function() {
+          btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i> Confirmer');
         }
       });
     });

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import *
 from .forms import *
 from t_formations.models import *
@@ -94,14 +95,25 @@ def ApiCreateGroupe(request):
     except Exception as e:
         return JsonResponse({"status":"error",'message':str(e)})
 
-    
-
 @login_required(login_url="insitut_app:login")
 def ListeGroupe(request):
-    groupes = Groupe.objects.all()
+    groupes_list = Groupe.objects.all().order_by('-id')
+    
+    # Pagination
+    paginator = Paginator(groupes_list, 10) # 10 groups per page
+    page = request.GET.get('page')
+    
+    try:
+        groupes = paginator.page(page)
+    except PageNotAnInteger:
+        groupes = paginator.page(1)
+    except EmptyPage:
+        groupes = paginator.page(paginator.num_pages)
+        
     context = {
         'liste' : groupes,
         'tenant' : request.tenant,
+        'page_title': "Liste des Groupes",
     }
     return render(request,'tenant_folder/formations/groupe/liste_des_groupes.html', context)
 

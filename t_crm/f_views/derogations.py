@@ -13,6 +13,7 @@ from institut_app.decorators import *
 from institut_app.utils_notifications import send_notification_to_module_level
 from institut_app.models import GlobalConfiguration
 from django.urls import reverse
+from django.core.paginator import Paginator
 
 
 @login_required(login_url='institut_app:login')
@@ -21,10 +22,52 @@ from django.urls import reverse
 @module_permission_required('crm','approuv')
 @role_required('crm', ['Administrateur','Superviseur'])
 def liste_derogations(request):
-   
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', 'all')
+    sort_order = request.GET.get('sort', 'recent')
+
+    queryset = Derogations.objects.all().order_by('-created_at')
+
+    # Apply filters
+    if search_query:
+        queryset = queryset.filter(
+            Q(demandeur__nom__icontains=search_query) | 
+            Q(demandeur__prenom__icontains=search_query)
+        )
+    
+    if status_filter != 'all':
+        queryset = queryset.filter(statut=status_filter)
+
+    # Apply sorting
+    if sort_order == 'old':
+        queryset = queryset.order_by('date_de_demande')
+    else:
+        queryset = queryset.order_by('-date_de_demande')
+
+    # Stats (full dataset for stats regardless of pagination)
+    all_qs = Derogations.objects.all()
+    stats = {
+        'total': all_qs.count(),
+        'en_attente': all_qs.filter(statut='en_attente').count(),
+        'acceptee': all_qs.filter(statut='acceptee').count(),
+        'rejetee': all_qs.filter(statut='rejetee').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(queryset, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'page_title': 'Liste des dérogations',
-
+        'page_obj': page_obj,
+        'stats': stats,
+        'filters': {
+            'search': search_query,
+            'status': status_filter,
+            'sort': sort_order,
+        },
+        'tenant': request.tenant,
     }
     return render(request, 'tenant_folder/crm/liste_derogations.html', context)
 

@@ -192,11 +192,14 @@
               <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2 flex-grow-1">
                 <div class="search-input-group" style="min-width: 250px;">
                   <i class="ri-search-line"></i>
-                  <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un module ou code...">
+                  <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un module ou code..." value="{{ filters.q|default_if_none:'' }}">
                 </div>
 
                 <select id="filter-groupes" class="form-select border-0 shadow-sm rounded-pill px-3 py-2 bg-white w-auto" style="min-width: 200px;">
-                  <!-- Options chargées via JS -->
+                  <option value="0">Filtrer par groupe</option>
+                  {% for groupe in groupes %}
+                  <option value="{{ groupe.id }}" {% if filters.groupe_id == groupe.id|stringformat:"s" %}selected{% endif %}>{{ groupe.nom }}</option>
+                  {% endfor %}
                 </select>
 
                 <select id="date_filter-cours" class="form-select border-0 shadow-sm rounded-pill px-3 py-2 bg-white w-auto" style="min-width: 200px;">
@@ -224,20 +227,114 @@
                     </tr>
                   </thead>
                   <tbody id="suiviCoursListBody" class="border-top-0">
-                    <!-- Loading spinner -->
-                    <tr id="loadingSpinner" class="loading-row border-0">
-                      <td colspan="6" class="border-0">
-                        <div class="d-flex flex-column align-items-center justify-content-center py-5">
-                          <div class="spinner-border text-info mb-3" role="status">
-                            <span class="visually-hidden">Chargement...</span>
+                    {% if page_obj %}
+                      {% regroup page_obj|dictsort:"group_key" by group_key as grouped_list %}
+                      {% for group in grouped_list %}
+                        {% with first_item=group.list.0 %}
+                        <tr class="table-light group-header" data-target=".group-{{ forloop.counter }}">
+                          <td colspan="6" class="fw-bold text-primary">
+                            <div class="d-flex align-items-center justify-content-between">
+                              <span><i class="ri-group-line me-2"></i>{{ first_item.registre__groupe__nom }} - Semestre {{ first_item.registre__semestre }}</span>
+                              <i class="ri-arrow-down-s-line arrow-icon fs-5" style="transition: transform 0.3s; transform: rotate(-180deg);"></i>
+                            </div>
+                          </td>
+                        </tr>
+                        {% endwith %}
+                        {% for p in group.list %}
+                        <tr class="align-middle timetable-item group-{{ forloop.parentloop.counter }}" data-groupe-id="{{ p.registre__groupe__id }}">
+                          <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                              <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-semibold">{{ p.module__code }}-{{ p.module__label }}</h6>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="text-center">
+                            <div class="fw-medium"><span class="badge bg-primary">Semestre {{ p.registre__semestre }}</span></div>
+                          </td>
+                          <td class="text-center">{{ p.registre__groupe__annee_scolaire }}</td>
+                          <td class="text-center">
+                            <div class="fw-medium"><span class="badge bg-primary">{{ p.module__duree }}h</span></div>
+                          </td>
+                          <td class="text-center">
+                            <div class="text-body"><span class="badge bg-success">{{ p.faites }} / {{ p.total }}</span></div>
+                          </td>
+                          <td class="text-end">
+                            <div class="dropdown d-inline-block">
+                              <button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-g{{ p.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri-more-2-fill align-middle"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-g{{ p.id }}" style="z-index: 1060 !important;">
+                                <li>
+                                  <a href="#" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2 btn-details" data-id="{{ p.module__id }}" data-ligne="{{ p.id }}">
+                                    <i class="ri-eye-line text-primary me-3"></i><span>Voir détails</span>
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="6">
+                          <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                            <div class="avatar-sm mb-4">
+                              <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-calendar-todo-line"></i>
+                              </div>
+                            </div>
+                            <h5 class="mb-2">Aucune séance trouvée</h5>
+                            <p class="text-muted mb-0">Il n'y a aucune séance enregistrée pour le moment ou correspondant à vos filtres.</p>
                           </div>
-                          <p class="text-muted fw-medium mb-0">Chargement des données en cours...</p>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    {% endif %}
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            <!-- Pagination Info & Controls -->
+            <div class="d-flex align-items-center justify-content-between px-4 py-3 bg-light bg-opacity-50 mt-0 rounded-bottom-4 border-top">
+              <div class="text-muted small">
+                Affichage de <span class="fw-semibold">{{ page_obj.start_index|default:"0" }}</span> à <span class="fw-semibold">{{ page_obj.end_index|default:"0" }}</span> sur <span class="fw-bold">{{ page_obj.paginator.count|default:"0" }}</span> séances
+              </div>
+              
+              {% if page_obj.has_other_pages %}
+              <nav aria-label="Page navigation">
+                <ul class="pagination pagination-separated pagination-sm mb-0">
+                  {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.previous_page_number }}&groupe_id={{ filters.groupe_id }}&q={{ filters.q }}">
+                      <i class="ri-arrow-left-s-line fs-14"></i>
+                    </a>
+                  </li>
+                  {% endif %}
+
+                  {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link rounded-circle mx-1 shadow-sm">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link rounded-circle mx-1 shadow-sm" href="?page={{ num }}&groupe_id={{ filters.groupe_id }}&q={{ filters.q }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                  {% endfor %}
+
+                  {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.next_page_number }}&groupe_id={{ filters.groupe_id }}&q={{ filters.q }}">
+                      <i class="ri-arrow-right-s-line fs-14"></i>
+                    </a>
+                  </li>
+                  {% endif %}
+                </ul>
+              </nav>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -403,123 +500,29 @@
 <script>
   $(document).ready(function(){
 
-    var isGroupLoaded = false;
-
-    function loadItems(){
-      var groupeId = $('#filter-groupes').val();
-      var searchQuery = $('#table-filter').val();
-
-      $.ajax({
-        url : '{% url "t_timetable:ApiGetCours" %}',
-        dataType:"JSON",
-        type:"GET",
-        data: {
-            'groupe_id': groupeId,
-            'q': searchQuery
-        },
-        success: function(data){
-          var row = "";
-
-
-          if(data.seances && data.seances.length > 0){
-            // Group data by: Group Name -> Semester
-            var groupedData = {};
-            $.each(data.seances, function(index, p){
-               var groupName = p.registre__groupe__nom;
-               var semester = p.registre__semestre;
-               var key = groupName + '|' + semester;
-
-               if(!groupedData[key]){
-                   groupedData[key] = {
-                       group: groupName,
-                       semester: semester,
-                       items: []
-                   };
-               }
-               groupedData[key].items.push(p);
-            });
-
-            // Iterate over groups
-            var groupIndex = 0;
-            $.each(groupedData, function(key, groupData){
-                groupIndex++;
-                var groupId = 'group-' + groupIndex;
-                
-                // Add Header Row for the Group/Semester
-                row += '<tr class="table-light group-header" data-target=".' + groupId + '">';
-                row += '<td colspan="6" class="fw-bold text-primary">';
-                row += '<div class="d-flex align-items-center justify-content-between">';
-                row += '<span><i class="ri-group-line me-2"></i>' + groupData.group + ' - Semestre ' + groupData.semester + '</span>';
-                row += '<i class="ri-arrow-down-s-line arrow-icon fs-5" style="transition: transform 0.3s;"></i>';
-                row += '</div></td></tr>';
-
-                // Add items for this group
-                $.each(groupData.items, function(i, p){
-                  row +='<tr class="align-middle timetable-item ' + groupId + '" data-groupe-id="'+ p.registre__groupe__id +'">'; 
-                  row +='<td class="ps-4"><div class="d-flex align-items-center"><div class="flex-grow-1"><h6 class="mb-0 fw-semibold">'+p.module__code +'-'+p.module__label+'</h6>';
-                  row +='</div></div></td>';
-                  row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">Semestre '+p.registre__semestre+'</span></div></td>';
-                  row +='<td class="text-center">'+ p.registre__groupe__annee_scolaire +'</td>';
-                  row +='<td class="text-center"><div class="fw-medium"><span class="badge bg-primary">'+p.module__duree+'h</span></div></td>';
-                  row +='<td class="text-center"><div class="text-body"><span class="badge bg-success">'+p.faites+' / '+p.total+'</span></div></td>';
-                  row +='<td class="text-end"><div class="dropdown d-inline-block">';
-                  row +='<button class="btn btn-sm btn-outline-secondary dropdown-toggle-no-caret shadow-none" type="button" id="dropdownMenuButton-g'+p.id+'" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-2-fill align-middle"></i></button>';
-                  row +='<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-2 py-2" aria-labelledby="dropdownMenuButton-g'+p.id+'" style="z-index: 1060 !important;">';
-                  row +='<li><a href="#" id="detailsBtn" data-id="'+p.module__id+'" data-ligne="'+p.id+'" class="dropdown-item rounded-1 d-flex align-items-center px-3 py-2">';
-                  row +='<i class="ri-eye-line text-primary me-3"></i><span>Voir détails</span></a>';
-                  row +='</li></ul></div>';
-                  row +='</td></tr>';
-                });
-            });
-
-          }else{
-            row +="<tr>";
-            row +="<td colspan='6'>";
-            
-            row += '<div class="d-flex flex-column align-items-center justify-content-center py-5">';
-                row += '<div class="avatar-sm mb-4">';
-                    row += '<div class="avatar-title bg-light text-muted rounded-circle fs-1">';
-                        row += '<i class="ri-calendar-todo-line"></i>';
-                    row += '</div>';
-                row += '</div>';
-                row += '<h5 class="mb-2">Aucune séance trouvée</h5>';
-                row += '<p class="text-muted mb-0">Il n\'y a aucune séance enregistrée pour le moment</p>';
-            row += '</div>';
-            row +="</tr>";
-            row +="</td>";
-          }
-
-          $('#suiviCoursListBody').html(row);
-          
-          if(!isGroupLoaded){
-            var option = "<option value='0'>Filtrer par groupe</option>";
-            $.each(data.groupes, function(index, t){
-                option += "<option value="+t.id+">"+t.nom+"</option>"
-            });
-            $('#filter-groupes').html(option);
-            isGroupLoaded = true;
-          }
-
-        }
-      });
+    function updateFilters() {
+      const groupeId = $('#filter-groupes').val();
+      const searchQuery = $('#table-filter').val();
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('groupe_id', groupeId);
+      url.searchParams.set('q', searchQuery);
+      url.searchParams.set('page', 1); // Reset page on filter
+      
+      window.location.href = url.toString();
     }
 
-    loadItems();
-
-    // Event listeners for filters
-    $('#filter-groupes').on('change', function(){
-        loadItems();
-    });
-
-    var searchTimer;
-    $('#table-filter').on('keyup', function(){
+    // Debounced search
+    let searchTimer;
+    $('#table-filter').on('input', function(){
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(loadItems, 500); // Debounce of 500ms
+        searchTimer = setTimeout(updateFilters, 500); 
     });
 
-
+    $('#filter-groupes').on('change', updateFilters);
    
-    $(document).on('click','#detailsBtn', function(){
+    $(document).on('click','.btn-details', function(e){
+      e.preventDefault();
       var moduleId= $(this).data('id');
       var seanceLigne = $(this).data('ligne');
       

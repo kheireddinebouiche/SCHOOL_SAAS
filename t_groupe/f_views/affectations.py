@@ -291,16 +291,41 @@ def ApiGetSpecialiteDatas(request):
         promo = request.GET.get('promo')
         
         object = Specialites.objects.filter(id = specialite).values('id','label','code','condition_access')
-        nb_groupe= Groupe.objects.filter(promotion__code = promo, specialite_id = specialite,etat='inscription').count()
+        nb_groupe = Groupe.objects.filter(promotion__code=promo, specialite_id=specialite, etat='inscription').count()
+        nb_groupe_brouillon = Groupe.objects.filter(promotion__code=promo, specialite_id=specialite, etat='brouillon').count()
 
         data = {
             'specialite' : list(object),
             'nb_groupe' : nb_groupe,
+            'nb_groupe_brouillon': nb_groupe_brouillon,
         }
 
         return JsonResponse(data, safe=False)
     else:
         return JsonResponse({"status":"error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetBrouillonGroupes(request):
+    """Retourne la liste des groupes en mode brouillon pour une spécialité et promotion données."""
+    if request.method == 'GET':
+        specialite = request.GET.get('specialite')
+        promo = request.GET.get('promo')
+
+        if not specialite or not promo:
+            return JsonResponse([], safe=False)
+
+        groupes = Groupe.objects.filter(
+            promotion__code=promo,
+            specialite_id=specialite,
+            etat='brouillon'
+        ).values('id', 'nom', 'etat')
+
+        return JsonResponse(list(groupes), safe=False)
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
 
 
 @login_required(login_url="institut_app:login")

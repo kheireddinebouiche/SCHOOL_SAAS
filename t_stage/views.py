@@ -6,8 +6,12 @@ from t_crm.models import Prospets
 from t_groupe.models import Groupe
 from t_formations.models import Formateurs
 from django.utils import timezone
+from institut_app.decorators import ajax_required, module_permission_required, role_required
 
 @login_required
+@module_permission_required('sta','view')
+@module_permission_required('sta','add')
+@role_required('sta', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def stage_dashboard(request):
     """Tableau de bord général des stages."""
     stages = Stage.objects.all().order_by('-created_at')
@@ -18,6 +22,9 @@ def stage_dashboard(request):
     })
 
 @login_required
+@module_permission_required('sta','view')
+@module_permission_required('sta','add')
+@role_required('sta', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def list_stages(request):
     """Liste filtrée des stages."""
     stages = Stage.objects.all()
@@ -25,6 +32,9 @@ def list_stages(request):
     return render(request, 't_stage/list_stages.html', {'stages': stages})
 
 @login_required
+@module_permission_required('sta','view')
+@module_permission_required('sta','add')
+@role_required('sta', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def focus_group_detail(request, pk):
     """Détail d'un Focus Group et ses séances."""
     fg = get_object_or_404(FocusGroup, pk=pk)
@@ -84,6 +94,8 @@ def progressive_presentation_form(request, stage_id):
     })
 
 @login_required
+@module_permission_required('sta','delete')
+@role_required('sta', ['Administrateur','Manager','Superviseur'])
 def delete_presentation(request, pk):
     """Suppression d'une présentation progressive."""
     presentation = get_object_or_404(PresentationProgressive, pk=pk)
@@ -153,7 +165,11 @@ def quick_decision(request):
             
     return redirect('t_stage:validation_council')
 
+
 @login_required
+@module_permission_required('sta','view')
+@module_permission_required('sta','add')
+@role_required('sta', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def launch_stage(request):
     """Lancement/Planification d'un nouveau stage."""
     if request.method == 'POST':
@@ -190,6 +206,9 @@ def launch_stage(request):
     return render(request, 't_stage/stage_form.html', context)
 
 @login_required
+@module_permission_required('sta','view')
+@module_permission_required('sta','change')
+@role_required('sta', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def edit_stage(request, stage_id):
     """Modification d'un stage existant."""
     stage = get_object_or_404(Stage, pk=stage_id)

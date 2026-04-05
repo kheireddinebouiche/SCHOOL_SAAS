@@ -237,7 +237,7 @@
                 </div>
                 <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">Total</span>
               </div>
-              <h3 class="fw-bold mb-1" id="total-derogations">0</h3>
+              <h3 class="fw-bold mb-1" id="total-derogations">{{ stats.total }}</h3>
               <p class="text-muted mb-0 small">Demandes soumises</p>
             </div>
           </div>
@@ -251,7 +251,7 @@
                 </div>
                 <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">En cours</span>
               </div>
-              <h3 class="fw-bold mb-1" id="en-attente">0</h3>
+              <h3 class="fw-bold mb-1" id="en-attente">{{ stats.en_attente }}</h3>
               <p class="text-muted mb-0 small">En attente de traitement</p>
             </div>
           </div>
@@ -265,7 +265,7 @@
                 </div>
                 <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Validées</span>
               </div>
-              <h3 class="fw-bold mb-1" id="acceptees">0</h3>
+              <h3 class="fw-bold mb-1" id="acceptees">{{ stats.acceptee }}</h3>
               <p class="text-muted mb-0 small">Dossiers approuvés</p>
             </div>
           </div>
@@ -279,7 +279,7 @@
                 </div>
                 <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">Rejetées</span>
               </div>
-              <h3 class="fw-bold mb-1" id="rejetees">0</h3>
+              <h3 class="fw-bold mb-1" id="rejetees">{{ stats.rejetee }}</h3>
               <p class="text-muted mb-0 small">Demandes refusées</p>
             </div>
           </div>
@@ -293,24 +293,24 @@
             <div class="col-md-4">
               <div class="search-box position-relative">
                 <i class="ri-search-line fs-5"></i>
-                <input type="text" id="table-filter" class="form-control premium-input ps-5" placeholder="Rechercher un étudiant...">
+                <input type="text" id="table-filter" class="form-control premium-input ps-5" placeholder="Rechercher un étudiant..." value="{{ filters.search }}">
               </div>
             </div>
             <div class="col-md-8">
               <div class="d-flex flex-wrap justify-content-md-end gap-3">
                 <div class="d-flex gap-2">
                   <select id="filter-derogation" class="form-select premium-input w-auto">
-                    <option value="all">Tous les statuts</option>
-                    <option value="en_attente">En attente</option>
-                    <option value="acceptee">Acceptée</option>
-                    <option value="rejetee">Rejetée</option>
+                    <option value="all" {% if filters.status == 'all' %}selected{% endif %}>Tous les statuts</option>
+                    <option value="en_attente" {% if filters.status == 'en_attente' %}selected{% endif %}>En attente</option>
+                    <option value="acceptee" {% if filters.status == 'acceptee' %}selected{% endif %}>Acceptée</option>
+                    <option value="rejetee" {% if filters.status == 'rejetee' %}selected{% endif %}>Rejetée</option>
                   </select>
                   <select id="date_filter-derogation" class="form-select premium-input w-auto">
-                    <option value="recent">Plus récent</option>
-                    <option value="old">Plus ancien</option>
+                    <option value="recent" {% if filters.sort == 'recent' %}selected{% endif %}>Plus récent</option>
+                    <option value="old" {% if filters.sort == 'old' %}selected{% endif %}>Plus ancien</option>
                   </select>
                 </div>
-                <button class="btn btn-primary rounded-pill px-4 shadow-sm h-100" onclick="loadDerogations()">
+                <button class="btn btn-primary rounded-pill px-4 shadow-sm h-100" onclick="location.reload()">
                   <i class="ri-refresh-line me-1"></i> Actualiser
                 </button>
               </div>
@@ -332,17 +332,153 @@
                 </tr>
               </thead>
               <tbody id="listeItem">
-                <!-- Loading State -->
-                <tr id="loadingRow">
-                  <td colspan="6" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Chargement...</span>
+                {% for item in page_obj %}
+                <tr class="animate-slide-up" style="animation-delay: {{ forloop.counter0|add:0.04 }}s">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-premium me-3" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%)">
+                        {{ item.demandeur.nom|slice:":1" }}{{ item.demandeur.prenom|slice:":1" }}
+                      </div>
+                      <div>
+                        <h6 class="mb-1 fw-bold text-dark">{{ item.demandeur.nom }} {{ item.demandeur.prenom }}</h6>
+                        <div class="d-flex align-items-center">
+                          <span class="badge bg-light text-muted border px-2 py-1 rounded-pill me-2" style="font-size: 0.65rem">ID: {{ item.demandeur.id }}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p class="mt-2 text-muted fw-medium">Récupération des données...</p>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="fw-bold text-primary small">{{ item.type }}</span>
+                      <small class="text-muted" style="font-size: 0.75rem">Catégorie: Dérogation</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="text-muted small text-truncate" style="max-width: 200px;" title="{{ item.motif }}">
+                      {{ item.motif }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="text-dark small fw-medium"><i class="ri-calendar-line me-1 text-primary"></i> {{ item.date_de_demande|date:"Y-m-d" }}</span>
+                      <small class="text-muted" style="font-size: 0.7rem">Mise à jour: {{ item.updated_at|date:"Y-m-d H:i" }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    {% if item.statut == 'en_attente' %}
+                      <span class="badge-modern badge-modern-warning"><i class="ri-timer-2-line fs-6"></i> En attente</span>
+                    {% elif item.statut == 'acceptee' %}
+                      <span class="badge-modern badge-modern-success"><i class="ri-checkbox-circle-line fs-6"></i> Acceptée</span>
+                    {% elif item.statut == 'rejetee' %}
+                      <span class="badge-modern badge-modern-danger"><i class="ri-close-circle-line fs-6"></i> Rejetée</span>
+                    {% else %}
+                      <span class="badge bg-secondary text-white">Inconnu</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="dropdown d-inline-block">
+                      <button class="btn-action-icon shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ri-more-2-line fs-5"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 py-2 mt-2">
+                        <li>
+                          <h6 class="dropdown-header text-muted small text-uppercase fw-bold px-3 py-2">Gestion du dossier</h6>
+                        </li>
+                        <li>
+                          <a class="dropdown-item py-2 px-3 d-flex align-items-center btn-details" 
+                             href="javascript:void(0)" 
+                             data-id="{{ item.id }}" 
+                             data-demandeur="{{ item.demandeur.id }}">
+                            <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                              <i class="ri-file-search-line text-primary fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                              <span class="d-block fw-bold mb-0">Détails & Action</span>
+                              <small class="text-muted">Traiter la demande</small>
+                            </div>
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item py-2 px-3 d-flex align-items-center btn-view-profile" href="javascript:void(0)" data-url="/crm/details-preinscrit/{{ item.demandeur.id }}/" data-demandeur="{{ item.demandeur.id }}">
+                            <div class="bg-info bg-opacity-10 p-2 rounded-3 me-3">
+                              <i class="ri-user-follow-line text-info fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                              <span class="d-block fw-bold mb-0">Voir le Profil</span>
+                              <small class="text-muted">Dossier académique</small>
+                            </div>
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider opacity-50 my-2 mx-3"></li>
+                        <li>
+                          <a class="dropdown-item py-2 px-3 d-flex align-items-center text-danger btn-supprimer" href="javascript:void(0)" data-id="{{ item.id }}">
+                            <div class="bg-danger bg-opacity-10 p-2 rounded-3 me-3">
+                              <i class="ri-delete-bin-line text-danger fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                              <span class="d-block fw-bold mb-0">Supprimer</span>
+                              <small class="text-danger-emphasis">Action irréversible</small>
+                            </div>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
                   </td>
                 </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-5">
+                    <div class="p-4">
+                      <i class="ri-inbox-archive-line display-4 text-muted opacity-25"></i>
+                      <h5 class="mt-3 text-muted fw-bold">Aucune dérogation trouvée</h5>
+                      <p class="text-muted small">Essayez d'ajuster vos filtres pour voir plus de résultats.</p>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Info & Controls -->
+          <div class="d-flex align-items-center justify-content-between px-4 py-3 bg-light bg-opacity-50 mt-0 rounded-bottom-4 border-top">
+            <div class="text-muted small">
+              Affichage de <span class="fw-semibold">{{ page_obj.start_index }}</span> à <span class="fw-semibold">{{ page_obj.end_index }}</span> sur <span class="fw-bold">{{ page_obj.paginator.count }}</span> dérogations
+            </div>
+            
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation">
+              <ul class="pagination pagination-separated pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.previous_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">
+                    <i class="ri-arrow-left-s-line fs-14"></i>
+                  </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link rounded-circle mx-1 shadow-sm">{{ num }}</span>
+                  </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link rounded-circle mx-1 shadow-sm" href="?page={{ num }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">{{ num }}</a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.next_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">
+                    <i class="ri-arrow-right-s-line fs-14"></i>
+                  </a>
+                </li>
+                {% endif %}
+              </ul>
+            </nav>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -355,199 +491,29 @@
 
 <script>
   $(document).ready(function () {
-    let derogationsData = [];
-    let currentFilteredData = [];
-
-    // Load Data
-    window.loadDerogations = function() {
-      $("#listeItem").html(`
-        <tr>
-          <td colspan="6" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2 text-muted fw-medium">Chargement...</p>
-          </td>
-        </tr>
-      `);
-
-      $.ajax({
-        url : "{% url 't_crm:ApiLoadDerogation' %}",
-        dataType: "JSON",
-        type : "GET",
-        success : function(data){
-            derogationsData = data;
-            applyFilters();
-        },
-        error: function() {
-          $("#listeItem").html('<tr><td colspan="6" class="text-center text-danger py-5">Erreur lors du chargement des données.</td></tr>');
-        }
-      });
+    // URL Filter Helper
+    function updateFilters() {
+      const search = $('#table-filter').val();
+      const status = $('#filter-derogation').val();
+      const sort = $('#date_filter-derogation').val();
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('search', search);
+      url.searchParams.set('status', status);
+      url.searchParams.set('sort', sort);
+      url.searchParams.set('page', 1); // Reset to first page on filter change
+      
+      window.location.href = url.toString();
     }
 
-    // Filter Logic
-    function applyFilters() {
-      const searchTerm = $('#table-filter').val().toLowerCase();
-      const statusFilter = $('#filter-derogation').val();
-      const sortOrder = $('#date_filter-derogation').val();
+    // Debounced search
+    let searchTimer;
+    $('#table-filter').on('input', function() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(updateFilters, 500);
+    });
 
-      currentFilteredData = derogationsData.filter(item => {
-        const nameMatch = (item.demandeur__nom + ' ' + item.demandeur__prenom).toLowerCase().includes(searchTerm);
-        const statusMatch = statusFilter === 'all' || item.statut === statusFilter;
-        return nameMatch && statusMatch;
-      });
-
-      // Sorting
-      currentFilteredData.sort((a, b) => {
-        const dateA = new Date(a.date_de_demande);
-        const dateB = new Date(b.date_de_demande);
-        return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
-      });
-
-      renderTable(currentFilteredData);
-      updateStats();
-    }
-
-    function renderTable(data) {
-      let html = "";
-      if (data.length === 0) {
-        html = `
-          <tr>
-            <td colspan="6" class="text-center py-5">
-              <div class="p-4">
-                <i class="ri-inbox-archive-line display-4 text-muted opacity-25"></i>
-                <h5 class="mt-3 text-muted fw-bold">Aucune dérogation trouvée</h5>
-                <p class="text-muted small">Essayez d'ajuster vos filtres pour voir plus de résultats.</p>
-              </div>
-            </td>
-          </tr>
-        `;
-      } else {
-        const gradients = [
-          'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-          'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
-          'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-          'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)'
-        ];
-
-        $.each(data, function(index, item) {
-          let statusBadge = "";
-          const grad = gradients[index % gradients.length];
-          
-          switch(item.statut) {
-            case "en_attente": 
-              statusBadge = '<span class="badge-modern badge-modern-warning"><i class="ri-timer-2-line fs-6"></i> En attente</span>'; 
-              break;
-            case "acceptee": 
-              statusBadge = '<span class="badge-modern badge-modern-success"><i class="ri-checkbox-circle-line fs-6"></i> Acceptée</span>'; 
-              break;
-            case "rejetee": 
-              statusBadge = '<span class="badge-modern badge-modern-danger"><i class="ri-close-circle-line fs-6"></i> Rejetée</span>'; 
-              break;
-            default: 
-              statusBadge = '<span class="badge bg-secondary text-white">Inconnu</span>';
-          }
-
-          html += `
-            <tr class="animate-slide-up" style="animation-delay: ${index * 0.04}s">
-              <td>
-                <div class="d-flex align-items-center">
-                  <div class="avatar-premium me-3" style="background: ${grad}">
-                    ${item.demandeur__nom.charAt(0)}${item.demandeur__prenom.charAt(0)}
-                  </div>
-                  <div>
-                    <h6 class="mb-1 fw-bold text-dark">${item.demandeur__nom} ${item.demandeur__prenom}</h6>
-                    <div class="d-flex align-items-center">
-                      <span class="badge bg-light text-muted border px-2 py-1 rounded-pill me-2" style="font-size: 0.65rem">ID: ${item.demandeur}</span>
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="d-flex flex-column">
-                  <span class="fw-bold text-primary small">${item.type}</span>
-                  <small class="text-muted" style="font-size: 0.75rem">Catégorie: Dérogation</small>
-                </div>
-              </td>
-              <td>
-                <div class="text-muted small text-truncate" style="max-width: 200px;" title="${item.motif}">
-                  ${item.motif}
-                </div>
-              </td>
-              <td>
-                <div class="d-flex flex-column">
-                  <span class="text-dark small fw-medium"><i class="ri-calendar-line me-1 text-primary"></i> ${item.date_de_demande}</span>
-                  <small class="text-muted" style="font-size: 0.7rem">Mise à jour: ${item.updated_at || '-'}</small>
-                </div>
-              </td>
-              <td>${statusBadge}</td>
-              <td class="text-center">
-                <div class="dropdown d-inline-block">
-                  <button class="btn-action-icon shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ri-more-2-line fs-5"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 py-2 mt-2">
-                    <li>
-                      <h6 class="dropdown-header text-muted small text-uppercase fw-bold px-3 py-2">Gestion du dossier</h6>
-                    </li>
-                    <li>
-                      <a class="dropdown-item py-2 px-3 d-flex align-items-center btn-details" 
-                         href="javascript:void(0)" 
-                         data-id="${item.id}" 
-                         data-demandeur="${item.demandeur}">
-                        <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
-                          <i class="ri-file-search-line text-primary fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <span class="d-block fw-bold mb-0">Détails & Action</span>
-                          <small class="text-muted">Traiter la demande</small>
-                        </div>
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item py-2 px-3 d-flex align-items-center btn-view-profile" href="javascript:void(0)" data-url="/crm/details-preinscrit/${item.demandeur}/">
-                        <div class="bg-info bg-opacity-10 p-2 rounded-3 me-3">
-                          <i class="ri-user-follow-line text-info fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <span class="d-block fw-bold mb-0">Voir le Profil</span>
-                          <small class="text-muted">Dossier académique</small>
-                        </div>
-                      </a>
-                    </li>
-                    <li><hr class="dropdown-divider opacity-50 my-2 mx-3"></li>
-                    <li>
-                      <a class="dropdown-item py-2 px-3 d-flex align-items-center text-danger btn-supprimer" href="javascript:void(0)" data-id="${item.id}">
-                        <div class="bg-danger bg-opacity-10 p-2 rounded-3 me-3">
-                          <i class="ri-delete-bin-line text-danger fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <span class="d-block fw-bold mb-0">Supprimer</span>
-                          <small class="text-danger-emphasis">Action irréversible</small>
-                        </div>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-      }
-      $("#listeItem").html(html);
-    }
-
-    function updateStats() {
-      $('#total-derogations').text(derogationsData.length);
-      $('#en-attente').text(derogationsData.filter(i => i.statut === 'en_attente').length);
-      $('#acceptees').text(derogationsData.filter(i => i.statut === 'acceptee').length);
-      $('#rejetees').text(derogationsData.filter(i => i.statut === 'rejetee').length);
-    }
-
-    // Events
-    $('#table-filter').on('input', applyFilters);
-    $('#filter-derogation, #date_filter-derogation').on('change', applyFilters);
-
-    // Initial Load
-    loadDerogations();
+    $('#filter-derogation, #date_filter-derogation').on('change', updateFilters);
 
     // Details & Traiter Handler (Unified)
     $(document).on('click', '.btn-details, .btn-traiter', function(){
@@ -665,7 +631,7 @@
           if(res.status === "success"){
             alertify.success("Décision enregistrée");
             bootstrap.Offcanvas.getInstance('#derogationOffcanvas').hide();
-            loadDerogations();
+            location.reload();
           }
         },
         complete: () => btn.prop('disabled', false).html(originalText)
@@ -816,7 +782,7 @@
           if(res.status === "success"){
             alertify.success(res.message || "Dérogation supprimée");
             $('.deleteModal').modal('hide');
-            loadDerogations();
+            location.reload();
           } else {
             alertify.error(res.message || "Erreur lors de la suppression");
           }

@@ -3325,7 +3325,9 @@
                         echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
                         
                         if (data.remise && data.remise.remise_approuver) {
-                            echeancierHtml += '<td class="prix-final-cell" style="display: none;"><span class="fw-bold text-success">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
+                            var montantFinal = parseFloat(data.voeux.frais_inscription);
+                            var displayStyle = (data.remise.remise_approuver && data.remise.remise_appliquer) ? 'table-cell' : 'none';
+                            echeancierHtml += '<td class="prix-final-cell" style="display: ' + displayStyle + ';"><span class="fw-bold text-success">' + montantFinal.toFixed(2) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     }
@@ -3336,23 +3338,27 @@
                        
                         hasReduction = true;
                         
-
-                        prixFormationReduction = parseFloat(prixFormation-(prixFormation*(data.remise.valeur/100)));
+                        if (data.remise.is_value) {
+                            // Fixed amount discount
+                            prixFormationReduction = parseFloat(prixFormation - data.remise.valeur);
+                            $('#reductionAmount').text(formatComptable(data.remise.valeur) + " DA");
+                        } else {
+                            // Percentage discount
+                            prixFormationReduction = parseFloat(prixFormation - (prixFormation * (data.remise.valeur / 100)));
+                            $('#reductionAmount').text(data.remise.valeur + " %");
+                        }
 
                         $('#reductionType').text(data.remise.type_remise);
-                        $('#reductionAmount').text(data.remise.valeur+" %");
-                        $('#initialPrice').text(prixFormation);
-                        $('#finalPrice').text(parseFloat(prixFormationReduction));
+                        $('#initialPrice').text(formatComptable(prixFormation));
+                        $('#finalPrice').text(formatComptable(prixFormationReduction));
                         
                         if (data.remise.remise_approuver && data.remise.remise_appliquer){ 
                             reductionApprouved = true;
                             reductionAppliced = true;
                             $('#prixFinalHeader').show();
-                            $('[id^=prixFinal]').show();
                         }else{
                             reductionApprouved = false;
                             reductionAppliced = false;
-
                         }          
                         
                         HideReducNotif();
@@ -3470,9 +3476,26 @@
                         if (data.remise && data.remise.remise_approuver) {
                             var montantFinal = parseFloat(echeance.montant_tranche);
                             if (echeance.value.toLowerCase().indexOf("inscription") === -1) {
-                                montantFinal = montantFinal - (montantFinal * parseFloat(data.remise.valeur) / 100);
+                                if (data.remise.is_value) {
+                                    // For fixed amount, it's tricky to apply to each tranche. 
+                                    // Usually fixed amount is subtracted from the total.
+                                    // Here we might want to distribute it or just show the total.
+                                    // If it's a fixed amount on the formation, we should probably 
+                                    // recalculate the tranche based on the new total or just subtract it from the first non-inscription tranche.
+                                    // However, the backend usually handles the distribution if it's a percentage.
+                                    // If it's a fixed amount, let's assume the backend already provided the correct montant_tranche if applicable,
+                                    // but wait, the echeancier here is the standard one.
+                                    
+                                    // If it's a fixed amount, we apply a proportional reduction to the non-inscription tranches.
+                                    var totalNonInst = prixFormation; // Total before discount
+                                    var ratio = (prixFormation - data.remise.valeur) / prixFormation;
+                                    montantFinal = montantFinal * ratio;
+                                } else {
+                                    montantFinal = montantFinal - (montantFinal * parseFloat(data.remise.valeur) / 100);
+                                }
                             }
-                            echeancierHtml += '<td class="prix-final-cell" style="display: none;"><span class="fw-bold text-success">' + montantFinal.toFixed(2) + ' DA</span></td>';
+                            var displayStyle = (reductionApprouved && reductionAppliced) ? 'table-cell' : 'none';
+                            echeancierHtml += '<td class="prix-final-cell" style="display: ' + displayStyle + ';"><span class="fw-bold text-success">' + montantFinal.toFixed(2) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     });

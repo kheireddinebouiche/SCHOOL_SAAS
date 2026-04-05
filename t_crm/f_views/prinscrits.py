@@ -19,6 +19,7 @@ from django.db.models import Q, Sum
 from django.urls import reverse
 from institut_app.utils_notifications import send_notification_to_module_level
 from institut_app.models import GlobalConfiguration
+from django.core.paginator import Paginator
 
 
 @login_required(login_url='institut_app:login')
@@ -304,7 +305,9 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.annee_obtention = annee_diplome
     preinscrit.nom_arabe = nom_arabe
     preinscrit.prenom_arabe = prenom_arabe
-    preinscrit.date_naissance = date_naissance
+    # Nettoyer la date : si vide ou espaces insécables, mettre None
+    date_naissance_clean = date_naissance.strip().replace('\xa0', '').strip() if date_naissance else ''
+    preinscrit.date_naissance = date_naissance_clean if date_naissance_clean else None
     preinscrit.prenom_pere = prenom_pere
     preinscrit.tel_pere = tel_pere
     preinscrit.nom_mere = nom_mere
@@ -840,18 +843,28 @@ def ApiGetDossierDetailsDouble(request):
     else:
         return JsonResponse({"status":"error"})
 
+from django.core.paginator import Paginator
+
+@login_required(login_url="institut_app:login")
 def prospects_incomplets_view(request):
-    data = get_prospects_incomplets()                  # fiches simples
-    data_double = get_prospects_incomplets_double()    # fiches double
+    data_simples = get_prospects_incomplets()            # fiches simples
+    data_double = get_prospects_incomplets_double()      # fiches double
 
     # Fusionner les deux dans ta variable data
-    data = data + data_double
+    all_data = data_simples + data_double
 
-    # Option : trier par nom (facultatif)
-    data = sorted(data, key=lambda x: x["prospect"].nom.lower())
+    # Trier par nom
+    all_data = sorted(all_data, key=lambda x: x["prospect"].nom.lower())
+
+    # Pagination
+    items_per_page = 15
+    paginator = Paginator(all_data, items_per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     context = {
-        'data': data,           # ✔ on garde data !!
+        'page_obj': page_obj,
+        'all_data': all_data, # On garde all_data pour les compteurs globaux si besoin
         'tenant': request.tenant
     }
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)

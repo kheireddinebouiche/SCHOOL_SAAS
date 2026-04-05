@@ -11,19 +11,6 @@ from django.utils import timezone
 @login_required(login_url='institut_app:login')
 def crm_reporting(request):
     promos = Promos.objects.filter(etat='active')
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q, F
-from t_formations.models import Specialites, DoubleDiplomation, Promos
-from django.db.models.functions import TruncDate
-from ..models import Prospets
-from datetime import datetime, timedelta
-from django.utils import timezone
-
-@login_required(login_url='institut_app:login')
-def crm_reporting(request):
-    promos = Promos.objects.filter(etat='active')
     context = {
         'tenant': request.tenant,
         'promos': promos,
@@ -35,9 +22,6 @@ def ApiGetCrmReportingData(request):
     promo_id = request.GET.get('promo_id')
 
     # Base queryset for all academic reporting
-    # 1. context='acc'
-    # 2. excludes known B2B/Conseil flags
-    # 3. excludes direct links to Conseil models (opportunites, devis)
     base_qs = Prospets.objects.filter(context='acc').exclude(is_ets_prospect=True).exclude(type_prospect='entreprise')\
         .filter(conseil_commercial__isnull=True)\
         .filter(opportunites__isnull=True)\
@@ -118,7 +102,7 @@ def ApiGetCrmReportingData(request):
         convertit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='convertit') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         annuler=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='annuler') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         total=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter)
-    ).values('label', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
+    ).values('label', 'formation__nom', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
 
     matrix_double_qs = DoubleDiplomation.objects.annotate(
         visiteur=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='visiteur') & Q(fichevoeuxdouble__prospect__context='acc') & Q(fichevoeuxdouble__prospect__is_ets_prospect=False) & ~Q(fichevoeuxdouble__prospect__type_prospect='entreprise') & Q(fichevoeuxdouble__prospect__conseil_commercial__isnull=True) & Q(fichevoeuxdouble__prospect__opportunites__isnull=True) & Q(fichevoeuxdouble__prospect__client_devis__isnull=True) & double_filter),

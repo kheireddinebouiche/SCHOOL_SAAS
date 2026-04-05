@@ -118,8 +118,19 @@
   #groupedView:checked ~ .toggle-indicator { transform: translateX(calc(200% + 2px)); }
 
   /* Dropdown positioning fixes */
-  .table-responsive { overflow-x: visible !important; }
+  .table-responsive { overflow: visible !important; }
   .dropdown-menu { border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+
+  .timetable-item.dropdown-open {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+    transform: none !important;
+    z-index: 2000 !important;
+    position: relative;
+  }
+  
+  .timetable-item.dropdown-open td {
+    overflow: visible !important;
+  }
 </style>
 
 <div class="main-content">
@@ -215,7 +226,7 @@
                 <div class="row g-4">
                   {% for timetable in timetables %}
                   <div class="col-md-6 col-xl-4">
-                    <div class="glass-card h-100 p-0 overflow-hidden">
+                    <div class="glass-card h-100 p-0">
                       <div class="p-4">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                           <div class="d-flex align-items-center">
@@ -361,7 +372,7 @@
 
               <!-- Table View (Hidden by default) -->
               <div id="tableViewContainer" style="display: none;">
-                <div class="glass-card overflow-hidden">
+                <div class="glass-card">
                   <div class="table-responsive">
                     <table id="timetableTable" class="table table-modern align-middle mb-0">
                       <thead>
@@ -451,7 +462,7 @@
                 {% if timetables %}
                   {% regroup timetables by annee_scolaire as timetables_by_year %}
                   {% for year_group in timetables_by_year %}
-                    <div class="glass-card mb-4 overflow-hidden">
+                    <div class="glass-card mb-4">
                       <div class="card-header bg-primary bg-opacity-10 p-3 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
                           <i class="ri-calendar-2-line me-2"></i> Année Scolaire : {{ year_group.grouper }}
@@ -632,21 +643,19 @@
     // Handle dropdown show events to ensure proper z-index
     $(document).on('show.bs.dropdown', function(e) {
       var dropdownMenu = $(e.target).find('.dropdown-menu');
+      var row = $(e.target).closest('.timetable-item');
       if (dropdownMenu.length) {
         dropdownMenu.css({
           'z-index': '1060',
           'position': 'absolute'
         });
       }
+      row.addClass('dropdown-open');
     });
     
-    // Handle timetable item dropdown to ensure it appears above other rows
-    $(document).on('show.bs.dropdown', '.timetable-item .dropdown', function() {
-      $(this).closest('.timetable-item').css('z-index', '3');
-    });
-    
-    $(document).on('hidden.bs.dropdown', '.timetable-item .dropdown', function() {
-      $(this).closest('.timetable-item').css('z-index', '1');
+    $(document).on('hidden.bs.dropdown', function(e) {
+      var row = $(e.target).closest('.timetable-item');
+      row.removeClass('dropdown-open');
     });
     
     $(document).on('click','.PauseBtn', function(){

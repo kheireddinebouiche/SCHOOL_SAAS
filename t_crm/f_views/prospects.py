@@ -17,12 +17,13 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation', 'created_by__username').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
         prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M")
-        prospect['statut_label'] = obj.get_statut_display()   
+        prospect['statut_label'] = obj.get_statut_display()
+        prospect['created_by'] = prospect['created_by__username'] if prospect['created_by__username'] else "Système"
 
     return JsonResponse(prospect, safe=False)
 

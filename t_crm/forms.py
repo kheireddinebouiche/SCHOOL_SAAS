@@ -87,7 +87,7 @@ class NewProspecFormParticulier(forms.ModelForm):
             "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_last_name'}),
             "email" : forms.EmailInput(attrs={'class':'form-control'}),
             "canal" : forms.Select(attrs={'class':'form-control'}),
-            "indic" : forms.Select(attrs={"class" : "form-control"}),
+            "indic" : forms.Select(attrs={"class" : "form-control", "id": "id_indic_select"}),
             "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "observation" : forms.Textarea(attrs={'class':'form-control', "rows" : "3"}),
             'is_double' : forms.CheckboxInput(attrs={"class" : "form-control",'id':'IdSelectDoubleDiplomation'})
@@ -123,7 +123,7 @@ class NewProspecFormEntreprise(forms.ModelForm):
 
         widgets = {
             "email" : forms.EmailInput(attrs={'class':'form-control'}),
-            "indic" : forms.Select(attrs={"class" : "form-control"}),
+            "indic" : forms.Select(attrs={"class" : "form-control", "id": "id_indic_select_ets"}),
             "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
             "canal" : forms.Select(attrs={'class':'form-control'}),
             "observation" : forms.Textarea(attrs={'class':'form-control'}),

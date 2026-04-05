@@ -31,6 +31,7 @@ urlpatterns = [
     path('ApiListeStudentNotAffected', ApiListeStudentNotAffected, name="ApiListeStudentNotAffected"),
     path('ApiGroupeListeForAffectation', ApiGroupeListeForAffectation, name="ApiGroupeListeForAffectation"),
     path('ApiGetSpecialiteDatas', ApiGetSpecialiteDatas, name="ApiGetSpecialiteDatas"),
+    path('ApiGetBrouillonGroupes', ApiGetBrouillonGroupes, name="ApiGetBrouillonGroupes"),
     path('ApiAffectStudentToGroupe', ApiAffectStudentToGroupe, name="ApiAffectStudentToGroupe"),
 
     path('profile-etudiant/<int:pk>/', StudentDetails, name="StudentDetails"),

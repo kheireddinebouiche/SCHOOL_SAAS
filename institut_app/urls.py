@@ -7,7 +7,7 @@ from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
-from .f_views.config import general_settings_view, api_update_global_settings
+from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings
 
 app_name="institut_app"
 
@@ -113,6 +113,9 @@ urlpatterns = [
     path('ApiChangeUserStatus', ApiChangeUserStatus, name="ApiChangeUserStatus"),
     path('ApiChangeUserPassword', ApiChangeUserPassword, name="ApiChangeUserPassword"),
     path('ApiCreateUser', ApiCreateUser, name="ApiCreateUser"),
+    path('ApiResetDeviceLock', ApiResetDeviceLock, name="ApiResetDeviceLock"),
+    path('ApiToggleDeviceLock', ApiToggleDeviceLock, name="ApiToggleDeviceLock"),
+    path('utilisateurs/historique-appareils/', DeviceManagementPage, name="DeviceManagementPage"),
 
     #### Dashboard #####
     path('pedagogie/dashboard/',pedago_dashboard, name="pedago_dashboard"),
@@ -142,6 +145,8 @@ urlpatterns = [
     ########################################## Configuration Globale ##########################################
     path('configuration/generale/', general_settings_view, name="general_settings"),
     path('api/update-global-settings/', api_update_global_settings, name="api_update_global_settings"),
+    path('api/update-tenant-settings/', api_update_tenant_settings, name="api_update_tenant_settings"),
+    path('api/verify-password/', ApiVerifyPassword, name="ApiVerifyPassword"),
     ########################################## Configuration Globale ##########################################
 ]
 

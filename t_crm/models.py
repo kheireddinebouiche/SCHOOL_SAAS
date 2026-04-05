@@ -9,6 +9,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.text import slugify
 
 INDICATIF = {
+    '+213': '🇩🇿 +213 Algérie',
     '+1': '🇺🇸 +1 États-Unis / Canada',
     '+7': '🇷🇺 +7 Russie / Kazakhstan',
     '+20': '🇪🇬 +20 Égypte',
@@ -57,7 +58,6 @@ INDICATIF = {
     '+98': '🇮🇷 +98 Iran',
     '+211': '🇸🇸 +211 Soudan du Sud',
     '+212': '🇲🇦 +212 Maroc',
-    '+213': '🇩🇿 +213 Algérie',
     '+216': '🇹🇳 +216 Tunisie',
     '+218': '🇱🇾 +218 Libye',
     '+220': '🇬🇲 +220 Gambie',
@@ -247,6 +247,8 @@ class Prospets(models.Model):
 
     matricule = models.CharField(max_length=100, null=True, blank=True)
     matricule_interne = models.CharField(max_length=100, null=True, blank=True)
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='prospects_created')
 
     is_double = models.BooleanField(default=False)
 

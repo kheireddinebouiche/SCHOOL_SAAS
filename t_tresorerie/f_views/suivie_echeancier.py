@@ -290,13 +290,15 @@ def ApiGetClientEcheancier(request):
 
         if remiseObj and remiseObj.remise_appliquer:
             
-            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            remise = remiseObj.remise_appliquer.remise
+            remise_appliquer = remise.montant if remise.is_value else remise.taux
             is_approuved_remise = remiseObj.remise_appliquer.is_approuved
-            reduction_type = remiseObj.remise_appliquer.remise.label
+            reduction_type = remise.label
             id_reduction = remiseObj.remise_appliquer.id
 
             remiseDatas = {
                 'valeur' : remise_appliquer,
+                'is_value' : remiseObj.remise_appliquer.remise.is_value,
                 'remise_approuver' : is_approuved_remise,
                 'type_remise' : reduction_type,
                 'id_applied_reduction' : id_reduction,
@@ -500,13 +502,15 @@ def ApiGetClientEcheancierDouble(request):
 
         if remiseObj and remiseObj.remise_appliquer:
             
-            remise_appliquer = remiseObj.remise_appliquer.remise.taux
+            remise = remiseObj.remise_appliquer.remise
+            remise_appliquer = remise.montant if remise.is_value else remise.taux
             is_approuved_remise = remiseObj.remise_appliquer.is_approuved
-            reduction_type = remiseObj.remise_appliquer.remise.label
+            reduction_type = remise.label
             id_reduction = remiseObj.remise_appliquer.id
 
             remiseDatas = {
                 'valeur' : remise_appliquer,
+                'is_value' : remiseObj.remise_appliquer.remise.is_value,
                 'remise_approuver' : is_approuved_remise,
                 'type_remise' : reduction_type,
                 'id_applied_reduction' : id_reduction,

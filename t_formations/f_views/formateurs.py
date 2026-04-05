@@ -12,6 +12,7 @@ import json
 import csv
 import openpyxl
 from django.http import HttpResponse
+from django.core.paginator import Paginator
 
 def format_dispo(dispo):
     if not dispo or 'disponibilites' not in dispo:
@@ -77,11 +78,36 @@ def export_formateurs(request):
         return response
 
 
-login_required(login_url="institut_app:login")
+@login_required(login_url="institut_app:login")
 def PageFormateurs(request):
-    liste = Formateurs.objects.all()
+    search_query = request.GET.get('search', '')
+    
+    queryset = Formateurs.objects.all().order_by('-nom')
+
+    if search_query:
+        queryset = queryset.filter(
+            Q(nom__icontains=search_query) |
+            Q(prenom__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(telephone__icontains=search_query) |
+            Q(nin__icontains=search_query)
+        )
+
+    # Stats (full dataset for total counts)
+    total_count = Formateurs.objects.count()
+    
+    # Pagination
+    paginator = Paginator(queryset, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
-        "formateurs" : liste
+        "formateurs": page_obj, # Template expects 'formateurs' to iterate
+        "page_obj": page_obj,
+        "total_count": total_count,
+        "filters": {
+            "search": search_query,
+        }
     }
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
 
