@@ -168,9 +168,9 @@ class PromoForm(forms.ModelForm):
         fields = '__all__'
         exclude = ['created_by', 'created_at', 'updated_at','etat']
         widgets = {
-            'label' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'label' : forms.TextInput(attrs={'class' : 'form-control', 'style' : 'text-transform: uppercase;'}),
             'session' : forms.Select(attrs={'class' : 'form-control'}),
-            'code' : forms.TextInput(attrs={"class" : 'form-control'}),
+            'code' : forms.TextInput(attrs={"class" : 'form-control', 'style' : 'text-transform: uppercase;', 'id' : 'id_code'}),
             'begin_year' : forms.TextInput(attrs={"class" : 'form-control', "placeholder": "Année",'id' : "begin_year_id"}),
             'end_year': forms.TextInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
             'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),

@@ -282,7 +282,20 @@ class Promos(models.Model):
     code = models.CharField(max_length = 255, null=True, blank=True)
     begin_year = models.CharField(null=True, blank=True)
     end_year = models.CharField(null=True, blank=True)
-    session = models.CharField(max_length=255, null=True, blank=True, choices=[('octobre', 'Octobre'), ('mars', 'Mars')])
+    session = models.CharField(max_length=255, null=True, blank=True, choices=[
+        ('janvier', 'Janvier'),
+        ('fevrier', 'Février'),
+        ('mars', 'Mars'),
+        ('avril', 'Avril'),
+        ('mai', 'Mai'),
+        ('juin', 'Juin'),
+        ('juillet', 'Juillet'),
+        ('aout', 'Août'),
+        ('septembre', 'Septembre'),
+        ('octobre', 'Octobre'),
+        ('novembre', 'Novembre'),
+        ('decembre', 'Décembre'),
+    ])
     annee_academique = models.CharField(max_length=255, null=True, blank=True)
 
     date_debut = models.DateField(null=True)
@@ -305,3 +318,10 @@ class Promos(models.Model):
 
     def __str__(self):
         return f"{self.label} - {self.session}"
+    
+    def save(self, *args, **kwargs):
+        if self.label:
+            self.label = self.label.upper()
+        if self.code:
+            self.code = self.code.upper()
+        super().save(*args, **kwargs)

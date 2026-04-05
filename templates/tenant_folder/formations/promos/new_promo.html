@@ -268,6 +268,48 @@
       YearEnd.value = annee;
     });
 
+    // Real-time code validation
+    const codeInput = document.getElementById('id_code');
+    const codeFeedback = document.createElement('div');
+    codeFeedback.id = 'code-feedback';
+    codeFeedback.className = 'mt-1 small';
+    codeInput.parentNode.after(codeFeedback);
+
+    let timeout = null;
+    codeInput.addEventListener('input', function() {
+        clearTimeout(timeout);
+        const code = this.value.trim();
+        
+        if (code.length < 2) {
+            codeFeedback.innerHTML = '';
+            codeInput.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        timeout = setTimeout(() => {
+            codeFeedback.innerHTML = '<i class="ri-loader-4-line ri-spin me-1"></i>Vérification...';
+            codeFeedback.className = 'mt-1 small text-info';
+            
+            $.ajax({
+                url: "{% url 't_formations:ApiCheckPromoCode' %}",
+                type: "GET",
+                data: { 'code': code },
+                success: function(data) {
+                    if (data.exists) {
+                        codeFeedback.innerHTML = '<i class="ri-error-warning-line me-1"></i>Ce code est déjà utilisé';
+                        codeFeedback.className = 'mt-1 small text-danger';
+                        codeInput.classList.add('is-invalid');
+                        codeInput.classList.remove('is-valid');
+                    } else {
+                        codeFeedback.innerHTML = '<i class="ri-checkbox-circle-line me-1"></i>Ce code est disponible';
+                        codeFeedback.className = 'mt-1 small text-success';
+                        codeInput.classList.add('is-valid');
+                        codeInput.classList.remove('is-invalid');
+                    }
+                }
+            });
+        }, 500);
+    });
 
   });
 

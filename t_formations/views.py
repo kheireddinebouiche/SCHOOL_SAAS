@@ -855,6 +855,21 @@ def ApiListePromos(request):
 
     return JsonResponse(list(liste), safe=False)
 
+@login_required(login_url="institut_app:login")
+def ApiCheckPromoCode(request):
+    code = request.GET.get('code')
+    exclude_id = request.GET.get('exclude_id')
+    
+    if not code:
+        return JsonResponse({'exists': False})
+        
+    query = Promos.objects.filter(code__iexact=code)
+    if exclude_id:
+        query = query.exclude(id=exclude_id)
+        
+    exists = query.exists()
+    return JsonResponse({'exists': exists})
+
 def ApiListeFormation(request):
     liste = Formation.objects.all().values('id', 'nom')
     return JsonResponse(list(liste), safe=False)

@@ -65,6 +65,7 @@ urlpatterns = [
     path('ApiUpdatePromo',ApiUpdatePromo,name="ApiUpdatePromo"),
     path('ApiActivatePromo', ApiActivatePromo, name="ApiActivatePromo"),
     path('ApiDeletePromo',ApiDeletePromo,name="ApiDeletePromo"),
+    path('ApiCheckPromoCode', ApiCheckPromoCode, name="ApiCheckPromoCode"),
 
     path('modules/liste-des-modules/', PageListeModules, name="PageListeModules"),
     path('ApiGetModules', ApiGetModules, name="ApiGetModules"),

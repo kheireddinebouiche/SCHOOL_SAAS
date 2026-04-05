@@ -195,7 +195,7 @@
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label class="form-label fw-semibold">Libellé</label>
-                            <input type="text" class="form-control btn-rounded" id="updated_label" name="label">
+                            <input type="text" class="form-control btn-rounded" id="updated_label" name="label" style="text-transform: uppercase;">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Session</label>
@@ -365,8 +365,24 @@
                 data : { 'id' : id },
                 success : function(data){
                     $('#updated_label').val(data[0].label);
-                    var row = "<option value='octobre' " + (data[0].session == 'octobre' ? "selected" : "") + ">Octobre</option>" +
-                              "<option value='mars' " + (data[0].session == 'mars' ? "selected" : "") + ">Mars</option>";
+                    var months = [
+                        ['janvier', 'Janvier'],
+                        ['fevrier', 'Février'],
+                        ['mars', 'Mars'],
+                        ['avril', 'Avril'],
+                        ['mai', 'Mai'],
+                        ['juin', 'Juin'],
+                        ['juillet', 'Juillet'],
+                        ['aout', 'Août'],
+                        ['septembre', 'Septembre'],
+                        ['octobre', 'Octobre'],
+                        ['novembre', 'Novembre'],
+                        ['decembre', 'Décembre']
+                    ];
+                    var row = "";
+                    months.forEach(function(m) {
+                        row += "<option value='" + m[0] + "' " + (data[0].session == m[0] ? "selected" : "") + ">" + m[1] + "</option>";
+                    });
                     var buttons = '<button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>'+
                                   '<button id="confirmUpdateButton" data-id='+id+' class="btn btn-primary btn-rounded px-4">Enregistrer</button>';
                     $('.update-promo').html(buttons);
@@ -455,6 +471,50 @@
             } else {
                 this.classList.remove("is-invalid");
             }
+        });
+
+        // Real-time code validation for update modal
+        const updateCodeInput = document.getElementById('updated_code');
+        const updateCodeFeedback = document.createElement('div');
+        updateCodeFeedback.id = 'update-code-feedback';
+        updateCodeFeedback.className = 'mt-1 small';
+        updateCodeInput.after(updateCodeFeedback);
+
+        let updateTimeout = null;
+        updateCodeInput.addEventListener('input', function() {
+            clearTimeout(updateTimeout);
+            const code = this.value.trim();
+            const exclude_id = $('#confirmUpdateButton').data('id');
+            
+            if (code.length < 2) {
+                updateCodeFeedback.innerHTML = '';
+                updateCodeInput.classList.remove('is-invalid', 'is-valid');
+                return;
+            }
+
+            updateTimeout = setTimeout(() => {
+                updateCodeFeedback.innerHTML = '<i class="ri-loader-4-line ri-spin me-1"></i>Vérification...';
+                updateCodeFeedback.className = 'mt-1 small text-info';
+                
+                $.ajax({
+                    url: "{% url 't_formations:ApiCheckPromoCode' %}",
+                    type: "GET",
+                    data: { 'code': code, 'exclude_id' : exclude_id },
+                    success: function(data) {
+                        if (data.exists) {
+                            updateCodeFeedback.innerHTML = '<i class="ri-error-warning-line me-1"></i>Ce code est déjà utilisé';
+                            updateCodeFeedback.className = 'mt-1 small text-danger';
+                            updateCodeInput.classList.add('is-invalid');
+                            updateCodeInput.classList.remove('is-valid');
+                        } else {
+                            updateCodeFeedback.innerHTML = '<i class="ri-checkbox-circle-line me-1"></i>Ce code est disponible';
+                            updateCodeFeedback.className = 'mt-1 small text-success';
+                            updateCodeInput.classList.add('is-valid');
+                            updateCodeInput.classList.remove('is-invalid');
+                        }
+                    }
+                });
+            }, 500);
         });
     });
 </script>
