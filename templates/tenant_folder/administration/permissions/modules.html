@@ -713,6 +713,42 @@
   </div>
 </div>
 
+<!-- Modal d'erreur de validation (missing information) -->
+<div class="modal fade validationErrorModal" tabindex="-1" role="dialog" aria-labelledby="validationErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+            <i class="ri-error-warning-line text-warning fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-semibold text-warning mb-1" id="validationErrorModalLabel">
+              Information manquante
+            </h5>
+            <p class="text-muted small mb-0">Action requise</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="mb-4">
+          <i class="ri-alert-line text-warning" style="font-size: 4rem;"></i>
+        </div>
+        <h4 class="text-warning mb-3">Attention</h4>
+        <p class="text-muted mb-0" id="validationErrorMessage">
+          Veuillez remplir tous les champs obligatoires avant de poursuivre.
+        </p>
+      </div>
+      <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-center">
+        <button type="button" class="btn btn-warning px-4 py-2" data-bs-dismiss="modal">
+          <i class="ri-check-line me-2"></i>Compris
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden File Input for Import -->
 <input type="file" id="importModuleInput" style="display: none;" accept=".json">
 
@@ -1329,6 +1365,24 @@
         var addModuleStatus = $('#addModuleStatus').val();
         var addModuleDescription = $('#addModuleDescription').val();
 
+        if (!addModuleName || addModuleName.trim() === '') {
+            $('#validationErrorMessage').text("Il est imperatif de définir le nom du module (CRM, Pédagogie, etc) pour pouvoir l'ajouter.");
+            $('.validationErrorModal').modal('show');
+            return;
+        }
+        
+        if (!addModuleStatus || addModuleStatus.trim() === '') {
+            $('#validationErrorMessage').text("Veuillez définir un statut pour ce module.");
+            $('.validationErrorModal').modal('show');
+            return;
+        }
+
+        if (!addModuleDescription || addModuleDescription.trim() === '') {
+            $('#validationErrorMessage').text("Veuillez impérativement rajouter une petite description clarifiant l'usage de ce module.");
+            $('.validationErrorModal').modal('show');
+            return;
+        }
+
         $.ajax({
             url : "{% url 'institut_app:ApiAddModule' %}",
             dataType: "JSON",
@@ -1345,12 +1399,14 @@
                     $('#addModuleModal').modal('hide');
                     loadModules();
                 }else{
-                    alertify.error(response.message);
+                    $('#validationErrorMessage').text(response.message);
+                    $('.validationErrorModal').modal('show');
                 }
             },
             error: function(xhr, status, error) {
                 console.error("Error adding module:", error);
-                alertify.error("Une erreur est survenue lors de l'ajout du module");
+                $('#validationErrorMessage').text("Une erreur serveur est survenue.");
+                $('.validationErrorModal').modal('show');
             }
         });
     });
@@ -1361,6 +1417,18 @@
       var updateModuleName = $('#updateModuleName').val();
       var updateModuleStatus = $('#updateModuleStatus').val();
       var updateModuleDescription = $('#updateModuleDescription').val();
+
+      if (!updateModuleName || updateModuleName.trim() === '') {
+          $('#validationErrorMessage').text("Il est imperatif de définir le nom du module (CRM, Pédagogie, etc) pour pouvoir le modifier.");
+          $('.validationErrorModal').modal('show');
+          return;
+      }
+
+      if (!updateModuleDescription || updateModuleDescription.trim() === '') {
+          $('#validationErrorMessage').text("Il est impératif de rajouter une petite description clarifiant l'usage de ce module.");
+          $('.validationErrorModal').modal('show');
+          return;
+      }
 
       $.ajax({
         url: "{% url 'institut_app:ApiUpdateModule' %}",
@@ -1379,12 +1447,14 @@
             $('#updateModuleModal').modal('hide');
             loadModules();
           } else {
-            alertify.error(response.message || "Erreur lors de la mise à jour du module");
+            $('#validationErrorMessage').text(response.message || "Erreur lors de la mise à jour du module");
+            $('.validationErrorModal').modal('show');
           }
         },
         error: function(xhr, status, error) {
           console.error("Error updating module:", error);
-          alertify.error("Une erreur est survenue lors de la mise à jour du module");
+          $('#validationErrorMessage').text("Une erreur serveur est survenue lors de la mise à jour.");
+          $('.validationErrorModal').modal('show');
         }
       });
     });
