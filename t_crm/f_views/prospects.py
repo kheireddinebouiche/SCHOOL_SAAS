@@ -99,6 +99,7 @@ def ApiLoadFicheVoeuxProspect(request):
     for fiche in fiche_voeux:
         fiche_voeux_list.append({
             'id': fiche.id,
+            'formation_label': fiche.specialite.formation.nom,
             'specialite_code': fiche.specialite.code,
             'specialite_label': fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
