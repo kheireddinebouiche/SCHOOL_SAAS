@@ -91,7 +91,7 @@
                                     <div class="col-12">
                                         <label for="groupe_filtre" class="form-label">Filtrer par Groupe</label>
                                         <select class="form-select" id="groupe_filtre" name="groupe_filtre">
-                                            <option value="">Tous les étudiants</option>
+                                            <option value="">Veuillez sélectionner un groupe...</option>
                                             {% for grp in groupes %}
                                             <option value="{{ grp.id }}" {% if stage and stage.groupe_id == grp.id %}selected{% endif %}>{{ grp.nom }}</option>
                                             {% endfor %}
@@ -99,12 +99,14 @@
                                     </div>
 
                                     <!-- Étudiants -->
-                                    <div class="col-12">
+                                    <div class="col-12 {% if not stage or not stage.groupe_id %}d-none{% endif %}" id="students_container">
                                         <label for="etudiants" class="form-label">Étudiants (Binôme / Trinôme...) <span class="text-danger">*</span></label>
                                         <select class="form-select" id="etudiants" name="etudiants" multiple required style="height: 150px;">
-                                            {% for etud in etudiants %}
-                                            <option value="{{ etud.id }}" {% if etud.id in selected_etudiants_ids %}selected{% endif %}>{{ etud }}</option>
-                                            {% endfor %}
+                                            {% if stage %}
+                                                {% for etud in etudiants %}
+                                                <option value="{{ etud.id }}" {% if etud.id in selected_etudiants_ids %}selected{% endif %}>{{ etud }}</option>
+                                                {% endfor %}
+                                            {% endif %}
                                         </select>
                                         <div class="form-text mt-2"><i class="ri-information-fill me-1"></i> Maintenez la touche <strong>Ctrl</strong> (ou <strong>Cmd</strong>) enfoncée pour sélectionner plusieurs étudiants.</div>
                                     </div>
@@ -147,7 +149,14 @@
                                         }
 
                                         groupSelect.addEventListener('change', function() {
-                                            fetchStudents(this.value);
+                                            const container = document.getElementById('students_container');
+                                            if (this.value) {
+                                                container.classList.remove('d-none');
+                                                fetchStudents(this.value);
+                                            } else {
+                                                container.classList.add('d-none');
+                                                studentSelect.innerHTML = '';
+                                            }
                                         });
                                     });
                                     </script>
