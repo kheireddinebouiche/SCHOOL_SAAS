@@ -43,4 +43,13 @@ urlpatterns = [
    path('ApiGetModeleContratByFormation', ApiGetModeleContratByFormation, name="ApiGetModeleContratByFormation"),
 
    path('ApiGetStudentFinancialsData', ApiGetStudentFinancialsData, name="ApiGetStudentFinancialsData"),
+
+   path('transfert/', StudentTransfert, name="StudentTransfert"),
+   path('demandes-transfert/', StudentTransfertList, name="StudentTransfertList"),
+
+   path('api/request-transfer/', ApiRequestTransfer, name="ApiRequestTransfer"),
+   path('api/get-specialites-promos/', ApiGetSpecialitesPromos, name="ApiGetSpecialitesPromos"),
+   path('api/update-transfer-status/', ApiUpdateTransferStatus, name="ApiUpdateTransferStatus"),
+   path('api/execute-transfer/', ApiExecuteTransfer, name="ApiExecuteTransfer"),
+   path('api/get-groups-for-transfer/', ApiGetGroupsForTransfer, name="ApiGetGroupsForTransfer"),
 ]

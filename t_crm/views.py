@@ -346,6 +346,7 @@ def InscriptionParticulier(request):
         if form.is_valid():
             donnee = form.save(commit=False)
             donnee.created_by = request.user
+            donnee.type_prospect = "particulier"
             donnee.save()
 
             type_select = form.cleaned_data.get('select_type')
@@ -355,8 +356,6 @@ def InscriptionParticulier(request):
                 return redirect('t_crm:inscription_particulier')
             
             if type_select == "0":
-                donnee = form.save()
-                donnee.type_prospect = "particulier"
                 donnee.context = "acc"
                 donnee.save()
 
@@ -406,6 +405,7 @@ def InscriptionEntreprise(request):
         if form.is_valid():
             donnee = form.save(commit=False)
             donnee.created_by = request.user
+            donnee.type_prospect = "entreprise"
             donnee.save()
             messages.success(request, "Prospect ajouté avec succès")
             return redirect('t_crm:ListeDesProspects')

@@ -465,6 +465,13 @@
                                                         <a href="{% url 't_groupe:StudentDetails' pk=i.student.id %}" class="btn btn-sm btn-soft-secondary" title="Voir le profil">
                                                             <i class="ri-eye-line"></i>
                                                         </a>
+                                                        <button class="btn btn-sm btn-soft-warning ms-1 btn-transfer" 
+                                                                data-student-id="{{i.student.id}}" 
+                                                                data-student-name="{{i.student.nom}} {{i.student.prenom}}" 
+                                                                data-origin-group-id="{{groupe.id}}"
+                                                                title="Demander un transfert">
+                                                            <i class="ri-shuffle-line"></i>
+                                                        </button>
                                                         {% if i.student.context == 'con' %}
                                                             <button class="btn btn-sm btn-soft-danger ms-1 btn-unenroll" data-student-id="{{i.student.id}}" data-specialty-id="{{groupe.specialite.id}}" title="Désinscrire l'étudiant">
                                                                 <i class="ri-user-unfollow-line"></i>
@@ -2109,33 +2116,184 @@
             }
         });
     });
-
 </script>
 
-<!-- Unenroll Modal -->
-<div class="modal fade" id="unenrollModal" tabindex="-1" aria-hidden="true">
+<!-- Transfer Request Modal -->
+<div class="modal fade" id="transferRequestModal" tabindex="-1" aria-labelledby="transferRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center p-4">
-                <div class="avatar-lg mx-auto mb-4">
-                    <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-1">
-                        <i class="ri-user-unfollow-line"></i>
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-shuffle-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="transferRequestModalLabel">
+                            Demande de Transfert
+                        </h5>
+                        <p class="text-muted small mb-0">Formuler une demande de transfert pour l'étudiant</p>
                     </div>
                 </div>
-                <h4 class="fw-bold mb-2">Confirmer la désinscription</h4>
-                <p class="text-muted mb-4">Êtes-vous sûr de vouloir désinscrire cet étudiant de ce groupe ? Cette action annule juste son affectation au groupe actuel.</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-danger rounded-pill px-4 fw-medium" id="confirmUnenrollBtn">Oui, désinscrire</button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="transferRequestForm">
+                    <input type="hidden" id="trans_student_id" name="student_id">
+                    <input type="hidden" id="trans_origin_group_id" name="origin_group_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Étudiant :</label>
+                        <div id="trans_student_name" class="form-control bg-light border-0 fw-semibold"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="trans_target_formation" class="form-label fw-bold">Filtrer par Formation :</label>
+                        <select class="form-select" id="trans_target_formation">
+                            <option value="">Toutes les formations</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="trans_target_specialty" class="form-label fw-bold">Nouvelle Spécialité :</label>
+                        <select class="form-select select2-modal" id="trans_target_specialty" name="target_specialty_id" required>
+                            <option value="">Sélectionner une spécialité</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="trans_target_promo" class="form-label fw-bold">Promotion :</label>
+                        <select class="form-select" id="trans_target_promo" name="target_promo_id" required>
+                            <option value="">Sélectionner une promotion</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="trans_reason" class="form-label fw-bold">Motif du transfert :</label>
+                        <textarea class="form-control" id="trans_reason" name="reason" rows="3" placeholder="Expliquez la raison du transfert..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-warning px-4" id="submitTransferRequestBtn">Soumettre la demande</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Unenroll Modal -->
+<div class="modal fade" id="unenrollModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg text-center p-4">
+            <div class="avatar-lg mx-auto mb-4">
+                <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-1">
+                    <i class="ri-user-unfollow-line"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-2">Confirmer la désinscription</h4>
+            <p class="text-muted mb-4">Êtes-vous sûr de vouloir désinscrire cet étudiant de ce groupe ? Cette action annule juste son affectation au groupe actuel.</p>
+            <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-medium" id="confirmUnenrollBtn">Oui, désinscrire</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Load specialties and promos once
+        let allSpecialities = [];
+        let transferDataLoaded = false;
+
+        function loadTransferData() {
+            if (transferDataLoaded) return;
+            $.get('{% url "t_etudiants:ApiGetSpecialitesPromos" %}', function(data) {
+                const formationSelect = $('#trans_target_formation');
+                const specSelect = $('#trans_target_specialty');
+                const promoSelect = $('#trans_target_promo');
+                
+                allSpecialities = data.specialites;
+                
+                // Load formations
+                data.formations.forEach(f => {
+                    formationSelect.append(`<option value="${f.code}">${f.nom}</option>`);
+                });
+
+                // Initial load of specialties (all)
+                renderSpecialities('');
+                
+                data.promos.forEach(p => {
+                    promoSelect.append(`<option value="${p.id}">${p.code}</option>`);
+                });
+                
+                transferDataLoaded = true;
+            });
+        }
+
+        function renderSpecialities(formationId) {
+            const specSelect = $('#trans_target_specialty');
+            specSelect.empty().append('<option value="">Sélectionner une spécialité</option>');
+            
+            const filtered = formationId 
+                ? allSpecialities.filter(s => s.formation_id == formationId)
+                : allSpecialities;
+                
+            filtered.forEach(s => {
+                specSelect.append(`<option value="${s.id}">${s.code} - ${s.label}</option>`);
+            });
+        }
+
+        $('#trans_target_formation').on('change', function() {
+            renderSpecialities($(this).val());
+        });
+
+        $('.btn-transfer').on('click', function() {
+            const studentId = $(this).data('student-id');
+            const studentName = $(this).data('student-name');
+            const originGroupId = $(this).data('origin-group-id');
+            
+            $('#trans_student_id').val(studentId);
+            $('#trans_student_name').text(studentName);
+            $('#trans_origin_group_id').val(originGroupId);
+            
+            loadTransferData();
+            $('#transferRequestModal').modal('show');
+        });
+
+        $('#submitTransferRequestBtn').on('click', function() {
+            const formData = $('#transferRequestForm').serialize();
+            const $btn = $(this);
+            const originalText = $btn.html();
+            
+            $btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin me-1"></i> Envoi...');
+            
+            $.ajax({
+                url: '{% url "t_etudiants:ApiRequestTransfer" %}',
+                type: 'POST',
+                data: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        $('#transferRequestModal').modal('hide');
+                        $('#transferRequestForm')[0].reset();
+                    } else {
+                        alertify.error(res.message);
+                    }
+                },
+                error: function() {
+                    alertify.error("Une erreur s'est produite lors de la demande de transfert.");
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+    });
+</script>
 
 {% endblock content %}
            

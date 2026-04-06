@@ -1,0 +1,240 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Scolarité - Demandes de transfert {% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --card-border-color: rgba(226, 232, 240, 0.8);
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+
+    /* Premium Look & Feel */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Refined Table Styles */
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        padding: 1rem;
+        border: none;
+    }
+    .table tbody td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        color: #334155;
+    }
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+    }
+
+    /* Badges */
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Header Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="ri-list-settings-line text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Demandes de transfert</h4>
+                                <p class="text-muted mb-0">Historique et suivi des demandes</p>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-3 mt-sm-0">
+                            <button class="btn btn-primary btn-rounded px-4 shadow-sm">
+                                <i class="ri-add-line align-bottom me-1"></i> Nouvelle demande
+                            </button>
+                            <nav aria-label="breadcrumb" class="ms-md-3 d-none d-md-block">
+                                <ol class="breadcrumb m-0 bg-transparent">
+                                    <li class="breadcrumb-item text-muted">Scolarité</li>
+                                    <li class="breadcrumb-item active fw-semibold">Demandes de transfert</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-12">
+                    <div class="glass-card border-0 overflow-hidden">
+                        <div class="card-header border-0 bg-transparent py-4 px-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="card-title fw-bold mb-0">Récapitulatif des demandes</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">ID</th>
+                                            <th>Étudiant</th>
+                                            <th>Groupe Actuel</th>
+                                            <th>Groupe Cible</th>
+                                            <th>Date Demande</th>
+                                            <th>Statut</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                     <tbody>
+                                         {% for demande in demandes %}
+                                         <tr>
+                                             <td class="ps-4 fw-medium text-primary">#{{ demande.id }}</td>
+                                             <td>
+                                                 <div class="d-flex align-items-center">
+                                                     <div class="avatar-xs bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px; height:32px;">
+                                                         {{ demande.student.nom|first }}{{ demande.student.prenom|first }}
+                                                     </div>
+                                                     <div>
+                                                         <h6 class="mb-0 fw-bold fs-14">{{ demande.student.nom }} {{ demande.student.prenom }}</h6>
+                                                         <small class="text-muted">{{ demande.student.email|default:"" }}</small>
+                                                     </div>
+                                                 </div>
+                                             </td>
+                                             <td>
+                                                 <span class="badge badge-soft-info">{{ demande.origin_group.nom }}</span>
+                                                 <div class="small text-muted">{{ demande.origin_group.specialite.label }}</div>
+                                             </td>
+                                             <td>
+                                                 <span class="badge badge-soft-primary">{{ demande.target_specialty.label }}</span>
+                                                 <div class="small text-muted">{{ demande.target_promo.code }}</div>
+                                             </td>
+                                             <td>{{ demande.created_at|date:"d M Y, H:i" }}</td>
+                                             <td>
+                                                 {% if demande.status == 'pending' %}
+                                                     <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">En attente</span>
+                                                 {% elif demande.status == 'approved' %}
+                                                     <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">Approuvée</span>
+                                                 {% elif demande.status == 'rejected' %}
+                                                     <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">Rejetée</span>
+                                                 {% elif demande.status == 'done' %}
+                                                     <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">Exécutée</span>
+                                                 {% endif %}
+                                             </td>
+                                             <td class="text-end pe-4">
+                                                 <div class="hstack gap-2 justify-content-end">
+                                                     {% if demande.status == 'pending' %}
+                                                         <button class="btn btn-sm btn-soft-success btn-update-status" data-id="{{ demande.id }}" data-status="approved" title="Approuver">
+                                                             <i class="ri-check-line"></i>
+                                                         </button>
+                                                         <button class="btn btn-sm btn-soft-danger btn-update-status" data-id="{{ demande.id }}" data-status="rejected" title="Rejeter">
+                                                             <i class="ri-close-line"></i>
+                                                         </button>
+                                                     {% elif demande.status == 'approved' %}
+                                                         <button class="btn btn-sm btn-primary btn-execute-modal" 
+                                                                 data-id="{{ demande.id }}" 
+                                                                 data-specialty="{{ demande.target_specialty.id }}"
+                                                                 data-promo="{{ demande.target_promo.id }}"
+                                                                 title="Confirmer & Exécuter">
+                                                             <i class="ri-play-line me-1"></i> Confirmer
+                                                         </button>
+                                                     {% endif %}
+                                                     <button class="btn btn-sm btn-soft-secondary" title="Détails" data-bs-toggle="collapse" data-bs-target="#reason-{{ demande.id }}">
+                                                         <i class="ri-information-line"></i>
+                                                     </button>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                         <tr class="collapse border-0" id="reason-{{ demande.id }}">
+                                             <td colspan="7" class="bg-light bg-opacity-50 px-4 py-3 border-0">
+                                                 <div class="d-flex">
+                                                     <i class="ri-chat-1-line text-muted me-2"></i>
+                                                     <div>
+                                                         <div class="fw-bold small text-uppercase text-muted mb-1">Motif du transfert :</div>
+                                                         <div class="text-dark">{{ demande.reason|default:"Aucun motif fourni." }}</div>
+                                                         <div class="mt-2 small text-muted">Demandé par : {{ demande.created_by.get_full_name|default:demande.created_by.username }}</div>
+                                                     </div>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                         {% empty %}
+                                         <tr>
+                                             <td colspan="7" class="text-center py-5">
+                                                 <div class="py-5">
+                                                     <div class="avatar-lg mx-auto mb-4">
+                                                         <div class="avatar-title bg-soft-info text-info rounded-circle fs-2 shadow-sm">
+                                                             <i class="ri-inbox-line"></i>
+                                                         </div>
+                                                     </div>
+                                                     <h5 class="fw-bold text-dark">Aucune demande trouvée</h5>
+                                                     <p class="text-muted">Il n'y a actuellement aucune demande de transfert dans le système.</p>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                         {% endfor %}
+                                     </tbody>
+                                 </table>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
+     </div>
+ </div>
+
+ <!-- Execute Transfer Modal -->
+ <div class="modal fade" id="executeTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-play-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1">Confirmer le Transfert</h5>
+                        <p class="text-muted small mb-0">Sélectionner le groupe cible final</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="executeTransferForm">
+                    <input type="hidden" id="exec_request_id" name="request_id">
+                    <div class="mb-3">
+                        <label for="exec_target_group" class="form-label fw-bold">Groupe Cible :</label>
+                        <select class="form-select" id="exec_target_group" name="target_group_id" required>
+                            <option value="">Chargement des groupes...</option>
+                        </select>
+                        <div class="form-text">L'étudiant sera officiellement déplacé vers ce groupe.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary px-4" id="confirmExecuteBtn">Exécuter le transfert</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

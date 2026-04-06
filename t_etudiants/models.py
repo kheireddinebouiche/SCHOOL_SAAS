@@ -150,7 +150,6 @@ class SuiviCours(models.Model):
                             absents += 1
         return absents
 
-
 class ModelContrat(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
@@ -172,3 +171,25 @@ class ClauseContrat(models.Model):
 
     def __str__(self):
         return self.modele.label
+
+class StudentTransferRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'En attente'),
+        ('approved', 'Approuvé'),
+        ('rejected', 'Rejeté'),
+        ('done', 'Exécuté'),
+    ]
+    student = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='transfer_requests')
+    origin_group = models.ForeignKey(Groupe, on_delete=models.CASCADE, related_name='transfer_requests_from')
+    target_specialty = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='transfer_requests_to_specialty')
+    target_promo = models.ForeignKey(Promos, on_delete=models.CASCADE, related_name='transfer_requests_to_promo')
+    target_group = models.ForeignKey(Groupe, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfer_requests_to_group')
+    reason = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"Transfer Request: {self.student.nom} {self.student.prenom} to {self.target_specialty.label}"
