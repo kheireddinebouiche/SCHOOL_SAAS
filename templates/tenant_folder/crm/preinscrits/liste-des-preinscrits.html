@@ -830,6 +830,7 @@
   $(document).ready(function () {
     let originalData = [];
     let currentView = 'card'; // Default to card view
+    let isLoading = true; // Track loading state
 
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
@@ -852,7 +853,9 @@
       $('#cardViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
       $('#tableView').show();
       $('#cardViewContainer').hide();
-      renderData(originalData);
+      if (!isLoading) {
+          renderData(originalData);
+      }
     });
 
     $('#cardViewBtn').on('click', function() {
@@ -861,7 +864,9 @@
       $('#tableViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
       $('#tableView').hide();
       $('#cardViewContainer').show();
-      renderCardView(originalData);
+      if (!isLoading) {
+          renderCardView(originalData);
+      }
     });
 
     function updateStatistics(data) {
@@ -896,15 +901,18 @@
           dataType: "JSON",
           type: 'GET',
           beforeSend: function() {
+            isLoading = true;
             var spinnerHtml = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100" style="grid-column: 1 / -1; min-height: 200px;"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Chargement...</span></div><h5 class="mt-3 text-muted">Chargement en cours...</h5></div>';
             $("#listeItem").html('<tr><td colspan="6" class="text-center">' + spinnerHtml + '</td></tr>');
             $("#cardViewContainer").html(spinnerHtml);
           },
           success : function(data){
+            isLoading = false;
             originalData = data;
             renderData(data);
           },
           error: function(xhr, status, error) {
+            isLoading = false;
             console.error("Erreur lors du chargement des prospects:", error);
             console.log("Statut:", status);
             console.log("Réponse:", xhr.responseText);
