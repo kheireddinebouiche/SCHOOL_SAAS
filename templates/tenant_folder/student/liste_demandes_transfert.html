@@ -119,10 +119,15 @@
                                                  <span class="badge badge-soft-info">{{ demande.origin_group.nom }}</span>
                                                  <div class="small text-muted">{{ demande.origin_group.specialite.label }}</div>
                                              </td>
-                                             <td>
-                                                 <span class="badge badge-soft-primary">{{ demande.target_specialty.label }}</span>
-                                                 <div class="small text-muted">{{ demande.target_promo.code }}</div>
-                                             </td>
+                                              <td>
+                                                  {% if demande.target_is_double %}
+                                                      <span class="badge badge-soft-primary"><i class="ri-double-quotes-l"></i> {{ demande.target_double_diploma.label }}</span>
+                                                      <div class="small text-muted text-uppercase fw-bold" style="font-size: 10px;">{{ demande.target_double_diploma.specialite1.code }} + {{ demande.target_double_diploma.specialite2.code }}</div>
+                                                  {% else %}
+                                                      <span class="badge badge-soft-primary">{{ demande.target_specialty.label }}</span>
+                                                  {% endif %}
+                                                  <div class="small text-muted">{{ demande.target_promo.code }}</div>
+                                              </td>
                                              <td>{{ demande.created_at|date:"d M Y, H:i" }}</td>
                                              <td>
                                                  {% if demande.status == 'pending' %}
@@ -141,17 +146,24 @@
                                                          <button class="btn btn-sm btn-soft-success btn-update-status" data-id="{{ demande.id }}" data-status="approved" title="Approuver">
                                                              <i class="ri-check-line"></i>
                                                          </button>
-                                                         <button class="btn btn-sm btn-soft-danger btn-update-status" data-id="{{ demande.id }}" data-status="rejected" title="Rejeter">
-                                                             <i class="ri-close-line"></i>
-                                                         </button>
+                                                          <button class="btn btn-sm btn-soft-danger btn-update-status" 
+                                                                  data-id="{{ demande.id }}" 
+                                                                  data-status="rejected" 
+                                                                  data-name="{{ demande.student.nom }} {{ demande.student.prenom }}"
+                                                                  title="Rejeter">
+                                                              <i class="ri-close-line"></i>
+                                                          </button>
                                                      {% elif demande.status == 'approved' %}
-                                                         <button class="btn btn-sm btn-primary btn-execute-modal" 
-                                                                 data-id="{{ demande.id }}" 
-                                                                 data-specialty="{{ demande.target_specialty.id }}"
-                                                                 data-promo="{{ demande.target_promo.id }}"
-                                                                 title="Confirmer & Exécuter">
-                                                             <i class="ri-play-line me-1"></i> Confirmer
-                                                         </button>
+                                                          <button class="btn btn-sm btn-primary btn-execute-modal" 
+                                                                  data-id="{{ demande.id }}" 
+                                                                  data-is-double="{{ demande.target_is_double|yesno:'true,false' }}"
+                                                                  data-specialty="{{ demande.target_specialty.id|default:'' }}"
+                                                                  data-spec1="{{ demande.target_double_diploma.specialite1.id|default:'' }}"
+                                                                  data-spec2="{{ demande.target_double_diploma.specialite2.id|default:'' }}"
+                                                                  data-promo="{{ demande.target_promo.id }}"
+                                                                  title="Confirmer & Exécuter">
+                                                              <i class="ri-play-line me-1"></i> Confirmer
+                                                          </button>
                                                      {% endif %}
                                                      <button class="btn btn-sm btn-soft-secondary" title="Détails" data-bs-toggle="collapse" data-bs-target="#reason-{{ demande.id }}">
                                                          <i class="ri-information-line"></i>
@@ -216,13 +228,32 @@
             <div class="modal-body p-4">
                 <form id="executeTransferForm">
                     <input type="hidden" id="exec_request_id" name="request_id">
-                    <div class="mb-3">
-                        <label for="exec_target_group" class="form-label fw-bold">Groupe Cible :</label>
-                        <select class="form-select" id="exec_target_group" name="target_group_id" required>
-                            <option value="">Chargement des groupes...</option>
-                        </select>
-                        <div class="form-text">L'étudiant sera officiellement déplacé vers ce groupe.</div>
+                    
+                    <div id="single_group_container">
+                        <div class="mb-3">
+                            <label for="exec_target_group" class="form-label fw-bold">Groupe Cible :</label>
+                            <select class="form-select" id="exec_target_group" name="target_group_id">
+                                <option value="">Chargement des groupes...</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <div id="double_group_container" class="d-none">
+                        <div class="mb-3">
+                            <label for="exec_target_group1" class="form-label fw-bold" id="label_group1">Groupe Spécialité 1 :</label>
+                            <select class="form-select" id="exec_target_group1" name="target_group1_id">
+                                <option value="">Chargement...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exec_target_group2" class="form-label fw-bold" id="label_group2">Groupe Spécialité 2 :</label>
+                            <select class="form-select" id="exec_target_group2" name="target_group2_id">
+                                <option value="">Chargement...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-text mt-n2">L'étudiant sera officiellement déplacé vers le(s) groupe(s) sélectionné(s).</div>
                 </form>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -234,4 +265,184 @@
         </div>
     </div>
 </div>
+
+<!-- Reject Transfer Modal -->
+<div class="modal fade" id="rejectTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-close-circle-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="rejectModalTitle">Rejeter la demande</h5>
+                        <p class="text-muted small mb-0" id="rejectModalSubtitle">Veuillez indiquer la raison du rejet</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="rejectTransferForm">
+                    <input type="hidden" id="reject_request_id" name="request_id">
+                    <div class="mb-3">
+                        <label for="reject_reason" class="form-label fw-bold">Motif du rejet :</label>
+                        <textarea class="form-control" id="reject_reason" name="rejection_reason" rows="4" placeholder="Expliquez pourquoi le transfert est refusé..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger px-4" id="confirmRejectBtn">Confirmer le rejet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle status update (Approve directly, Reject via modal)
+        $(document).on('click', '.btn-update-status', function() {
+            const requestId = $(this).data('id');
+            const status = $(this).data('status');
+            const studentName = $(this).data('name');
+            
+            if (status === 'rejected') {
+                $('#reject_request_id').val(requestId);
+                $('#reject_reason').val('');
+                $('#rejectModalTitle').text(`Rejeter : ${studentName}`);
+                $('#rejectTransferModal').modal('show');
+            } else {
+                updateStatus(requestId, status);
+            }
+        });
+
+        // Confirm rejection
+        $('#confirmRejectBtn').on('click', function() {
+            const requestId = $('#reject_request_id').val();
+            const reason = $('#reject_reason').val();
+            
+            if (!reason) {
+                alertify.error("Veuillez saisir un motif de rejet.");
+                return;
+            }
+            
+            updateStatus(requestId, 'rejected', reason);
+        });
+
+        function updateStatus(requestId, status, reason = '') {
+            const $btn = $(`.btn-update-status[data-id="${requestId}"][data-status="${status}"]`);
+            const originalHtml = $btn.html();
+            
+            $btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin"></i>');
+            
+            $.ajax({
+                url: '{% url "t_etudiants:ApiUpdateTransferStatus" %}',
+                type: 'POST',
+                data: {
+                    'request_id': requestId,
+                    'status': status,
+                    'rejection_reason': reason,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        alertify.error(res.message);
+                        $btn.prop('disabled', false).html(originalHtml);
+                    }
+                    $('#rejectTransferModal').modal('hide');
+                },
+                error: function() {
+                    alertify.error("Une erreur s'est produite.");
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        }
+
+        // Handle Execute Modal
+        $(document).on('click', '.btn-execute-modal', function() {
+            const requestId = $(this).data('id');
+            const isDouble = $(this).data('is-double');
+            const promoId = $(this).data('promo');
+            
+            $('#exec_request_id').val(requestId);
+            
+            if (isDouble) {
+                $('#single_group_container').addClass('d-none');
+                $('#double_group_container').removeClass('d-none');
+                
+                const spec1 = $(this).data('spec1');
+                const spec2 = $(this).data('spec2');
+                
+                loadGroups(spec1, promoId, '#exec_target_group1');
+                loadGroups(spec2, promoId, '#exec_target_group2');
+            } else {
+                $('#single_group_container').removeClass('d-none');
+                $('#double_group_container').addClass('d-none');
+                
+                const specialtyId = $(this).data('specialty');
+                loadGroups(specialtyId, promoId, '#exec_target_group');
+            }
+            
+            $('#executeTransferModal').modal('show');
+        });
+
+        function loadGroups(specialtyId, promoId, targetSelectSelector) {
+            $(targetSelectSelector).empty().append('<option value="">Chargement...</option>');
+            $.get('{% url "t_etudiants:ApiGetGroupsForTransfer" %}', {
+                'specialty_id': specialtyId,
+                'promo_id': promoId
+            }, function(res) {
+                const $select = $(targetSelectSelector);
+                $select.empty();
+                if (res && res.length > 0) {
+                    res.forEach(g => {
+                        $select.append(`<option value="${g.id}">${g.nom}</option>`);
+                    });
+                } else {
+                    $select.append('<option value="">Aucun groupe disponible</option>');
+                }
+            });
+        }
+
+        // Confirm execution
+        $('#confirmExecuteBtn').on('click', function() {
+            const formData = $('#executeTransferForm').serialize();
+            const $btn = $(this);
+            const originalText = $btn.html();
+            
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Exécution...');
+            
+            $.ajax({
+                url: '{% url "t_etudiants:ApiExecuteTransfer" %}',
+                type: 'POST',
+                data: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        $('#executeTransferModal').modal('hide');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        alertify.error(res.message);
+                    }
+                },
+                error: function() {
+                    alertify.error("Erreur lors de l'exécution du transfert.");
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

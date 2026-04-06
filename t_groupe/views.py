@@ -132,6 +132,23 @@ def detailsGroupe(request, pk):
     groupe = Groupe.objects.get(pk=pk)
     students = GroupeLine.objects.filter(groupe = groupe)
 
+    from t_etudiants.models import StudentTransferRequest
+    all_requests = StudentTransferRequest.objects.filter(origin_group=groupe).order_by('-created_at')
+    transfer_dict = {}
+    for req in all_requests:
+        if req.student_id not in transfer_dict:
+            transfer_dict[req.student_id] = {
+                'status': req.status,
+                'status_display': req.get_status_display(),
+                'target_specialty': req.target_specialty.label if req.target_specialty else '',
+                'target_promo': req.target_promo.code if req.target_promo else '',
+                'reason': req.reason or 'Aucun motif renseigné',
+                'rejection_reason': req.rejection_reason or '',
+                'date': req.created_at.strftime('%d/%m/%Y %H:%M')
+            }
+    import json
+    transfer_data_json = json.dumps(transfer_dict)
+
     documents = groupe.specialite.formation.documents.all()
 
     context = {
@@ -139,6 +156,7 @@ def detailsGroupe(request, pk):
         'students' : students,
         "specialite" : groupe.specialite,
         "qualification" : groupe.specialite.formation.qualification if groupe.specialite and groupe.specialite.formation else "",
+        'transfer_data_json': transfer_data_json,
         "date_debut" : groupe.start_date,
         "date_fin" : groupe.end_date,
         "branche" : groupe.specialite.branche if groupe.specialite else "",

@@ -181,10 +181,15 @@ class StudentTransferRequest(models.Model):
     ]
     student = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='transfer_requests')
     origin_group = models.ForeignKey(Groupe, on_delete=models.CASCADE, related_name='transfer_requests_from')
-    target_specialty = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='transfer_requests_to_specialty')
+    
+    target_is_double = models.BooleanField(default=False)
+    target_specialty = models.ForeignKey(Specialites, on_delete=models.CASCADE, related_name='transfer_requests_to_specialty', null=True, blank=True)
+    target_double_diploma = models.ForeignKey('t_formations.DoubleDiplomation', on_delete=models.SET_NULL, null=True, blank=True, related_name='transfer_requests_to_double')
+    
     target_promo = models.ForeignKey(Promos, on_delete=models.CASCADE, related_name='transfer_requests_to_promo')
     target_group = models.ForeignKey(Groupe, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfer_requests_to_group')
     reason = models.TextField(null=True, blank=True)
+    rejection_reason = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     created_at = models.DateTimeField(auto_now_add=True)

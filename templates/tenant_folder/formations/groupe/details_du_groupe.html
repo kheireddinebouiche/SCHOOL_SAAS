@@ -2142,21 +2142,34 @@
                     <input type="hidden" id="trans_origin_group_id" name="origin_group_id">
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Étudiant :</label>
-                        <div id="trans_student_name" class="form-control bg-light border-0 fw-semibold"></div>
+                        <div class="form-check form-switch card p-2 bg-light border-0">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="trans_is_double" name="target_is_double" value="true">
+                            <label class="form-check-label fw-bold text-primary" for="trans_is_double">
+                                <i class="ri-double-quotes-l me-1"></i> Transfert vers Double Diplomation
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="trans_target_formation" class="form-label fw-bold">Filtrer par Formation :</label>
-                        <select class="form-select" id="trans_target_formation">
-                            <option value="">Toutes les formations</option>
+                    <div id="formation_filter_container">
+                        <div class="mb-3">
+                            <label for="trans_target_formation" class="form-label fw-bold small text-uppercase text-muted">Filtrer par Formation :</label>
+                            <select class="form-select" id="trans_target_formation">
+                                <option value="">Toutes les formations</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="specialty_select_container">
+                        <label for="trans_target_specialty" class="form-label fw-bold small text-uppercase text-muted">Nouvelle Spécialité :</label>
+                        <select class="form-select select2-modal" id="trans_target_specialty" name="target_specialty_id">
+                            <option value="">Sélectionner une spécialité</option>
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="trans_target_specialty" class="form-label fw-bold">Nouvelle Spécialité :</label>
-                        <select class="form-select select2-modal" id="trans_target_specialty" name="target_specialty_id" required>
-                            <option value="">Sélectionner une spécialité</option>
+                    <div class="mb-3 d-none" id="double_diploma_select_container">
+                        <label for="trans_target_double" class="form-label fw-bold small text-uppercase text-muted">Double Diplomation :</label>
+                        <select class="form-select select2-modal" id="trans_target_double" name="target_double_diploma_id">
+                            <option value="">Sélectionner une double diplomation</option>
                         </select>
                     </div>
 
@@ -2176,8 +2189,59 @@
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <div class="hstack gap-2 justify-content-end w-100">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-warning px-4" id="submitTransferRequestBtn">Soumettre la demande</button>
+                    <button type="submit" form="transferRequestForm" class="btn btn-warning px-4" id="submitTransferRequestBtn">Soumettre la demande</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending/Rejected Transfer Modal -->
+<div class="modal fade" id="pendingTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-4">
+            <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                    <div id="pendingTransferIcon" class="avatar-title bg-info bg-opacity-10 text-info rounded-circle fs-1">
+                        <i class="ri-information-line"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1" id="pendingTransferTitle">Historique de transfert</h4>
+                <p class="text-muted mb-0" id="pendingTransferSubtitle">Cet étudiant a une demande de transfert enregistrée.</p>
+            </div>
+            <div class="card bg-light border-0 mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="text-muted small text-uppercase fw-semibold mb-1">Spécialité ciblée</label>
+                            <div class="fw-bold" id="pendingTargetSpecialty"></div>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small text-uppercase fw-semibold mb-1">Promotion</label>
+                            <div class="fw-bold" id="pendingTargetPromo"></div>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small text-uppercase fw-semibold mb-1">Motif</label>
+                            <div class="text-dark" id="pendingReason"></div>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small text-uppercase fw-semibold mb-1">Date</label>
+                            <div class="text-dark" id="pendingDate"></div>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small text-uppercase fw-semibold mb-1">Statut</label>
+                            <div id="pendingStatusBadge"></div>
+                        </div>
+                        <div class="col-12 d-none" id="rejectionReasonSection">
+                            <label class="text-danger small text-uppercase fw-semibold mb-1">Motif du rejet</label>
+                            <div class="p-2 border border-danger border-opacity-25 rounded bg-danger bg-opacity-10 text-danger fw-medium" id="pendingRejectionReason"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-warning rounded-pill px-4 fw-medium d-none" id="btnRequestRecours" data-bs-dismiss="modal">Faire un recours</button>
             </div>
         </div>
     </div>
@@ -2203,6 +2267,9 @@
 </div>
 
 <script>
+    // Transfer data injected from views
+    const transferRequestsData = JSON.parse('{{ transfer_data_json|safe }}');
+
     $(document).ready(function() {
         // Load specialties and promos once
         let allSpecialities = [];
@@ -2212,14 +2279,19 @@
             if (transferDataLoaded) return;
             $.get('{% url "t_etudiants:ApiGetSpecialitesPromos" %}', function(data) {
                 const formationSelect = $('#trans_target_formation');
-                const specSelect = $('#trans_target_specialty');
                 const promoSelect = $('#trans_target_promo');
+                const doubleSelect = $('#trans_target_double');
                 
                 allSpecialities = data.specialites;
                 
                 // Load formations
                 data.formations.forEach(f => {
                     formationSelect.append(`<option value="${f.code}">${f.nom}</option>`);
+                });
+
+                // Load Double Diplomations
+                data.double_diplomations.forEach(d => {
+                    doubleSelect.append(`<option value="${d.id}">${d.label}</option>`);
                 });
 
                 // Initial load of specialties (all)
@@ -2250,25 +2322,101 @@
             renderSpecialities($(this).val());
         });
 
-        $('.btn-transfer').on('click', function() {
-            const studentId = $(this).data('student-id');
-            const studentName = $(this).data('student-name');
-            const originGroupId = $(this).data('origin-group-id');
-            
+        $('#trans_is_double').on('change', function() {
+            const isDouble = $(this).is(':checked');
+            if (isDouble) {
+                $('#specialty_select_container').addClass('d-none');
+                $('#formation_filter_container').addClass('d-none');
+                $('#double_diploma_select_container').removeClass('d-none');
+                $('#trans_target_specialty').val('').trigger('change').prop('required', false);
+                $('#trans_target_double').prop('required', true);
+            } else {
+                $('#specialty_select_container').removeClass('d-none');
+                $('#formation_filter_container').removeClass('d-none');
+                $('#double_diploma_select_container').addClass('d-none');
+                $('#trans_target_double').val('').trigger('change').prop('required', false);
+                $('#trans_target_specialty').prop('required', true);
+            }
+        });
+
+        function openNewTransferModal(studentId, studentName, originGroupId) {
             $('#trans_student_id').val(studentId);
             $('#trans_student_name').text(studentName);
             $('#trans_origin_group_id').val(originGroupId);
             
             loadTransferData();
             $('#transferRequestModal').modal('show');
+        }
+
+        $('#btnRequestRecours').on('click', function() {
+            const studentId = $(this).data('student-id');
+            const studentName = $(this).data('student-name');
+            const originGroupId = $(this).data('origin-group-id');
+            openNewTransferModal(studentId, studentName, originGroupId);
         });
 
-        $('#submitTransferRequestBtn').on('click', function() {
-            const formData = $('#transferRequestForm').serialize();
-            const $btn = $(this);
+        $('.btn-transfer').on('click', function() {
+            const studentId = $(this).data('student-id');
+            const studentName = $(this).data('student-name');
+            const originGroupId = $(this).data('origin-group-id');
+            
+            const req = transferRequestsData[studentId];
+            if (req && req.status !== 'done') {
+                // Populate Modal
+                $('#pendingTargetSpecialty').text(req.target_specialty || '-');
+                $('#pendingTargetPromo').text(req.target_promo || '-');
+                $('#pendingReason').text(req.reason);
+                $('#pendingDate').text(req.date);
+                
+                let badgeClass = 'bg-secondary';
+                if (req.status === 'pending') badgeClass = 'bg-warning text-dark';
+                if (req.status === 'approved') badgeClass = 'bg-success';
+                if (req.status === 'rejected') badgeClass = 'bg-danger';
+                
+                $('#pendingStatusBadge').html(`<span class="badge ${badgeClass}">${req.status_display}</span>`);
+                
+                const $icon = $('#pendingTransferIcon');
+                if (req.status === 'rejected') {
+                    $('#pendingTransferTitle').text('Demande Rejetée');
+                    $('#pendingTransferSubtitle').text('La demande précédente a été refusée.');
+                    $icon.removeClass('bg-info text-info').addClass('bg-danger text-danger');
+                    $icon.html('<i class="ri-close-circle-line"></i>');
+                    
+                    $('#btnRequestRecours').removeClass('d-none')
+                        .data('student-id', studentId)
+                        .data('student-name', studentName)
+                        .data('origin-group-id', originGroupId);
+                    
+                    if (req.rejection_reason) {
+                        $('#pendingRejectionReason').text(req.rejection_reason);
+                        $('#rejectionReasonSection').removeClass('d-none');
+                    } else {
+                        $('#rejectionReasonSection').addClass('d-none');
+                    }
+                } else {
+                    $('#pendingTransferTitle').text('Transfert en cours');
+                    $('#pendingTransferSubtitle').text('Une procédure de transfert est en attente de décision.');
+                    $icon.removeClass('bg-danger text-danger').addClass('bg-info text-info');
+                    $icon.html('<i class="ri-time-line"></i>');
+                    
+                    $('#btnRequestRecours').addClass('d-none');
+                    $('#rejectionReasonSection').addClass('d-none');
+                }
+                
+                $('#pendingTransferModal').modal('show');
+                return;
+            }
+            
+            openNewTransferModal(studentId, studentName, originGroupId);
+        });
+
+        $('#transferRequestForm').on('submit', function(e) {
+            e.preventDefault();
+            const formData = $(this).serialize();
+            const $btn = $(this).find('button[type="submit"]');
             const originalText = $btn.html();
             
-            $btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin me-1"></i> Envoi...');
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Envoi...');
             
             $.ajax({
                 url: '{% url "t_etudiants:ApiRequestTransfer" %}',
@@ -2279,13 +2427,13 @@
                     if (res.status === 'success') {
                         alertify.success(res.message);
                         $('#transferRequestModal').modal('hide');
-                        $('#transferRequestForm')[0].reset();
+                        setTimeout(() => location.reload(), 1000);
                     } else {
                         alertify.error(res.message);
                     }
                 },
                 error: function() {
-                    alertify.error("Une erreur s'est produite lors de la demande de transfert.");
+                    alertify.error("Erreur lors de l'envoi de la demande.");
                 },
                 complete: function() {
                     $btn.prop('disabled', false).html(originalText);

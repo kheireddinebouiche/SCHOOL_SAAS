@@ -155,10 +155,12 @@ def ApiGetSpecialitesPromos(request):
     specialites = Specialites.objects.all().values('id', 'label', 'code', 'formation_id')
     promos = Promos.objects.filter(etat='active').values('id', 'code')
     formations = Formation.objects.all().values('code', 'nom')
+    double_diplomations = DoubleDiplomation.objects.all().values('id', 'label')
     return JsonResponse({
         'specialites': list(specialites),
         'promos': list(promos),
-        'formations': list(formations)
+        'formations': list(formations),
+        'double_diplomations': list(double_diplomations)
     })
 
 @login_required(login_url='institut_app:login')
@@ -169,13 +171,17 @@ def ApiRequestTransfer(request):
         origin_group_id = request.POST.get('origin_group_id')
         target_specialty_id = request.POST.get('target_specialty_id')
         target_promo_id = request.POST.get('target_promo_id')
+        target_is_double = request.POST.get('target_is_double') == 'true'
+        target_double_diploma_id = request.POST.get('target_double_diploma_id')
         reason = request.POST.get('reason')
 
         try:
             StudentTransferRequest.objects.create(
                 student_id=student_id,
                 origin_group_id=origin_group_id,
-                target_specialty_id=target_specialty_id,
+                target_specialty_id=target_specialty_id if not target_is_double else None,
+                target_is_double=target_is_double,
+                target_double_diploma_id=target_double_diploma_id if target_is_double else None,
                 target_promo_id=target_promo_id,
                 reason=reason,
                 created_by=request.user
@@ -191,10 +197,13 @@ def ApiUpdateTransferStatus(request):
     if request.method == "POST":
         request_id = request.POST.get('request_id')
         new_status = request.POST.get('status')
+        rejection_reason = request.POST.get('rejection_reason')
         
         try:
             transfer_request = StudentTransferRequest.objects.get(id=request_id)
             transfer_request.status = new_status
+            if new_status == 'rejected' and rejection_reason:
+                transfer_request.rejection_reason = rejection_reason
             transfer_request.save()
             return JsonResponse({'status': 'success', 'message': f'Statut mis à jour : {transfer_request.get_status_display()}'})
         except Exception as e:
@@ -218,25 +227,52 @@ def ApiExecuteTransfer(request):
             # 1. Remove old group line
             GroupeLine.objects.filter(student=transfer_request.student, groupe=transfer_request.origin_group).delete()
 
-            # 2. Cleanup old affectation if different specialty
-            if transfer_request.origin_group.specialite != transfer_request.target_specialty:
-                AffectationGroupe.objects.filter(etudiant=transfer_request.student, specialite=transfer_request.origin_group.specialite).delete()
+            # 2. Cleanup old affectations (for security, remove all if needed or just the current one)
+            # Here we follow the logic of removing the primary one
+            AffectationGroupe.objects.filter(etudiant=transfer_request.student, specialite=transfer_request.origin_group.specialite).delete()
 
-            # 3. Create new group line
-            GroupeLine.objects.create(
-                student=transfer_request.student,
-                groupe_id=target_group_id
-            )
-            
-            # 4. Update or Create AffectationGroupe for target specialty
-            AffectationGroupe.objects.update_or_create(
-                etudiant=transfer_request.student,
-                specialite=transfer_request.target_specialty,
-                defaults={'groupe_id': target_group_id}
-            )
+            if transfer_request.target_is_double:
+                # Handle Double Diploma: two groups
+                target_group1_id = request.POST.get('target_group1_id')
+                target_group2_id = request.POST.get('target_group2_id')
+                
+                spec1 = transfer_request.target_double_diploma.specialite1
+                spec2 = transfer_request.target_double_diploma.specialite2
+
+                # Specialty 1
+                GroupeLine.objects.create(student=transfer_request.student, groupe_id=target_group1_id)
+                AffectationGroupe.objects.update_or_create(
+                    etudiant=transfer_request.student,
+                    specialite=spec1,
+                    defaults={'groupe_id': target_group1_id}
+                )
+
+                # Specialty 2
+                GroupeLine.objects.create(student=transfer_request.student, groupe_id=target_group2_id)
+                AffectationGroupe.objects.update_or_create(
+                    etudiant=transfer_request.student,
+                    specialite=spec2,
+                    defaults={'groupe_id': target_group2_id}
+                )
+                
+                transfer_request.student.is_double = True
+                transfer_request.student.save()
+            else:
+                # Handle Standard Transfer: one group
+                target_group_id = request.POST.get('target_group_id')
+                
+                GroupeLine.objects.create(student=transfer_request.student, groupe_id=target_group_id)
+                AffectationGroupe.objects.update_or_create(
+                    etudiant=transfer_request.student,
+                    specialite=transfer_request.target_specialty,
+                    defaults={'groupe_id': target_group_id}
+                )
+                
+                transfer_request.student.is_double = False
+                transfer_request.student.save()
+                transfer_request.target_group_id = target_group_id
 
             transfer_request.status = 'done'
-            transfer_request.target_group_id = target_group_id
             transfer_request.save()
 
             return JsonResponse({'status': 'success', 'message': 'Transfert exécuté avec succès.'})
