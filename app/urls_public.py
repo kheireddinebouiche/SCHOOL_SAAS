@@ -22,6 +22,7 @@ urlpatterns = [
     path('nbleads/',NombreLead, name="NombreLead"),
     path('socialEngagement/', socialEngagement, name="socialEngagement"),
     path('configuration/', include('associe_app.urls')),
+    path('saas-admin/', include('saas_admin_app.urls')),
     
     # path('login/',LoginView.as_view(), name="login"),
     # path('logout/',LogoutView.as_view(), name="logout"),

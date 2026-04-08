@@ -127,12 +127,31 @@ class BankAccount(models.Model):
 
 class GlobalConfiguration(models.Model):
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
+    crm_tab_validation_enabled = models.BooleanField(default=True, verbose_name=_("Validation des onglets CRM active"))
     session_timeout_minutes = models.PositiveIntegerField(default=5, verbose_name=_("Délai d'inactivité (minutes)"))
     session_timeout_seconds = models.PositiveIntegerField(default=0, verbose_name=_("Délai d'inactivité (secondes)"))
     session_timeout_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage de session actif"))
     device_lock_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage par appareil actif"))
-    updated_at = models.DateTimeField(auto_now=True)
     
+    # Email Configuration
+    email_enabled = models.BooleanField(default=False, verbose_name=_("Envoi d'emails activé"))
+    email_host = models.CharField(max_length=255, default='smtp.gmail.com', verbose_name=_("Serveur SMTP"))
+    email_port = models.PositiveIntegerField(default=587, verbose_name=_("Port SMTP"))
+    email_use_tls = models.BooleanField(default=True, verbose_name=_("Utiliser TLS"))
+    email_host_user = models.CharField(max_length=255, default='', verbose_name=_("Email expéditeur"))
+    email_host_password = models.CharField(max_length=255, default='', verbose_name=_("Mot de passe email"))
+    default_from_email = models.CharField(max_length=255, default='noreply@school-saas.com', verbose_name=_("Email par défaut"))
+    
+    # Email Templates
+    email_reset_password_subject = models.CharField(max_length=255, default='Réinitialisation de votre mot de passe - School SaaS', verbose_name=_("Objet - Reset mot de passe"))
+    email_reset_password_template = models.TextField(
+        default='Bonjour {user_name},\n\nVotre mot de passe a été réinitialisé.\n\nVotre nouveau mot de passe est : {password}\n\nVeuillez vous connecter et changer ce mot de passe dès que possible.\n\nCordialement,\nL\'équipe School SaaS',
+        verbose_name=_("Template - Reset mot de passe"),
+        help_text="Utilisez {user_name} et {password} comme variables"
+    )
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
         verbose_name="Configuration Globale"
         verbose_name_plural="Configurations Globales"
@@ -144,6 +163,17 @@ class GlobalConfiguration(models.Model):
     def get_solo(cls):
         obj, created = cls.objects.get_or_create(id=1)
         return obj
+    
+    def apply_email_settings(self):
+        """Applique les paramètres email aux settings Django."""
+        from django.conf import settings
+        settings.EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        settings.EMAIL_HOST = self.email_host
+        settings.EMAIL_PORT = self.email_port
+        settings.EMAIL_USE_TLS = self.email_use_tls
+        settings.EMAIL_HOST_USER = self.email_host_user
+        settings.EMAIL_HOST_PASSWORD = self.email_host_password
+        settings.DEFAULT_FROM_EMAIL = self.default_from_email
 
     
 class SalleClasse(models.Model):
@@ -204,9 +234,9 @@ class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
         ('ped',_('Pédagogie')),
-        ('exa',_('Chargé(e) des examens')),
+        ('exa',_('Examens')),
         ('eva',_('Evaluation')),
-        ('con',_('Conseil')),
+        ('con',_('Executive Education')),
         ('adm',_('Administration')),
         ('tre',_('Trésorerie')),
         ('daf',_('DAF')),

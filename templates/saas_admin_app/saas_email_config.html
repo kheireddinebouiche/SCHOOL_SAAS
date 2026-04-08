@@ -1,0 +1,343 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+{% block title %} Configuration Email - SaaS Admin {% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Page Title & Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-card p-3 d-sm-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box info me-3">
+                        <i class="ri-mail-settings-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1">Configuration Email</h4>
+                        <p class="text-muted mb-0">Gérez vos paramètres SMTP et vos modèles de messages</p>
+                    </div>
+                </div>
+                <div class="mt-3 mt-sm-0">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb m-0 bg-transparent p-0">
+                            <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Email</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show glass-card border-0 mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="ri-information-line me-2 fs-18"></i>
+                <div>{{ message }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" id="emailConfigForm">
+        {% csrf_token %}
+        
+        <div class="row g-4">
+            <!-- SMTP Configuration -->
+            <div class="col-xl-6">
+                <div class="card modern-card h-100">
+                    <div class="card-header-modern d-flex align-items-center">
+                        <i class="ri-server-line me-2 text-primary fs-20"></i>
+                        <h5 class="card-title mb-0">Paramètres Serveur SMTP</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="form-check form-switch mb-4 p-3 rounded-4 bg-white bg-opacity-50 border border-white">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="email_enabled" id="emailEnabled" {% if config.email_enabled %}checked{% endif %}>
+                            <label class="form-check-label fw-bold text-dark" for="emailEnabled">
+                                Activer le service d'envoi d'emails
+                            </label>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-9">
+                                <label class="form-label fw-semibold">Serveur SMTP</label>
+                                <input type="text" class="form-control" name="email_host" value="{{ config.email_host }}" placeholder="smtp.gmail.com">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Port</label>
+                                <input type="number" class="form-control" name="email_port" value="{{ config.email_port }}" placeholder="587">
+                            </div>
+                            
+                            <div class="col-12 mt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="email_use_tls" id="emailUseTLS" {% if config.email_use_tls %}checked{% endif %}>
+                                    <label class="form-check-label text-muted" for="emailUseTLS">Utiliser TLS / SSL (Sécurisé)</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <label class="form-label fw-semibold">Email d'expédition (User/Auth)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ri-user-mail-line"></i></span>
+                                    <input type="email" class="form-control" name="email_host_user" value="{{ config.email_host_user }}" placeholder="nom@exemple.com">
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Mot de passe / Token</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ri-lock-password-line"></i></span>
+                                    <input type="password" class="form-control" name="email_host_password" id="emailPassword" value="{{ config.email_host_password }}" placeholder="••••••••">
+                                    <button class="btn btn-light border" type="button" onclick="togglePassword()">
+                                        <i class="ri-eye-line" id="togglePasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block mt-1">Pour Gmail, utilisez un "Mot de passe d'application".</small>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Email par défaut (FROM)</label>
+                                <input type="email" class="form-control" name="default_from_email" value="{{ config.default_from_email }}" placeholder="noreply@votre-saas.com">
+                            </div>
+
+                            <div class="col-12 mt-4 pt-2 border-top">
+                                <button type="button" class="btn btn-soft-primary w-100" onclick="sendTestEmail()">
+                                    <i class="ri-send-plane-fill me-2"></i>Envoyer un test à moi-même
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Templates -->
+            <div class="col-xl-6">
+                <div class="card modern-card h-100">
+                    <div class="card-header-modern d-flex align-items-center">
+                        <i class="ri-layout-masonry-line me-2 text-success fs-20"></i>
+                        <h5 class="card-title mb-0">Modèles d'Emails Systèmes</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="alert bg-success bg-opacity-10 border-0 mb-4">
+                            <h6 class="text-success"><i class="ri-lightbulb-line me-1"></i> Astuce : Personnalisation</h6>
+                            <p class="small mb-0 text-success opacity-75">Vous pouvez utiliser les variables <code>{user_name}</code> et <code>{password}</code> dans vos templates.</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Objet (Reset Mot de Passe)</label>
+                            <input type="text" class="form-control" name="email_reset_password_subject" value="{{ config.email_reset_password_subject }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Corps du message (Reset Mot de Passe)</label>
+                            <textarea class="form-control" name="email_reset_password_template" id="resetPasswordTemplate" rows="10" 
+                                      style="font-family: 'Inter', sans-serif; font-size: 0.9rem;">{{ config.email_reset_password_template }}</textarea>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="button" class="btn btn-soft-success" onclick="previewEmail()">
+                                <i class="ri-eye-line me-2"></i>Prévisualiser le rendu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Bottom Bar -->
+        <div class="sticky-footer-placeholder" style="height: 100px;"></div>
+        <div class="glass-card p-3 fixed-bottom-actions mx-3 mb-3 shadow-lg border border-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted d-none d-md-block">
+                    <i class="ri-history-line me-1"></i> Dernière modification : {{ config.updated_at|date:"d/m/Y H:i" }}
+                </div>
+                <div class="d-flex gap-2 w-100 w-md-auto">
+                    <a href="{% url 'saas_admin_app:saas_dashboard' %}" class="btn btn-light rounded-pill px-4 flex-grow-1">Annuler</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 flex-grow-1 shadow-sm">
+                        <i class="ri-save-line me-2"></i>Sauvegarder les reglages
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal Aperçu -->
+<div class="modal fade" id="emailPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom border-white border-opacity-20 bg-primary bg-opacity-10">
+                <h5 class="modal-title font-outfit fw-bold">Aperçu du mail envoyé</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="preview-meta mb-4 p-3 rounded-4 bg-white bg-opacity-40 border border-white">
+                    <div class="row small text-muted">
+                        <div class="col-3 fw-bold">Expéditeur:</div>
+                        <div class="col-9" id="previewFrom"></div>
+                        <div class="col-3 fw-bold mt-1">Objet:</div>
+                        <div class="col-9 text-dark fw-semibold mt-1" id="previewSubject"></div>
+                    </div>
+                </div>
+                <div id="previewBody" class="p-4 bg-white rounded-4 border shadow-sm" style="min-height: 200px; white-space: pre-wrap;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-soft-secondary rounded-pill" data-bs-dismiss="modal">Fermer l'aperçu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Glass Design for Form Controls */
+    .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 12px !important;
+        padding: 0.65rem 1rem;
+        transition: all 0.2s ease;
+        color: var(--text-main) !important;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+    }
+
+    /* Input Group Segmented Borders */
+    .input-group {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.4);
+    }
+
+    .input-group .form-control, .input-group .input-group-text, .input-group .btn {
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        backdrop-filter: none;
+    }
+
+    .input-group-text {
+        border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+        color: var(--text-muted) !important;
+        min-width: 46px;
+        justify-content: center;
+    }
+
+    .input-group .btn {
+        border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .input-group:focus-within {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1);
+    }
+
+    /* Switches */
+    .form-switch .form-check-input {
+        width: 3.2em;
+        height: 1.6em;
+        margin-top: 0;
+        cursor: pointer;
+        background-color: rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .form-switch .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    /* Cards header fix */
+    .card-header-modern {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Sticky Actions Area */
+    .fixed-bottom-actions {
+        position: sticky;
+        bottom: 1.5rem;
+        z-index: 100;
+        margin-top: 2rem;
+    }
+
+    .btn-soft-primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); border: 1px solid rgba(67, 97, 238, 0.15); }
+    .btn-soft-primary:hover { background: var(--primary-color); color: white; }
+    
+    .btn-soft-success { background: rgba(76, 201, 240, 0.1); color: #08b1e1; border: 1px solid rgba(76, 201, 240, 0.15); }
+    .btn-soft-success:hover { background: #08b1e1; color: white; }
+
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
+<script>
+function togglePassword() {
+    const pwd = document.getElementById('emailPassword');
+    const icon = document.getElementById('togglePasswordIcon');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.className = 'ri-eye-off-line';
+    } else {
+        pwd.type = 'password';
+        icon.className = 'ri-eye-line';
+    }
+}
+
+function previewEmail() {
+    const template = document.getElementById('resetPasswordTemplate').value;
+    const subject = document.querySelector('input[name="email_reset_password_subject"]').value;
+    const fromEmail = document.querySelector('input[name="default_from_email"]').value;
+    
+    const previewText = template
+        .replace(/{user_name}/g, 'Jean Dupont')
+        .replace(/{password}/g, 'AzErTy123!');
+    
+    document.getElementById('previewSubject').textContent = subject;
+    document.getElementById('previewFrom').textContent = fromEmail;
+    document.getElementById('previewBody').textContent = previewText;
+    
+    new bootstrap.Modal(document.getElementById('emailPreviewModal')).show();
+}
+
+function sendTestEmail() {
+    const testEmail = document.querySelector('input[name="email_host_user"]').value;
+    if (!testEmail) {
+        alertify.error('Configurez un email expéditeur d\'abord');
+        return;
+    }
+    
+    const btn = event.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ri-loader-4-line spin me-2"></i>Envoi en cours...';
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('email', testEmail);
+    
+    fetch("{% url 'saas_admin_app:saas_test_email' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) alertify.success(data.message);
+        else alertify.error('Erreur: ' + data.error);
+    })
+    .catch(() => alertify.error('Impossible de contacter le serveur'))
+    .finally(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock content %}

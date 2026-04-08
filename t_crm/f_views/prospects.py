@@ -30,23 +30,25 @@ def ApiLoadProspectPerosnalInfos(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectRendezVous(request):
    id_prospect = request.GET.get('id_prospect')
-   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect, context = "prospect", archived=False).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
+   rendez_vous = list(RendezVous.objects.filter(prospect__id=id_prospect, archived=False).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut'))
    for l in rendez_vous:
        l_obj = RendezVous.objects.get(id = l['id'])
        l['status_label'] = l_obj.get_statut_display()
        l['type_label'] = l_obj.get_type_display()
-       l['created_at'] = l_obj.created_at.strftime("%Y-%m-%d")
-   return JsonResponse(list(rendez_vous), safe=False)
+       l['type_label'] = l_obj.get_type_display()
+       l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
+   return JsonResponse(rendez_vous, safe=False)
 
 ################################### Gestion des notes ##################################################
 @login_required(login_url='institut_app:login')
 def ApiLoadNote(request):
     prospect_id = request.GET.get('id_prospect')
-    notes = NotesProcpects.objects.filter(prospect__id = prospect_id, context="prospect").values('id','prospect','created_by__username','created_at','note','tage')
+    notes = list(NotesProcpects.objects.filter(prospect__id = prospect_id).values('id','prospect','created_by__username','created_at','note','tage'))
     for l in notes:
         l_obj = NotesProcpects.objects.get(id = l['id'])
-        l['tage'] = l_obj.get_tage_display()
-    return JsonResponse(list(notes), safe=False)
+        l['tage_label'] = l_obj.get_tage_display()
+        l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
+    return JsonResponse(notes, safe=False)
     
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -81,7 +83,20 @@ def ApiDeleteNote(request):
 @login_required(login_url='institut_app:login')
 @transaction.atomic
 def ApiUpdateNote(request):
-    pass
+    note_id = request.POST.get('id')
+    content = request.POST.get('note')
+    tage = request.POST.get('tage')
+
+    try:
+        note = NotesProcpects.objects.get(id=note_id)
+        note.note = content
+        note.tage = tage
+        note.save()
+        return JsonResponse({'status': 'success', 'message': 'Note mise à jour avec succès.'})
+    except NotesProcpects.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Note introuvable.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 ################################### !Gestion des notes##################################################

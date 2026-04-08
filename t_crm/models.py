@@ -212,7 +212,7 @@ class Prospets(models.Model):
     date_naissance = models.DateField(null=True, blank=True)
     lieu_naissance = models.CharField(null=True, blank=True)
         
-    niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 am'),('2_am','2 am'),('3_am', '3_am'),('4_am','4 am'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminal'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','Licence'),('m','Master')])
+    niveau_scolaire = models.CharField(max_length=100, null=True, blank=True, choices=[('1_am','1 AM'),('2_am','2 AM'),('3_am', '3 AM'),('4_am','4 AM'),('1_as','1 AS'),('2_as','2 AS'),('terminal','Terminale'),('bac1','BAC +1'),('bac2','BAC +2'),('licence','BAC +3'),('m','BAC +4'),('b5','BAC +5'),('b6','BAC +6'),('bp','BAC +')])
     diplome = models.CharField(max_length=100, null=True, blank=True)
     etablissement = models.CharField(max_length=100, null=True, blank=True)
     annee_obtention = models.CharField(max_length=100, null=True, blank=True)
@@ -253,6 +253,8 @@ class Prospets(models.Model):
     is_double = models.BooleanField(default=False)
 
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+
+    specialite_obtenu = models.CharField(max_length=100, null=True, blank=True)
 
     conseil_pipeline_stage = models.CharField(
         max_length=50, 

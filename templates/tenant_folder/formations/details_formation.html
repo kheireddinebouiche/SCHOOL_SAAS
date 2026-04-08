@@ -146,7 +146,7 @@
                                                 <i class='ri-sync-line me-2'></i>Synchroniser
                                             </button>
                                             <div id="update-btn-content">
-                                                <button class="btn btn-soft-success btn-sm" id="effectuerMiseAjour">
+                                                <button class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#confirmUpdateModal">
                                                     <i class="ri-refresh-line me-2"></i>Mise à jour
                                                 </button>
                                             </div>   
@@ -570,6 +570,47 @@
                 </div>
             </div>
         </div>
+        <!-- Modal Confirmation Mise à jour Formations -->
+        <div class="modal fade" id="confirmUpdateModal" tabindex="-1" aria-labelledby="confirmUpdateModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-lg border-0">
+                    <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-refresh-line text-success fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-semibold text-success mb-1" id="confirmUpdateModalLabel">Confirmation de mise à jour</h5>
+                                <p class="text-muted small mb-0">Synchronisation globale de la formation</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 text-center">
+                        <lord-icon src="https://cdn.lordicon.com/asvdeonb.json" trigger="loop" colors="primary:#0ab39c,secondary:#405189" style="width:100px;height:100px"></lord-icon>
+                        <div class="mt-4 pt-2">
+                            <h4 class="fw-bold">Mettre à jour tous les instituts ?</h4>
+                            <p class="text-muted mx-4 mb-3">Cette action propagera les modifications pédagogiques vers tous les établissements satellites.</p>
+                            <div class="bg-light p-3 rounded-4 mb-0 text-start">
+                                <small class="text-uppercase fw-bold text-muted mb-2 d-block fs-10">Ce qui sera synchronisé :</small>
+                                <ul class="list-unstyled mb-0 small text-dark">
+                                    <li><i class="ri-checkbox-circle-line text-success me-2"></i>Dossier d'inscription complet</li>
+                                    <li><i class="ri-checkbox-circle-line text-success me-2"></i>Toutes les spécialités et modules</li>
+                                    <li><i class="ri-checkbox-circle-line text-success me-2"></i>Contenu (Nom, Description, Qualification...)</li>
+                                    <li class="mt-2 text-muted italic"><i class="ri-error-warning-line text-warning me-2"></i>Note : Les tarifs locaux et l'entité juridique restent inchangés.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light px-4 py-3">
+                        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" id="confirmSyncUpdateBtn" class="btn btn-success px-4 py-2">
+                            <i class="ri-refresh-line me-2"></i>Confirmer la mise à jour
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 <script>
     $(document).ready(function(){
@@ -637,20 +678,29 @@
             });
         });
 
-        $(document).on('click','#effectuerMiseAjour',function(){
+        $(document).on('click','#confirmSyncUpdateBtn',function(){
+            var btn = $(this);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Synchronisation...');
+            
             $.ajax({
                 url :"{% url 't_formations:ApiSyncUpdateFormation' %}",
                 dataType: "JSON",
                 type : 'POST',
                 data : {'code_formation' : code_formation,'csrfmiddlewaretoken': '{{ csrf_token }}'},
                 success: function(response){
+                    btn.prop('disabled', false).html('<i class="ri-refresh-line me-2"></i>Confirmer la mise à jour');
                     if (response.status){
                         alertify.success(response.message);
+                        $('#confirmUpdateModal').modal('hide');
                         afficheBtnUpdat();
                     }else{
                         alertify.error(response.message);
                     }                   
                 },
+                error: function(){
+                    btn.prop('disabled', false).html('<i class="ri-refresh-line me-2"></i>Confirmer la mise à jour');
+                    alertify.error("Une erreur s'est produite lors de la synchronisation.");
+                }
             });
         });
 

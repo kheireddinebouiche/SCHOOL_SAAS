@@ -10,7 +10,7 @@ from .views import (
     ApiLoadProspects, ApiDeleteProspect, ApiFilterProspect,
     ApiLoadProspectDetails, ApiUpdatePropectDetails, ApiUpdateProspectEtsDetails,
     ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCreateVoeuxDouble,
-    ApiFilterPrinscrit, ApiLoadSpecialite
+    ApiFilterPrinscrit, ApiLoadSpecialite,
 )
 from .f_views.prospects import (
     ApiLoadProspectPerosnalInfos,
@@ -29,12 +29,14 @@ from .f_views.prinscrits import (
     ListeDesPrinscrits, ApiLoadPrinscrits, DetailsPrinscrit,
     ApiLoadPreinscrisPerosnalInfos, ApiLoadPreinscritRendezVous,
     ApiLoadNotePr, ApiCheckHasCompletedProfile, ApiCheckCompletedDoc,
+    ApiUpdateNotePr,
     ApiUpdatePreinscritInfos, ApiLoadRequiredDocs, add_document, add_document_double,
     LoadPresinscritDocs, DeleteDocumentPreinscrit, ApiStoreNotePreinscrit,
     check_all_required_docs, check_all_required_doc_double, ApiStoreRappelPreinscrit,
     ApiValidatePreinscrit, ApiCancelPreinscrit, ApiReactivatePreinscrit,
     ApiLoadFinancialData, ApiLoadPreinscritDoubleVoeux, prospects_incomplets_view,
-    ApiGetDossierDetails, ApiGetDossierDetailsDouble
+    ApiGetDossierDetails, ApiGetDossierDetailsDouble,ApiLoadPrinscritsDataUpdate,
+    ApiUpdatePreinscritPersonalData
 )
 from .f_views.derogations import (
     liste_derogations,
@@ -135,6 +137,7 @@ urlpatterns = [
     path('ApiUpdateRappel', ApiUpdateRappel, name="ApiUpdateRappel"),
 
     path('liste-des-preinscrits/', ListeDesPrinscrits, name="ListeDesPrinscrits"),
+    path('ApiLoadPrinscritsDataUpdate',ApiLoadPrinscritsDataUpdate, name="ApiLoadPrinscritsDataUpdate"),
     path('ApiLoadPrinscrits', ApiLoadPrinscrits, name="ApiLoadPrinscrits"),
     path('ApiLoadPreinscritDoubleVoeux', ApiLoadPreinscritDoubleVoeux, name="ApiLoadPreinscritDoubleVoeux"),
     path('ApiCheckStatutProspect', ApiCheckStatutProspect, name="ApiCheckStatutProspect"),
@@ -163,6 +166,7 @@ urlpatterns = [
     path('ApiCheckHasCompletedProfile', ApiCheckHasCompletedProfile, name="ApiCheckHasCompletedProfile"),
     path('ApiCheckCompletedDoc', ApiCheckCompletedDoc, name="ApiCheckCompletedDoc"),
     path('ApiUpdatePreinscritInfos', ApiUpdatePreinscritInfos, name="ApiUpdatePreinscritInfos"),
+    path('ApiUpdatePreinscritPersonalData', ApiUpdatePreinscritPersonalData, name="ApiUpdatePreinscritPersonalData"),
     path('ApiLoadRequiredDocs', ApiLoadRequiredDocs, name="ApiLoadRequiredDocs"),
 
     path('add_document', add_document, name="add_document"),
@@ -172,6 +176,7 @@ urlpatterns = [
 
     path("DeleteDocumentPreinscrit",DeleteDocumentPreinscrit,name="DeleteDocumentPreinscrit"),
     path('ApiStoreNotePreinscrit', ApiStoreNotePreinscrit, name="ApiStoreNotePreinscrit"),
+    path('ApiUpdateNotePr', ApiUpdateNotePr, name="ApiUpdateNotePr"),
     
     path('check_all_required_docs', check_all_required_docs, name="check_all_required_docs"),
     path('check_all_required_doc_double', check_all_required_doc_double, name="check_all_required_doc_double"),

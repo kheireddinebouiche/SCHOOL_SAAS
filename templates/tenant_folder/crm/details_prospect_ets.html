@@ -587,7 +587,7 @@
                                     <select id="note_tags" class="form-select border-0 bg-light py-2">
                                         <option value="important">Important</option>
                                         <option value="a_revoir">A revoir</option>
-                                        <option value="a_contacte">A contacter</option>
+                                        <option value="a_contacter">A contacter</option>
                                         <option value="a_relancer">A relancer</option>
 
                                     </select>
@@ -617,9 +617,9 @@
                                 </div>
                                 <div>
                                     <h5 class="modal-title fw-semibold text-warning mb-1" id="editNoteModalLabel">
-                                        Modifier le profil
+                                        Modifier la note
                                     </h5>
-                                    <p class="text-muted small mb-0">Modification des informations de Jean Martin</p>
+                                    <p class="text-muted small mb-0">Modification d'une note existante</p>
                                 </div>
                             </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -627,12 +627,17 @@
                         <div class="modal-body p-4">
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <label class="form-label fw-medium">Nom et Prénom</label>
-                                    <input type="text" class="form-control border-0 bg-light" value="Jean Martin">
+                                    <label class="form-label fw-medium">Contenu de la note</label>
+                                    <textarea id="edit_content_note" class="form-control border-0 bg-light" rows="4"></textarea>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-medium">Date</label>
-                                    <input type="date" class="form-control border-0 bg-light" value="2024-01-20">
+                                    <label class="form-label fw-medium">Étiquettes</label>
+                                    <select id="edit_note_tags" class="form-select border-0 bg-light py-2">
+                                        <option value="important">Important</option>
+                                        <option value="a_revoir">A revoir</option>
+                                        <option value="a_contacter">A contacter</option>
+                                        <option value="a_relancer">A relancer</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -640,7 +645,7 @@
                             <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
                                 <i class="ri-close-line me-2"></i>Annuler
                             </button>
-                            <button type="button" class="btn btn-warning px-4 py-2">
+                            <button type="button" class="btn btn-warning px-4 py-2" id="updateNoteBtn">
                                 <i class="ri-save-line me-2"></i>Enregistrer
                             </button>
                         </div>
@@ -1031,7 +1036,7 @@
                             html +='<div class="dropdown">';
                             html +='<button class="btn btn-icon btn-sm btn-ghost-secondary" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>';
                             html +='<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-                            html +='<li><button class="dropdown-item d-flex align-items-center" type="button" data-bs-toggle="modal" data-bs-target="#editNoteModal"><i class="ri-edit-line me-2"></i>Modifier</button></li>';
+                            html +='<li><button class="dropdown-item d-flex align-items-center editNoteBtn" type="button" data-bs-toggle="modal" data-bs-target="#editNoteModal" data-id="'+item.id+'" data-note="'+item.note+'" data-tage="'+item.tage+'"><i class="ri-edit-line me-2"></i>Modifier</button></li>';
                             html +='<li><button class="dropdown-item d-flex align-items-center" type="button" data-bs-toggle="modal" data-id="'+item.id+'" id="deleteNoteBtn"><i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
                             html +='</ul>';
                             html +='</div>';
@@ -1187,31 +1192,33 @@
                         $.each(data, function(index, item){
                             var statutBreak = "";
                             switch(item.statut){
-                                case "nabouti":
-                                    statutBreak = '<span class="badge bg-primary-subtle text-primary px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "nabouti":
+                                     statutBreak = '<span class="badge bg-dark-subtle text-dark px-2 py-1"><i class="ri-error-warning-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                                case "abouti":
-                                    statutBreak = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "abouti":
+                                     statutBreak = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-check-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                                case "termine":
-                                    statutBreak = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "termine":
+                                     statutBreak = '<span class="badge bg-info-subtle text-info px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                                case "nabouti":
-                                    statutBreak = '<span class="badge bg-dark-subtle text-dark px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "en_attente":
+                                     statutBreak = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                                case "en_attente":
-                                    statutBreak = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "confirme":
+                                     statutBreak = '<span class="badge bg-primary-subtle text-primary px-2 py-1"><i class="ri-checkbox-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                                case "annule":
-                                    statutBreak = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-time-line me-1"></i>' + item.status_label + '</span>';
-                                break;
+                                 case "annule":
+                                     statutBreak = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>' + item.status_label + '</span>';
+                                 break;
 
-                            }
+                                 default:
+                                     statutBreak = '<span class="badge bg-secondary-subtle text-secondary px-2 py-1">' + (item.status_label || item.statut) + '</span>';
+                             }
                             row += '<tr>';
                                 row += '<td>';
                                     row += '<div class="d-flex align-items-center">';
@@ -1429,7 +1436,46 @@
                 success : function(data){
                     if (data.status === 'success'){
                         $('#deleteNoteModal').modal('hide');
+                        alertify.success(response.message);
+                    } else {
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        });
+
+
+                        
+        // Gestion de la modification des notes
+        $(document).on('click', '.editNoteBtn', function() {
+            var noteId = $(this).data('id');
+            var noteContent = $(this).data('note');
+            var noteTage = $(this).data('tage');
+            
+            $('#edit_content_note').val(noteContent);
+            $('#edit_note_tags').val(noteTage);
+            $('#updateNoteBtn').data('id', noteId);
+        });
+
+        $('#updateNoteBtn').click(function(){
+            var noteId = $(this).data('id');
+            var content = $('#edit_content_note').val();
+            var tage = $('#edit_note_tags').val();
+
+            $.ajax({
+                url: "{% url 't_crm:ApiUpdateNote' %}",
+                type: 'POST',
+                data: {
+                    'id': noteId,
+                    'note': content,
+                    'tage': tage,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#editNoteModal').modal('hide');
                         loadNotes();
+loadNotes();
                         alertify.success(data.message);
                     }else{
                         alertify.error(data.message);

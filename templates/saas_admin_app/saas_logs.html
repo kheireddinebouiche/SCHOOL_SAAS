@@ -1,0 +1,311 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+{% block title %} Logs Système {% endblock title %}
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between glass-card p-3">
+                 <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                        <i class="ri-file-list-3-line text-primary fs-4"></i>
+                    </div>
+                    <h4 class="mb-0 text-primary">Logs Système</h4>
+                </div>
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0 bg-transparent">
+                        <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_dashboard' %}">Tableau de bord</a></li>
+                        <li class="breadcrumb-item active">Logs</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Level Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Total</h5>
+                        <div class="icon-box primary">
+                            <i class="ri-file-list-3-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value">{{ total_entries }}</h2>
+                    <p class="text-muted mb-0 fs-13">Entrées de log</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Erreurs</h5>
+                        <div class="icon-box danger">
+                            <i class="ri-error-warning-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value text-danger">{{ level_counts.ERROR }}</h2>
+                    <p class="text-muted mb-0 fs-13">Critiques</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Critiques</h5>
+                        <div class="icon-box danger">
+                            <i class="ri-alert-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value text-danger">{{ level_counts.CRITICAL }}</h2>
+                    <p class="text-muted mb-0 fs-13">Fatals</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Warnings</h5>
+                        <div class="icon-box warning">
+                            <i class="ri-alert-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value text-warning">{{ level_counts.WARNING }}</h2>
+                    <p class="text-muted mb-0 fs-13">Avertissements</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Info</h5>
+                        <div class="icon-box info">
+                            <i class="ri-information-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value text-info">{{ level_counts.INFO }}</h2>
+                    <p class="text-muted mb-0 fs-13">Informations</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Debug</h5>
+                        <div class="icon-box success">
+                            <i class="ri-bug-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value text-success">{{ level_counts.DEBUG }}</h2>
+                    <p class="text-muted mb-0 fs-13">Débogage</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Controls -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card modern-card">
+                <div class="card-body p-3">
+                    <form method="GET" action="" class="row g-3 align-items-end">
+                        <!-- Log File Selector -->
+                        <div class="col-xl-4 col-md-6">
+                            <label class="form-label fs-13 fw-medium text-muted">
+                                <i class="ri-file-text-line me-1"></i>Fichier de log
+                            </label>
+                            <select name="file" class="form-select form-control-sm" onchange="this.form.submit()">
+                                {% if log_files %}
+                                    {% for file in log_files %}
+                                        <option value="{{ file.path }}" {% if file.is_selected %}selected{% endif %}>
+                                            {{ file.name }} ({{ file.size }}) - {{ file.modified|date:"d/m/Y H:i" }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">Aucun fichier de log trouvé</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <!-- Level Filter -->
+                        <div class="col-xl-2 col-md-3">
+                            <label class="form-label fs-13 fw-medium text-muted">
+                                <i class="ri-filter-3-line me-1"></i>Niveau
+                            </label>
+                            <select name="level" class="form-select form-control-sm" onchange="this.form.submit()">
+                                <option value="ALL" {% if current_level_filter == 'ALL' %}selected{% endif %}>Tous</option>
+                                <option value="CRITICAL" {% if current_level_filter == 'CRITICAL' %}selected{% endif %}>Critique</option>
+                                <option value="ERROR" {% if current_level_filter == 'ERROR' %}selected{% endif %}>Erreur</option>
+                                <option value="WARNING" {% if current_level_filter == 'WARNING' %}selected{% endif %}>Warning</option>
+                                <option value="INFO" {% if current_level_filter == 'INFO' %}selected{% endif %}>Info</option>
+                                <option value="DEBUG" {% if current_level_filter == 'DEBUG' %}selected{% endif %}>Debug</option>
+                            </select>
+                        </div>
+
+                        <!-- Search -->
+                        <div class="col-xl-4 col-md-5">
+                            <label class="form-label fs-13 fw-medium text-muted">
+                                <i class="ri-search-line me-1"></i>Rechercher
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="search" class="form-control" placeholder="Rechercher dans les logs..." value="{{ search_query }}">
+                                <button class="btn btn-outline-primary" type="submit">
+                                    <i class="ri-search-line"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="col-xl-2 col-md-12">
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'saas_admin_app:saas_logs' %}" class="btn btn-sm btn-soft-danger">
+                                    <i class="ri-refresh-line me-1"></i> Actualiser
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Entries -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card h-100">
+                <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-15">
+                        <i class="ri-terminal-box-line me-2 text-primary"></i>
+                        Entrées de log
+                        {% if selected_file %}
+                            <span class="badge bg-light text-primary border ms-2 font-monospace fs-12">
+                                {{ selected_file|slice:"-50:" }}
+                            </span>
+                        {% endif %}
+                    </h5>
+                    <span class="badge bg-primary">{{ log_entries|length }} entrées</span>
+                </div>
+                <div class="card-body p-3">
+                    {% if log_entries %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-nowrap table-modern mb-0">
+                                <thead class="bg-light sticky-top">
+                                    <tr>
+                                        <th style="width: 180px;">Timestamp</th>
+                                        <th style="width: 100px;">Niveau</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in log_entries %}
+                                    <tr class="log-row log-level-{{ entry.level|lower }}">
+                                        <td class="text-muted fs-13">
+                                            {% if entry.timestamp %}
+                                                <i class="ri-time-line me-1"></i>
+                                                {{ entry.timestamp|date:"d/m/Y H:i:s" }}
+                                            {% else %}
+                                                <span class="text-muted opacity-50">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if entry.level == 'ERROR' %}
+                                                <span class="badge bg-danger fs-12 px-2 py-1">
+                                                    <i class="ri-error-warning-line me-1"></i> ERROR
+                                                </span>
+                                            {% elif entry.level == 'WARNING' %}
+                                                <span class="badge bg-warning fs-12 px-2 py-1">
+                                                    <i class="ri-alert-line me-1"></i> WARN
+                                                </span>
+                                            {% elif entry.level == 'CRITICAL' %}
+                                                <span class="badge bg-dark fs-12 px-2 py-1">
+                                                    <i class="ri-alert-line me-1"></i> CRIT
+                                                </span>
+                                            {% elif entry.level == 'DEBUG' %}
+                                                <span class="badge bg-success fs-12 px-2 py-1">
+                                                    <i class="ri-bug-line me-1"></i> DEBUG
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-info fs-12 px-2 py-1">
+                                                    <i class="ri-information-line me-1"></i> INFO
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="fs-13 font-monospace text-break" style="max-width: 600px;">
+                                            {{ entry.line|truncatechars:200 }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="ri-file-text-line fs-1" style="opacity: 0.5;"></i>
+                            <div class="mt-2">
+                                {% if log_files %}
+                                    Aucune entrée de log trouvée avec les filtres actuels
+                                {% else %}
+                                    Aucun fichier de log détecté
+                                {% endif %}
+                            </div>
+                            <div class="mt-2">
+                                <a href="{% url 'saas_admin_app:saas_logs' %}" class="btn btn-sm btn-soft-primary">
+                                    <i class="ri-refresh-line me-1"></i> Rafraîchir
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .log-row {
+        transition: background-color 0.2s;
+    }
+    
+    .log-row:hover {
+        background-color: rgba(67, 97, 238, 0.03) !important;
+    }
+    
+    .log-row.log-level-error {
+        background-color: rgba(239, 35, 60, 0.05);
+    }
+    
+    .log-row.log-level-critical {
+        background-color: rgba(239, 35, 60, 0.1);
+    }
+    
+    .log-row.log-level-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    .log-row.log-level-debug {
+        background-color: rgba(40, 167, 69, 0.03);
+    }
+    
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+    }
+</style>
+
+{% endblock content %}

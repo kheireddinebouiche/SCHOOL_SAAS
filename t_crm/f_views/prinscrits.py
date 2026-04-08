@@ -1,5 +1,6 @@
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 from ..models import *
 from ..models import Derogations
 from ..forms import *
@@ -24,8 +25,10 @@ from django.core.paginator import Paginator
 
 @login_required(login_url='institut_app:login')
 def ListeDesPrinscrits(request):
+    promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')
     context = {
-        'tenant' : request.tenant
+        'tenant' : request.tenant,
+        'promos': promos,
     }
 
     return render(request,'tenant_folder/crm/preinscrits/liste-des-preinscrits.html', context)
@@ -79,12 +82,61 @@ def get_missing_docs_list(prospect):
 
 @login_required(login_url='institut_app:login')
 def ApiLoadPrinscrits(request):
+    promo_id = request.GET.get('promo')
+    statuses = request.GET.getlist('statuses[]')
+    month_filter = request.GET.get('month')
+    search_term = request.GET.get('search', '').strip().lower() if request.GET.get('search') else ''
+    client_type = request.GET.get('client_type')
+    page_number = request.GET.get('page', 1)
+    page_size = 10
+
     qs = Prospets.objects.filter(
         Q(statut="prinscrit") | Q(statut="instance") | Q(statut="convertit")
-    ).exclude(context='con').order_by('-created_at')
+    ).exclude(context='con')
+
+    # Status filter
+    if statuses:
+        qs = qs.filter(statut__in=statuses)
+
+    # Month filter
+    if month_filter:
+        try:
+            year, month = month_filter.split('-')
+            qs = qs.filter(created_at__year=year, created_at__month=month)
+        except ValueError:
+            pass
+
+    # Promo filter
+    if promo_id:
+        qs = qs.filter(
+            Q(prospect_fiche_voeux__promo_id=promo_id) | 
+            Q(prospect_fiche_voeux_double__promo_id=promo_id)
+        ).distinct()
+
+    # Search filter (Previously client-side)
+    if search_term:
+        qs = qs.filter(
+            Q(nom__icontains=search_term) |
+            Q(prenom__icontains=search_term) |
+            Q(email__icontains=search_term) |
+            Q(telephone__icontains=search_term) |
+            Q(entreprise__icontains=search_term)
+        ).distinct()
+
+    # Client type filter (Previously client-side)
+    if client_type:
+        if client_type == 'particulier':
+            qs = qs.filter(Q(entreprise__isnull=True) | Q(entreprise=''))
+        elif client_type == 'entreprise':
+            qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
+
+    qs = qs.order_by('-created_at')
+    
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page_number)
     
     liste = []
-    for obj in qs:
+    for obj in page_obj:
         # Get missing documents
         missing_docs = get_missing_docs_list(obj)
         
@@ -107,14 +159,21 @@ def ApiLoadPrinscrits(request):
             'statut_label': obj.get_statut_display(),
             'missing_docs': missing_docs,
         })
-    return JsonResponse(liste, safe=False)
+    
+    return JsonResponse({
+        'results': liste,
+        'has_next': page_obj.has_next(),
+        'total_count': paginator.count,
+        'page': page_obj.number,
+    }, safe=False)
 
 @login_required(login_url='institut_app:login')
 def DetailsPrinscrit(request, pk):
-    
+    config = GlobalConfiguration.get_solo()
     context = {
         'pk' : pk,
-        'tenant' : request.tenant
+        'tenant' : request.tenant,
+        'config': config,
     }
     preinscrit = Prospets.objects.get(id = pk)
 
@@ -171,6 +230,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'niveau_scolaire' : prospect.get_niveau_scolaire_display(),
         'niveau_scolaire_pure' : prospect.niveau_scolaire,
         'diplome' : prospect.diplome,
+        'specialite_obtenu' : prospect.specialite_obtenu,
         'annee_obtention': prospect.annee_obtention,
         'etablissement' : prospect.etablissement,
 
@@ -220,23 +280,24 @@ def ApiLoadPreinscritDoubleVoeux(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadPreinscritRendezVous(request):
    id_prospect = request.GET.get('id_prospect')
-   rendez_vous = RendezVous.objects.filter(prospect__id=id_prospect, context="prinscrit", archived = False).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut')
+   rendez_vous = list(RendezVous.objects.filter(prospect__id=id_prospect, archived = False).values('id','date_rendez_vous','heure_rendez_vous','type','object','created_at','statut'))
    for l in rendez_vous:
        l_obj = RendezVous.objects.get(id = l['id'])
        l['status_label'] = l_obj.get_statut_display()
        l['type_label'] = l_obj.get_type_display()
-       l['created_at'] = format(l_obj.created_at, "Y-m-d H:i"),
-   return JsonResponse(list(rendez_vous), safe=False)
+       l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
+   return JsonResponse(rendez_vous, safe=False)
 
 
 @login_required(login_url='institut_app:login')
 def ApiLoadNotePr(request):
     prospect_id = request.GET.get('id_prospect')
-    notes = NotesProcpects.objects.filter(prospect__id = prospect_id, context="prinscrit").values('id','prospect','created_by__username','created_at','note','tage')
+    notes = list(NotesProcpects.objects.filter(prospect__id = prospect_id).values('id','prospect','created_by__username','created_at','note','tage'))
     for l in notes:
         l_obj = NotesProcpects.objects.get(id = l['id'])
-        l['tage'] = l_obj.get_tage_display()
-    return JsonResponse(list(notes), safe=False)
+        l['tage_label'] = l_obj.get_tage_display()
+        l['created_at'] = format(l_obj.created_at, "Y-m-d H:i")
+    return JsonResponse(notes, safe=False)
 
 @login_required(login_url='intitut_app:login')
 def ApiCheckHasCompletedProfile(request):
@@ -289,6 +350,7 @@ def ApiUpdatePreinscritInfos(request):
     lieu_naissance = request.POST.get('lieu_naissance')
     indic_pere = request.POST.get('indic_pere')
     indic_mere = request.POST.get('indic_mere')
+    specialite_obtenu = request.POST.get('specialite_obtenu')
 
     annee_diplome = request.POST.get('annee_diplome')
     commune = request.POST.get('commune')
@@ -319,6 +381,7 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.adresse = adresse
     preinscrit.niveau_scolaire = niveau_scolaire
     preinscrit.diplome = diplome
+    preinscrit.specialite_obtenu = specialite_obtenu
     preinscrit.etablissement = etablissement_diplome
     preinscrit.nin = nin
     preinscrit.nationnalite = nationnalite
@@ -910,6 +973,24 @@ def ApiCancelPreinscrit(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiUpdateNotePr(request):
+    note_id = request.POST.get('id')
+    content = request.POST.get('note')
+    tage = request.POST.get('tage')
+
+    try:
+        note = NotesProcpects.objects.get(id=note_id)
+        note.note = content
+        note.tage = tage
+        note.save()
+        return JsonResponse({'status': 'success', 'message': 'Note mise à jour avec succès.'})
+    except NotesProcpects.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Note introuvable.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiReactivatePreinscrit(request):
@@ -1012,3 +1093,70 @@ def ApiLoadFinancialData(request):
         }
 
         return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadPrinscritsDataUpdate(request):
+    if request.method == "GET":
+        id_preinscrit = request.GET.get('id_prospect')
+        try:
+            prospect = Prospets.objects.get(id=id_preinscrit)
+            
+            data = {
+                'id': prospect.id,
+                'nom' : prospect.nom or "",
+                'prenom' : prospect.prenom or "",
+                'email' : prospect.email or "",
+                'telephone' : prospect.telephone or "",
+                'observations' : prospect.observation or "",
+                'canal': prospect.canal or "",
+                'type_prospect': prospect.type_prospect,
+                'entreprise': prospect.entreprise or "",
+                'rc': prospect.rc or "",
+                'nif': prospect.nif or "",
+                'nis': prospect.nis or "",
+                'art_imp': prospect.art_imp or "",
+                'indic': prospect.indic or "",
+                'canal_choices': [{'id': k, 'label': v} for k, v in Prospets._meta.get_field('canal').choices],
+                'indic_choices': [{'id': k, 'label': v} for k, v in Prospets._meta.get_field('indic').choices]
+            }
+            return JsonResponse(data, safe=False)
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé'}, status=404)
+    else:
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"}, status=405)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdatePreinscritPersonalData(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        try:
+            prospect = Prospets.objects.get(id=id_prospect)
+            
+            # Common fields
+            prospect.email = request.POST.get('email')
+            prospect.telephone = request.POST.get('telephone')
+            prospect.indic = request.POST.get('indic')
+            prospect.canal = request.POST.get('canal')
+            prospect.observation = request.POST.get('observation')
+            
+            if prospect.type_prospect == 'entreprise':
+                prospect.entreprise = request.POST.get('entreprise_name')
+                prospect.nom = request.POST.get('contact_nom')
+                prospect.prenom = request.POST.get('contact_prenom')
+                prospect.rc = request.POST.get('rc')
+                prospect.nif = request.POST.get('nif')
+                prospect.nis = request.POST.get('nis')
+                prospect.art_imp = request.POST.get('art_imp')
+            else:
+                prospect.nom = request.POST.get('nom')
+                prospect.prenom = request.POST.get('prenom')
+                
+            prospect.save()
+            return JsonResponse({'status': 'success', 'message': 'Informations mises à jour avec succès'})
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"}, status=405)

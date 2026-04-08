@@ -1,0 +1,884 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+{% block title %} Fichiers - {{ institut.nom }} {% endblock title %}
+{% block extra_css %}
+<!-- PDF.js for PDF viewing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- SheetJS for Excel files -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- Mammoth.js for Word documents -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- Highlight.js for code/files -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+{% endblock extra_css %}
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between glass-card p-3">
+                 <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                        <i class="ri-folder-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 text-success">Explorateur de Fichiers</h4>
+                        <small class="text-muted">{{ institut.nom }} - <span class="font-monospace">{{ schema_name }}</span></small>
+                    </div>
+                </div>
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0 bg-transparent">
+                        <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_dashboard' %}">Tableau de bord</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_tenant_detail' institut.id %}">{{ institut.nom }}</a></li>
+                        <li class="breadcrumb-item active">Fichiers</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Browser -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card h-100">
+                <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-15">
+                        <i class="ri-folder-open-line me-2 text-success"></i>
+                        <span id="currentPathLabel">Racine</span>
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-soft-primary" onclick="refreshFiles()" id="refreshBtn">
+                            <i class="ri-refresh-line me-1"></i> Actualiser
+                        </button>
+                        <button class="btn btn-sm btn-soft-secondary" onclick="goToParent()" id="parentBtn" style="display: none;">
+                            <i class="ri-arrow-go-back-line me-1"></i> Dossier parent
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    {% if media_exists %}
+                        <!-- Breadcrumb -->
+                        <nav aria-label="breadcrumb" class="mb-3">
+                            <ol class="breadcrumb" id="breadcrumb">
+                                <li class="breadcrumb-item">
+                                    <a href="#" onclick="navigateTo(''); return false;">
+                                        <i class="ri-home-line"></i> Racine
+                                    </a>
+                                </li>
+                            </ol>
+                        </nav>
+
+                        <!-- Files Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-nowrap table-modern mb-0" id="filesTable">
+                                <thead class="bg-light sticky-top">
+                                    <tr>
+                                        <th style="width: 50px;"></th>
+                                        <th>Nom</th>
+                                        <th style="width: 120px;">Type</th>
+                                        <th style="width: 120px;">Taille</th>
+                                        <th style="width: 160px;">Modifié le</th>
+                                        <th style="width: 120px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="filesTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Chargement...</span>
+                                            </div>
+                                            <div class="mt-2 text-muted">Chargement des fichiers...</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="ri-folder-warning-line fs-1" style="opacity: 0.5;"></i>
+                            <div class="mt-3">
+                                <h5>Aucun dossier média</h5>
+                                <p class="text-muted">Le dossier média pour ce tenant n'existe pas encore.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Advanced File Preview Modal -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xxl" style="max-width: 95vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="filePreviewTitle">
+                    <i class="ri-file-line me-2"></i>Aperçu du document
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="#" id="downloadBtn" class="btn btn-sm btn-primary" download>
+                        <i class="ri-download-line me-1"></i> Télécharger
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" id="filePreviewBody" style="overflow: auto; height: calc(90vh - 60px);">
+                <!-- Preview content will be loaded here -->
+                <div class="d-flex align-items-center justify-content-center h-100">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="text-muted">Chargement de l'aperçu...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-xxl {
+    max-width: 95vw;
+}
+
+.preview-container {
+    padding: 1rem;
+    height: 100%;
+}
+
+/* PDF Viewer */
+.pdf-viewer {
+    width: 100%;
+    height: calc(90vh - 120px);
+    border: none;
+}
+
+/* Image Preview */
+.image-preview {
+    max-width: 100%;
+    max-height: calc(90vh - 150px);
+    object-fit: contain;
+}
+
+/* Text/Code Preview */
+.text-preview {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    max-height: calc(90vh - 150px);
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Excel Preview */
+.excel-preview table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+}
+
+.excel-preview th,
+.excel-preview td {
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+}
+
+.excel-preview th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.excel-preview tr:hover {
+    background-color: #f1f5f9;
+}
+
+.excel-tabs .nav-link {
+    border-radius: 8px 8px 0 0;
+}
+
+/* Document Preview */
+.document-preview {
+    background: white;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    line-height: 1.8;
+}
+
+.document-preview h1,
+.document-preview h2,
+.document-preview h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.document-preview p {
+    margin-bottom: 1rem;
+}
+
+/* File Info Panel */
+.file-info-panel {
+    background: #f8f9fa;
+    border-left: 4px solid #4361ee;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.file-info-panel .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.file-info-panel .info-row:last-child {
+    border-bottom: none;
+}
+
+.file-info-panel .info-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.file-info-panel .info-value {
+    color: #1e293b;
+}
+</style>
+
+<script>
+let currentPath = '';
+const tenantId = {{ tenant_id }};
+let currentPreviewFile = null;
+
+// Enhanced file type configuration
+const fileTypeConfig = {
+    // Images
+    '.jpg': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.jpeg': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.png': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.gif': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.webp': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.svg': { icon: 'ri-image-line', type: 'SVG', color: 'success', preview: 'image' },
+    '.bmp': { icon: 'ri-image-line', type: 'Image', color: 'success', preview: 'image' },
+    '.ico': { icon: 'ri-image-line', type: 'Icon', color: 'success', preview: 'image' },
+    
+    // PDF
+    '.pdf': { icon: 'ri-file-pdf-line', type: 'PDF', color: 'danger', preview: 'pdf' },
+    
+    // Word
+    '.doc': { icon: 'ri-file-word-line', type: 'Word', color: 'primary', preview: 'document' },
+    '.docx': { icon: 'ri-file-word-line', type: 'Word', color: 'primary', preview: 'document' },
+    '.rtf': { icon: 'ri-file-text-line', type: 'RTF', color: 'primary', preview: 'text' },
+    
+    // Excel
+    '.xls': { icon: 'ri-file-excel-line', type: 'Excel', color: 'success', preview: 'excel' },
+    '.xlsx': { icon: 'ri-file-excel-line', type: 'Excel', color: 'success', preview: 'excel' },
+    '.csv': { icon: 'ri-table-2', type: 'CSV', color: 'success', preview: 'excel' },
+    
+    // Text & Code
+    '.txt': { icon: 'ri-file-text-line', type: 'Text', color: 'info', preview: 'text' },
+    '.json': { icon: 'ri-braces-line', type: 'JSON', color: 'warning', preview: 'code', language: 'json' },
+    '.xml': { icon: 'ri-code-line', type: 'XML', color: 'warning', preview: 'code', language: 'xml' },
+    '.html': { icon: 'ri-code-line', type: 'HTML', color: 'warning', preview: 'code', language: 'html' },
+    '.css': { icon: 'ri-code-line', type: 'CSS', color: 'warning', preview: 'code', language: 'css' },
+    '.js': { icon: 'ri-code-line', type: 'JavaScript', color: 'warning', preview: 'code', language: 'javascript' },
+    '.py': { icon: 'ri-python-line', type: 'Python', color: 'warning', preview: 'code', language: 'python' },
+    '.md': { icon: 'ri-markdown-line', type: 'Markdown', color: 'warning', preview: 'text' },
+    '.log': { icon: 'ri-file-list-3-line', type: 'Log', color: 'secondary', preview: 'text' },
+    
+    // Archives
+    '.zip': { icon: 'ri-file-zip-line', type: 'Archive', color: 'secondary', preview: 'none' },
+    '.rar': { icon: 'ri-file-zip-line', type: 'Archive', color: 'secondary', preview: 'none' },
+    '.7z': { icon: 'ri-file-zip-line', type: 'Archive', color: 'secondary', preview: 'none' },
+    '.tar': { icon: 'ri-file-zip-line', type: 'Archive', color: 'secondary', preview: 'none' },
+    '.gz': { icon: 'ri-file-zip-line', type: 'Archive', color: 'secondary', preview: 'none' },
+    
+    // Media
+    '.mp4': { icon: 'ri-video-line', type: 'Video', color: 'danger', preview: 'none' },
+    '.avi': { icon: 'ri-video-line', type: 'Video', color: 'danger', preview: 'none' },
+    '.mov': { icon: 'ri-video-line', type: 'Video', color: 'danger', preview: 'none' },
+    '.mp3': { icon: 'ri-music-line', type: 'Audio', color: 'info', preview: 'none' },
+    '.wav': { icon: 'ri-music-line', type: 'Audio', color: 'info', preview: 'none' },
+    
+    // Default
+    'default': { icon: 'ri-file-line', type: 'Fichier', color: 'secondary', preview: 'none' }
+};
+
+function getFileConfig(extension) {
+    return fileTypeConfig[extension] || fileTypeConfig['default'];
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function loadFiles(path = '') {
+    currentPath = path;
+    document.getElementById('currentPathLabel').textContent = path || 'Racine';
+    document.getElementById('breadcrumb').innerHTML = buildBreadcrumb(path);
+    
+    document.getElementById('filesTableBody').innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <div class="mt-2 text-muted">Chargement des fichiers...</div>
+            </td>
+        </tr>
+    `;
+    
+    fetch(`/saas-admin/api/tenant/${tenantId}/files/browse/?path=${encodeURIComponent(path)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFiles(data.items, data.parent_path);
+            } else {
+                showError(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Erreur lors du chargement des fichiers');
+        });
+}
+
+function displayFiles(items, parentPath) {
+    const tbody = document.getElementById('filesTableBody');
+    
+    if (items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="ri-folder-line fs-1" style="opacity: 0.5;"></i>
+                    <div class="mt-2">Dossier vide</div>
+                </td>
+            </tr>
+        `;
+        document.getElementById('parentBtn').style.display = parentPath ? 'inline-block' : 'none';
+        return;
+    }
+    
+    let html = '';
+    items.forEach(item => {
+        const isDirectory = item.type === 'directory';
+        const config = isDirectory ? { icon: 'ri-folder-line', type: 'Dossier', color: 'warning' } : getFileConfig(item.extension || '');
+        
+        const escapedPath = item.path.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedName = item.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const escapedExt = (item.extension || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        
+        html += `
+            <tr>
+                <td>
+                    <i class="${config.icon} fs-5 text-${config.color}"></i>
+                </td>
+                <td>
+                    ${isDirectory ? 
+                        `<a href="#" onclick="navigateTo('${escapedPath}'); return false;" class="text-decoration-none fw-medium">
+                            ${item.name}
+                        </a>` :
+                        `<span class="fw-medium">${item.name}</span>`
+                    }
+                </td>
+                <td>
+                    <span class="badge bg-${config.color}-subtle text-${config.color}">
+                        ${config.type}
+                    </span>
+                </td>
+                <td class="text-muted">${item.size_formatted}</td>
+                <td class="text-muted fs-13">${item.modified}</td>
+                <td>
+                    <div class="d-flex gap-2">
+                        ${isDirectory ? 
+                            `<button class="btn btn-sm btn-soft-primary" onclick="navigateTo('${escapedPath}')" title="Ouvrir">
+                                <i class="ri-folder-open-line"></i>
+                            </button>` :
+                            `<button class="btn btn-sm btn-soft-info" onclick="previewFile('${escapedPath}', '${escapedName}', '${escapedExt}', ${item.size})" title="Aperçu">
+                                <i class="ri-eye-line"></i>
+                            </button>`
+                        }
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    document.getElementById('parentBtn').style.display = parentPath ? 'inline-block' : 'none';
+}
+
+function buildBreadcrumb(path) {
+    if (!path) {
+        return `<li class="breadcrumb-item"><a href="#" onclick="navigateTo(''); return false;"><i class="ri-home-line"></i> Racine</a></li>`;
+    }
+    
+    const parts = path.split('/').filter(p => p);
+    let html = `<li class="breadcrumb-item"><a href="#" onclick="navigateTo(''); return false;"><i class="ri-home-line"></i> Racine</a></li>`;
+    
+    let currentPath = '';
+    parts.forEach((part, index) => {
+        currentPath += (currentPath ? '/' : '') + part;
+        const isLast = index === parts.length - 1;
+        
+        if (isLast) {
+            html += `<li class="breadcrumb-item active">${part}</li>`;
+        } else {
+            html += `<li class="breadcrumb-item"><a href="#" onclick="navigateTo('${currentPath}'); return false;">${part}</a></li>`;
+        }
+    });
+    
+    return html;
+}
+
+function navigateTo(path) {
+    loadFiles(path);
+}
+
+function goToParent() {
+    const parentPath = currentPath.split('/').slice(0, -1).join('/');
+    loadFiles(parentPath);
+}
+
+function refreshFiles() {
+    const btn = document.getElementById('refreshBtn');
+    btn.innerHTML = '<i class="ri-loader-4-line me-1 spin"></i> Actualisation...';
+    btn.disabled = true;
+    
+    loadFiles(currentPath);
+    
+    setTimeout(() => {
+        btn.innerHTML = '<i class="ri-refresh-line me-1"></i> Actualiser';
+        btn.disabled = false;
+    }, 500);
+}
+
+function showError(message) {
+    document.getElementById('filesTableBody').innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-5 text-danger">
+                <i class="ri-error-warning-line fs-1"></i>
+                <div class="mt-2">${message}</div>
+                <button class="btn btn-sm btn-soft-primary mt-3" onclick="refreshFiles()">
+                    <i class="ri-refresh-line me-1"></i> Réessayer
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+// Advanced file preview
+async function previewFile(path, name, extension, size) {
+    const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+    const config = getFileConfig(extension);
+    
+    currentPreviewFile = { path, name, extension, size };
+    
+    document.getElementById('filePreviewTitle').innerHTML = `<i class="${config.icon} me-2"></i>${name}`;
+    
+    // Encode the path properly for the download URL
+    document.getElementById('downloadBtn').href = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    const previewBody = document.getElementById('filePreviewBody');
+    previewBody.innerHTML = `
+        <div class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="text-muted">Chargement de l'aperçu...</p>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    try {
+        console.log('Starting preview for:', name, extension);
+        switch (config.preview) {
+            case 'image':
+                await previewImage(path, name, extension);
+                break;
+            case 'pdf':
+                await previewPDF(path, name);
+                break;
+            case 'excel':
+                await previewExcel(path, name, extension);
+                break;
+            case 'text':
+                await previewText(path, name, extension);
+                break;
+            case 'code':
+                await previewCode(path, name, extension, config.language);
+                break;
+            case 'document':
+                await previewDocument(path, name, extension);
+                break;
+            default:
+                console.log('No preview available for this file type');
+                showNoPreview(name, extension, size);
+        }
+    } catch (error) {
+        console.error('Preview error:', error);
+        previewBody.innerHTML = `
+            <div class="alert alert-warning m-3">
+                <i class="ri-error-warning-line me-2"></i>
+                <strong>Impossible de prévisualiser ce fichier</strong><br>
+                <small>${error.message}</small>
+                <div class="mt-3">
+                    <p class="mb-2">Vous pouvez quand même le télécharger :</p>
+                    <a href="/saas-admin/api/tenant/${tenantId}/files/serve/${path}" download class="btn btn-primary">
+                        <i class="ri-download-line me-1"></i> Télécharger
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Image preview
+async function previewImage(path, name, extension) {
+    const previewBody = document.getElementById('filePreviewBody');
+    // Use the file serve API
+    const imageUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    previewBody.innerHTML = `
+        <div class="preview-container text-center">
+            <div class="file-info-panel">
+                <div class="info-row">
+                    <span class="info-label">Nom du fichier</span>
+                    <span class="info-value">${name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type</span>
+                    <span class="info-value">Image ${extension.toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Dimensions</span>
+                    <span class="info-value" id="imageDimensions">Chargement...</span>
+                </div>
+            </div>
+            <img src="${imageUrl}" alt="${name}" class="image-preview rounded shadow-sm" 
+                 onload="document.getElementById('imageDimensions').textContent = this.naturalWidth + ' × ' + this.naturalHeight + ' px'"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div class="file-error text-center mt-3 text-danger" style="display: none;">
+                <i class="ri-error-warning-line me-2"></i>
+                <span>Impossible de charger l'image. <a href="/saas-admin/api/tenant/${tenantId}/files/serve/${path}" download class="btn btn-sm btn-primary ms-2">Télécharger</a></span>
+            </div>
+        </div>
+    `;
+}
+
+// PDF preview
+async function previewPDF(path, name) {
+    const previewBody = document.getElementById('filePreviewBody');
+    const pdfUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    console.log('Loading PDF:', pdfUrl);
+    
+    previewBody.innerHTML = `
+        <div class="preview-container">
+            <div class="file-info-panel">
+                <div class="info-row">
+                    <span class="info-label">Nom du fichier</span>
+                    <span class="info-value">${name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type</span>
+                    <span class="info-value">Document PDF</span>
+                </div>
+            </div>
+            <iframe src="${pdfUrl}#toolbar=1&navpanes=1" class="pdf-viewer" title="${name}" 
+                    onload="console.log('PDF loaded successfully');"
+                    onerror="console.error('PDF failed to load');"></iframe>
+        </div>
+    `;
+}
+
+// Excel/CSV preview
+async function previewExcel(path, name, extension) {
+    const previewBody = document.getElementById('filePreviewBody');
+    const fileUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    console.log('Fetching Excel file:', fileUrl);
+    
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+        throw new Error(`Fichier non trouvé (${response.status})`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    console.log('File size:', arrayBuffer.byteLength, 'bytes');
+    
+    let workbook;
+    if (extension === '.csv') {
+        // For CSV, decode the text first
+        const text = new TextDecoder('utf-8').decode(arrayBuffer);
+        workbook = XLSX.read(text, { type: 'string' });
+    } else {
+        workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    }
+    
+    console.log('Workbook loaded, sheets:', workbook.SheetNames);
+    
+    let html = `
+        <div class="preview-container">
+            <div class="file-info-panel">
+                <div class="info-row">
+                    <span class="info-label">Nom du fichier</span>
+                    <span class="info-value">${name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type</span>
+                    <span class="info-value">Classeur Excel/CSV</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Feuilles</span>
+                    <span class="info-value">${workbook.SheetNames.length}</span>
+                </div>
+            </div>
+    `;
+    
+    if (workbook.SheetNames.length > 1) {
+        html += `
+            <ul class="nav nav-tabs excel-tabs mb-3" id="excelTabs" role="tablist">
+                ${workbook.SheetNames.map((sheetName, index) => `
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                                data-bs-toggle="tab" 
+                                data-bs-target="#sheet-${index}" 
+                                type="button" 
+                                role="tab">
+                            ${sheetName}
+                        </button>
+                    </li>
+                `).join('')}
+            </ul>
+            <div class="tab-content" id="excelTabContent">
+        `;
+    }
+    
+    workbook.SheetNames.forEach((sheetName, index) => {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        html += `
+            <div class="tab-pane fade ${index === 0 ? 'show active' : ''} excel-preview" id="sheet-${index}" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            ${jsonData.length > 0 ? `
+                                <tr>
+                                    ${jsonData[0].map(cell => `<th>${cell || ''}</th>`).join('')}
+                                </tr>
+                            ` : ''}
+                        </thead>
+                        <tbody>
+                            ${jsonData.slice(1, 100).map(row => `
+                                <tr>
+                                    ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ${jsonData.length > 100 ? `<p class="text-muted text-center mt-3">Affichage des 100 premières lignes sur ${jsonData.length}</p>` : ''}
+            </div>
+        `;
+    });
+    
+    if (workbook.SheetNames.length > 1) {
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    previewBody.innerHTML = html;
+}
+
+// Text file preview
+async function previewText(path, name, extension) {
+    const previewBody = document.getElementById('filePreviewBody');
+    const fileUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    console.log('Fetching text file:', fileUrl);
+    
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+        throw new Error(`Fichier non trouvé (${response.status})`);
+    }
+    const text = await response.text();
+    console.log('Text loaded, length:', text.length);
+    
+    previewBody.innerHTML = `
+        <div class="preview-container">
+            <div class="file-info-panel">
+                <div class="info-row">
+                    <span class="info-label">Nom du fichier</span>
+                    <span class="info-value">${name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type</span>
+                    <span class="info-value">Fichier texte ${extension.toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Taille</span>
+                    <span class="info-value">${text.length} caractères</span>
+                </div>
+            </div>
+            <div class="text-preview">${escapeHtml(text)}</div>
+        </div>
+    `;
+}
+
+// Code file preview with syntax highlighting
+async function previewCode(path, name, extension, language) {
+    const previewBody = document.getElementById('filePreviewBody');
+    const fileUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    console.log('Fetching code file:', fileUrl, 'language:', language);
+    
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+        throw new Error(`Fichier non trouvé (${response.status})`);
+    }
+    const code = await response.text();
+    console.log('Code loaded, length:', code.length);
+    
+    previewBody.innerHTML = `
+        <div class="preview-container">
+            <div class="file-info-panel">
+                <div class="info-row">
+                    <span class="info-label">Nom du fichier</span>
+                    <span class="info-value">${name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Langage</span>
+                    <span class="info-value">${language.toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Lignes</span>
+                    <span class="info-value">${code.split('\n').length}</span>
+                </div>
+            </div>
+            <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
+        </div>
+    `;
+    
+    hljs.highlightAll();
+}
+
+// Word document preview
+async function previewDocument(path, name, extension) {
+    const previewBody = document.getElementById('filePreviewBody');
+    const fileUrl = `/saas-admin/api/tenant/${tenantId}/files/serve/${path}`;
+    
+    console.log('Fetching Word document:', fileUrl);
+    
+    if (extension === '.docx') {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+            throw new Error(`Fichier non trouvé (${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('Document loaded, size:', arrayBuffer.byteLength);
+        
+        try {
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            const html_content = result.value;
+            const messages = result.messages;
+            
+            console.log('Word converted, messages:', messages);
+            console.log('HTML content length:', html_content.length);
+            
+            if (!html_content || html_content.trim().length === 0) {
+                throw new Error('Le document ne contient aucun contenu lisible');
+            }
+            
+            previewBody.innerHTML = `
+                <div class="preview-container">
+                    <div class="file-info-panel">
+                        <div class="info-row">
+                            <span class="info-label">Nom du fichier</span>
+                            <span class="info-value">${name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">Document Word</span>
+                        </div>
+                        ${messages.length > 0 ? `
+                            <div class="info-row">
+                                <span class="info-label">Messages</span>
+                                <span class="info-value">${messages.length} avertissement(s)</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="document-preview">
+                        ${html_content}
+                    </div>
+                </div>
+            `;
+        } catch (mammothError) {
+            console.error('Mammoth conversion error:', mammothError);
+            throw new Error(`Erreur lors de la conversion du document: ${mammothError.message}`);
+        }
+    } else {
+        showNoPreview(name, extension);
+    }
+}
+
+// Show no preview available
+function showNoPreview(name, extension, size) {
+    const config = getFileConfig(extension);
+    const previewBody = document.getElementById('filePreviewBody');
+    
+    previewBody.innerHTML = `
+        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center">
+            <i class="${config.icon}" style="font-size: 6rem; color: #4361ee;"></i>
+            <h4 class="mt-4">${name}</h4>
+            <p class="text-muted">Type: ${config.type} (${extension.toUpperCase()})</p>
+            ${size ? `<p class="text-muted">Taille: ${formatSize(size)}</p>` : ''}
+            <div class="mt-4">
+                <p class="text-muted mb-3">Aperçu non disponible pour ce type de fichier</p>
+                <a href="/saas-admin/api/tenant/${tenantId}/files/serve/${currentPreviewFile.path}" download class="btn btn-primary btn-lg">
+                    <i class="ri-download-line me-2"></i> Télécharger le fichier
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Show file error when file cannot be loaded
+function showFileError(element, name) {
+    const errorDiv = element?.parentElement?.querySelector('.file-error');
+    if (errorDiv) {
+        errorDiv.style.display = 'block';
+    }
+    console.error(`Failed to load file: ${name}`);
+}
+
+// Load files on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadFiles('');
+});
+</script>
+
+{% endblock content %}

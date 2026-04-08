@@ -97,6 +97,14 @@
         border-top: 1px solid #f1f5f9;
         padding: 1.25rem;
     }
+
+    /* Stacking modals */
+    .updateConfirmationModal {
+        z-index: 1070 !important;
+    }
+    .updateConfirmationModal.modal-backdrop {
+        z-index: 1065 !important;
+    }
 </style>
 
 <div class="main-content">
@@ -177,6 +185,24 @@
                 <p class="text-muted mb-4">Voulez-vous vraiment activer cette promotion pour la gestion académique ?</p>
                 <div class="hstack gap-2 justify-content-center">
                     <!-- Buttons injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade updateConfirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body p-5 text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                    <i class="ri-save-3-line text-primary fs-1"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Confirmer les modifications</h4>
+                <p class="text-muted mb-4">Voulez-vous vraiment appliquer ces modifications à la promotion ?</p>
+                <div class="hstack gap-2 justify-content-center">
+                    <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button id="finalConfirmUpdateBtn" class="btn btn-primary btn-rounded px-4">Confirmer</button>
                 </div>
             </div>
         </div>
@@ -397,6 +423,19 @@
         });
 
         $(document).on('click', '#confirmUpdateButton',  function(){
+            // Validation format année académique avant de montrer la confirmation
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            let valeur = $('#updated_annee_academique').val();
+            if (valeur && !anneeFormat.test(valeur)) {
+                alertify.error("Format de l'année académique invalide (Ex: 2023/2024)");
+                $('#updated_annee_academique').addClass("is-invalid");
+                return;
+            }
+
+            $('.updateConfirmationModal').modal('show');
+        });
+
+        $(document).on('click', '#finalConfirmUpdateBtn', function(){
             var new_label = $('#updated_label').val();
             var new_session = $('#updated_session').val();
             var new_code = $('#updated_code').val();
@@ -405,7 +444,7 @@
             var new_date_fin = $('#updated_date_fin').val();
             var new_begin_year = new Date(new_date_debut).getFullYear();
             var new_end_year = new Date(new_date_fin).getFullYear();
-            var id = $(this).data('id');
+            var id = $('#confirmUpdateButton').data('id');
 
             $.ajax({
                 url : "{% url 't_formations:ApiUpdatePromo' %}",
@@ -424,10 +463,12 @@
                 },
                 success : function(data){
                     if(data.success){
+                        $('.updateConfirmationModal').modal('hide');
                         $('#updatePromo').modal('hide');
                         alertify.success(data.message);
                         loadItem();
                     }else{
+                        $('.updateConfirmationModal').modal('hide');
                         alertify.error(data.message);
                     }
                 }

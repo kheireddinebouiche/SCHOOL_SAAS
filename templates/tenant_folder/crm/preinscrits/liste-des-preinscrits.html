@@ -439,35 +439,73 @@
         <div class="col-lg-12">
           <div class="card custom-table-card mb-4" id="prospectList">
             <div class="card-header bg-transparent border-0 p-4">
+              <!-- Row 1: Search and Global Actions -->
               <div class="row g-3 align-items-center">
-                <div class="col-md-4">
+                <div class="col-md-6">
                   <div class="search-box position-relative">
-                    <input type="text" id="table-filter" class="form-control bg-light border-0 rounded-pill ps-5 py-2" placeholder="Rechercher un préinscrit...">
+                    <input type="text" id="table-filter" class="form-control bg-light border-0 rounded-pill ps-5 py-2" placeholder="Rechercher un préinscrit (nom, email, tel)...">
                     <i class="ri-search-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                   </div>
                 </div>
-                <div class="col-md-8">
-                  <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                    <select id="filter-prospect" class="form-select bg-light border-0 rounded-pill w-auto px-4 py-2">
-                        <option value="">Type de client</option>
-                        <option value="particulier">Particulier</option>
-                        <option value="entreprise">Entreprise</option>
-                    </select>
-
-                    <select id="date_filter-prospect" class="form-select bg-light border-0 rounded-pill w-auto px-4 py-2">
-                        <option value="">Date de création</option>
-                        <option value="-created_at">Date (récent)</option>
-                        <option value="created_at">Date (ancien)</option>
-                    </select>
-
+                <div class="col-md-6 text-md-end">
+                  <div class="d-flex justify-content-md-end align-items-center gap-3">
                     <!-- Toggle View Buttons -->
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-light rounded-pill me-1" id="tableViewBtn" data-view="table" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                            <i class="ri-list-check"></i>
+                    <div class="btn-group p-1 bg-light rounded-pill" role="group">
+                        <button type="button" class="btn btn-white rounded-pill px-3 shadow-sm border-0" id="tableViewBtn" data-view="table" style="height: 38px;">
+                            <i class="ri-list-check me-1"></i> Liste
                         </button>
-                        <button type="button" class="btn btn-light rounded-pill me-2" id="cardViewBtn" data-view="card" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                            <i class="ri-grid-fill"></i>
+                        <button type="button" class="btn btn-light rounded-pill px-3 border-0" id="cardViewBtn" data-view="card" style="height: 38px;">
+                            <i class="ri-grid-fill me-1"></i> Cartes
                         </button>
+                    </div>
+
+                    <div class="vr mx-2 opacity-25 d-none d-md-block"></div>
+
+                    <button type="button" class="btn btn-soft-danger rounded-pill px-3 d-flex align-items-center gap-2" id="reset-filters" title="Réinitialiser tous les filtres" style="height: 40px;">
+                        <i class="ri-refresh-line"></i>
+                        <span class="d-none d-lg-inline">Réinitialiser</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Row 2: Dedicated Filter Bar -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="bg-light p-3 rounded-4 border border-light-subtle d-flex flex-wrap align-items-center gap-4">
+                    <div class="d-flex align-items-center gap-3 pe-4 border-end border-light-subtle">
+                        <span class="text-muted small fw-bold text-uppercase"><i class="ri-filter-3-line me-1"></i> Statuts :</span>
+                        <div class="d-flex gap-2">
+                            <div class="form-check custom-status-check mb-0">
+                                <input class="form-check-input status-checkbox" type="checkbox" id="status-prinscrit" value="prinscrit" checked>
+                                <label class="form-check-label px-2 py-1 rounded-pill badge-soft-warning small fw-medium cursor-pointer" for="status-prinscrit">Pré-inscrit</label>
+                            </div>
+                            <div class="form-check custom-status-check mb-0">
+                                <input class="form-check-input status-checkbox" type="checkbox" id="status-instance" value="instance" checked>
+                                <label class="form-check-label px-2 py-1 rounded-pill badge-soft-info small fw-medium cursor-pointer" for="status-instance">Instance</label>
+                            </div>
+                            <div class="form-check custom-status-check mb-0">
+                                <input class="form-check-input status-checkbox" type="checkbox" id="status-convertit" value="convertit" checked>
+                                <label class="form-check-label px-2 py-1 rounded-pill badge-soft-success small fw-medium cursor-pointer" for="status-convertit">Convertit</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-2 flex-grow-1">
+                        <select id="filter-promo" class="form-select bg-white border-light rounded-pill w-auto px-4 py-2 small shadow-sm">
+                            <option value="">Toutes les promos</option>
+                            {% for promo in promos %}
+                                <option value="{{ promo.id }}">{{ promo.label }} ({{ promo.begin_year }}/{{ promo.end_year }})</option>
+                            {% endfor %}
+                        </select>
+
+                        <input type="month" id="month-filter" class="form-control bg-white border-light rounded-pill w-auto px-4 py-2 small shadow-sm" title="Filtrer par mois">
+
+                        <select id="filter-prospect" class="form-select bg-white border-light rounded-pill w-auto px-4 py-2 small shadow-sm">
+                            <option value="">Type de client</option>
+                            <option value="particulier">Particulier</option>
+                            <option value="entreprise">Entreprise</option>
+                        </select>
                     </div>
                   </div>
                 </div>
@@ -504,6 +542,20 @@
               <div id="cardViewContainer" class="cards-container">
                 <!-- Cards will be populated here by JavaScript -->
               </div>
+            </div>
+            
+            <!-- Load More Bar -->
+            <div id="load-more-container" class="text-center py-4 d-none">
+                <button id="load-more-btn" class="btn btn-white rounded-pill px-5 shadow-sm border-light-subtle d-inline-flex align-items-center gap-2 transition-all">
+                    <span>Voir plus de dossiers</span>
+                    <i class="ri-arrow-down-line"></i>
+                </button>
+                <div id="load-more-spinner" class="d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <span class="ms-2 text-muted small">Chargement des dossiers suivants...</span>
+                </div>
             </div>
           </div>
         </div>
@@ -615,7 +667,9 @@
                             <div class="col-lg-4">
                                 <label class="form-label fw-medium" for="id_telephone">Téléphone</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i class="ri-phone-line text-muted"></i></span>
+                                    <select class="form-select border-0 bg-light py-2" id="id_indic" name="indic" style="max-width: 120px;">
+                                        <option value="">Ind.</option>
+                                    </select>
                                     <input type="text" class="form-control border-0 bg-light py-2" id="id_telephone" name="telephone">
                                 </div>
                             </div>
@@ -642,35 +696,7 @@
                     <div class="card-body">
                         <textarea class="form-control border-0 bg-light" id="id_observation" name="observation" rows="3"></textarea>
                     </div>
-                </div>
-
-                <!-- Voeux de formation -->
-                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
-                    <div class="card-header border-0 bg-white pt-3">
-                        <div class="d-flex align-items-center">
-                            <span class="icon-circle bg-success bg-opacity-10 rounded me-2">
-                                <i class="ri-book-open-line text-success"></i>
-                            </span>
-                            <h6 class="card-title mb-0 text-success">Voeux de formation</h6>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_voeux_formation">Formation</label>
-                                <select class="form-select border-0 bg-light py-2" id="id_voeux_formation" name="voeux_formation">
-                                    <option value="">Sélectionner une formation</option>
-                                </select>
-                            </div>
-                            <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_voeux_specialite">Spécialité</label>
-                                <select class="form-select border-0 bg-light py-2" id="id_voeux_specialite" name="voeux_specialite">
-                                    <option value="">Sélectionner une spécialité</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                  </div>
             </div>
 
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -684,6 +710,79 @@
         </div>
     </div>
 </div><!-- /.modal -->
+
+<!-- MODAL ANNULER PREINSCRIPTION -->
+<div id="modalAnnulerPreinscription" class="modal fade" tabindex="-1" aria-labelledby="modalAnnulerPreinscriptionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-error-warning-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1" id="modalAnnulerPreinscriptionLabel">
+                            Annuler la préinscription
+                        </h5>
+                        <p class="text-muted small mb-0">Veuillez indiquer le motif de l'annulation</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="cancel_prospect_id">
+                <div class="mb-3">
+                    <label for="cancellation_reason" class="form-label fw-medium">Motif de l'annulation <span class="text-danger">*</span></label>
+                    <textarea class="form-control border-0 bg-light" id="cancellation_reason" rows="4" placeholder="Saisissez la raison de l'annulation..."></textarea>
+                </div>
+                <div class="alert alert-soft-warning border-0 d-flex align-items-center" role="alert">
+                    <i class="ri-information-line fs-4 me-2"></i>
+                    <div class="small">Cette action annulera également les demandes de paiement non réglées associées.</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-2">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-warning px-4" id="btnConfirmCancel">
+                    <i class="ri-close-circle-line me-1"></i> Confirmer l'annulation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMATION SAUVEGARDE -->
+<div id="confirmSaveModal" class="modal fade" tabindex="-1" aria-labelledby="confirmSaveModalLabel" aria-hidden="true" style="z-index: 2060 !important;">
+    <div class="modal-dialog modal-dialog-centered" style="z-index: 2061 !important;">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-question-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="confirmSaveModalLabel">
+                            Confirmer les modifications
+                        </h5>
+                        <p class="text-muted small mb-0">Validation de l'enregistrement</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="fs-16 mb-0">Êtes-vous sûr de vouloir enregistrer ces modifications ?</p>
+                <p class="text-muted small mt-2">Cette action mettra à jour les informations du prospect dans la base de données.</p>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 justify-content-center">
+                <button type="button" class="btn btn-light px-4 py-2 rounded-pill" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-primary px-4 py-2 rounded-pill" id="finalConfirmSaveBtn">
+                    <i class="ri-check-line me-1"></i> Confirmer l'enregistrement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <!--MODAL-->
@@ -741,14 +840,14 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_last_name">Nom</label>
+                                <label class="form-label fw-medium" for="id_last_name_ets">Nom</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
                                     <input type="text" class="form-control border-0 bg-light py-2" id="id_last_name_ets" name="nom" placeholder="Nom">
                                 </div>
                             </div>
                             <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="id_first_name">Prénom</label>
+                                <label class="form-label fw-medium" for="id_first_name_ets">Prénom</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-user-line text-muted"></i></span>
                                     <input type="text" class="form-control border-0 bg-light py-2" id="id_first_name_ets" name="prenom" placeholder="Prénom">
@@ -771,16 +870,18 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-lg-4">
-                                <label class="form-label fw-medium" for="id_email">Email</label>
+                                <label class="form-label fw-medium" for="id_email_ets">Email</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-muted"></i></span>
                                     <input type="email" class="form-control border-0 bg-light py-2" id="id_email_ets" name="email" placeholder="Email">
                                 </div>
                             </div>
                             <div class="col-lg-4">
-                                <label class="form-label fw-medium" for="id_telephone">Téléphone</label>
+                                <label class="form-label fw-medium" for="id_telephone_ets">Téléphone</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i class="ri-phone-line text-muted"></i></span>
+                                    <select class="form-select border-0 bg-light py-2" id="id_indic_ets" name="indic" style="max-width: 100px;">
+                                        <option value="">Ind.</option>
+                                    </select>
                                     <input type="text" class="form-control border-0 bg-light py-2" id="id_telephone_ets" name="telephone" placeholder="Téléphone">
                                 </div>
                             </div>
@@ -808,6 +909,38 @@
                         <textarea class="form-control border-0 bg-light" id="id_observation_ets" name="observation" rows="3" placeholder="Ajouter une observation..."></textarea>
                     </div>
                 </div>
+
+                <!-- Informations Fiscales / Commerciales -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header border-0 bg-white pt-3">
+                        <div class="d-flex align-items-center">
+                            <span class="icon-circle bg-info bg-opacity-10 rounded me-2">
+                                <i class="ri-file-list-3-line text-info"></i>
+                            </span>
+                            <h6 class="card-title mb-0 text-info">Informations Fiscales & Commerciales</h6>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-3">
+                                <label class="form-label fw-medium" for="id_rc_ets">Registre de Commerce (RC)</label>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="id_rc_ets" name="rc" placeholder="RC">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-medium" for="id_nif_ets">NIF</label>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="id_nif_ets" name="nif" placeholder="NIF">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-medium" for="id_nis_ets">NIS</label>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="id_nis_ets" name="nis" placeholder="NIS">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-medium" for="id_art_imp_ets">Article d'imposition</label>
+                                <input type="text" class="form-control border-0 bg-light py-2" id="id_art_imp_ets" name="art_imp" placeholder="Article d'imp.">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer border-0 bg-light px-4 py-3">
@@ -830,7 +963,13 @@
   $(document).ready(function () {
     let originalData = [];
     let currentView = 'card'; // Default to card view
-    let isLoading = true; // Track loading state
+    let isLoading = false; // Track loading state
+    let currentPage = 1;
+    let hasMore = false;
+    
+    // Variables for pending save
+    let pendingFormData = null;
+    let pendingModalId = null;
 
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
@@ -869,9 +1008,9 @@
       }
     });
 
-    function updateStatistics(data) {
+    function updateStatistics(data, serverTotal) {
       // Count total records
-      const totalCount = data.length;
+      const totalCount = serverTotal || data.length;
 
       // Count by status - adjust the property names based on your actual data structure
       let instanceCount = 0;
@@ -895,41 +1034,88 @@
       $('#convertiCount').text(convertiCount);
     }
 
-    function loadProspects(){
+    function loadProspects(reset = false){
+        if (isLoading) return;
+        
+        if (reset) {
+            currentPage = 1;
+            originalData = [];
+            $('#load-more-container').addClass('d-none');
+        }
+
+        var promo_id = $('#filter-promo').val();
+        var selectedStatuses = [];
+        $('.status-checkbox:checked').each(function() {
+            selectedStatuses.push($(this).val());
+        });
+        var monthFilter = $('#month-filter').val();
+        var searchTerm = $('#table-filter').val().trim();
+        var clientType = $('#filter-prospect').val();
+
         $.ajax({
           url : '{% url "t_crm:ApiLoadPrinscrits" %}',
           dataType: "JSON",
           type: 'GET',
+          data: {
+              'promo': promo_id,
+              'statuses': selectedStatuses,
+              'month': monthFilter,
+              'search': searchTerm,
+              'client_type': clientType,
+              'page': currentPage
+          },
           beforeSend: function() {
             isLoading = true;
-            var spinnerHtml = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100" style="grid-column: 1 / -1; min-height: 200px;"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Chargement...</span></div><h5 class="mt-3 text-muted">Chargement en cours...</h5></div>';
-            $("#listeItem").html('<tr><td colspan="6" class="text-center">' + spinnerHtml + '</td></tr>');
-            $("#cardViewContainer").html(spinnerHtml);
+            if (currentPage === 1) {
+                var spinnerHtml = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100" style="grid-column: 1 / -1; min-height: 200px;"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"><span class="visually-hidden">Chargement...</span></div><h5 class="mt-3 text-muted">Chargement en cours...</h5></div>';
+                $("#listeItem").html('<tr><td colspan="6" class="text-center">' + spinnerHtml + '</td></tr>');
+                $("#cardContentGrid").html(spinnerHtml);
+            } else {
+                $('#load-more-btn').addClass('d-none');
+                $('#load-more-spinner').removeClass('d-none');
+            }
           },
-          success : function(data){
+          success: function(data) {
             isLoading = false;
-            originalData = data;
-            renderData(data);
+            $('#load-more-spinner').addClass('d-none');
+
+            if (currentPage === 1) {
+                originalData = data.results;
+            } else {
+                originalData = originalData.concat(data.results);
+            }
+
+            hasMore = data.has_next;
+            
+            if (hasMore) {
+                $('#load-more-container').removeClass('d-none');
+                $('#load-more-btn').removeClass('d-none');
+            } else {
+                $('#load-more-container').addClass('d-none');
+            }
+
+            renderData(originalData);
+            updateStatistics(originalData, data.total_count);
           },
-          error: function(xhr, status, error) {
+          error: function() {
             isLoading = false;
-            console.error("Erreur lors du chargement des prospects:", error);
-            console.log("Statut:", status);
-            console.log("Réponse:", xhr.responseText);
-            // Afficher un message d'erreur dans le tableau
+            $('#load-more-spinner').addClass('d-none');
             $("#listeItem").html("<tr><td colspan='6' class='text-center text-danger'>Erreur de chargement des données</td></tr>");
+            $("#cardContentGrid").html("<div class='col-12 text-center text-danger'>Erreur de chargement des données</div>");
           }
         });
     }
 
+    // Handle load more button
+    $(document).on('click', '#load-more-btn', function() {
+        if (hasMore) {
+            currentPage++;
+            loadProspects();
+        }
+    });
+
     // Function to render data to the table
     function renderData(data) {
-      // Sort data by date (newest first)
-      data.sort(function(a, b) {
-         var dateA = a.created_at ? new Date(a.created_at) : new Date(0);
-         var dateB = b.created_at ? new Date(b.created_at) : new Date(0);
-         return dateB - dateA;
-      });
 
       var row = "";
       var lastMonthYear = "";
@@ -991,7 +1177,8 @@
           row += '</button>';
           row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">';
           row += '<li><a href="/crm/details-preinscrit/' + item.id + '/" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
-          row += '<li><a class="dropdown-item edit-prospect" href="javascript:void(0)" data-prospect-id="' + item.id + '" data-bs-toggle="modal" data-bs-target="#updateInfoProspect"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
+          var modalTarget = item.type_prospect === 'entreprise' ? '#updateInfoProspectEntreprise' : '#updateInfoProspect';
+          row += '<li><a class="dropdown-item edit-prospect" href="javascript:void(0)" data-prospect-id="' + item.id + '" data-prospect-type="' + item.type_prospect + '" data-bs-toggle="modal" data-bs-target="' + modalTarget + '"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier</a></li>';
           row += '<li><a class="dropdown-item cancel-preinscription text-warning" href="javascript:void(0)" data-prospect-id="' + item.id + '"><i class="ri-close-circle-line align-bottom me-2 text-warning"></i> Annuler la préinscription</a></li>';
           row += '<li><hr class="dropdown-divider"></li>';
           row += '<li><a class="dropdown-item delete-prospect text-danger" href="javascript:void(0)" data-prospect-id="' + item.id + '"><i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer</a></li>';
@@ -1110,7 +1297,8 @@
           cards += '<li><a href="/crm/details-preinscrit/' + item.id + '/" class="dropdown-item d-flex align-items-center px-3 py-2">';
           cards += '<i class="ri-eye-line text-info me-2"></i>Consulter</a></li>';
           
-          cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 edit-prospect" data-prospect-id="' + item.id + '" data-bs-toggle="modal" data-bs-target="#updateInfoProspect">';
+          var modalTarget = item.type_prospect === 'entreprise' ? '#updateInfoProspectEntreprise' : '#updateInfoProspect';
+          cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 edit-prospect" data-prospect-id="' + item.id + '" data-prospect-type="' + item.type_prospect + '" data-bs-toggle="modal" data-bs-target="' + modalTarget + '">';
           cards += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
           
           cards += '<li><button class="dropdown-item d-flex align-items-center px-3 py-2 text-warning cancel-preinscription" data-prospect-id="' + item.id + '">';
@@ -1165,98 +1353,194 @@
     }
 
 
-    // Client-side filter by prospect type
+    // Server-side filter by prospect type
     $(document).on('change', '#filter-prospect', function() {
-      var filterValue = $(this).val();
-
-      if (filterValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Filter based on prospect type
-        var filteredData = originalData.filter(function(item) {
-          // Assuming 'particulier' and 'entreprise' are types - adjust as needed
-          if (filterValue === 'particulier') {
-            // Filter for particular - may need to adjust based on actual data structure
-            return !item.entreprise || item.entreprise === '';
-          } else if (filterValue === 'entreprise') {
-            return item.entreprise && item.entreprise !== '';
-          }
-          return true;
-        });
-
-        renderData(filteredData);
-      }
+        loadProspects(true);
     });
 
+    // Handle promo filter change
+    $(document).on('change', '#filter-promo', function() {
+        loadProspects(true);
+    });
 
-    // Client-side search functionality
+    // Handle status checkboxes change
+    $(document).on('change', '.status-checkbox', function() {
+        loadProspects(true);
+    });
+
+    // Server-side search functionality
+    var searchTimer;
     $(document).on('input', '#table-filter', function() {
-      var searchTerm = $(this).val().trim().toLowerCase();
-
-      if (searchTerm === '') {
-        // If search is empty, show all original data
-        renderData(originalData);
-      } else {
-        // Filter the original data based on search term
-        var filteredData = originalData.filter(function(item) {
-          return (
-            item.nom.toLowerCase().includes(searchTerm) ||
-            item.prenom.toLowerCase().includes(searchTerm) ||
-            (item.entreprise && item.entreprise.toLowerCase().includes(searchTerm)) ||
-            item.telephone.toLowerCase().includes(searchTerm) ||
-            item.email.toLowerCase().includes(searchTerm) ||
-            item.statut_label.toLowerCase().includes(searchTerm)
-          );
-        });
-
-        renderData(filteredData);
-      }
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            loadProspects(true);
+        }, 500); // Debounce search
     });
 
-    // Client-side filter by date
-    $(document).on('change', '#date_filter-prospect', function() {
-      var sortValue = $(this).val();
+    // Handle month filter change
+    $(document).on('change', '#month-filter', function() {
+        loadProspects(true);
+    });
 
-      if (sortValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Sort the data based on date
-        var sortedData = [...originalData]; // Create a copy to avoid modifying original
-
-        if (sortValue === '-created_at') {
-          // Sort by date - recent first
-          sortedData.sort(function(a, b) {
-            // Assuming there's a created_at field - adjust as needed
-            return new Date(b.created_at) - new Date(a.created_at);
-          });
-        } else if (sortValue === 'created_at') {
-          // Sort by date - old first
-          sortedData.sort(function(a, b) {
-            return new Date(a.created_at) - new Date(b.created_at);
-          });
-        }
-
-        renderData(sortedData);
-      }
+    // Handle reset filters
+    $(document).on('click', '#reset-filters', function() {
+        $('#table-filter').val('');
+        $('#filter-prospect').val('');
+        $('#filter-promo').val('');
+        $('#month-filter').val('');
+        $('.status-checkbox').prop('checked', true);
+        
+        loadProspects(true);
     });
 
     // Handle edit prospect action
     $(document).on('click', '.edit-prospect', function() {
       var prospectId = $(this).data('prospect-id');
-      // You would load the prospect data into the modal here
-      console.log('Edit prospect with ID:', prospectId);
-      // Additional code to populate the form would go here
+      loadProspectData(prospectId);
     });
 
     // Handle delete prospect action
     $(document).on('click', '.delete-prospect', function() {
       var prospectId = $(this).data('prospect-id');
       $('#confirmDeleteBtn').data('id', prospectId);
-      // Show the delete confirmation modal
       $('.deleteModal').modal('show');
     });
+
+    function loadProspectData(prospectId) {
+      $.ajax({
+        url : '{% url "t_crm:ApiLoadPrinscritsDataUpdate" %}',
+        type : 'GET',
+        data : {
+          'id_prospect': prospectId
+        },
+        success : function(data){
+          var type = data.type_prospect;
+          
+          // Helper to populate canal choices
+          function populateCanal(selectId, currentValue, choices) {
+              var select = $(selectId);
+              select.empty();
+              select.append('<option value="">---------</option>');
+              $.each(choices, function(i, choice) {
+                  var selected = choice.id === currentValue ? 'selected' : '';
+                  select.append('<option value="' + choice.id + '" ' + selected + '>' + choice.label + '</option>');
+              });
+          }
+
+          if (type === 'entreprise') {
+              $('#entreprise_informations').val(data.entreprise);
+              $('#id_last_name_ets').val(data.nom);
+              $('#id_first_name_ets').val(data.prenom);
+              $('#id_email_ets').val(data.email);
+              $('#id_telephone_ets').val(data.telephone);
+              $('#id_observation_ets').val(data.observations);
+              $('#id_rc_ets').val(data.rc);
+              $('#id_nif_ets').val(data.nif);
+              $('#id_nis_ets').val(data.nis);
+              $('#id_art_imp_ets').val(data.art_imp);
+              populateCanal('#id_canal_ets', data.canal, data.canal_choices);
+              populateCanal('#id_indic_ets', data.indic, data.indic_choices);
+              $('#updateInfoProspectEntrepriseBtn').data('id', prospectId);
+          } else {
+              $('#id_last_name').val(data.nom);
+              $('#id_first_name').val(data.prenom);
+              $('#id_email').val(data.email);
+              $('#id_telephone').val(data.telephone);
+              $('#id_observation').val(data.observations);
+              populateCanal('#id_canal', data.canal, data.canal_choices);
+              populateCanal('#id_indic', data.indic, data.indic_choices);
+              $('#updateInfoProspectBtn').data('id', prospectId);
+          }
+        }
+      });
+    }
+
+    // Individual Prospect Save
+    $('#updateInfoProspectBtn').on('click', function() {
+        var prospectId = $(this).data('id');
+        pendingFormData = {
+            'id_prospect': prospectId,
+            'nom': $('#id_last_name').val(),
+            'prenom': $('#id_first_name').val(),
+            'email': $('#id_email').val(),
+            'telephone': $('#id_telephone').val(),
+            'indic': $('#id_indic').val(),
+            'canal': $('#id_canal').val(),
+            'observation': $('#id_observation').val(),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+        pendingModalId = '#updateInfoProspect';
+        $('#confirmSaveModal').modal('show');
+    });
+
+    // Enterprise Prospect Save Click
+    $('#updateInfoProspectEntrepriseBtn').on('click', function() {
+        var prospectId = $(this).data('id');
+        pendingFormData = {
+            'id_prospect': prospectId,
+            'entreprise_name': $('#entreprise_informations').val(),
+            'contact_nom': $('#id_last_name_ets').val(),
+            'contact_prenom': $('#id_first_name_ets').val(),
+            'email': $('#id_email_ets').val(),
+            'telephone': $('#id_telephone_ets').val(),
+            'indic': $('#id_indic_ets').val(),
+            'rc': $('#id_rc_ets').val(),
+            'nif': $('#id_nif_ets').val(),
+            'nis': $('#id_nis_ets').val(),
+            'art_imp': $('#id_art_imp_ets').val(),
+            'canal': $('#id_canal_ets').val(),
+            'observation': $('#id_observation_ets').val(),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+        pendingModalId = '#updateInfoProspectEntreprise';
+        $('#confirmSaveModal').modal('show');
+    });
+
+    // Final Confirmation Button in confirmSaveModal
+    $('#finalConfirmSaveBtn').on('click', function() {
+        if (pendingFormData && pendingModalId) {
+            $('#confirmSaveModal').modal('hide');
+            // Small delay to ensure smooth transition
+            setTimeout(function() {
+                saveProspectData(pendingFormData, pendingModalId);
+            }, 300);
+        }
+    });
+
+    // Z-index fix for multiple modals
+    $('#confirmSaveModal').on('show.bs.modal', function () {
+        // Ensure backdrop is above the first modal
+        setTimeout(function() {
+            $('.modal-backdrop').last().css('z-index', 2059);
+        }, 0);
+    });
+
+    function saveProspectData(formData, modalId) {
+        var $btn = $(modalId + 'Btn');
+        var originalBtnLabel = $btn.html();
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Traitement...');
+
+        $.ajax({
+            url: '{% url "t_crm:ApiUpdatePreinscritPersonalData" %}',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                $(modalId).modal('hide');
+                $btn.prop('disabled', false).html(originalBtnLabel);
+                
+                if (response.status === 'success') {
+                    showAlert('success', response.message);
+                    loadProspects(); // Refresh the list
+                } else {
+                    showAlert('error', response.message);
+                }
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false).html(originalBtnLabel);
+                showAlert('error', "Une erreur est survenue lors de la mise à jour.");
+            }
+        });
+    }
 
     $('#confirmDeleteBtn').on('click', function() {
         var prospectId = $(this).data('id');
@@ -1274,30 +1558,15 @@
                 $('#confirmDeleteBtn').prop('disabled', false).text('Confirmer la suppression');
                 
                 if (response.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Supprimé !',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        loadProspects(); // Refresh the list
-                    });
+                    showAlert('success', response.message);
+                    loadProspects(); // Refresh the list
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Erreur',
-                        text: response.message,
-                    });
+                    showAlert('error', response.message);
                 }
             },
             error: function(xhr) {
                 $('#confirmDeleteBtn').prop('disabled', false).text('Confirmer la suppression');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: "Une erreur est survenue lors de la suppression.",
-                });
+                showAlert('error', "Une erreur est survenue lors de la suppression.");
             }
         });
     });
@@ -1338,21 +1607,10 @@
                 $('#btnConfirmCancel').prop('disabled', false).html('<i class="ri-close-circle-line me-1"></i> Confirmer l\'annulation');
                 
                 if (response.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Succès',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        loadProspects(); // Refresh the list
-                    });
+                    showAlert('success', response.message);
+                    loadProspects(); // Refresh the list
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Erreur',
-                        text: response.message,
-                    });
+                    showAlert('error', response.message);
                 }
             },
             error: function(xhr) {
@@ -1361,11 +1619,7 @@
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     message = xhr.responseJSON.message;
                 }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: message,
-                });
+                showAlert('error', message);
             }
         });
     });

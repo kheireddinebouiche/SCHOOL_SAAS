@@ -1,0 +1,622 @@
+{% load static %}
+<style>
+    /* SaaS Admin Menu Variables */
+    :root {
+        --saas-menu-width: 280px;
+        --saas-menu-bg: rgba(255, 255, 255, 0.65);
+        --saas-menu-item-color: #475569;
+        --saas-menu-item-hover-color: #4361ee;
+        --saas-menu-item-active-bg: rgba(67, 97, 238, 0.15);
+        --saas-menu-item-active-color: #4361ee;
+        --saas-border-color: rgba(255, 255, 255, 0.3);
+        --saas-submenu-bg: rgba(255, 255, 255, 0.3);
+        --saas-badge-color: #f72585;
+    }
+
+    /* Menu Container */
+    .saas-app-menu {
+        width: var(--saas-menu-width) !important;
+        min-width: var(--saas-menu-width) !important;
+        max-width: var(--saas-menu-width) !important;
+        background: var(--saas-menu-bg);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-right: 1px solid var(--saas-border-color);
+        font-family: 'Inter', sans-serif;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1000;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-shadow: 4px 0 24px rgba(31, 38, 135, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Logo Section */
+    .saas-logo-box {
+        padding: 1.2rem 0.5rem;
+        border-bottom: 1px solid var(--saas-border-color);
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .saas-logo-box img {
+        max-width: 110px;
+        height: auto;
+        transition: transform 0.3s ease;
+    }
+
+    .saas-logo-box:hover img {
+        transform: scale(1.05);
+    }
+
+    .saas-logo-box .brand-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #4361ee, #4895ef);
+        color: white;
+        font-size: 0.65rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        margin-top: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+    }
+
+    /* Menu Title */
+    .saas-menu-title {
+        padding: 1.25rem 1.5rem 0.5rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.7rem !important;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .saas-menu-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--saas-border-color);
+        margin-left: 0.5rem;
+    }
+
+    /* Navigation Items */
+    .saas-menu .nav-item {
+        margin-bottom: 0.2rem !important;
+        padding: 0 0.75rem;
+    }
+
+    .saas-menu .nav-link {
+        color: var(--saas-menu-item-color) !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 500;
+        border-radius: 12px;
+        transition: all 0.25s ease-in-out;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        position: relative;
+    }
+
+    .saas-menu .nav-link i {
+        font-size: 1.2rem !important;
+        min-width: 2rem;
+        margin-right: 0.5rem;
+        transition: all 0.2s ease;
+        opacity: 0.8;
+    }
+
+    .saas-menu .nav-link .menu-badge {
+        margin-left: auto;
+        background: var(--saas-badge-color);
+        color: white;
+        font-size: 0.65rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 10px;
+        font-weight: 600;
+        box-shadow: 0 2px 5px rgba(247, 37, 133, 0.3);
+    }
+
+    .saas-menu .nav-link .arrow {
+        margin-left: auto;
+        transition: transform 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .saas-menu .nav-link[aria-expanded="true"] .arrow {
+        transform: rotate(90deg);
+    }
+
+    /* Hover State */
+    .saas-menu .nav-link:hover:not(.active) {
+        color: var(--saas-menu-item-hover-color) !important;
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        transform: translateX(4px);
+    }
+
+    .saas-menu .nav-link:hover i {
+        opacity: 1;
+        color: var(--saas-menu-item-hover-color);
+    }
+
+    /* Active State */
+    .saas-menu .nav-link.active {
+        color: var(--saas-menu-item-active-color) !important;
+        background-color: var(--saas-menu-item-active-bg) !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 10px rgba(67, 97, 238, 0.1);
+        border: 1px solid rgba(67, 97, 238, 0.2);
+    }
+
+    .saas-menu .nav-link.active i {
+        opacity: 1;
+        color: var(--saas-menu-item-active-color);
+    }
+
+    /* Submenu Styles */
+    .saas-submenu {
+        background: var(--saas-submenu-bg);
+        border-radius: 12px;
+        margin: 0.25rem 0;
+        padding: 0.5rem 0;
+        border: 1px solid var(--saas-border-color);
+    }
+
+    .saas-submenu .nav-link {
+        padding: 0.6rem 1rem 0.6rem 3.5rem !important;
+        font-size: 0.825rem !important;
+        font-weight: 400 !important;
+    }
+
+    .saas-submenu .nav-link::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        position: absolute;
+        left: 2.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .saas-submenu .nav-link:hover::before,
+    .saas-submenu .nav-link.active::before {
+        background: var(--saas-menu-item-active-color);
+        transform: scale(1.5);
+    }
+
+    /* Divider */
+    .saas-menu-divider {
+        height: 1px;
+        background: var(--saas-border-color);
+        margin: 1rem 1rem;
+    }
+
+    /* Quick Stats Section */
+    .saas-quick-stats {
+        padding: 1.25rem 1rem;
+        background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+        border-bottom: 1px solid var(--saas-border-color);
+        flex-shrink: 0;
+    }
+
+    .saas-quick-stats .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+    }
+
+    .saas-quick-stats .stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .saas-quick-stats .stat-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1e293b;
+        background: rgba(255,255,255,0.8);
+        padding: 0.15rem 0.5rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    /* User Profile Section */
+    .saas-user-profile {
+        padding: 1.25rem 1rem;
+        border-top: 1px solid var(--saas-border-color);
+        margin-top: auto;
+        background: rgba(255,255,255,0.4);
+        flex-shrink: 0;
+    }
+
+    .saas-user-profile .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .saas-user-profile .user-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #4361ee, #3a56d4);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+    }
+
+    .saas-user-profile .user-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .saas-user-profile .user-name {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #1e293b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .saas-user-profile .user-role {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .saas-user-profile .user-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .saas-user-profile .action-btn {
+        color: #64748b;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.6);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .saas-user-profile .action-btn:hover {
+        background: rgba(67, 97, 238, 0.15);
+        color: #4361ee;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(67, 97, 238, 0.1);
+    }
+
+    .saas-user-profile .action-btn.logout:hover {
+        background: rgba(239, 35, 60, 0.15);
+        color: #ef233c;
+        box-shadow: 0 4px 8px rgba(239, 35, 60, 0.1);
+    }
+
+    /* Scrollbar Styling */
+    .saas-app-menu::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .saas-app-menu::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+    
+    .saas-app-menu::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .saas-app-menu::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    /* Sidebar Width Variable */
+    :root {
+        --saas-sidebar-width: 280px;
+    }
+
+    @media (max-width: 767.98px) {
+        .saas-app-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .saas-app-menu.show {
+            transform: translateX(0);
+        }
+
+        .saas-quick-stats {
+            display: none;
+        }
+    }
+</style>
+
+<!-- ========== SaaS Admin Menu ========== -->
+<div class="saas-app-menu">
+    <!-- Logo -->
+    <div class="saas-logo-box">
+        <a href="{% url 'saas_admin_app:saas_dashboard' %}">
+            <img src="{% static 'images/insim-logo.png' %}" alt="SaaS Admin Logo">
+            <div>
+                <span class="brand-badge">SUPER ADMIN</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Quick Stats Section -->
+    <div class="saas-quick-stats">
+        <div class="stat-item">
+            <span class="stat-label"><i class="ri-building-4-line me-1"></i> Tenants Actifs</span>
+            <span class="stat-value">--</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label"><i class="ri-group-line me-1"></i> Utilisateurs</span>
+            <span class="stat-value">--</span>
+        </div>
+    </div>
+
+    <!-- Menu Items -->
+    <div class="saas-menu flex-grow-1">
+        <!-- Principal -->
+        <div class="saas-menu-title">
+            <span>Principal</span>
+        </div>
+
+        <ul class="navbar-nav" id="saas-navbar-nav">
+            <li class="nav-item">
+                <a href="{% url 'saas_admin_app:saas_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'saas_dashboard' %}active{% endif %}">
+                    <i class="ri-dashboard-horizontal-line"></i>
+                    <span>Tableau de bord</span>
+                </a>
+            </li>
+
+            <!-- Gestion des Tenants (avec sous-menu) -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'tenant' in request.resolver_match.url_name %}active{% endif %}" 
+                   data-bs-toggle="collapse" 
+                   href="#submenu-tenants" 
+                   {% if 'tenant' in request.resolver_match.url_name %}aria-expanded="true"{% else %}aria-expanded="false"{% endif %}>
+                    <i class="ri-building-4-line"></i>
+                    <span>Gestion des Tenants</span>
+                    <i class="ri-arrow-right-s-line arrow"></i>
+                </a>
+                <div class="collapse {% if 'tenant' in request.resolver_match.url_name %}show{% endif %}" id="submenu-tenants">
+                    <ul class="nav flex-column saas-submenu">
+                        <li class="nav-item">
+                            <a href="{% url 'associe_app:tenant_data_list' %}" class="nav-link {% if 'tenant_data_list' in request.resolver_match.url_name %}active{% endif %}">
+                                <span>Liste des tenants</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Créer un tenant</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Configurations</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- Monitoring & Analytics -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'performance' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="collapse" href="#submenu-monitoring" aria-expanded="{% if 'performance' in request.resolver_match.url_name %}true{% else %}false{% endif %}">
+                    <i class="ri-pulse-line"></i>
+                    <span>Monitoring</span>
+                    <span class="menu-badge">3</span>
+                    <i class="ri-arrow-right-s-line arrow"></i>
+                </a>
+                <div class="collapse {% if 'performance' in request.resolver_match.url_name %}show{% endif %}" id="submenu-monitoring">
+                    <ul class="nav flex-column saas-submenu">
+                        <li class="nav-item">
+                            <a href="{% url 'saas_admin_app:saas_performance' %}" class="nav-link {% if request.resolver_match.url_name == 'saas_performance' %}active{% endif %}">
+                                <span>Performance système</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Statistiques globales</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Alertes actives</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <div class="saas-menu-divider"></div>
+
+            <!-- Administration -->
+            <div class="saas-menu-title">
+                <span>Administration</span>
+            </div>
+
+            <!-- Licences & Abonnements -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#submenu-licences" aria-expanded="false">
+                    <i class="ri-shield-check-line"></i>
+                    <span>Licences & Abonnements</span>
+                    <i class="ri-arrow-right-s-line arrow"></i>
+                </a>
+                <div class="collapse" id="submenu-licences">
+                    <ul class="nav flex-column saas-submenu">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Gérer les licences</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Plans d'abonnement</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Facturation</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- Sauvegardes -->
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#submenu-backups" aria-expanded="false">
+                    <i class="ri-database-2-line"></i>
+                    <span>Sauvegardes</span>
+                    <i class="ri-arrow-right-s-line arrow"></i>
+                </a>
+                <div class="collapse" id="submenu-backups">
+                    <ul class="nav flex-column saas-submenu">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Sauvegardes automatiques</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Restaurer un tenant</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Historique</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- Configuration Globale -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'email' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="collapse" href="#submenu-config" aria-expanded="{% if 'email' in request.resolver_match.url_name %}true{% else %}false{% endif %}">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Configuration</span>
+                    <i class="ri-arrow-right-s-line arrow"></i>
+                </a>
+                <div class="collapse {% if 'email' in request.resolver_match.url_name %}show{% endif %}" id="submenu-config">
+                    <ul class="nav flex-column saas-submenu">
+                        <li class="nav-item">
+                            <a href="{% url 'saas_admin_app:saas_email_config' %}" class="nav-link {% if request.resolver_match.url_name == 'saas_email_config' %}active{% endif %}">
+                                <span>Emails & Notifications</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Paramètres généraux</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <span>Sécurité & Accès</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <div class="saas-menu-divider"></div>
+
+            <!-- Système -->
+            <div class="saas-menu-title">
+                <span>Système</span>
+            </div>
+
+            <li class="nav-item">
+                <a href="{% url 'saas_admin_app:saas_logs' %}" class="nav-link {% if request.resolver_match.url_name == 'saas_logs' %}active{% endif %}">
+                    <i class="ri-file-list-3-line"></i>
+                    <span>Logs Système</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="ri-user-settings-line"></i>
+                    <span>Gestionnaires</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="ri-question-line"></i>
+                    <span>Support & Aide</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- User Profile -->
+    <div class="saas-user-profile">
+        <div class="user-info">
+            <div class="user-avatar">
+                {{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+            </div>
+            <div class="user-details">
+                <div class="user-name">{{ request.user.get_full_name|default:request.user.email }}</div>
+                <div class="user-role">Super Administrateur</div>
+            </div>
+            <div class="user-actions">
+                <a href="#" class="action-btn" title="Paramètres" data-bs-toggle="tooltip" data-bs-placement="top">
+                    <i class="ri-settings-line"></i>
+                </a>
+                <a href="{% url 'saas_admin_app:saas_logout' %}" class="action-btn logout" title="Déconnexion" data-bs-toggle="tooltip" data-bs-placement="top">
+                    <i class="ri-logout-box-r-line"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-update quick stats with dashboard data
+    document.addEventListener('DOMContentLoaded', function() {
+        const statsSection = document.querySelector('.saas-quick-stats');
+        
+        if (statsSection && typeof window.saasStats !== 'undefined') {
+            const tenants = window.saasStats.tenants || 0;
+            const users = window.saasStats.users || 0;
+            
+            statsSection.innerHTML = `
+                <div class="stat-item">
+                    <span class="stat-label"><i class="ri-building-4-line me-1"></i> Tenants</span>
+                    <span class="stat-value">${tenants}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label"><i class="ri-group-line me-1"></i> Utilisateurs</span>
+                    <span class="stat-value">${users.toLocaleString('fr-FR')}</span>
+                </div>
+            `;
+        }
+
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>

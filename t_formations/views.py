@@ -251,8 +251,7 @@ def update_or_create_formation_in_tenant(formation, institut_schema):
                     'duree': formation.duree,
                     'partenaire': formation.partenaire,
                     'type_formation': formation.type_formation,
-                    'frais_inscription': formation.frais_inscription,
-                    'frais_assurance': formation.frais_assurance,
+                    'qualification': formation.qualification,
                 }
             )
             return sync_formation
@@ -268,11 +267,13 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
                 formation=sync_formation,
                 defaults={
                     'label': specialite.label,
-                    'prix': specialite.prix,
                     'duree': specialite.duree,
                     'version': specialite.version,
                     'condition_access': specialite.condition_access,
-                    'dossier_inscription': specialite.dossier_inscription,
+                    'nb_semestre': specialite.nb_semestre,
+                    'branche': specialite.branche,
+                    'abr': specialite.abr,
+                    'nb_tranche': specialite.nb_tranche,
                 }
             )
             return sync_specialite
@@ -295,6 +296,19 @@ def update_or_create_module_in_tenant(module, specialite, institut_schema):
             return sync_module
     except IntegrityError:
         raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du module.")
+def update_or_create_dossier_in_tenant(dossier, sync_formation, institut_schema):
+    try:
+        with schema_context(institut_schema):
+            sync_dossier, created = DossierInscription.objects.update_or_create(
+                formation=sync_formation,
+                label=dossier.label,
+                defaults={
+                    'is_required': dossier.is_required,
+                }
+            )
+            return sync_dossier
+    except IntegrityError:
+        raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du dossier d'inscription.")
 
 
 @login_required(login_url="institut_app:login")
@@ -373,17 +387,23 @@ def ApiSyncFormation(request):
     with schema_context(institut.schema_name):
         sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
 
+    # Sync Dossier d'inscription
+    dossiers = DossierInscription.objects.filter(formation=formation)
+    for dossier in dossiers:
+        update_or_create_dossier_in_tenant(dossier, sync_formation, institut.schema_name)
+
+    # Sync Specialites and their Modules
     specialites = Specialites.objects.filter(formation=formation)
     for specialite in specialites:
         with schema_context(institut.schema_name):
             sync_specialite = update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
-
-    modules = Modules.objects.filter(specialite=specialite)
-    for module in modules:
-        with schema_context(institut.schema_name):
+        
+        # Sync Modules for THIS speciality
+        modules = Modules.objects.filter(specialite=specialite)
+        for module in modules:
             update_or_create_module_in_tenant(module, sync_specialite, institut.schema_name)
 
-    return JsonResponse({'status': True, 'message': 'Formation et spécialités synchronisées avec succès'})
+    return JsonResponse({'status': True, 'message': 'Formation, dossier, spécialités et modules synchronisés avec succès'})
 ##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
 
 ##### Synchronisation (Modification et création) des formations et spécialités dans tous les tenants ##################
@@ -400,16 +420,23 @@ def ApiSyncUpdateFormation(request):
         with schema_context(institut.schema_name):
             sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
 
+        # Sync Dossier d'inscription
+        dossiers = DossierInscription.objects.filter(formation=formation)
+        for dossier in dossiers:
+            update_or_create_dossier_in_tenant(dossier, sync_formation, institut.schema_name)
+
+        # Sync Specialites and their Modules
         specialites = Specialites.objects.filter(formation=formation)
         for specialite in specialites:
             with schema_context(institut.schema_name):
-                update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
+                sync_specialite = update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
+            
+            # Sync Modules for THIS speciality
+            modules = Modules.objects.filter(specialite=specialite)
+            for module in modules:
+                update_or_create_module_in_tenant(module, sync_specialite, institut.schema_name)
 
-        modules = Modules.objects.filter(specialite=specialite)
-        for module in modules:
-            with schema_context(institut.schema_name):
-                update_or_create_module_in_tenant(module, specialite, institut.schema_name)
-    return JsonResponse({'status': True, 'message': 'Formation et spécialités ont été mises à jour avec succès dans tous les instituts.'})
+    return JsonResponse({'status': True, 'message': 'Formation et tous ses composants ont été mis à jour avec succès dans tous les instituts.'})
 ##### Synchronisation (Modification et création) des formations et spécialités dans tous les tenants ##################
 
 def ApiCheckFormationState(request):
