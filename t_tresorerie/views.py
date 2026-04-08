@@ -4,7 +4,7 @@ from .models import *
 from django.db import transaction
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer
+from t_crm.models import FicheDeVoeux,RemiseAppliquerLine,RemiseAppliquer, UserActionLog
 from t_remise.models import *
 from t_groupe.models import *
 from django.db.models import Sum
@@ -779,6 +779,15 @@ def ApiStorePaiement(request):
             if paiement_line_obj.montant_restant == 0:
                 paiement_line_obj.etat = "ter"
 
+            prospect = paiement_line_obj.paiement_request.client
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Paiement',
+                target_id=str(new_paiement.id),
+                details=f"Paiement de {received_amount} DA enregistré pour {prospect.nom} {prospect.prenom} ({paiement_line_obj.get_motif_paiement_display()}).",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status' : 'success', 'message' : 'Le paiement a été enregistré avec succès'})
         

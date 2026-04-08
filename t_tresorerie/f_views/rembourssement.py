@@ -26,7 +26,14 @@ def listeDesRembourssement(request):
 @require_http_methods(["GET"])
 def ApiLoadRemboursements(request):
     
-    clients = Prospets.objects.filter(statut="annuler", type_prospect="particulier").values("id", "nom", "prenom",'telephone','email')
+    # On récupère les IDs des clients ayant effectivement un enregistrement de remboursement
+    refund_client_ids = Rembourssements.objects.values_list('client', flat=True)
+
+    # On n'affiche que ceux qui ont un remboursement (peu importe leur statut d'annulation ou autre)
+    clients = Prospets.objects.filter(
+        id__in=refund_client_ids,
+        type_prospect="particulier"
+    ).values("id", "nom", "prenom",'telephone','email')
 
     data = []
 
@@ -45,15 +52,15 @@ def ApiLoadRemboursements(request):
             "allowed_amount": remboursements.allowed_amount if remboursements else None,
             "updated_at": remboursements.updated_at.strftime("%Y-%m-%d") if remboursements else None,
             "mode_rembourssement" : remboursements.get_mode_rembourssement_display() if remboursements else None,
-            "motif_rembourssement" : remboursements.motif_rembourssement,
-            "observation" : remboursements.observation,
-            'promotion' : promotion.promo.code,
-            'promotion_session' : promotion.promo.get_session_display(),
-            'promotion_start' : promotion.promo.begin_year,
-            'promotion_end' : promotion.promo.end_year,
-            'specialite' : promotion.specialite.label,
-            'formation' : promotion.specialite.formation.nom,
-            'total_paye' : paiements - remboursements.allowed_amount,
+            "motif_rembourssement" : remboursements.motif_rembourssement if remboursements else None,
+            "observation" : remboursements.observation if remboursements else None,
+            'promotion' : promotion.promo.code if promotion and promotion.promo else None,
+            'promotion_session' : promotion.promo.get_session_display() if promotion and promotion.promo else None,
+            'promotion_start' : promotion.promo.begin_year if promotion and promotion.promo else None,
+            'promotion_end' : promotion.promo.end_year if promotion and promotion.promo else None,
+            'specialite' : promotion.specialite.label if promotion and promotion.specialite else None,
+            'formation' : promotion.specialite.formation.nom if promotion and promotion.specialite and promotion.specialite.formation else None,
+            'total_paye' : paiements - (remboursements.allowed_amount if remboursements and remboursements.allowed_amount else 0),
         })
         
 

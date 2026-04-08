@@ -138,9 +138,14 @@ def timetable_view(request, pk):
     # Sort the time slots chronologically
     sorted_time_slots = sorted(list(time_slots_set))
     
-    # Sort the days in a logical order (Monday to Sunday or based on first occurrence)
-    # For this simple case, we'll sort alphabetically but could improve to order by week days
-    sorted_days = sorted(list(days_set))
+    # Define custom day order for sorting (Sunday to Saturday)
+    day_order = {
+        'dimanche': 0, 'lundi': 1, 'mardi': 2, 'mercredi': 3,
+        'jeudi': 4, 'vendredi': 5, 'samedi': 6
+    }
+    
+    # Sort the days using the defined order
+    sorted_days = sorted(list(days_set), key=lambda d: day_order.get(d.lower(), 7))
     
     # Check for Double Degree Students in this Group
     has_double_degree_students = False

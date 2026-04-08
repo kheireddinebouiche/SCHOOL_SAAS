@@ -547,7 +547,20 @@ class CrmCounter(models.Model):
     phone_counter = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.date_counter
+        return str(self.date_counter)
+    
+class CrmActivity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='crm_activities')
+    activity_type = models.CharField(max_length=20, choices=[('visit', 'Visite'), ('call', 'Appel')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Activité CRM"
+        verbose_name_plural = "Activités CRM"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_activity_type_display()} - {self.created_at}"
     
 class RemiseAppliquer(models.Model):
     remise  = models.ForeignKey(Remises, on_delete=models.CASCADE, null=True, blank=True)

@@ -235,11 +235,11 @@
                                         <thead>
                                             <tr>
                                                 <th class="ps-4">Promotion</th>
-                                                <th>Total à payer</th>
-                                                <th>Total payé</th>
-                                                <th>Reste à payer</th>
-                                                <th>Paiements échus</th>
-                                                <th>Remboursement</th>
+                                                <th class="text-end">Total à payer</th>
+                                                <th class="text-end">Total payé</th>
+                                                <th class="text-end">Reste à payer</th>
+                                                <th class="text-end">Paiements échus</th>
+                                                <th class="text-end">Remboursement</th>
                                             </tr>
                                         </thead>
                                         <tbody id="promoTableBody">
@@ -282,7 +282,7 @@
                                             <tr>
                                                 <th class="ps-4">Nom & Prénom</th>
                                                 <th>Type de paiement</th>
-                                                <th>Montant payé</th>
+                                                <th class="text-end">Montant payé</th>
                                                 <th>Statut</th>
                                                 <th class="text-center pe-4">Action</th>
                                             </tr>
@@ -428,7 +428,16 @@
             applyProspectFilter();
         });
         
-        // Filter by promo in prospect view
+        // Function to format numbers to accounting format
+        function formatAccounting(amount) {
+            if (amount === undefined || amount === null || isNaN(amount)) return '0.00 DA';
+            return parseFloat(amount).toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' DA';
+        }
+
+        // Toggle between Promotion View and Prospect View
         $('#prospectPromoFilter').on('change', function() {
             applyProspectFilter();
         });
@@ -518,11 +527,11 @@
                 $.each(data, function(index, item) {
                     html += '<tr class="promo-row" data-promo-id="' + item.id + '" data-promo-name="' + item.name + '">';
                     html += '<td class="ps-4"><div class="fw-semibold text-dark">' + item.name + '</div></td>';
-                    html += '<td><div class="fw-medium text-muted">' + item.totalToPay.toLocaleString('fr-FR') + ' DA</div></td>';
-                    html += '<td><div class="fw-medium text-success">' + item.totalPaid.toLocaleString('fr-FR') + ' DA</div></td>';
-                    html += '<td><div class="fw-medium text-danger">' + item.restant_a_paye.toLocaleString('fr-FR') + ' DA</div></td>';
-                    html += '<td><div class="fw-medium text-danger">' + item.montant_echu.toLocaleString('fr-FR') + ' DA</div></td>';
-                    html += '<td><div class="fw-medium text-danger">' + item.remboursement.toLocaleString('fr-FR') + ' DA</div></td>';
+                    html += '<td class="text-end"><div class="fw-medium text-muted">' + formatAccounting(item.totalToPay) + '</div></td>';
+                    html += '<td class="text-end"><div class="fw-medium text-success">' + formatAccounting(item.totalPaid) + '</div></td>';
+                    html += '<td class="text-end"><div class="fw-medium text-danger">' + formatAccounting(item.restant_a_paye) + '</div></td>';
+                    html += '<td class="text-end"><div class="fw-medium text-danger">' + formatAccounting(item.montant_echu) + '</div></td>';
+                    html += '<td class="text-end"><div class="fw-medium text-danger">' + formatAccounting(item.remboursement) + '</div></td>';
                     html += '</tr>';
                 });
             } else {
@@ -555,7 +564,7 @@
                     html += '<tr>';
                     html += '<td class="ps-4"><strong>' + (client.nom || '') + " " + (client.prenom || '') + '</strong></td>';
                     html += '<td class="text-muted">Frais de formation</td>'; 
-                    html += '<td class="fw-bold text-dark">' + (client.total_paye ? parseFloat(client.total_paye).toLocaleString('fr-FR') : '0') + ' DA</td>';
+                    html += '<td class="fw-bold text-dark text-end">' + formatAccounting(client.total_paye) + '</td>';
                     html += '<td><span class="badge badge-soft-success">Payé</span></td>'; 
                     
                     var actions = '<div class="dropdown d-inline-block">'+
@@ -587,8 +596,8 @@
                 success : function(data){
                     $('#totalConvertedProspects').text(data.data.nombre_inscrit);
                     $('#paidCount').text(data.data.nombre_paiement);
-                    $('#pendingCount').text(data.data.paiement_attente + ' DA');
-                    $('#overdueCount').text(data.data.montant_echu + ' DA');
+                    $('#pendingCount').text(formatAccounting(data.data.paiement_attente));
+                    $('#overdueCount').text(formatAccounting(data.data.montant_echu));
                 }
             })
         }

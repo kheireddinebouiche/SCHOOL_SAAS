@@ -267,7 +267,12 @@
                           <td>
                             <div class="d-flex align-items-center">
                               <div class="flex-grow-1">
-                                <h6 class="mb-0 fw-semibold">{{ model.label }}</h6>
+                                <h6 class="mb-0 fw-semibold">
+                                  {{ model.label }}
+                                  {% if not model.is_editable %}
+                                    <i class="ri-lock-line text-danger ms-1" title="Verrouillé (utilisé dans un emploi du temps validé)"></i>
+                                  {% endif %}
+                                </h6>
                                 <p class="mb-0 text-muted small">{{ model.description|default:"Aucune description" }}</p>
                               </div>
                             </div>
@@ -293,12 +298,20 @@
                                   </a>
                                 </li>
                                 {% endif %}
-                                {% if not model.is_active %}
+                                {% if not model.is_active and model.is_editable %}
                                   <li>
                                     <a href="{% url 't_timetable:model_creneau_edit' model.id %}" class="dropdown-item d-flex align-items-center px-3 py-2">
                                       <i class="ri-edit-line text-primary me-2"></i>Configurer
                                     </a>
                                   </li>
+                                {% elif not model.is_active and not model.is_editable %}
+                                  <li>
+                                    <span class="dropdown-item d-flex align-items-center px-3 py-2 text-muted opacity-50">
+                                      <i class="ri-lock-line me-2"></i>Configurer (Verrouillé)
+                                    </span>
+                                  </li>
+                                {% endif %}
+                                {% if not model.is_active %}
                                   <li>
                                     <a href="#" class="dropdown-item d-flex align-items-center px-3 py-2 text-success" 
                                       data-bs-toggle="modal" data-bs-target="#activateModal"
@@ -475,7 +488,7 @@
             <div>
               <h6 class="alert-heading fw-semibold text-warning">Attention Importante!</h6>
               <p class="mb-0 text-dark">
-                Une fois le modèle activé, vous ne pourrez plus le modifier pour garantir la cohérence des données des emplois du temps.
+                Une fois le modèle activé, vous ne pourrez plus le modifier pour garantir la cohérence avec les <strong>registres de présence</strong> déjà générés.
               </p>
             </div>
           </div>

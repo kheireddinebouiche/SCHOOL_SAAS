@@ -439,6 +439,15 @@ def timetable_edit(request, pk):
     timetable = Timetable.objects.get(id = pk)
 
     creneau_data = timetable.creneau.jour_data
+    if creneau_data and 'jours_travail' in creneau_data:
+        day_order = {
+            'dimanche': 0, 'lundi': 1, 'mardi': 2, 'mercredi': 3,
+            'jeudi': 4, 'vendredi': 5, 'samedi': 6
+        }
+        creneau_data['jours_travail'] = sorted(
+            creneau_data['jours_travail'],
+            key=lambda d: day_order.get(d.lower(), 7)
+        )
     creneau_horaire = timetable.creneau.horaire_data
 
     modules = ProgrammeFormation.objects.filter(specialite = timetable.groupe.specialite, semestre = timetable.semestre)

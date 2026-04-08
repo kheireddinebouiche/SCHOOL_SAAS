@@ -34,7 +34,7 @@ def PageSuivieCours(request):
                     group_key=Concat('registre__groupe__nom', Value('|'), 'registre__semestre', output_field=CharField())
                 )
                .order_by('registre__groupe__nom', 'registre__semestre', 'module__label')
-            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites', 'group_key')
+            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites', 'group_key', 'registre__groupe__specialite__label', 'registre__groupe__specialite__formation__nom')
     
     groupes = Groupe.objects.all().values('id','nom').order_by('nom')
 
@@ -71,7 +71,7 @@ def ApiGetCours(request):
                     total=Count('seance_module'),
                     faites=Count('seance_module', filter=Q(seance_module__is_done=True))
                 )
-            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites')
+            ).values('id','module__id','module__label','module__code','module__duree','registre__groupe__nom','registre__groupe__id','registre__groupe__annee_scolaire','registre__semestre','total','faites', 'registre__groupe__specialite__label', 'registre__groupe__specialite__formation__nom')
     
     groupes = Groupe.objects.all().values('id','nom')
 
@@ -135,7 +135,9 @@ def ApiHistoriqueCours(request):
             'registre__groupe__nom',
             'registre__semestre',
             'module__duree',
-            'module__label'
+            'module__label',
+            'registre__groupe__specialite__label',
+            'registre__groupe__specialite__formation__nom'
         ).first()
 
         # Suivis marqués comme effectués

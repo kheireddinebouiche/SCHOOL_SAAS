@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+            @bottom-right {
+                content: "Page " counter(page) " sur " counter(pages);
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 9pt;
+            color: #1e293b;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 5mm;
+            margin-bottom: 8mm;
+            display: table;
+            width: 100%;
+        }
+
+        .header-left {
+            display: table-cell;
+            width: 50%;
+            vertical-align: middle;
+        }
+
+        .header-right {
+            display: table-cell;
+            width: 50%;
+            text-align: right;
+            vertical-align: middle;
+        }
+
+        .company-name {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .report-title {
+            font-size: 20pt;
+            font-weight: 900;
+            color: #3b82f6;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .report-meta {
+            font-size: 8pt;
+            color: #64748b;
+            margin-top: 2mm;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10mm;
+        }
+
+        th {
+            background-color: #0f172a;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 7.5pt;
+            padding: 3mm 2mm;
+            text-align: left;
+        }
+
+        td {
+            padding: 2.5mm 2mm;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .badge {
+            padding: 1mm 2.5mm;
+            border-radius: 3mm;
+            font-size: 7pt;
+            font-weight: bold;
+        }
+
+        .rate-excellent { color: #10c469; }
+        .rate-good { color: #3bafda; }
+        .rate-warning { color: #f6bb42; }
+        .rate-critical { color: #d9534f; }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 7pt;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 3mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="company-name">{{ tenant.schema_name|upper }}</div>
+            <div class="report-meta">Généré le {{ now|date:"d/m/Y à H:i" }}</div>
+        </div>
+        <div class="header-right">
+            <h1 class="report-title">État des Présences</h1>
+            <div class="report-meta">Rapport Pédagogique</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Étudiant</th>
+                <th style="width: 10%;">Matricule</th>
+                <th style="width: 12%;">Promotion</th>
+                <th style="width: 10%;">Semestre</th>
+                <th style="width: 15%;">Groupes</th>
+                <th class="text-center">Séc.</th>
+                <th class="text-center">Près.</th>
+                <th class="text-center">Abs.</th>
+                <th class="text-center">Just.</th>
+                <th class="text-right">Taux (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in stats %}
+            <tr>
+                <td><strong>{{ item.student.nom }} {{ item.student.prenom }}</strong></td>
+                <td>{{ item.student.matricule_interne|default:"-" }}</td>
+                <td>{{ item.promo }}</td>
+                <td>{{ item.semester_display }}</td>
+                <td style="font-size: 8pt;">{{ item.groups|join:", " }}</td>
+                <td class="text-center">{{ item.total }}</td>
+                <td class="text-center" style="color: #10c469;">{{ item.presence }}</td>
+                <td class="text-center" style="color: #d9534f;">{{ item.absence }}</td>
+                <td class="text-center" style="color: #3bafda;">{{ item.justified }}</td>
+                <td class="text-right">
+                    <span class="{% if item.rate >= 90 %}rate-excellent{% elif item.rate >= 75 %}rate-good{% elif item.rate >= 50 %}rate-warning{% else %}rate-critical{% endif %}">
+                        {{ item.rate }}%
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document généré par SALDAE ERP - Système de Gestion Scolaire
+    </div>
+</body>
+</html>

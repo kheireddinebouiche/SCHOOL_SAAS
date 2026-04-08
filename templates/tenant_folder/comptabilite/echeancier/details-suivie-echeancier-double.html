@@ -844,8 +844,8 @@
                                                         <tr>
                                                             <th scope="col">Description</th>
                                                             <th scope="col">Date d'échéance</th>
-                                                            <th scope="col">Montant dû</th>
-                                                            <th scope="col">Restant à payer</th>
+                                                            <th scope="col" class="text-end">Montant dû</th>
+                                                            <th scope="col" class="text-end">Restant à payer</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLine">
@@ -861,7 +861,7 @@
                                                         <tr>
                                                             <th scope="col">N° Reçu</th>
                                                             <th scope="col">Description</th>
-                                                            <th scope="col">Montant payé</th>
+                                                            <th scope="col" class="text-end">Montant payé</th>
                                                             <th scope="col">Date de paiement</th>
                                                             <th scope="col">Mode</th>
                                                             <th scope="col">Actions</th>
@@ -1038,8 +1038,8 @@
                                             <tr>
                                                 <th>Libellé</th>
                                                 <th>Date d'échéance</th>
-                                                <th>Montant</th>
-                                                <th id="modalPrixFinalHeader" style="display: none;">Prix final</th>
+                                                <th class="text-end">Montant</th>
+                                                <th class="text-end" id="modalPrixFinalHeader" style="display: none;">Prix final</th>
                                             </tr>
                                         </thead>
                                         <tbody id="modalEcheancesTable">
@@ -1756,7 +1756,7 @@
                                             <tr>
                                                 <th>Tranche</th>
                                                 <th>Pourcentage</th>
-                                                <th>Montant</th>
+                                                <th class="text-end">Montant</th>
                                                 <th>Date d'échéance</th>
                                             </tr>
                                         </thead>
@@ -2019,8 +2019,8 @@
                                             <tr>
                                                 <th>Échéance</th>
                                                 <th>Date d'échéance</th>
-                                                <th>Montant (DA)</th>
-                                                <th>Prix final(Reduction)</th>
+                                                <th class="text-end">Montant (DA)</th>
+                                                <th class="text-end">Prix final(Reduction)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="echeancierDetailsTable">
@@ -3055,19 +3055,15 @@
                 
         
 
-        function formatComptable(number) {
-            if (number == null || number === '') return "0,00";
-
-            return parseFloat(number)
-                .toFixed(2)                       // deux décimales
-                .replace('.', ',')                // virgule pour décimales
-                .replace(/\B(?=(\d{3})+(?!\d))/g, "."); // points pour milliers
+        function formatSimple(amount) {
+            if (amount === undefined || amount === null || isNaN(amount)) return '0.00';
+            return parseFloat(amount).toFixed(2);
         }
 
         function SummeryPaiement(totalPaye, total_initial, total_solde) {
-            $('#totalPaidAmount').text(formatComptable(totalPaye) + ' DA');
-            $('#totalDueAmount').text(formatComptable(total_initial) + ' DA');
-            $('#balanceAmount').text(formatComptable(total_solde) + ' DA');
+            $('#totalPaidAmount').text(formatSimple(totalPaye) + ' DA');
+            $('#totalDueAmount').text(formatSimple(total_initial) + ' DA');
+            $('#balanceAmount').text(formatSimple(total_solde) + ' DA');
         }
 
         
@@ -3114,7 +3110,7 @@
                     // Informations sur la formation
                     $('#specialite').text(data.voeux.specialite_label);
                     $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
+                    $('#prix_formation').text(formatSimple(data.voeux.prix_formation) + " DA");
                     
                     // Stocker le prix de la formation pour le modal spécial
                     prixFormation = data.voeux.prix_formation;
@@ -3161,9 +3157,8 @@
                             duePaiementHtml += '<td hidden>' + item.id_due_paiement + '</td>';
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + item.montant_due + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + item.montant_restant + ' DA</span></td>';
-                            duePaiementHtml += '</td>';
+                            duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-due-cell">' + formatSimple(item.montant_due) + ' DA</span></td>';
+                            duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-restant-cell">' + formatSimple(item.montant_restant) + ' DA</span></td>';
                             duePaiementHtml += '</tr>';
                         });
                         
@@ -3209,10 +3204,10 @@
                                         ) + 
                                     "</td>";
 
-                            row += "<td>" + 
+                            row += "<td class='text-end'>" + 
                                         (item.is_refund 
-                                            ? "<span class='badge bg-danger'>" + formatComptable(item.montant_paye) + "</span>" 
-                                            : formatComptable(item.montant_paye)
+                                            ? "<span class='badge bg-danger'>" + formatSimple(item.montant_paye) + " DA</span>" 
+                                            : formatSimple(item.montant_paye) + " DA"
                                         ) + 
                                     "</td>";
                             row += "<td>"+item.date_paiement+"</td>";
@@ -3311,8 +3306,7 @@
                         echeancierHtml += '<tr>';
                         echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
                         echeancierHtml += '<td>'+date_frais_inscription+'</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
-                        
+                        echeancierHtml += '<td class="text-end"><span class="fw-bold">' + formatSimple(data.voeux.frais_inscription) + ' DA</span></td>';
                         echeancierHtml += '</tr>';
                     }
 
@@ -3323,10 +3317,10 @@
                         echeancierHtml += '<tr>';
                         echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
                         echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
+                        echeancierHtml += '<td class="text-end"><span class="fw-bold">' + formatSimple(echeance.montant_tranche) + ' DA</span></td>';
                         if(hasReduction && reductionApprouved) {
                             var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
-                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
+                            echeancierHtml += '<td class="text-end" id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + formatSimple(montantReduction) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     });
@@ -3412,7 +3406,7 @@
             $('#remboursementTraiteMontant').text(remboursementMontant);
             $('#remboursementTraiteMotif').text(remboursementMotif);
             $('#remboursementTraiteObservations').text(observations || 'Aucune observation');
-            $('#autoriserMontant').val(montantAutoriser);
+            $('#autoriserMontant').val(parseFloat(montantAutoriser).toFixed(2));
             $('#texte_statut_refund').text(etat);
             $('#mode_de_rembourssement').text(mode_de_rembourssement_label);
             

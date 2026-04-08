@@ -6,135 +6,190 @@
 
 {% block content %}
 <style>
-    /* Style de secours pour les icônes */
-    .ri:before {
-        display: inline-block;
-        font-family: "remixicon" !important;
-        font-style: normal;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
-    
-    /* Style pour les boutons avec icônes */
-    .btn i {
-        vertical-align: middle;
-    }
-    
-    .btn span {
-        vertical-align: middle;
-    }
-    
-    /* Style pour le modal de chargement */
-    #loadingModal .modal-content {
-        background: rgba(0, 0, 0, 0.8) !important;
-    }
-    
-    #loadingModal .modal-backdrop {
-        background: rgba(0, 0, 0, 0.5);
-    }
+  /* Premium Glass-Card Styles */
+  :root {
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.4);
+      --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+      --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 16px;
+  }
+
+  .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--premium-shadow);
+      transition: transform 0.3s ease;
+  }
+
+  .stat-card:hover {
+      transform: translateY(-5px);
+  }
+
+  .icon-box {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 1.5rem;
+  }
+
+  .info-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: #6c757d;
+      margin-bottom: 2px;
+  }
+
+  .info-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #343a40;
+  }
+
+  .badge-soft-success {
+      background-color: rgba(52, 199, 89, 0.1);
+      color: #28a745;
+  }
+
+  .badge-soft-secondary {
+      background-color: rgba(108, 117, 125, 0.1);
+      color: #6c757d;
+  }
 </style>
 
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">                                                    
-
             <!-- start page title -->
-            <div class="row mb-3">
+            <div class="row mb-4 mt-2">
                 <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                    <div class="glass-card p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
-                                <i class="ri-time-line text-primary"></i>
+                            <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                <i class="ri-time-line"></i>
                             </div>
-                            <h4 class="mb-0 text-primary">Détails du créneau</h4>
+                            <div>
+                                <h4 class="fw-bold mb-1">Détails du créneau</h4>
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0 bg-transparent p-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Gestion</a></li>
+                                        <li class="breadcrumb-item"><a href="{% url 't_timetable:ListeModelCrenau' %}" class="text-muted">Créneaux</a></li>
+                                        <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Détails</li>
+                                    </ol>
+                                </nav>
+                            </div>
                         </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <nav aria-label="breadcrumb">
-                                <ol class="breadcrumb m-0 bg-transparent">
-                                    <li class="breadcrumb-item">
-                                        <a href="javascript: void(0);">Gestion</a>
-                                    </li>
-                                    <li class="breadcrumb-item">
-                                        <a href="javascript: void(0);">Créneaux</a>
-                                    </li>
-                                    <li class="breadcrumb-item active">Détails du créneau</li>
-                                </ol>
-                            </nav>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-primary px-4 py-2" id="updateCrenauDetailsBtn">
-                                    <i class="ri-edit-line me-2"></i>Modifier
-                                </button>
-                                <a href="{% url 't_timetable:ListeModelCrenau' %}" class="btn btn-light px-4 py-2">
-                                    <i class="ri-arrow-left-line me-2"></i>Retour à la liste
-                                </a>
-                            </div>
+                        
+                        <div class="d-flex align-items-center gap-2">
+                            {% if is_editable %}
+                            <a href="{% url 't_timetable:model_creneau_edit' model.id %}" class="btn btn-primary rounded-pill px-4">
+                                <i class="ri-edit-line me-1"></i> Modifier
+                            </a>
+                            {% else %}
+                            <span class="badge badge-soft-danger rounded-pill px-3 py-2 d-flex align-items-center">
+                                <i class="ri-lock-line me-1"></i> Modèle Verrouillé
+                            </span>
+                            {% endif %}
+                            <a href="{% url 't_timetable:ListeModelCrenau' %}" class="btn btn-light rounded-pill px-4">
+                                <i class="ri-arrow-left-line me-1"></i> Retour
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- end page title -->
             
+            {% if not is_editable %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 rounded-4 d-flex align-items-center p-3 mb-0">
+                        <div class="icon-box bg-warning bg-opacity-20 text-warning me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                            <i class="ri-information-line"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Modification restreinte</h6>
+                            <p class="mb-0 text-muted small">Ce modèle ne peut plus être modifié car il est actuellement utilisé dans un <strong>emploi du temps validé</strong>. Cela garantit la cohérence avec les <strong>registres de présence</strong> déjà générés.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
             <!-- Première rangée : Informations du créneau -->
             <div class="row mb-4">
-                <!-- Informations du créneau -->
                 <div class="col-lg-12">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                    <div class="glass-card">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0">
                             <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-time-line text-primary fs-4"></i>
+                                <div class="icon-box bg-primary bg-opacity-10 text-primary me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-information-line"></i>
                                 </div>
-                                <div>
-                                    <h5 class="card-title fw-semibold text-primary mb-1">Informations du Créneau</h5>
-                                    <p class="text-muted small mb-0">Détails du créneau horaire</p>
-                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Informations Générales</h5>
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-4 d-flex align-items-start">
-                                        <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                            <i class="ri-calendar-line text-primary"></i>
+                            <div class="row g-4">
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-light text-muted me-3" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            <i class="ri-bookmark-line"></i>
                                         </div>
                                         <div>
-                                            <small class="text-muted d-block mb-1">Label</small>
-                                            <span class="fw-semibold" id="label_crenau">{{ model.label|default:'Non défini' }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="mb-4 d-flex align-items-start">
-                                        <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                            <i class="ri-file-text-line text-info"></i>
-                                        </div>
-                                        <div>
-                                            <small class="text-muted d-block mb-1">Description</small>
-                                            <span class="fw-semibold" id="description_crenau">{{ model.description|default:'Aucune description' }}</span>
+                                            <p class="info-label mb-0">Libellé</p>
+                                            <h6 class="info-value mb-0 text-dark">{{ model.label|default:'Non défini' }}</h6>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-4 d-flex align-items-start">
-                                        <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                            <i class="ri-toggle-line text-success"></i>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-light text-muted me-3" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            <i class="ri-file-info-line"></i>
                                         </div>
                                         <div>
-                                            <small class="text-muted d-block mb-1">Statut</small>
-                                            <span class="fw-semibold" id="statut_crenau">
-                                                {% if model.is_active %}
-                                                    <span class="badge bg-success">Actif</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">Inactif</span>
-                                                {% endif %}
-                                            </span>
+                                            <p class="info-label mb-0">Description</p>
+                                            <h6 class="info-value mb-0 text-dark">{{ model.description|default:'Aucune description' }}</h6>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-start">
-                                        <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                            <i class="ri-calendar-line text-warning"></i>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-light text-muted me-3" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            <i class="ri-checkbox-circle-line"></i>
                                         </div>
                                         <div>
-                                            <small class="text-muted d-block mb-1">Date de création</small>
-                                            <span class="fw-semibold" id="created_at">{{ model.created_at|date:'d/m/Y H:i' }}</span>
+                                            <p class="info-label mb-0">Statut</p>
+                                            {% if model.is_active %}
+                                                <span class="badge badge-soft-success rounded-pill px-3 py-2">Actif</span>
+                                            {% else %}
+                                                <span class="badge badge-soft-secondary rounded-pill px-3 py-2">Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-light text-muted me-3" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            <i class="ri-calendar-line"></i>
+                                        </div>
+                                        <div>
+                                            <p class="info-label mb-0">Date de création</p>
+                                            <h6 class="info-value mb-0 text-dark">{{ model.created_at|date:'d/m/Y H:i' }}</h6>
                                         </div>
                                     </div>
                                 </div>
@@ -145,51 +200,63 @@
             </div>
 
             <!-- Deuxième rangée : Jour et Horaire associés -->
-            <div class="row mb-4">
+            <div class="row g-4 mb-4">
                 <!-- Jour associé -->
                 <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
+                    <div class="glass-card h-100">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0">
                             <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-calendar-event-line text-info fs-4"></i>
+                                <div class="icon-box bg-info bg-opacity-10 text-info me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-calendar-event-line"></i>
                                 </div>
-                                <div>
-                                    <h5 class="card-title fw-semibold text-info mb-1">Jour Associé</h5>
-                                    <p class="text-muted small mb-0">Détails du jour</p>
-                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Jours Associés</h5>
                             </div>
                         </div>
                         <div class="card-body p-4">
-                            <ul>
-                            {% for j in model.jour_data.jours_travail %}
-                                <li>{{j}}</li>
-                            {% endfor %}
-                            <ul>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for j in model.jour_data.jours_travail %}
+                                    <div class="stat-card px-3 py-2 text-center" style="min-width: 100px;">
+                                        <span class="fw-bold text-info text-capitalize">{{ j }}</span>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted mb-0">Aucun jour configuré</p>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Horaire associé -->
                 <div class="col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                    <div class="glass-card h-100">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0">
                             <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-time-line text-success fs-4"></i>
+                                <div class="icon-box bg-success bg-opacity-10 text-success me-3" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                    <i class="ri-time-line"></i>
                                 </div>
-                                <div>
-                                    <h5 class="card-title fw-semibold text-success mb-1">Horaire Associé</h5>
-                                    <p class="text-muted small mb-0">Détails de l'horaire</p>
-                                </div>
+                                <h5 class="fw-bold mb-0 text-dark">Plages Horaires</h5>
                             </div>
                         </div>
                         <div class="card-body p-4">
-                             <ul>
-                            {% for j in model.horaire_data.plages_horaires %}
-                                <li>{{j.nom_creneau}} / {{j.heure_debut}} - {{j.heure_fin}}</li>
-                            {% endfor %}
-                            <ul>
+                            <div class="row g-3">
+                                {% for j in model.horaire_data.plages_horaires %}
+                                    <div class="col-sm-6">
+                                        <div class="stat-card p-3 d-flex align-items-center">
+                                            <div class="icon-box bg-success bg-opacity-10 text-success me-3" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                                                <i class="ri-history-line"></i>
+                                            </div>
+                                            <div>
+                                                <p class="info-label mb-0">{{ j.nom_creneau|default:"Plage" }}</p>
+                                                <h6 class="info-value mb-0 text-dark">{{ j.heure_debut }} - {{ j.heure_fin }}</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <div class="col-12">
+                                        <p class="text-muted mb-0 text-center py-3">Aucune plage horaire configurée</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,36 +272,7 @@
 
 <script>
     $(document).ready(function(){
-        // Vérification du chargement des icônes
-        function checkIconsLoaded() {
-            // Vérifier si les icônes Remix sont chargées
-            if ($('.ri-check-line').length > 0) {
-                // Si les icônes sont présentes, on masque le texte de secours
-                $('.btn span').each(function() {
-                    if ($(this).siblings('.ri').length > 0) {
-                        $(this).removeClass('d-none');
-                    }
-                });
-            }
-        }
-        
-        // Appeler la vérification après le chargement de la page
-        setTimeout(checkIconsLoaded, 1000);
-
-        let id_crenau = "{{ crenau.id }}";
-
-        // Gestion du bouton de modification
-        $('#updateCrenauDetailsBtn').on('click', function() {
-            window.location.href = "#";
-        });
-
-        // Fonction pour charger les informations du créneau
-        function loadCrenauInfo() {
-            // Ici on pourrait charger les informations dynamiquement si nécessaire
-        }
-
-        // Charger les informations au démarrage
-        loadCrenauInfo();
+        // Les informations sont chargées via le contexte Django
     });
 </script>
 {% endblock content %}

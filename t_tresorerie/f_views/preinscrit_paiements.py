@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble
+from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble, UserActionLog
 from django.db.models import Q
 from institut_app.decorators import *
 from datetime import datetime
@@ -236,6 +236,15 @@ def ApiStoreClientPaiement(request):
                 paiement = paiement,
                 montant = montant,
                 reference_bancaire = reference,
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Paiement',
+            target_id=str(paiement.id),
+            details=f"Paiement de {montant} DA enregistré pour {paiement.prospect.nom} {paiement.prospect.prenom} (Echéance : {echeance}).",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
 
         return JsonResponse({"status" : "success"})

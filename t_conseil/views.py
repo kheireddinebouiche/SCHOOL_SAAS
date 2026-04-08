@@ -1213,23 +1213,30 @@ def ConfigurationConseil(request):
         
         if action == 'save_config' or not action: # Default fallback if action missing
             try:
-                config.default_tva_percent = request.POST.get('default_tva_percent', 19)
+                config.default_tva_percent = request.POST.get('default_tva_percent') or 19.00
                 config.show_tva_on_devis = request.POST.get('show_tva_on_devis') == 'on'
                 config.show_tva_on_facture = request.POST.get('show_tva_on_facture') == 'on'
                 
                 config.enable_remise_global = request.POST.get('enable_remise_global') == 'on'
-                config.default_remise_percent = request.POST.get('default_remise_percent', 0)
+                config.default_remise_percent = request.POST.get('default_remise_percent') or 0.00
                 config.show_remise_on_devis = request.POST.get('show_remise_on_devis') == 'on'
                 config.show_remise_on_facture = request.POST.get('show_remise_on_facture') == 'on'
                 
                 # Numbering Configuration
                 config.devis_prefix = request.POST.get('devis_prefix', 'DEV')
-                config.devis_counter_width = request.POST.get('devis_counter_width', 4)
+                config.devis_counter_width = request.POST.get('devis_counter_width') or 4
                 config.facture_prefix = request.POST.get('facture_prefix', 'FAC')
-                config.facture_counter_width = request.POST.get('facture_counter_width', 4)
+                config.facture_counter_width = request.POST.get('facture_counter_width') or 4
                 
                 config.default_conditions_commerciales = request.POST.get('default_conditions_commerciales', '')
                 config.payment_methods = request.POST.get('payment_methods', '')
+                
+                # Stamp Duty Configuration
+                config.enable_stamp_duty = request.POST.get('enable_stamp_duty') == 'on'
+                config.stamp_duty_rate = request.POST.get('stamp_duty_rate') or 1.00
+                config.stamp_duty_min = request.POST.get('stamp_duty_min') or 5.00
+                config.stamp_duty_max = request.POST.get('stamp_duty_max') or 10000.00
+                config.apply_stamp_duty_on_cash_only = request.POST.get('apply_stamp_duty_on_cash_only') == 'on'
                 
                 config.save()
                 messages.success(request, "Configuration mise Ã  jour avec succÃ¨s.")

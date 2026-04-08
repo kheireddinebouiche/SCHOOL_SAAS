@@ -703,6 +703,17 @@
                                         </div>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1" id="formation_label"></h6>
+                                        <p class="text-muted mb-0 small">Formation</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center mb-4">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar-sm bg-success bg-opacity-10 rounded icon-center">
+                                            <i class="ri-book-line text-success fs-5"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
                                         <h6 class="mb-1" id="specialite"></h6>
                                         <p class="text-muted mb-0 small">Spécialité</p>
                                     </div>
@@ -844,8 +855,8 @@
                                                         <tr>
                                                             <th scope="col">Description</th>
                                                             <th scope="col">Date d'échéance</th>
-                                                            <th scope="col">Montant dû</th>
-                                                            <th scope="col">Restant à payer</th>
+                                                            <th scope="col" class="text-end">Montant dû</th>
+                                                            <th scope="col" class="text-end">Restant à payer</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLine">
@@ -861,7 +872,7 @@
                                                         <tr>
                                                             <th scope="col">N° Reçu</th>
                                                             <th scope="col">Description</th>
-                                                            <th scope="col">Montant payé</th>
+                                                            <th scope="col" class="text-end">Montant payé</th>
                                                             <th scope="col">Date de paiement</th>
                                                             <th scope="col">Mode</th>
                                                             <th scope="col">Actions</th>
@@ -1011,6 +1022,10 @@
                             </div>
                             <div class="card-body">
                                 <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Formation:</span>
+                                    <span class="fw-medium" id="modalFormation"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Spécialité:</span>
                                     <span class="fw-medium" id="modalSpecialite"></span>
                                 </div>
@@ -1099,6 +1114,10 @@
                                 <h6 class="mb-0 text-success">Informations de la formation</h6>
                             </div>
                             <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Formation:</span>
+                                    <span class="fw-medium" id="modalFormation"></span>
+                                </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Spécialité:</span>
                                     <span class="fw-medium" id="modalSpecialite"></span>
@@ -1189,6 +1208,14 @@
                             </div>
                             <div class="card-body">
                                 <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Formation:</span>
+                                    <span class="fw-medium" id="modalFormation"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Formation:</span>
+                                    <span class="fw-medium" id="modalFormation"></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Spécialité:</span>
                                     <span class="fw-medium" id="modalSpecialite"></span>
                                 </div>
@@ -1246,7 +1273,7 @@
                                             <tr>
                                                 <th>Tranche</th>
                                                 <th>Pourcentage</th>
-                                                <th>Montant</th>
+                                                <th class="text-end">Montant</th>
                                                 <th>Date d'échéance</th>
                                             </tr>
                                         </thead>
@@ -1262,7 +1289,7 @@
                                             <tr class="total-row">
                                                 <td><strong>Total</strong></td>
                                                 <td id="totalPercentage">0%</td>
-                                                <td id="totalAmount">0 DA</td>
+                                                <td id="totalAmount" class="text-end">0.00 DA</td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
@@ -2025,8 +2052,8 @@
                                             <tr>
                                                 <th>Échéance</th>
                                                 <th>Date d'échéance</th>
-                                                <th>Montant (DA)</th>
-                                                <th>Prix final(Reduction)</th>
+                                                <th class="text-end">Montant (DA)</th>
+                                                <th class="text-end">Prix final(Reduction)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="echeancierDetailsTable">
@@ -2976,19 +3003,15 @@
                 
         
 
-        function formatComptable(number) {
-            if (number == null || number === '') return "0,00";
-
-            return parseFloat(number)
-                .toFixed(2)                       // deux décimales
-                .replace('.', ',')                // virgule pour décimales
-                .replace(/\B(?=(\d{3})+(?!\d))/g, "."); // points pour milliers
+        function formatSimple(amount) {
+            if (amount === undefined || amount === null || isNaN(amount)) return '0.00';
+            return parseFloat(amount).toFixed(2);
         }
 
         function SummeryPaiement(totalPaye, total_initial, total_solde) {
-            $('#totalPaidAmount').text(formatComptable(totalPaye) + ' DA');
-            $('#totalDueAmount').text(formatComptable(total_initial) + ' DA');
-            $('#balanceAmount').text(formatComptable(total_solde) + ' DA');
+            $('#totalPaidAmount').text(formatSimple(totalPaye) + ' DA');
+            $('#totalDueAmount').text(formatSimple(total_initial) + ' DA');
+            $('#balanceAmount').text(formatSimple(total_solde) + ' DA');
         }
 
         
@@ -3031,9 +3054,10 @@
                     $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
                     
                     // Informations sur la formation
+                    $('#formation_label').text(data.voeux.formation_label);
                     $('#specialite').text(data.voeux.specialite_label);
                     $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
+                    $('#prix_formation').text(formatSimple(data.voeux.prix_formation) + " DA");
                     
                     // Stocker le prix de la formation pour le modal spécial
                     prixFormation = data.voeux.prix_formation;
@@ -3080,9 +3104,8 @@
                             duePaiementHtml += '<td hidden>' + item.id_due_paiement + '</td>';
                             duePaiementHtml += '<td>' + item.label + '</td>';
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-due-cell">' + formatComptable(item.montant_due) + ' DA</span></td>';
-                            duePaiementHtml += '<td><span class="amount-cell amount-balance-cell">' + formatComptable(item.montant_restant) + ' DA</span></td>';
-                            duePaiementHtml += '</td>';
+                            duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-due-cell">' + formatSimple(item.montant_due) + ' DA</span></td>';
+                            duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-balance-cell">' + formatSimple(item.montant_restant) + ' DA</span></td>';
                             duePaiementHtml += '</tr>';
                         });
                         
@@ -3128,10 +3151,10 @@
                                         ) + 
                                     "</td>";
 
-                            row += "<td>" + 
+                            row += "<td class='text-end'>" + 
                                         (item.is_refund 
-                                            ? "<span class='badge bg-danger'>" + formatComptable(item.montant_paye) + "</span>" 
-                                            : formatComptable(item.montant_paye)
+                                            ? "<span class='badge bg-danger'>" + formatSimple(item.montant_paye) + " DA</span>" 
+                                            : formatSimple(item.montant_paye) + " DA"
                                         ) + 
                                     "</td>";
                             row += "<td>"+item.date_paiement+"</td>";
@@ -3230,8 +3253,7 @@
                         echeancierHtml += '<tr>';
                         echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
                         echeancierHtml += '<td>'+date_frais_inscription+'</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + parseFloat(data.voeux.frais_inscription).toFixed(2) + ' DA</span></td>';
-                        
+                        echeancierHtml += '<td class="text-end"><span class="fw-bold">' + formatSimple(data.voeux.frais_inscription) + ' DA</span></td>';
                         echeancierHtml += '</tr>';
                     }
 
@@ -3242,10 +3264,10 @@
                         echeancierHtml += '<tr>';
                         echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
                         echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + echeance.montant_tranche + ' DA</span></td>';
+                        echeancierHtml += '<td class="text-end"><span class="fw-bold">' + formatSimple(echeance.montant_tranche) + ' DA</span></td>';
                         if(hasReduction && reductionApprouved) {
                             var montantReduction = parseFloat(echeance.montant_tranche - (echeance.montant_tranche * (data.remise.valeur/100)));
-                            echeancierHtml += '<td id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + montantReduction.toFixed(2) + ' DA</span></td>';
+                            echeancierHtml += '<td class="text-end" id="prixFinalTranche' + index + '" style="display: table-cell;"><span class="fw-bold text-success">' + formatSimple(montantReduction) + ' DA</span></td>';
                         }
                         echeancierHtml += '</tr>';
                     });
@@ -3331,7 +3353,7 @@
             $('#remboursementTraiteMontant').text(remboursementMontant);
             $('#remboursementTraiteMotif').text(remboursementMotif);
             $('#remboursementTraiteObservations').text(observations || 'Aucune observation');
-            $('#autoriserMontant').val(montantAutoriser);
+            $('#autoriserMontant').val(parseFloat(montantAutoriser).toFixed(2));
             $('#texte_statut_refund').text(etat);
             $('#mode_de_rembourssement').text(mode_de_rembourssement_label);
             
@@ -3455,6 +3477,7 @@
                   
         $(document).on('click', '#confirmEcheancierBtn', function(){
             // Remplir la modale avec les informations actuelles
+            $('#modalFormation').text($('#formation_label').text());
             $('#modalSpecialite').text($('#specialite').text());
             $('#modalPromo').text($('#promo').text());
             $('#modalPrixFormation').text($('#prix_formation').text());
@@ -3504,6 +3527,7 @@
         
         // Pré-remplir les informations dans le modal spécial
         $('#specialEcheancierModal').on('show.bs.modal', function () {
+            $('#modalFormation').text($('#formation_label').text());
             $('#modalSpecialite').text($('#specialite').text());
             $('#modalPromo').text($('#promo').text());
             $('#modalPrixFormation').text($('#prix_formation').text());

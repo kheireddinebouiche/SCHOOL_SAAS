@@ -27,8 +27,12 @@ urlpatterns = [
    path('ApiLoadDatas', ApiLoadDatas, name="ApiLoadDatas"),
    path('ApiAjouterHistoriqueAbsence', ApiAjouterHistoriqueAbsence, name="ApiAjouterHistoriqueAbsence"),
    path('ApiGetHistoriqueEtudiant/<int:pk>/<int:id_ligne>/', ApiGetHistoriqueEtudiant, name="ApiGetHistoriqueEtudiant"),
+   path('ApiUpdateAbsenceReason', ApiUpdateAbsenceReason, name="ApiUpdateAbsenceReason"),
    
    path('presences-des-etudiants/',ListeDesEtudiants, name="ListeDesEtudiants"),
+   path('etat-presences/', EtatPresences, name='EtatPresences'),
+   path('etat-presences/excel/', ExportPresencesExcel, name='ExportPresencesExcel'),
+   path('etat-presences/pdf/', ExportPresencesPDF, name='ExportPresencesPDF'),
 
    path('contrat/modele/',PageModeleContrat, name="PageModeleContrat"),
    path('contrat/modele/load/', ApiLoadModelesContrat, name="ApiLoadModelesContrat"),

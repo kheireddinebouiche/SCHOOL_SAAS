@@ -1,5 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
+{% load l10n %}
 {% block title %} Conseil - Configuration {% endblock title %}
 
 {% block content %}
@@ -209,6 +210,9 @@
                                 <a class="nav-link" id="v-pills-mentions-tab" data-bs-toggle="pill" href="#v-pills-mentions" role="tab">
                                     <i class="ri-article-line"></i> Mentions Légales
                                 </a>
+                                <a class="nav-link" id="v-pills-timbre-tab" data-bs-toggle="pill" href="#v-pills-timbre" role="tab">
+                                    <i class="ri-sticky-note-line"></i> Droits de Timbre
+                                </a>
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100 fw-bold btn-rounded mt-4 py-3 shadow-indigo" style="background-color: #6366f1; border-color: #6366f1;">
@@ -232,7 +236,7 @@
                                         <div class="col-md-6">
                                             <label class="form-label-custom">Taux TVA par défaut (%)</label>
                                             <div class="input-group">
-                                                <input type="number" class="form-control" name="default_tva_percent" value="{{ config.default_tva_percent|stringformat:'f' }}" step="0.01">
+                                                <input type="number" class="form-control" name="default_tva_percent" value="{{ config.default_tva_percent|unlocalize }}" step="0.01">
                                                 <span class="input-group-text bg-light">%</span>
                                             </div>
                                             <p class="text-muted fs-12 mt-2">Appliqué par défaut sur chaque nouvelle ligne de facturation.</p>
@@ -269,7 +273,7 @@
                                                     {% for tva in tvas %}
                                                     <tr>
                                                         <td class="fw-bold">{{ tva.label }}</td>
-                                                        <td><span class="badge bg-soft-primary px-3 py-2 rounded-pill">{{ tva.valeur }}%</span></td>
+                                                        <td><span class="badge bg-soft-primary px-3 py-2 rounded-pill">{{ tva.valeur|floatformat:2 }}%</span></td>
                                                         <td class="text-end">
                                                             <button type="button" class="btn btn-soft-danger btn-sm btn-rounded" onclick="deleteTva({{ tva.id }})">
                                                                 <i class="ri-delete-bin-line"></i>
@@ -366,7 +370,7 @@
                                             <div class="col-md-6">
                                                 <label class="form-label-custom">Taux de remise par défaut (%)</label>
                                                 <div class="input-group">
-                                                    <input type="number" class="form-control" name="default_remise_percent" value="{{ config.default_remise_percent|stringformat:'f' }}" step="0.01">
+                                                    <input type="number" class="form-control" name="default_remise_percent" value="{{ config.default_remise_percent|unlocalize }}" step="0.01">
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                             </div>
@@ -410,6 +414,74 @@
                                 </div>
                             </div>
 
+                            <!-- Stamp Duty Tab -->
+                            <div class="tab-pane fade" id="v-pills-timbre" role="tabpanel">
+                                <div class="settings-header">
+                                    <h5 class="fw-bold mb-1">Droits de Timbre (Algérie)</h5>
+                                    <p class="text-muted small mb-0">Configuration modulable selon la législation fiscale algérienne.</p>
+                                </div>
+                                <div class="settings-body">
+                                    <div class="config-strip bg-soft-warning border-warning border-opacity-20 mb-5 p-4 rounded-4" style="border: 1px dashed rgba(245, 158, 11, 0.4);">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">Application des Droits de Timbre</h6>
+                                            <p class="text-muted small mb-0">Activer le calcul automatique du timbre fiscal.</p>
+                                        </div>
+                                        <div class="form-check form-switch p-0 m-0">
+                                            <input class="form-check-input scale-125 ms-0" type="checkbox" name="enable_stamp_duty" id="enableStampDuty" {% if config.enable_stamp_duty %}checked{% endif %}>
+                                        </div>
+                                    </div>
+
+                                    <div id="stampDutySettings" class="{% if not config.enable_stamp_duty %}d-none{% endif %} px-2">
+                                        <div class="row g-4 mb-4">
+                                            <div class="col-md-6 border-end">
+                                                <h6 class="section-title fs-14">Paramètres du Calcul</h6>
+                                                <div class="mb-3">
+                                                    <label class="form-label-custom">Taux du timbre (%)</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="stamp_duty_rate" value="{{ config.stamp_duty_rate|unlocalize }}" step="0.01">
+                                                        <span class="input-group-text bg-light">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="config-strip">
+                                                    <div>
+                                                        <span class="fs-13 fw-bold">Uniquement en espèces</span>
+                                                        <p class="text-muted fs-11 mb-0">Règle standard en Algérie</p>
+                                                    </div>
+                                                    <div class="form-check form-switch p-0 m-0">
+                                                        <input class="form-check-input ms-0" type="checkbox" name="apply_stamp_duty_on_cash_only" {% if config.apply_stamp_duty_on_cash_only %}checked{% endif %}>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="section-title fs-14">Limites Légales (DZD)</h6>
+                                                <div class="mb-3">
+                                                    <label class="form-label-custom">Montant Minimum</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="stamp_duty_min" value="{{ config.stamp_duty_min|unlocalize }}" step="0.01">
+                                                        <span class="input-group-text bg-light">DZD</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label-custom">Plafond Maximum</label>
+                                                    <div class="input-group border-danger border-opacity-25 rounded-3">
+                                                        <input type="number" class="form-control" name="stamp_duty_max" value="{{ config.stamp_duty_max|unlocalize }}" step="0.01">
+                                                        <span class="input-group-text bg-soft-danger text-danger border-0">DZD</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="alert alert-info border-0 shadow-sm rounded-4 d-flex align-items-center">
+                                            <i class="ri-information-line fs-20 me-3 text-info"></i>
+                                            <div class="small">
+                                                <strong>Note fiscale :</strong> Le droit de timbre est généralement calculé à 1% du montant TTC pour les encaissements en espèces. 
+                                                Le montant est arrondi au dinar supérieur si nécessaire, dans la limite du plafond légal (10 000 DZD).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -432,6 +504,17 @@
                 settingsContainer.classList.remove('d-none');
             } else {
                 settingsContainer.classList.add('d-none');
+            }
+        });
+
+        const toggleTimbre = document.getElementById('enableStampDuty');
+        const stampSettings = document.getElementById('stampDutySettings');
+        
+        toggleTimbre.addEventListener('change', function() {
+            if (this.checked) {
+                stampSettings.classList.remove('d-none');
+            } else {
+                stampSettings.classList.add('d-none');
             }
         });
     });

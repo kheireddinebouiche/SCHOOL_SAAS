@@ -238,7 +238,7 @@ class ConseilConfiguration(models.Model):
     Stocke les paramètres de TVA, Remises, et préférences d'affichage.
     """
     # Enterprise Association
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="conseil_config", unique=True)
+    entreprise = models.OneToOneField(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="conseil_config")
 
     # TVA Configuration
     default_tva_percent = models.DecimalField(max_digits=5, decimal_places=2, default=19.00, help_text="Taux de TVA par défaut (%)")
@@ -262,6 +262,13 @@ class ConseilConfiguration(models.Model):
     
     facture_prefix = models.CharField(max_length=20, default="FAC", help_text="Préfixe pour les factures")
     facture_counter_width = models.PositiveIntegerField(default=4, help_text="Longueur du compteur (ex: 4 pour 0001)")
+
+    # Droits de Timbre (Stamp Duty) - Algerian Legislation
+    enable_stamp_duty = models.BooleanField(default=False, help_text="Activer les droits de timbre (Algérie)")
+    stamp_duty_rate = models.DecimalField(max_digits=5, decimal_places=2, default=1.00, help_text="Taux du timbre en % (Standard: 1%)")
+    stamp_duty_min = models.DecimalField(max_digits=10, decimal_places=2, default=5.00, help_text="Montant minimum du timbre (DZD)")
+    stamp_duty_max = models.DecimalField(max_digits=10, decimal_places=2, default=10000.00, help_text="Plafond du timbre (DZD)")
+    apply_stamp_duty_on_cash_only = models.BooleanField(default=True, help_text="Appliquer uniquement sur les paiements en espèces")
 
     class Meta:
         verbose_name = "Configuration Conseil"

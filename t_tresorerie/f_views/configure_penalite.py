@@ -36,6 +36,7 @@ def ApiLoadPromo(request):
                 'penalite_retard' : i.penalite_retard,
                 'entite_id': i.entite.id if i.entite else None,
                 'entite_label': i.entite.designation if i.entite else None,
+                'code' : i.code if i.code else None,
             })
         return JsonResponse(data, safe=False)
 

@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 import json
 from t_conseil.models import Thematiques, Devis, Participant
-from t_crm.models import Prospets
+from t_crm.models import Prospets, UserActionLog
 from institut_app.models import Entreprise
 
 @login_required(login_url="insitut_app:login")
@@ -23,6 +23,15 @@ def NewGroupe(request):
             groupe = form.save(commit=False)
             groupe.createdy = request.user
             groupe.save()
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Groupe',
+                target_id=str(groupe.id),
+                details=f"Création du groupe {groupe.nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             messages.success(request, "Groupe enregistré avec succès")
             return redirect('t_groupe:listegroupes')
@@ -77,7 +86,7 @@ def ApiCreateGroupe(request):
     max_student = request.POST.get('max_student')
     print(id_promotion)
     try:
-        Groupe.objects.create(
+        groupe = Groupe.objects.create(
             nom = id_numero_groupe,
             annee_scolaire = _annee_scolaire,
             promotion = Promos.objects.get(id=id_promotion),
@@ -88,7 +97,15 @@ def ApiCreateGroupe(request):
             end_date = end_date,
             specialite_id = _formSelectSpecialite,
             createdy = request.user,
+        )
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Groupe',
+            target_id=str(groupe.id),
+            details=f"Création du groupe {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
         messages.success(request,"Le groupe a été créé avec succès")
         return JsonResponse({"status":"success"})
@@ -178,6 +195,14 @@ def UpdateGroupe(request, pk):
         form = NewGroupeForms(request.POST, instance=groupe)
         if form.is_valid():
             form.save()
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Groupe',
+                target_id=str(groupe.id),
+                details=f"Modification du groupe {groupe.nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             messages.success(request,"Les informations du groupe ont été modifiées avec succès")
             return redirect("t_groupe:detailsgroupe", pk)
         else:
@@ -202,7 +227,19 @@ def ApiDeleteGroupe(request):
 
         if obj.etat != "brouillon":
             return JsonResponse({"status":"error",'message':'Le groupe est en cours d\'utilisation, vous ne pouvez pas effectuer la suppression'})
+        
+        groupe_nom = obj.nom
+        groupe_id = obj.id
         obj.delete()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Groupe',
+            target_id=str(groupe_id),
+            details=f"Suppression du groupe {groupe_nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         messages.success(request,"Le groupe a été supprimé avec succès")
         return JsonResponse({"status":"success"})
     else:
@@ -255,7 +292,18 @@ def closeGroupe(request, pk):
 def deleteGroupe(request, pk):
     groupe = Groupe.objects.get(id=pk)
     if groupe.etat == "brouillon":
+        groupe_nom = groupe.nom
+        groupe_id = groupe.id
         groupe.delete()
+        
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Groupe',
+            target_id=str(groupe_id),
+            details=f"Suppression du groupe {groupe_nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         messages.success(request, "Groupe supprimé avec succès")
         return redirect('t_groupe:listegroupes')
     else:

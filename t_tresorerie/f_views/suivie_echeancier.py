@@ -374,6 +374,7 @@ def ApiGetClientEcheancier(request):
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
+            'formation_label' : voeux.specialite.formation.nom,
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.formation.prix_formation,
             'frais_inscription' : frais_inscription_val,

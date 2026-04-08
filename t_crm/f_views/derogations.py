@@ -103,10 +103,20 @@ def ApiStoreDerogation(request):
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
    
-    Derogations.objects.create(
+    derogation = Derogations.objects.create(
         demandeur = preinscrit,
         type = reason,
         motif = "Documents Incomplets",
+    )
+
+    # Log the action
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='CREATE',
+        target_model='Dérogation',
+        target_id=str(derogation.id),
+        details=f"Demande de dérogation (validation) soumise pour le pré-inscrit {preinscrit.nom} {preinscrit.prenom}. Motif: Documents Incomplets",
+        ip_address=request.META.get('REMOTE_ADDR')
     )
 
     # Send Notification to Supervisors (2) and Managers (3) of CRM module
@@ -166,6 +176,16 @@ def ApiTraiteDerogation(request):
     else:
         prospect.has_derogation = False
         prospect.save()
+
+    action = 'Validation' if decision == 'acceptee' else 'Rejet'
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Dérogation',
+        target_id=str(obj.id),
+        details=f"{action} de la demande de dérogation pour {prospect.nom} {prospect.prenom}. Commentaire: {commentaire}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
 
     return JsonResponse({"status" : "success"})
 

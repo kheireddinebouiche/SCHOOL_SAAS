@@ -331,7 +331,7 @@ class Depenses(models.Model):
 
 
 class PromoRembourssement(models.Model):
-    promo = models.ForeignKey(Promos, on_delete=models.CASCADE, null=True, unique=True)
+    promo = models.OneToOneField(Promos, on_delete=models.CASCADE, null=True)
     montant = models.DecimalField(decimal_places=2, max_digits=100, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True)

@@ -268,9 +268,276 @@ def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
         return JsonResponse({"status": "error", "message": str(e)})
 
 @login_required(login_url="institut_app:login")
+@csrf_exempt
+def ApiUpdateAbsenceReason(request):
+    if request.method == "POST":
+        try:
+            student_id = request.POST.get('student_id')
+            ligne_id = request.POST.get('ligne_id')
+            date_str = request.POST.get('date')
+            module_name = request.POST.get('module')
+            index_str = request.POST.get('index')  # The specific index in the daily data array
+            new_reason = request.POST.get('reason')
+            new_status = request.POST.get('status')
+            
+            if not new_reason or not new_reason.strip():
+                return JsonResponse({"status": "error", "message": "Le motif d'absence est requis."})
+
+            historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=student_id, ligne_presence_id=ligne_id)
+            
+            # Normalize module name for comparison fallback
+            module_name_clean = module_name.strip().lower() if module_name else ""
+            
+            updated = False
+            error_details = "Date non trouvée dans l'historique."
+            
+            if historique_obj.historique:
+                # We work on a copy to ensure mutation detection
+                new_historique = list(historique_obj.historique)
+                
+                for entry in new_historique:
+                    # Date comparison
+                    if entry.get('date') == date_str:
+                        error_details = f"Session non trouvée pour la date {date_str}."
+                        data_array = entry.get('data', [])
+                        
+                        # 1. Targeted update by index (most reliable)
+                        if index_str is not None:
+                            try:
+                                idx = int(index_str)
+                                if 0 <= idx < len(data_array):
+                                    item = data_array[idx]
+                                    # Verify it's the right module as a safety check
+                                    if str(item.get('module', '')).strip().lower() == module_name_clean:
+                                        item['reason'] = new_reason
+                                        item['motif'] = new_reason
+                                        if new_status:
+                                            item['etat'] = new_status
+                                        updated = True
+                            except (ValueError, IndexError):
+                                pass
+                        
+                        # 2. Fallback to name-based search if index failed or wasn't provided
+                        if not updated:
+                            for item in data_array:
+                                stored_module = str(item.get('module', '')).strip().lower()
+                                if stored_module == module_name_clean:
+                                    item['reason'] = new_reason
+                                    item['motif'] = new_reason
+                                    if new_status:
+                                        item['etat'] = new_status
+                                    updated = True
+                                    break
+                                    
+                        if updated:
+                            break
+                
+                if updated:
+                    historique_obj.historique = new_historique
+                    historique_obj.save()
+                    return JsonResponse({"status": "success", "message": "Enregistrement réussi."})
+            
+            return JsonResponse({"status": "error", "message": f"Erreur : {error_details}"})
+                
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+            
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
 def ListeDesEtudiants(request):
     liste = Prospets.objects.filter(statut = "convertit")
     context = {
         'etudiants' : liste
     }
     return render(request, 'tenant_folder/presences/liste_des_etudiants.html', context)
+
+
+def get_attendance_data(request):
+    """
+    Helper pour récupérer les données d'assiduité filtrées.
+    Partagé entre la vue HTML, l'export Excel et l'export PDF.
+    """
+    search_query = request.GET.get('search', '').lower()
+    selected_promo = request.GET.get('promo', '')
+    selected_semester = request.GET.get('semester', '')
+    selected_group = request.GET.get('group', '')
+
+    # Récupérer tous les étudiants convertis
+    students = Prospets.objects.filter(statut="convertit")
+    
+    # Récupérer tous les historiques d'absence avec les relations nécessaires
+    all_histories = HistoriqueAbsence.objects.filter(etudiant__in=students).select_related(
+        'etudiant',
+        'ligne_presence__registre__groupe__promotion'
+    )
+    
+    # Clé : (student_id, promo_id, semester_code)
+    student_period_stats = {}
+    
+    for history in all_histories:
+        registre = history.ligne_presence.registre if history.ligne_presence else None
+        if not registre: continue
+            
+        student = history.etudiant
+        groupe = registre.groupe
+        promo = groupe.promotion if groupe else None
+        semestre_code = registre.semestre or '?'
+        semestre_display = registre.get_semestre_display() if semestre_code != '?' else "N/A"
+        promo_label = promo.label if promo else "N/A"
+        
+        # Filtres côte serveur (pour les exports)
+        if selected_promo and promo_label != selected_promo: continue
+        if selected_semester and semestre_display != selected_semester: continue
+        if selected_group and (not groupe or groupe.nom != selected_group): continue
+        if search_query:
+            full_name = f"{student.nom} {student.prenom}".lower()
+            matricule = (student.matricule_interne or "").lower()
+            if search_query not in full_name and search_query not in matricule:
+                continue
+
+        promo_id = promo.id if promo else 0
+        key = (student.id, promo_id, semestre_code)
+        
+        if key not in student_period_stats:
+            student_period_stats[key] = {
+                'student': student,
+                'promo': promo_label,
+                'semester': semestre_code,
+                'semester_display': semestre_display,
+                'presence': 0, 'absence': 0, 'justified': 0, 'total': 0,
+                'groups': set(), 'details': []
+            }
+            
+        data = student_period_stats[key]
+        if groupe: data['groups'].add(groupe.nom)
+            
+        teacher_name = history.ligne_presence.teacher.nom if (history.ligne_presence and history.ligne_presence.teacher) else "N/A"
+        historique_data = history.historique or []
+        for entry in historique_data:
+            session_date = entry.get('date')
+            for item in entry.get('data', []):
+                etat = str(item.get('etat', 'P')).upper()
+                reason = item.get('reason') or item.get('motif')
+                data['total'] += 1
+                if etat == 'P': data['presence'] += 1
+                elif etat == 'J' or (etat == 'A' and reason): data['justified'] += 1
+                elif etat == 'A': data['absence'] += 1
+                else: data['presence'] += 1
+                    
+                data['details'].append({
+                    'date': session_date,
+                    'module': item.get('module') or "Module",
+                    'teacher': teacher_name,
+                    'status': 'Présent' if etat == 'P' else ('Justifié' if (etat == 'J' or reason) else 'Absent'),
+                    'badge': 'success' if etat == 'P' else ('info' if (etat == 'J' or reason) else 'danger')
+                })
+                        
+    final_stats = []
+    for key, data in student_period_stats.items():
+        if data['total'] > 0:
+            data['rate'] = round((data['presence'] / data['total']) * 100, 1)
+        else: data['rate'] = 0.0
+        
+        try:
+            data['details'].sort(key=lambda x: datetime.strptime(x['date'], "%d/%m/%Y"), reverse=True)
+        except: pass
+            
+        data['groups'] = sorted(list(data['groups']))
+        data['details_json'] = json.dumps(data['details'])
+        final_stats.append(data)
+        
+    final_stats.sort(key=lambda x: (x['student'].nom or '', x['student'].prenom or '', x['promo'], x['semester']))
+    return final_stats
+
+
+@login_required(login_url="institut_app:login")
+def EtatPresences(request):
+    """Vue HTML principale"""
+    final_stats = get_attendance_data(request)
+    context = {'stats': final_stats}
+    return render(request, 'tenant_folder/presences/etat_presences.html', context)
+
+
+@login_required(login_url="institut_app:login")
+def ExportPresencesExcel(request):
+    """Génération du fichier Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    
+    stats = get_attendance_data(request)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "État des Présences"
+    
+    # En-têtes
+    headers = [
+        "Étudiant", "Matricule", "Promotion", "Semestre", "Groupes",
+        "Total Séances", "Présences", "Absences", "Justifiées", "Taux (%)"
+    ]
+    ws.append(headers)
+    
+    # Style en-tête
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    # Données
+    for idx, item in enumerate(stats, 2):
+        ws.append([
+            f"{item['student'].nom} {item['student'].prenom}",
+            item['student'].matricule_interne or "N/A",
+            item['promo'],
+            item['semester_display'],
+            ", ".join(item['groups']),
+            item['total'],
+            item['presence'],
+            item['absence'],
+            item['justified'],
+            f"{item['rate']}%"
+        ])
+    
+    # Ajustement largeur colonnes
+    for column in ws.columns:
+        max_length = 0
+        column = [cell for cell in column]
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except: pass
+        ws.column_dimensions[column[0].column_letter].width = max_length + 2
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=Etat_Presences.xlsx'
+    wb.save(response)
+    return response
+
+
+@login_required(login_url="institut_app:login")
+def ExportPresencesPDF(request):
+    """Génération du fichier PDF via WeasyPrint"""
+    from weasyprint import HTML
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    
+    stats = get_attendance_data(request)
+    
+    html_string = render_to_string('tenant_folder/presences/etat_presences_pdf.html', {
+        'stats': stats,
+        'now': timezone.now(),
+        'tenant': request.tenant
+    }, request=request)
+    
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    pdf = html.write_pdf()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="Etat_Presences.pdf"'
+    return response

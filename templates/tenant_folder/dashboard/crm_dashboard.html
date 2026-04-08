@@ -358,9 +358,6 @@
                     <h6 class="text-uppercase fw-semibold text-muted mb-3 fs-13">Action</h6>
                     
                     <!-- Quick Actions -->
-                     <button class="btn btn-primary w-100 mb-3 modern-card shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#addActivityModal">
-                        <i class="ri-add-circle-line align-middle me-2"></i>Nouvelle Activité
-                    </button>
                     
                     <div class="card modern-card mb-3">
                         <div class="card-body p-3">
@@ -369,7 +366,7 @@
                                     <span><i class="ri-group-line me-2"></i>Liste Prospects</span>
                                     <i class="ri-arrow-right-s-line"></i>
                                 </a>
-                                <a href="#" class="btn btn-soft-warning text-start d-flex align-items-center justify-content-between">
+                                <a href="{% url 't_communication:calendar' %}" class="btn btn-soft-warning text-start d-flex align-items-center justify-content-between">
                                     <span><i class="ri-calendar-check-line me-2"></i>Agenda</span>
                                     <i class="ri-arrow-right-s-line"></i>
                                 </a>
@@ -397,16 +394,14 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Activity Feed / Reminders -->
-                    <div class="card modern-card">
+                                    <!-- Activity Feed / Reminders -->
+                    <div class="card modern-card mb-3">
                         <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
                             <h6 class="card-title mb-0 fs-14">Rappels & Activités</h6>
                              <span class="badge bg-danger-subtle text-danger">{{ pending_reminders }}</span>
                         </div>
                         <div class="card-body p-0">
-                            <div class="activity-timeline p-3">
+                            <div class="activity-timeline p-3" style="max-height: 250px; overflow-y: auto;">
                                 <ul class="list-group list-group-flush">
                                     {% for reminder in recent_reminders %}
                                     <li class="list-group-item bg-transparent">
@@ -442,6 +437,22 @@
                         </div>
                     </div>
 
+                    <!-- Journal des Appels & Visites -->
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0 fs-14">Journal d'appels & visites</h6>
+                            <button class="btn btn-ghost-primary btn-sm p-0" id="refresh-history"><i class="ri-refresh-line"></i></button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="activity-history-list" class="activity-timeline p-3" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Peuplé par JS -->
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -449,62 +460,122 @@
     </div>
 </div>
 
-<!-- Add Activity Modal -->
-<div class="modal fade" id="addActivityModal" tabindex="-1" aria-labelledby="addActivityModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addActivityModalLabel">Ajouter une activité</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="activityForm">
-                    <div class="mb-3">
-                        <label for="prospectSelect" class="form-label">Prospect</label>
-                        <select class="form-select" id="prospectSelect">
-                            <option>Sélectionnez un prospect</option>
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="activityType" class="form-label">Type d'activité</label>
-                        <select class="form-select" id="activityType">
-                            <option value="appel">Appel téléphonique</option>
-                            <option value="rendez_vous">Rendez-vous</option>
-                            <option value="email">Email</option>
-                            <option value="visite">Visite</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="activityDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="activityDescription" rows="3"></textarea>
-                    </div>
-                    <div class="mb-3">
-                         <div class="row">
-                             <div class="col-6">
-                                <label for="activityDate" class="form-label">Date</label>
-                                <input type="date" class="form-control" id="activityDate">
-                             </div>
-                             <div class="col-6">
-                                <label for="activityTime" class="form-label">Heure</label>
-                                <input type="time" class="form-control" id="activityTime">
-                             </div>
-                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary">Enregistrer</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Scripts for charts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // CSRF Helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- DASHBOARD COUNTERS & HISTORY LOGIC ---
+        function updateCounters() {
+            fetch('{% url "t_crm:get_crm_counters" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        document.getElementById('visit-counter').textContent = data[0].visite_counter;
+                        document.getElementById('call-counter').textContent = data[0].phone_counter;
+                    }
+                });
+        }
+
+        function updateHistory() {
+            fetch('{% url "t_crm:get_activity_history" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('activity-history-list');
+                    if (data.length === 0) {
+                        list.innerHTML = '<div class="text-center text-muted py-4"><small>Aucune activité journalière</small></div>';
+                        return;
+                    }
+                    
+                    let html = '<ul class="list-group list-group-flush">';
+                    data.forEach(act => {
+                        const iconClass = act.type === 'visit' ? 'bg-primary' : 'bg-success';
+                        const icon = act.type === 'visit' ? 'ri-user-follow-line' : 'ri-phone-line';
+                        
+                        html += `
+                        <li class="list-group-item bg-transparent px-0 border-0 mb-2">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-timeline-icon ${iconClass} text-white shadow-sm mt-0" style="position: relative; left: 0; top: 0; min-width: 24px; min-height: 24px;">
+                                    <i class="${icon} fs-10"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="fs-12 fw-semibold mb-0">${act.type_label} par ${act.user}</h6>
+                                        <small class="text-muted fs-10">${act.time}</small>
+                                    </div>
+                                    <p class="text-muted fs-10 mb-0">Aujourd'hui, le ${act.date}</p>
+                                </div>
+                            </div>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    list.innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('activity-history-list').innerHTML = '<div class="text-center text-danger py-2 small">Erreur de chargement</div>';
+                });
+        }
+
+        function incrementCounter(type) {
+            const formData = new FormData();
+            formData.append('type', type);
+            
+            fetch('{% url "t_crm:increment_crm_counter" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateCounters();
+                    updateHistory();
+                } else {
+                    console.error('Erreur API:', data.message);
+                }
+            })
+            .catch(err => console.error('Erreur réseau:', err));
+        }
+
+        // Init values
+        updateCounters();
+        updateHistory();
+
+        // Listeners for increments
+        document.getElementById('increment-visits').addEventListener('click', function(e) {
+            e.preventDefault();
+            incrementCounter('visit');
+        });
+
+        document.getElementById('increment-calls').addEventListener('click', function(e) {
+            e.preventDefault();
+            incrementCounter('call');
+        });
+
+        document.getElementById('refresh-history').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.querySelector('i').classList.add('ri-spin');
+            updateHistory();
+            setTimeout(() => this.querySelector('i').classList.remove('ri-spin'), 1000);
+        });
+
+        // --- CHARTS LOGIC ---
         // Chart des prospects
         var prospectsChartOptions = {
             chart: {
@@ -602,19 +673,6 @@
             statusChartOptions
         );
         statusChart.render();
-
-        // Fonctionnalités des compteurs
-        document.getElementById('increment-visits').addEventListener('click', function() {
-            var counter = document.getElementById('visit-counter');
-            var currentValue = parseInt(counter.textContent) || 0;
-            counter.textContent = currentValue + 1;
-        });
-
-        document.getElementById('increment-calls').addEventListener('click', function() {
-            var counter = document.getElementById('call-counter');
-            var currentValue = parseInt(counter.textContent) || 0;
-            counter.textContent = currentValue + 1;
-        });
     });
 </script>
 {% endblock content %}

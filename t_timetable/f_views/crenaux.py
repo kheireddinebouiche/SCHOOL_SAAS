@@ -25,6 +25,10 @@ def ListeModel(request):
     # For now, using a simple approach - you might want to customize this based on your business logic
     types_count = liste.count()  # or some other logic based on your requirements
     
+    # Mark each model as editable or not based on linked validated timetables
+    for modele in liste:
+        modele.is_editable = not Timetable.objects.filter(creneau=modele, is_validated=True).exists()
+    
     context = {
         "modeles": liste,
         "model_crenaux": liste,  # For the total count in stats
@@ -72,8 +76,12 @@ def create_model(request):
 @login_required(login_url="institut_app:login")
 def model_creneau_detail(request, pk):
     model = ModelCrenau.objects.get(id = pk)
+    # Check if this model is linked to any validated timetable
+    is_editable = not Timetable.objects.filter(creneau=model, is_validated=True).exists()
+    
     context = {
-        'model' : model
+        'model' : model,
+        'is_editable': is_editable
     }
     return render(request, 'tenant_folder/timetable/crenaux/details_creneau.html',context)
 
@@ -84,6 +92,12 @@ def model_creneau_edit(request, pk):
     """
     modele = get_object_or_404(ModelCrenau, pk=pk)
     
+    # Check if editing is allowed
+    is_validated_exists = Timetable.objects.filter(creneau=modele, is_validated=True).exists()
+    if is_validated_exists:
+        messages.error(request, "Ce modèle ne peut pas être modifié car il est utilisé par un emploi du temps validé.")
+        return redirect('t_timetable:model_creneau_detail', pk=modele.pk)
+
     # Jours de la semaine
     jours_semaine = [
         
@@ -167,6 +181,13 @@ def save_model_crenau(request):
         
         
         modele = get_object_or_404(ModelCrenau, pk=modele_id)
+        
+        # Security check: Prevent saving if linked to a validated timetable
+        if Timetable.objects.filter(creneau=modele, is_validated=True).exists():
+            return JsonResponse({
+                'success': False,
+                'message': "Ce modèle ne peut pas être modifié car il est lié à un emploi du temps validé."
+            })
         
         modele.label = nom_model
         modele.description = description

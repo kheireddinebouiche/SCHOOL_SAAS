@@ -2783,26 +2783,66 @@
     </div>
 </div>
 
-<!-- Modal Preview Document -->
+<!-- Modal Preview Document Premium -->
 <div class="modal fade" id="previewDocumentModal" tabindex="-1" aria-labelledby="previewDocumentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content rounded-4 shadow-lg">
-      <div class="modal-header">
-        <h5 class="modal-title" id="previewDocumentModalLabel">Aperçu du document</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-      </div>
-      <div class="modal-body" style="max-height:80vh; overflow-y:auto;">
-        <div id="previewContent" class="text-center">
-          <!-- Le contenu du document sera injecté ici -->
-        </div>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+            <!-- Header avec Glassmorphism -->
+            <div class="modal-header border-0 p-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                        <i class="ri-file-text-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="previewDocumentModalLabel">Visualiseur de Document</h5>
+                        <p class="text-muted small mb-0" id="pdfMetaInfo">Chargement des informations...</p>
+                    </div>
+                </div>
+                <div class="hstack gap-2">
+                    <button type="button" class="btn btn-light btn-icon rounded-pill shadow-sm" id="btnDownloadDoc" title="Télécharger">
+                        <i class="ri-download-2-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-light btn-icon rounded-pill shadow-sm" onclick="window.print()" title="Imprimer">
+                        <i class="ri-printer-line"></i>
+                    </button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+            </div>
 
-        <!-- Canvas pour pdf.js -->
-        <div id="pdfPreviewContainer" style="display:none;">
-            <canvas id="pdfCanvas" style="width:100%; border:1px solid #ccc;"></canvas>
+            <!-- Barre d'outils (Toolbar) pour PDF -->
+            <div id="pdfToolbar" class="border-top border-bottom py-2 px-3 bg-white d-flex align-items-center justify-content-center gap-3" style="display: none !important;">
+                <div class="btn-group shadow-sm rounded-pill p-1 bg-light">
+                    <button id="btnZoomOut" class="btn btn-sm btn-white rounded-pill border-0"><i class="ri-zoom-out-line"></i></button>
+                    <span class="px-3 align-self-center fw-medium text-primary fs-13" id="zoomLevel">100%</span>
+                    <button id="btnZoomIn" class="btn btn-sm btn-white rounded-pill border-0"><i class="ri-zoom-in-line"></i></button>
+                </div>
+                <div class="vr mx-2"></div>
+                <div class="rounded-pill p-1 bg-light px-3 fs-13 fw-medium text-muted shadow-sm">
+                    Page <span id="currentPageNum">1</span> / <span id="totalPageNum">-</span>
+                </div>
+            </div>
+
+            <!-- Corps de la modal -->
+            <div class="modal-body p-0 bg-dark bg-opacity-10" style="min-height: 500px; max-height: 85vh;">
+                <!-- Aperçu Image -->
+                <div id="previewContent" class="text-center p-4">
+                    <!-- Le contenu image sera injecté ici -->
+                </div>
+
+                <!-- Aperçu PDF dynamique -->
+                <div id="pdfPreviewContainer" style="display:none; overflow-y: auto; height: 100%; text-align: center;" class="p-4 d-flex flex-column align-items-center">
+                    <div id="pdfPagesContainer" class="d-flex flex-column gap-4 align-items-center w-100">
+                        <!-- Les canvasses PDF seront injectés ici -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer subtil -->
+            <div class="modal-footer border-0 p-2 justify-content-center" style="background: rgba(255, 255, 255, 0.5);">
+                <small class="text-muted"><i class="ri-information-line me-1"></i> Utilisez la molette pour faire défiler les pages</small>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <!-- Modal Validation Impossible -->
@@ -3163,10 +3203,19 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-
+<!-- PDF.js v3.4.120 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script>
+    // Configuration globale et robuste de PDF.js
+    const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+    }
+
     $(document).ready(function(){
+        let currentPdf = null;
+        let pdfScale = 1.5;
+        let currentFileUrl = "";
         // Activer les tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -4352,59 +4401,128 @@
 
 
 
-        // Gestion de l'affichage dans la modal
+        // --- Visualiseur de Document Premium ---
         $(document).on("click", ".view-doc", function () {
-            var fileUrl = $(this).data("url");
-            var previewHtml = "";
-
-            // Réinitialiser le container
-            $("#previewContent").html("");
+            currentFileUrl = $(this).data("url");
+            const fileName = currentFileUrl.split('/').pop();
+            
+            // Reset UI
+            $("#previewContent").html("").hide();
             $("#pdfPreviewContainer").hide();
-
-            // Déterminer le type du fichier par extension
-            if (fileUrl.match(/\.(jpeg|jpg|png|gif|bmp|webp)$/i)) {
-                // Image
-                previewHtml = "<img src='" + fileUrl + "' class='img-fluid rounded shadow'>";
-                $("#previewContent").html(previewHtml);
-
-            } else if (fileUrl.match(/\.pdf$/i)) {
-                // PDF avec pdf.js
+            $("#pdfToolbar").attr('style', 'display: none !important');
+            $("#pdfMetaInfo").text(fileName);
+            $("#btnDownloadDoc").attr("href", currentFileUrl).attr("download", fileName);
+            
+            if (currentFileUrl.match(/\.(jpeg|jpg|png|gif|bmp|webp)$/i)) {
+                // Rendu IMAGE
+                $("#previewContent").show().html(`
+                    <img src="${currentFileUrl}" class="img-fluid rounded-4 shadow-lg border" style="max-height: 70vh;">
+                `);
+                $("#pdfMetaInfo").text(fileName + " (Image)");
+            } 
+            else if (currentFileUrl.match(/\.pdf$/i)) {
+                // Rendu PDF
+                $("#pdfToolbar").attr('style', 'display: flex !important');
                 $("#pdfPreviewContainer").show();
+                $("#pdfPagesContainer").html(`
+                    <div id="loadingOverlay" class="text-center p-5">
+                        <div class="spinner-grow text-primary mb-3" role="status"></div>
+                        <h6 class="fw-bold text-primary">Initialisation du moteur PDF...</h6>
+                    </div>
+                `);
 
-                var loadingTask = pdfjsLib.getDocument(fileUrl);
-                loadingTask.promise.then(function(pdf) {
-                    // Charger la première page
-                    pdf.getPage(1).then(function(page) {
-                        var scale = 1.5;
-                        var viewport = page.getViewport({scale: scale});
-
-                        var canvas = document.getElementById("pdfCanvas");
-                        var context = canvas.getContext("2d");
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        var renderContext = {
-                            canvasContext: context,
-                            viewport: viewport
-                        };
-                        page.render(renderContext);
-                    });
-                }).catch(function(error){
-                    $("#previewContent").html(
-                        "<p class='text-danger'>Impossible de charger le PDF : " + error + "</p>"
-                    );
-                    $("#pdfPreviewContainer").hide();
-                });
-
+                renderPdf(currentFileUrl);
             } else {
-                // Autres fichiers (Word, Excel, etc.)
-                previewHtml = "<p class='text-muted'>Aucun aperçu disponible pour ce type de fichier.</p>" +
-                            "<a href='" + fileUrl + "' class='btn btn-primary' target='_blank'>Télécharger le fichier</a>";
-                $("#previewContent").html(previewHtml);
+                $("#previewContent").show().html(`
+                    <div class="p-5 text-center">
+                        <i class="ri-file-unknow-line display-4 text-muted mb-3"></i>
+                        <h5 class="text-muted">Aperçu non disponible</h5>
+                        <a href="${currentFileUrl}" class="btn btn-primary rounded-pill mt-3" download>Télécharger pour consulter</a>
+                    </div>
+                `);
             }
 
-            // Ouvrir la modal
             $("#previewDocumentModal").modal("show");
+        });
+
+        // Fonction de Rendu PDF Séquentiel
+        async function renderPdf(url, scale = 1.5) {
+            try {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+                const loadingTask = pdfjsLib.getDocument({
+                    url: url,
+                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/',
+                    cMapPacked: true,
+                });
+                
+                currentPdf = await loadingTask.promise;
+                $("#totalPageNum").text(currentPdf.numPages);
+                $("#pdfMetaInfo").text(`Document PDF • ${currentPdf.numPages} pages`);
+                $("#pdfPagesContainer").html("");
+
+                for (let i = 1; i <= currentPdf.numPages; i++) {
+                    const canvasId = `pdf-canvas-${i}`;
+                    $("#pdfPagesContainer").append(`
+                        <div class="pdf-page-card bg-white shadow rounded-3 mb-4 p-2 transition-all" style="max-width: 100%;">
+                            <canvas id="${canvasId}" style="width: 100%; height: auto; display: block; border-radius: 4px;"></canvas>
+                        </div>
+                    `);
+
+                    const page = await currentPdf.getPage(i);
+                    const viewport = page.getViewport({ scale: scale });
+                    const canvas = document.getElementById(canvasId);
+                    const context = canvas.getContext('2d');
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                }
+            } catch (err) {
+                console.error("Erreur PDF:", err);
+                $("#pdfPagesContainer").html(`
+                    <div class="alert alert-danger m-4 rounded-4 shadow-sm border-0">
+                        <i class="ri-error-warning-line me-2"></i> Erreur lors du chargement : ${err.message}
+                    </div>
+                `);
+            }
+        }
+
+        // Contrôles de Zoom
+        $("#btnZoomIn").on("click", function() {
+            pdfScale += 0.25;
+            if (pdfScale > 3) pdfScale = 3;
+            updateZoomDisplay();
+            renderPdf(currentFileUrl, pdfScale);
+        });
+
+        $("#btnZoomOut").on("click", function() {
+            pdfScale -= 0.25;
+            if (pdfScale < 0.5) pdfScale = 0.5;
+            updateZoomDisplay();
+            renderPdf(currentFileUrl, pdfScale);
+        });
+
+        function updateZoomDisplay() {
+            $("#zoomLevel").text(Math.round(pdfScale * 100) + "%");
+        }
+
+        // Détection de la page active au scroll
+        $("#pdfPreviewContainer").on("scroll", function() {
+            const container = $(this);
+            const cards = $(".pdf-page-card");
+            let activePage = 1;
+
+            cards.each(function(index) {
+                const card = $(this);
+                if (card.position().top < 200) {
+                    activePage = index + 1;
+                }
+            });
+            $("#currentPageNum").text(activePage);
         });
 
         
