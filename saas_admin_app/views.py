@@ -358,6 +358,18 @@ def saas_logs_view(request):
         os.path.join(settings.BASE_DIR, 'logs', '**', '*.log'),
     ]
     
+    # Add VPS System logs for Linux
+    if platform.system() == 'Linux':
+        linux_logs = [
+            '/var/log/syslog',
+            '/var/log/auth.log',
+            '/var/log/nginx/access.log',
+            '/var/log/nginx/error.log',
+            '/var/log/postgresql/postgresql-*.log',
+            '/var/log/dpkg.log',
+        ]
+        possible_log_paths.extend(linux_logs)
+    
     # Find all log files
     for pattern in possible_log_paths:
         log_files.extend(glob.glob(pattern, recursive=True))
@@ -413,6 +425,12 @@ def saas_logs_view(request):
                     'level': level,
                     'timestamp': extract_timestamp(line),
                 })
+        except PermissionError:
+            log_entries.append({
+                'line': f"ACCÈS REFUSÉ : Le serveur web n'a pas les permissions pour lire ce fichier de log ({os.path.basename(selected_log_file)}).",
+                'level': 'CRITICAL',
+                'timestamp': None,
+            })
         except Exception as e:
             log_entries.append({
                 'line': f"Error reading log file: {str(e)}",
