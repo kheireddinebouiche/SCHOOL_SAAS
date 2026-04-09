@@ -14,6 +14,13 @@ from app.models import Institut
 from django_tenants.utils import tenant_context
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import get_user_model
+from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration
+from .utils_backup import perform_backup, perform_restore
+
+
+
+def superadmin_only(user):
+    return user.is_authenticated and user.is_superuser
 
 def get_schema_size_bytes(schema_name):
     """Calcule la taille du schéma en bytes (bases de données PostgreSQL)."""
@@ -59,8 +66,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect
 from django.contrib import messages
 
-def superadmin_only(user):
-    return user.is_authenticated and user.is_superuser
 
 def saas_login_view(request):
     """Vue dédiée à la connexion au SaaS Admin Dashboard."""
@@ -407,6 +412,146 @@ def saas_logs_view(request):
     }
     
     return render(request, 'saas_admin_app/saas_logs.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_processes_view(request):
+    """Vue pour afficher les processus système et les services."""
+    import subprocess
+    import json
+    
+    # 1. Processus
+    processes = []
+    # On limite pour éviter de surcharger la page (top CPU/Memory)
+    for proc in psutil.process_iter(['pid', 'name', 'username', 'status', 'cpu_percent', 'memory_percent', 'create_time']):
+        try:
+            pinfo = proc.info
+            # Convert timestamp to datetime
+            pinfo['uptime'] = datetime.fromtimestamp(pinfo['create_time']).strftime("%Y-%m-%d %H:%M:%S")
+            processes.append(pinfo)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+            
+    # Tri par CPU ou Mémoire (ici par CPU descendant)
+    processes.sort(key=lambda x: x['cpu_percent'], reverse=True)
+    
+    # 2. Services
+    services = []
+    system_os = platform.system()
+    
+    if system_os == 'Windows':
+        # Utilisation de PowerShell pour obtenir les services
+        try:
+            cmd = 'powershell -Command "Get-Service | Select-Object Name, DisplayName, Status | ConvertTo-Json"'
+            result = subprocess.run(cmd, capture_output=True, shell=True)
+            if result.returncode == 0:
+                # On décode avec errors='ignore' pour éviter les plantages sur Windows (encoding cp1252 vs powershell output)
+                stdout_str = result.stdout.decode('utf-8', errors='ignore')
+                raw_services = json.loads(stdout_str)
+                # S'il n'y a qu'un service, JSON.loads retourne un dict au lieu d'une liste
+                if isinstance(raw_services, dict):
+                    raw_services = [raw_services]
+                
+                for s in raw_services:
+                    status_map = {0: 'Stopped', 1: 'StartPending', 2: 'StopPending', 3: 'Running', 4: 'ContinuePending', 5: 'PausePending', 6: 'Paused'}
+                    # PowerShell retourne parfois des codes au lieu de strings selon la version
+                    status = s.get('Status')
+                    if isinstance(status, int):
+                        status = status_map.get(status, f"Unknown ({status})")
+                    
+                    services.append({
+                        'name': s.get('Name'),
+                        'display_name': s.get('DisplayName'),
+                        'status': status,
+                        'type': 'Windows Service'
+                    })
+        except Exception as e:
+            services.append({'name': 'Error', 'display_name': f"Could not fetch Windows services: {str(e)}", 'status': 'Error', 'type': 'System'})
+
+    elif system_os == 'Linux':
+        # Utilisation de systemctl
+        try:
+            # On tente de lister les services
+            cmd = ['systemctl', 'list-units', '--type=service', '--all', '--no-legend', '--no-pager']
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    parts = line.split(None, 4)
+                    if len(parts) >= 4:
+                        services.append({
+                            'name': parts[0],
+                            'display_name': parts[4] if len(parts) > 4 else parts[0],
+                            'status': parts[3], # active/inactive/failed
+                            'sub_status': parts[2], # running/exited/dead
+                            'type': 'Systemd Service'
+                        })
+        except Exception as e:
+            services.append({'name': 'Error', 'display_name': f"Could not fetch Linux services: {str(e)}", 'status': 'Error', 'type': 'System'})
+
+    context = {
+        'processes': processes[:100],  # Top 100 processus
+        'services': services,
+        'system_os': system_os,
+        'timestamp': datetime.now().strftime("%H:%M:%S")
+    }
+    
+    return render(request, 'saas_admin_app/saas_processes.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_terminal_view(request):
+    """Affiche la page du terminal système."""
+    context = {
+        'current_dir': settings.BASE_DIR,
+        'system_os': platform.system(),
+    }
+    return render(request, 'saas_admin_app/saas_terminal.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_terminal_exec_view(request):
+    """API endpoint pour exécuter des commandes système."""
+    import subprocess
+    import os
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    command = request.POST.get('command')
+    if not command:
+        return JsonResponse({'success': False, 'error': 'Commande vide'})
+    
+    try:
+        # Exécution de la commande dans la racine du site
+        # Timeout de 60 secondes pour éviter les blocages
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            cwd=settings.BASE_DIR,
+            timeout=60,
+            # Forcer l'encodage selon l'OS pour éviter les plantages
+            encoding='utf-8',
+            errors='replace'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'stdout': result.stdout,
+            'stderr': result.stderr,
+            'returncode': result.returncode,
+            'current_dir': settings.BASE_DIR
+        })
+        
+    except subprocess.TimeoutExpired:
+        return JsonResponse({
+            'success': False,
+            'error': 'Délai d\'exécution dépassé (Timeout : 60s)'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 def extract_timestamp(log_line):
     """Extract timestamp from a log line."""
@@ -889,6 +1034,118 @@ def saas_toggle_maintenance_view(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_backups_view(request):
+    """Affiche la liste des sauvegardes effectuées."""
+    backups = DatabaseBackup.objects.all()
+    
+    # Statistiques simples
+    total_backups = backups.count()
+    global_backups = backups.filter(backup_type='GLOBAL').count()
+    tenant_backups = backups.filter(backup_type='TENANT').count()
+    total_size = sum(b.size for b in backups)
+    
+    context = {
+        'backups': backups,
+        'instituts': Institut.objects.all().order_by('nom'),
+        'total_backups': total_backups,
+        'global_backups': global_backups,
+        'tenant_backups': tenant_backups,
+        'total_size_formatted': format_size(total_size),
+    }
+    return render(request, 'saas_admin_app/saas_backups.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_create_backup_view(request):
+    """Déclenche une nouvelle sauvegarde."""
+    tenant_id = request.GET.get('tenant_id')
+    tenant = None
+    
+    if tenant_id:
+        try:
+            tenant = Institut.objects.get(id=tenant_id)
+        except Institut.DoesNotExist:
+            messages.error(request, "Tenant non trouvé.")
+            return redirect('saas_admin_app:saas_backups')
+    
+    success, result = perform_backup(tenant)
+    
+    if success:
+        messages.success(request, f"Sauvegarde {'globale' if not tenant else f'du tenant {tenant.nom}'} réussie.")
+    else:
+        messages.error(request, f"Échec de la sauvegarde : {result}")
+        
+    return redirect('saas_admin_app:saas_backups')
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_delete_backup_view(request, backup_id):
+    """Supprime une sauvegarde spécifique."""
+    try:
+        backup = DatabaseBackup.objects.get(id=backup_id)
+        filename = backup.filename
+        backup.delete()  # Ceci supprimera aussi le fichier physique via la méthode delete du modèle
+        messages.success(request, f"Sauvegarde {filename} supprimée.")
+    except DatabaseBackup.DoesNotExist:
+        messages.error(request, "Sauvegarde non trouvée.")
+        
+    return redirect('saas_admin_app:saas_backups')
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_download_backup_view(request, backup_id):
+    """Permet de télécharger un fichier de sauvegarde."""
+    from django.http import FileResponse, Http404
+    try:
+        backup = DatabaseBackup.objects.get(id=backup_id)
+        if backup.file and os.path.exists(backup.file.path):
+            return FileResponse(open(backup.file.path, 'rb'), as_attachment=True, filename=backup.filename)
+        else:
+            messages.error(request, "Fichier physique introuvable.")
+            return redirect('saas_admin_app:saas_backups')
+    except DatabaseBackup.DoesNotExist:
+        raise Http404("Sauvegarde non trouvée.")
+
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_restore_backup_view(request, backup_id):
+    """Effectue la restauration d'une sauvegarde de tenant."""
+    from django.shortcuts import get_object_or_404, redirect
+    from django.contrib import messages
+    
+    if request.method != 'POST':
+        messages.error(request, "Méthode non autorisée.")
+        return redirect('saas_admin_app:saas_backups')
+        
+    backup_obj = get_object_or_404(DatabaseBackup, id=backup_id)
+    
+    # Sécurité supplémentaire : vérification du code de confirmation
+    confirmation_code = request.POST.get('confirmation_code')
+    if confirmation_code != backup_obj.filename:
+        messages.error(request, "Le code de confirmation est incorrect. Veuillez saisir le nom complet du fichier.")
+        return redirect('saas_admin_app:saas_backups')
+
+    # 1. Activer le mode maintenance
+    maintenance_config = SaaSMaintenanceConfiguration.get_solo()
+    old_maintenance_state = maintenance_config.is_maintenance_mode
+    maintenance_config.is_maintenance_mode = True
+    maintenance_config.maintenance_message = f"Restauration en cours pour {backup_obj.tenant.nom if backup_obj.tenant else 'un tenant'}. Veuillez patienter..."
+    maintenance_config.save()
+    
+    try:
+        # 2. Effectuer la restauration
+        success, message = perform_restore(backup_obj)
+        
+        if success:
+            messages.success(request, f"Succès : {message}")
+        else:
+            messages.error(request, f"Échec de la restauration : {message}")
+            
+    finally:
+        # 3. Restaurer l'état précédent du mode maintenance
+        maintenance_config.is_maintenance_mode = old_maintenance_state
+        maintenance_config.save()
+        
+    return redirect('saas_admin_app:saas_backups')
 
 
 

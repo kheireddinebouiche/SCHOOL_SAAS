@@ -1,0 +1,357 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+{% block title %} Sauvegardes BDD - SaaS Admin {% endblock title %}
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between glass-card p-3">
+                 <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                        <i class="ri-database-2-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 text-primary">Gestion des Sauvegardes</h4>
+                        <p class="text-muted mb-0 fs-13">Sauvegardes globales et par institution</p>
+                    </div>
+                </div>
+                <div class="page-title-right d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-soft-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#backupTenantModal">
+                        <i class="ri-building-line"></i> Sauvegarder un Tenant
+                    </button>
+                    <a href="{% url 'saas_admin_app:saas_create_backup' %}" class="btn btn-primary d-flex align-items-center gap-2">
+                        <i class="ri-add-line"></i> Créer Sauvegarde Globale
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Total Sauvegardes</h5>
+                        <div class="icon-box primary">
+                            <i class="ri-stack-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value">{{ total_backups }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Taille Totale</h5>
+                        <div class="icon-box info">
+                            <i class="ri-scales-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value">{{ total_size_formatted }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Globales</h5>
+                        <div class="icon-box success">
+                            <i class="ri-global-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value">{{ global_backups }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card modern-card h-100 mb-0">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="stat-tile-title mb-0">Tenants</h5>
+                        <div class="icon-box warning">
+                            <i class="ri-building-line"></i>
+                        </div>
+                    </div>
+                    <h2 class="stat-tile-value">{{ tenant_backups }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backups Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card h-100">
+                <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-15">
+                        <i class="ri-history-line me-2 text-primary"></i>Historique des Sauvegardes
+                    </h5>
+                    <div class="alert alert-info py-1 px-3 mb-0 fs-12 d-flex align-items-center gap-2">
+                        <i class="ri-information-line"></i>
+                        Note: Les fichiers sont stockés dans le dossier <code>backups/</code> du serveur.
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-nowrap table-modern mb-0">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th>Date & Heure</th>
+                                    <th>Type</th>
+                                    <th>Tenant / Cible</th>
+                                    <th>Nom du Fichier</th>
+                                    <th>Taille</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="ri-time-line text-muted"></i>
+                                            <div>
+                                                <h6 class="mb-0 fw-medium">{{ backup.created_at|date:"d/m/Y" }}</h6>
+                                                <small class="text-muted">{{ backup.created_at|date:"H:i:s" }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if backup.backup_type == 'GLOBAL' %}
+                                            <span class="badge bg-primary-subtle text-primary border px-2 py-1">
+                                                <i class="ri-global-line me-1"></i> Globale
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border px-2 py-1">
+                                                <i class="ri-building-line me-1"></i> Tenant
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if backup.tenant %}
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-light text-primary border font-monospace">
+                                                    {{ backup.tenant.schema_name }}
+                                                </span>
+                                                <span class="text-truncate" style="max-width: 150px;">{{ backup.tenant.nom }}</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Système Complet</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code class="text-dark fs-12">{{ backup.filename }}</code>
+                                    </td>
+                                    <td>
+                                        {% if backup.size > 0 %}
+                                            <span class="text-dark fw-medium">{{ backup.size|filesizeformat }}</span>
+                                        {% else %}
+                                            <span class="text-danger fw-medium">0 KB</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button type="button" class="btn btn-sm btn-soft-warning" 
+                                                    onclick="confirmRestore('{{ backup.id }}', '{{ backup.filename }}', '{{ backup.backup_type }}')" 
+                                                    title="Restaurer" {% if backup.backup_type == 'GLOBAL' %}disabled{% endif %}>
+                                                <i class="ri-refresh-line"></i>
+                                            </button>
+                                            <a href="{% url 'saas_admin_app:saas_download_backup' backup.id %}" class="btn btn-sm btn-soft-success" title="Télécharger">
+                                                <i class="ri-download-2-line"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-soft-danger" 
+                                                    onclick="confirmDelete('{{ backup.id }}', '{{ backup.filename }}')" 
+                                                    title="Supprimer">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="ri-database-2-line fs-1" style="opacity: 0.2;"></i>
+                                        <div class="mt-2 text-muted">Aucune sauvegarde trouvée.</div>
+                                        <div class="mt-3">
+                                            <a href="{% url 'saas_admin_app:saas_create_backup' %}" class="btn btn-soft-primary btn-sm">
+                                                Créer la première sauvegarde
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(id, filename) {
+    alertify.confirm("Supprimer la sauvegarde", 
+        "Êtes-vous sûr de vouloir supprimer le fichier <b>" + filename + "</b> ? Cette action est irréversible.",
+        function() {
+            window.location.href = "{% url 'saas_admin_app:saas_backups' %}" + id + "/delete/";
+        },
+        function() {
+            // Cancelled
+        }
+    ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+}
+
+function confirmRestore(id, filename, type) {
+    if (type === 'GLOBAL') {
+        alertify.error("La restauration globale n'est pas autorisée via l'interface web pour des raisons de sécurité.");
+        return;
+    }
+    
+    // Set data in modal
+    document.getElementById('restoreBackupId').value = id;
+    document.getElementById('restoreFilenameDisplay').textContent = filename;
+    document.getElementById('restoreFilenameInput').value = '';
+    document.getElementById('restoreConfirmBtn').disabled = true;
+    
+    // Set expected code
+    window.expectedRestoreCode = filename;
+    
+    // Show modal
+    var restoreModal = new bootstrap.Modal(document.getElementById('restoreConfirmModal'));
+    restoreModal.show();
+}
+
+function validateRestoreInput(val) {
+    const btn = document.getElementById('restoreConfirmBtn');
+    if (val === window.expectedRestoreCode) {
+        btn.disabled = false;
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-danger');
+    } else {
+        btn.disabled = true;
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-secondary');
+    }
+}
+
+function submitRestore() {
+    const id = document.getElementById('restoreBackupId').value;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/saas-admin/backups/${id}/restore/`;
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    
+    const codeInput = document.createElement('input');
+    codeInput.type = 'hidden';
+    codeInput.name = 'confirmation_code';
+    codeInput.value = document.getElementById('restoreFilenameInput').value;
+    
+    form.appendChild(csrfInput);
+    form.appendChild(codeInput);
+    document.body.appendChild(form);
+    
+    alertify.message("Lancement de la restauration... Veuillez ne pas fermer cette page.", 0);
+    form.submit();
+}
+</script>
+
+<!-- Modal de Confirmation de Restauration -->
+<div class="modal fade" id="restoreConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0 p-3">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <i class="ri-error-warning-fill"></i> Confirmation de Restauration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning border-warning border-opacity-20 bg-warning bg-opacity-10 d-flex gap-3 mb-4">
+                    <i class="ri-alert-fill fs-24 text-warning"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold text-warning mb-1">Attention : Action Irréversible</h6>
+                        <p class="mb-0 fs-13 text-dark">La restauration remplacera toutes les données actuelles du tenant par le contenu de ce fichier. Les données créées depuis cette sauvegarde seront <b>définitivement perdues</b>.</p>
+                    </div>
+                </div>
+
+                <p class="mb-2 fs-14">Fichier à restaurer : <br><b id="restoreFilenameDisplay" class="font-monospace text-primary"></b></p>
+                
+                <div class="mt-4">
+                    <label class="form-label fs-13 text-muted">Veuillez saisir le nom exact du fichier pour confirmer :</label>
+                    <input type="hidden" id="restoreBackupId">
+                    <input type="text" class="form-control font-monospace mb-2" id="restoreFilenameInput" 
+                           placeholder="Copiez/Collez le nom du fichier ici" 
+                           oninput="validateRestoreInput(this.value)">
+                </div>
+                
+                <div class="d-flex align-items-center gap-2 text-danger mt-3 fs-12">
+                    <i class="ri-shield-user-line"></i>
+                    <span>Toutes les sessions de ce tenant seront déconnectées durant l'opération.</span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 p-3">
+                <button type="button" class="btn btn-link link-secondary text-decoration-none" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-secondary px-4" id="restoreConfirmBtn" onclick="submitRestore()" disabled>
+                    <i class="ri-refresh-line me-1"></i> Confirmer la restauration
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sélection Tenant pour Sauvegarde -->
+<div class="modal fade" id="backupTenantModal" tabindex="-1" aria-labelledby="backupTenantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom border-white border-opacity-20 p-3">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="backupTenantModalLabel">
+                    <i class="ri-building-line text-primary"></i> Sauvegarder un Tenant
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted fs-14 mb-4">Sélectionnez une institution pour générer une sauvegarde individuelle de son schéma de base de données.</p>
+                
+                <div class="list-group list-group-flush rounded-3 border">
+                    {% for inst in instituts %}
+                    <a href="{% url 'saas_admin_app:saas_create_backup' %}?tenant_id={{ inst.id }}" 
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-bottom border-light">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                                {{ inst.nom|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fs-14">{{ inst.nom }}</h6>
+                                <small class="text-muted font-monospace" style="font-size: 0.7rem;">{{ inst.schema_name }}</small>
+                            </div>
+                        </div>
+                        <i class="ri-arrow-right-s-line text-muted"></i>
+                    </a>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted">Aunuc tenant trouvé.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer border-top border-white border-opacity-20 p-2">
+                <button type="button" class="btn btn-soft-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

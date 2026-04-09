@@ -132,8 +132,13 @@
                                         </ol>
                                     </nav>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <a href="{% url 't_formations:updateSpecialite' pk=object.id %}" class="btn btn-primary shadow-sm">
+                                <div class="d-flex gap-2 align-items-center">
+                                    {% if request.tenant.tenant_type == 'master' %}
+                                    <button class="btn btn-soft-success shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#visibilityModal" title="Contrôler quels établissements standards peuvent voir cette spécialité dans leur catalogue.">
+                                        <i class="ri-eye-line me-2"></i>Gestion de la visibilité
+                                    </button>
+                                    {% endif %}
+                                    <a href="{% url 't_formations:updateSpecialite' pk=object.id %}" class="btn btn-primary shadow-sm px-4">
                                         <i class="ri-edit-line me-2"></i>Modifier
                                     </a>
                                 </div>
@@ -234,6 +239,96 @@
                             </div>
                         </div>
                     </div>
+
+{% if request.tenant.tenant_type == 'master' %}
+<!-- Modal Gestion de la visibilité -->
+<div class="modal fade" id="visibilityModal" tabindex="-1" aria-labelledby="visibilityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 p-4 pb-0">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box success me-3">
+                        <i class="ri-eye-line"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-1" id="visibilityModalLabel">Visibilité par établissement</h5>
+                        <p class="text-muted small mb-0">Gérez quels instituts peuvent voir cette spécialité</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info border-0 border-start border-4 border-info bg-light-subtle mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-information-line text-info fs-4 me-3"></i>
+                        <div>
+                            <p class="mb-0 fs-13 text-dark">Basculez les interrupteurs ci-dessous pour masquer ou afficher cette spécialité individuellement pour chaque établissement standard.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-modern align-middle mb-0">
+                        <thead class="bg-light text-muted text-uppercase fs-12">
+                            <tr>
+                                <th class="ps-4">Établissement</th>
+                                <th>État de synchronisation</th>
+                                <th class="text-end pe-4">Visibilité</th>
+                            </tr>
+                        </thead>
+                        <tbody class="px-3 pb-3">
+                            {% for inst in tenant_visibility %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-xs me-3">
+                                            <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                                                {{ inst.nom|slice:":1"|upper }}
+                                            </div>
+                                        </div>
+                                        <span class="fw-semibold text-dark">{{ inst.nom }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if inst.is_synced %}
+                                        <span class="badge bg-soft-success text-success">
+                                            <i class="ri-checkbox-circle-line me-1"></i>Synchronisé
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-soft-warning text-warning">
+                                            <i class="ri-error-warning-line me-1"></i>Non synchronisé
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="form-check form-switch form-switch-md d-inline-block">
+                                        <input class="form-check-input tenant-visibility-toggle" 
+                                               type="checkbox" 
+                                               role="switch" 
+                                               data-tenant-id="{{ inst.id }}"
+                                               data-tenant-name="{{ inst.nom }}"
+                                               {% if inst.is_visible %}checked{% endif %}
+                                               {% if not inst.is_synced %}disabled{% endif %}>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    Aucun institut standard trouvé.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
                     <div class="row mt-4 mb-5">
                         <div class="col-lg-12">
@@ -1443,6 +1538,38 @@
                         title: 'Erreur',
                         text: 'Une erreur est survenue lors de la duplication de la spécialité.'
                     });
+                }
+            });
+        });
+
+        // Gestion de la visibilité individuelle par établissement
+        $(document).on('change', '.tenant-visibility-toggle', function() {
+            const isChecked = $(this).is(':checked');
+            const tenantId = $(this).data('tenant-id');
+            const tenantName = $(this).data('tenant-name');
+            const specCode = "{{ object.code }}";
+            const toggle = $(this);
+
+            $.ajax({
+                url: "{% url 't_formations:ApiToggleTenantVisibility' %}",
+                type: 'POST',
+                data: {
+                    'tenant_id': tenantId,
+                    'spec_code': specCode,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alertify.success(response.message);
+                    } else {
+                        // Reverser le toggle en cas d'erreur
+                        toggle.prop('checked', !isChecked);
+                        alertify.error(response.message || 'Une erreur est survenue');
+                    }
+                },
+                error: function() {
+                    toggle.prop('checked', !isChecked);
+                    alertify.error('Erreur réseau lors de la mise à jour pour ' + tenantName);
                 }
             });
         });

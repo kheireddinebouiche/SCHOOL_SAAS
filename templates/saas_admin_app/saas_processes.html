@@ -1,0 +1,249 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+
+{% block title %} Processus & Services SystǸme {% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-card p-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box primary">
+                        <i class="ri-cpu-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 text-primary">Monitoring SystǸme</h4>
+                        <p class="text-muted mb-0 fs-13">
+                            <i class="ri-time-line me-1"></i> Dernière mise à jour : <span class="fw-semibold">{{ timestamp }}</span>
+                            <span class="ms-3 badge bg-info-subtle text-info border">OS: {{ system_os }}</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="window.location.reload()" class="btn btn-soft-primary d-flex align-items-center gap-2">
+                        <i class="ri-refresh-line"></i> Actualiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monitoring Content -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card overflow-hidden">
+                <div class="card-header border-0 bg-transparent p-0">
+                    <ul class="nav nav-tabs nav-tabs-custom nav-success p-3 pb-0 border-bottom" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#processes-tab" role="tab">
+                                <i class="ri-list-settings-line me-1"></i> Processus Actifs
+                                <span class="badge bg-primary-subtle text-primary ms-2">{{ processes|length }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#services-tab" role="tab">
+                                <i class="ri-server-line me-1"></i> Services {{ system_os }}
+                                <span class="badge bg-success-subtle text-success ms-2">{{ services|length }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="tab-content">
+                        <!-- Processes Tab -->
+                        <div class="tab-pane active" id="processes-tab" role="tabpanel">
+                            <div class="p-3 border-bottom bg-light bg-opacity-50">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="search-box">
+                                            <input type="text" id="processSearch" class="form-control" placeholder="Rechercher un processus (Nom, PID...)" onkeyup="filterTable('processTable', 'processSearch')">
+                                            <i class="ri-search-line search-icon"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 text-end">
+                                        <span class="text-muted fs-12">Trié par utilisation CPU par défaut</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="max-height: 600px;">
+                                <table class="table table-hover table-nowrap table-modern mb-0" id="processTable">
+                                    <thead class="bg-light sticky-top">
+                                        <tr>
+                                            <th>PID</th>
+                                            <th>Nom du Processus</th>
+                                            <th>Utilisateur</th>
+                                            <th>CPU (%)</th>
+                                            <th>Mémoire (%)</th>
+                                            <th>État</th>
+                                            <th>Lancé le</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for proc in processes %}
+                                        <tr>
+                                            <td class="fw-bold text-primary">#{{ proc.pid }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="ri-terminal-window-line me-2 text-muted"></i>
+                                                    <span class="fw-medium">{{ proc.name }}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">{{ proc.username|default:"System" }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="progress flex-grow-1" style="height: 6px; min-width: 60px;">
+                                                        <div class="progress-bar {% if proc.cpu_percent > 50 %}bg-danger{% elif proc.cpu_percent > 20 %}bg-warning{% else %}bg-primary{% endif %}" 
+                                                             role="progressbar" style="width: {{ proc.cpu_percent }}%"></div>
+                                                    </div>
+                                                    <span class="fs-12 fw-semibold">{{ proc.cpu_percent|floatformat:1 }}%</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="fs-12 text-muted">{{ proc.memory_percent|floatformat:2 }}%</span>
+                                            </td>
+                                            <td>
+                                                {% if proc.status == 'running' %}
+                                                    <span class="badge bg-success-subtle text-success">Running</span>
+                                                {% elif proc.status == 'sleeping' %}
+                                                    <span class="badge bg-info-subtle text-info">Sleeping</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-muted">{{ proc.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-muted fs-12">{{ proc.uptime }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Services Tab -->
+                        <div class="tab-pane" id="services-tab" role="tabpanel">
+                            <div class="p-3 border-bottom bg-light bg-opacity-50">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="search-box">
+                                            <input type="text" id="serviceSearch" class="form-control" placeholder="Rechercher un service..." onkeyup="filterTable('serviceTable', 'serviceSearch')">
+                                            <i class="ri-search-line search-icon"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button onclick="filterService('Running')" class="btn btn-soft-success">Running</button>
+                                            <button onclick="filterService('Stopped')" class="btn btn-soft-danger">Stopped</button>
+                                            <button onclick="filterService('')" class="btn btn-soft-secondary">Tout</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="max-height: 600px;">
+                                <table class="table table-hover table-nowrap table-modern mb-0" id="serviceTable">
+                                    <thead class="bg-light sticky-top">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Description / Nom d'affichage</th>
+                                            <th>Type</th>
+                                            <th>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for service in services %}
+                                        <tr>
+                                            <td class="fw-medium text-dark">{{ service.name }}</td>
+                                            <td class="text-wrap" style="max-width: 300px;">
+                                                <span class="fs-13 text-muted">{{ service.display_name }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-primary fs-11">{{ service.type }}</span>
+                                            </td>
+                                            <td>
+                                                {% if 'Running' in service.status or 'active' in service.status %}
+                                                    <span class="badge bg-success text-white">
+                                                        <i class="ri-play-fill me-1"></i>{{ service.status }}
+                                                    </span>
+                                                {% elif 'Stopped' in service.status or 'inactive' in service.status %}
+                                                    <span class="badge bg-danger text-white">
+                                                        <i class="ri-stop-fill me-1"></i>{{ service.status }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark">{{ service.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light bg-opacity-50 border-0 p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted fs-12">Total Processus: <strong>{{ processes|length }}</strong></span>
+                        <span class="text-muted fs-12">Total Services: <strong>{{ services|length }}</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .search-box { position: relative; }
+    .search-box .form-control { padding-left: 35px; border-radius: 10px; background: rgba(255,255,255,0.8); }
+    .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    
+    .nav-tabs-custom .nav-link { border: none; font-weight: 600; color: var(--text-muted); padding: 1rem 1.5rem; position: relative; }
+    .nav-tabs-custom .nav-link.active { color: var(--primary-color); background: transparent; }
+    .nav-tabs-custom .nav-link.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--primary-color); border-radius: 3px 3px 0 0; }
+    
+    .table-modern tbody tr { transition: all 0.2s; }
+    .table-modern tbody tr:hover { background: rgba(67, 97, 238, 0.03) !important; }
+</style>
+
+<script>
+    function filterTable(tableId, inputId) {
+        let input = document.getElementById(inputId);
+        let filter = input.value.toUpperCase();
+        let table = document.getElementById(tableId);
+        let tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let found = false;
+            let td = tr[i].getElementsByTagName("td");
+            for (let j = 0; j < td.length; j++) {
+                if (td[j].textContent.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+            tr[i].style.display = found ? "" : "none";
+        }
+    }
+
+    function filterService(status) {
+        let table = document.getElementById('serviceTable');
+        let tr = table.getElementsByTagName("tr");
+        let filter = status.toUpperCase();
+
+        for (let i = 1; i < tr.length; i++) {
+            if (filter === "") {
+                tr[i].style.display = "";
+            } else {
+                let statusBadge = tr[i].getElementsByTagName("td")[3];
+                if (statusBadge.textContent.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+</script>
+{% endblock content %}

@@ -83,3 +83,34 @@ class SaaSMaintenanceConfiguration(models.Model):
         """Retourne l'unique instance de configuration."""
         obj, created = cls.objects.get_or_create(id=1)
         return obj
+
+
+class DatabaseBackup(models.Model):
+    """Modèle pour suivre les sauvegardes de la base de données."""
+    
+    TYPE_CHOICES = [
+        ('GLOBAL', 'Sauvegarde Globale'),
+        ('TENANT', 'Sauvegarde Tenant'),
+    ]
+    
+    file = models.FileField(upload_to='backups/', verbose_name=_("Fichier de sauvegarde"))
+    backup_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='GLOBAL', verbose_name=_("Type"))
+    tenant = models.ForeignKey('app.Institut', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Tenant"), related_name='backups')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    size = models.BigIntegerField(default=0, verbose_name=_("Taille (bytes)"))
+    filename = models.CharField(max_length=255, verbose_name=_("Nom du fichier"))
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Sauvegarde Base de Données"
+        verbose_name_plural = "Sauvegardes Base de Données"
+
+    def __str__(self):
+        return f"{self.backup_type} - {self.filename} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+    def delete(self, *args, **kwargs):
+        # Supprimer le fichier physique quand l'entrée est supprimée
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)

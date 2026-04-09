@@ -87,6 +87,7 @@ class Specialites(models.Model):
     condition_access = models.TextField(max_length=1000, null=True, blank=True)
 
     etat = models.CharField(max_length=10, null=True, blank=True, choices=[('last','À jour'),('updated','Mis à jour')], default='last')
+    is_visible = models.BooleanField(default=True)
 
     class Meta:
         verbose_name="Spécialité"

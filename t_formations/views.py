@@ -10,7 +10,7 @@ from django.http import JsonResponse, HttpResponse
 import csv
 import openpyxl
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from .import_utils import handle_uploaded_file, verify_data, import_data
 import json
 from django.core.paginator import Paginator
@@ -26,7 +26,11 @@ def listModules(request):
     return render(request, 't_formations/modules.html', {'modules': modules})
 
 def listSpecialites(request):
-    specialites = Specialites.objects.all().order_by('formation')
+    queryset = Specialites.objects.all()
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
+    
+    specialites = queryset.order_by('formation')
     context = {
         'liste' : specialites,
         'tenant' : request.tenant
@@ -36,9 +40,13 @@ def listSpecialites(request):
 @login_required(login_url="institut_app:login")
 def listFormations(request):
     # Optimisation avec prefetch_related pour éviter les requêtes N+1
+    queryset = Specialites.objects.all()
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
+
     formations = Formation.objects.all().prefetch_related(
-        'formation_specilite', 
-        'formation_specilite__modules_set',
+        Prefetch('formation_specilite', queryset=queryset, to_attr='visible_specialites'),
+        'visible_specialites__modules_set',
         'dossierinscription_set'
     )
     
@@ -60,7 +68,7 @@ def listFormations(request):
             f.missing_info.append("Dossier")
 
         # Vérification de l'architecture (Spécialités et Modules)
-        specs = f.formation_specilite.all()
+        specs = f.visible_specialites
         if not specs:
             f.missing_info.append("Spécialités")
         else:
@@ -274,6 +282,7 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
                     'branche': specialite.branche,
                     'abr': specialite.abr,
                     'nb_tranche': specialite.nb_tranche,
+                    'is_visible': specialite.is_visible,
                 }
             )
             return sync_specialite
@@ -616,22 +625,86 @@ def deleteFraisInscription(request):
 @login_required(login_url="institut_app:login")
 def detailFormation(request, pk):
     formation = Formation.objects.get(id = pk)
-    specialite = Specialites.objects.filter(formation = formation)
+    queryset = Specialites.objects.filter(formation = formation)
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
 
     context = {
         'formation' : formation,
         'tenant' : request.tenant,
-        'specialite' : specialite,
+        'specialite' : queryset,
     }
     return render(request, 'tenant_folder/formations/details_formation.html', context)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiToggleTenantVisibility(request):
+    if request.tenant.tenant_type != 'master':
+        return JsonResponse({'success': False, 'message': 'Accès refusé. Seul le compte maître peut gérer la visibilité.'})
+    
+    tenant_id = request.POST.get('tenant_id')
+    spec_code = request.POST.get('spec_code')
+    
+    if not tenant_id or not spec_code:
+        return JsonResponse({'success': False, 'message': 'Paramètres manquants.'})
+
+    try:
+        from app.models import Institut
+        inst = Institut.objects.get(id=tenant_id)
+        with schema_context(inst.schema_name):
+            try:
+                spec_local = Specialites.objects.get(code=spec_code)
+                spec_local.is_visible = not spec_local.is_visible
+                spec_local.save()
+                new_status = spec_local.is_visible
+                return JsonResponse({
+                    'success': True, 
+                    'is_visible': new_status,
+                    'message': f"Visibilité mise à jour pour {inst.nom}"
+                })
+            except Specialites.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Cette spécialité n\'est pas encore synchronisée sur cet institut.'})
+                
+    except Institut.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Institut introuvable.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
 
 def detailSpecialite(request, pk):
     object = Specialites.objects.get(id = pk)
     context = {
         'object' : object,
-        'tenant' : request.tenant,
+        'tenant' : request.tenant
     }
-    return render(request, "tenant_folder/formations/details_specialite.html", context)
+
+    if request.tenant.tenant_type == 'master':
+        from app.models import Institut
+        instituts = Institut.objects.filter(tenant_type='second').order_by('nom')
+        tenant_visibility = []
+        for inst in instituts:
+            try:
+                with schema_context(inst.schema_name):
+                    try:
+                        spec_local = Specialites.objects.get(code=object.code)
+                        is_visible = spec_local.is_visible
+                        is_synced = True
+                    except Specialites.DoesNotExist:
+                        is_visible = False
+                        is_synced = False
+                
+                tenant_visibility.append({
+                    'id': inst.id,
+                    'nom': inst.nom,
+                    'is_visible': is_visible,
+                    'is_synced': is_synced
+                })
+            except:
+                pass
+        
+        context['tenant_visibility'] = tenant_visibility
+
+    return render(request, 'tenant_folder/formations/details_specialite.html', context)
 
 def ApiGetSpecialiteModule(request):
     id = request.GET.get('id')
@@ -1116,7 +1189,7 @@ def get_module_details_with_teachers(request):
 @login_required(login_url='intitut_app:login')
 def ApiLoadDocuments(request):
     code_formation = request.GET.get('code_formation')
-    documents = DossierInscription.objects.filter(formation__code = code_formation).values('id','label')
+    documents = DossierInscription.objects.filter(formation__code = code_formation).values('id','label', 'is_required')
 
 
     return JsonResponse(list(documents), safe=False)
@@ -1150,6 +1223,28 @@ def ApiDeleteDoc(request):
         return JsonResponse({'status' : 'success', 'message' : 'Document supprimé avec succès' })
     else:
         return JsonResponse({'status' : 'error', 'message' : 'Une erreur est survenue lors du traitement de la requête' })
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiUpdateDoc(request):
+    id_doc = request.POST.get('id_doc')
+    label = request.POST.get('nom_doc')
+    required = request.POST.get('required')
+
+    if not id_doc or not label:
+        return JsonResponse({'status' : 'error', 'message' : 'Informations manquantes' })
+
+    try:
+        doc = DossierInscription.objects.get(id=id_doc)
+        doc.label = label
+        doc.is_required = (required == "true")
+        doc.save()
+        return JsonResponse({'status' : 'success', 'message' : 'Document mis à jour avec succès' })
+    except DossierInscription.DoesNotExist:
+        return JsonResponse({'status' : 'error', 'message' : 'Document introuvable' })
+    except Exception as e:
+        return JsonResponse({'status' : 'error', 'message' : str(e) })
     
 
 @login_required(login_url="institut_app:login")

@@ -180,6 +180,9 @@ DATABASES = {
     }
 }
 
+PG_DUMP_PATH = env("PG_DUMP_PATH", default='pg_dump')
+PSQL_PATH = env("PSQL_PATH", default='psql')
+
 
 
 # Password validation
