@@ -9,7 +9,8 @@ from .views import (
     saas_delete_backup_view, saas_download_backup_view, saas_restore_backup_view,
     saas_processes_view, saas_terminal_view, saas_terminal_exec_view,
     saas_explorer_view, api_explorer_browse, api_explorer_read,
-    api_explorer_save, api_explorer_delete
+    api_explorer_save, api_explorer_delete, saas_system_lock_view,
+    saas_system_logout_view
 )
 
 app_name = 'saas_admin_app'
@@ -23,6 +24,8 @@ urlpatterns = [
     path('processes/', saas_processes_view, name='saas_processes'),
     path('terminal/', saas_terminal_view, name='saas_terminal'),
     path('api/terminal/exec/', saas_terminal_exec_view, name='saas_terminal_exec'),
+    path('system-lock/', saas_system_lock_view, name='saas_system_lock'),
+    path('system-logout/', saas_system_logout_view, name='saas_system_logout'),
     path('explorer/', saas_explorer_view, name='saas_explorer'),
     path('api/explorer/browse/', api_explorer_browse, name='api_explorer_browse'),
     path('api/explorer/read/', api_explorer_read, name='api_explorer_read'),

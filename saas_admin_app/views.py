@@ -5,7 +5,8 @@ import platform
 import time
 import glob
 from datetime import datetime
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.db import connection
 from django.conf import settings
 from django.http import JsonResponse
@@ -155,6 +156,49 @@ def saas_dashboard_view(request):
     context['maintenance_config'] = SaaSMaintenanceConfiguration.get_solo()
 
     return render(request, 'saas_admin_app/saas_dashboard.html', context)
+
+from django.utils.decorators import method_decorator
+from functools import wraps
+from django.shortcuts import redirect
+from django.contrib import messages
+
+def system_access_required(view_func):
+    """Décorateur pour vérifier que l'accès système est déverrouillé par le PIN."""
+    @wraps(view_func)
+    @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.session.get('saas_system_unlocked', False):
+            # Stocker l'URL d'origine pour redirection après déverrouillage
+            request.session['next_system_url'] = request.path
+            return redirect('saas_admin_app:saas_system_lock')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_system_lock_view(request):
+    """Vue pour saisir le code PIN de sécurité SaaS."""
+    next_url = request.session.get('next_system_url', reverse('saas_admin_app:saas_dashboard'))
+    
+    if request.method == 'POST':
+        pin = request.POST.get('pin', '').strip()
+        # Nettoyage profond du PIN configuré (enlève espaces et guillemets éventuels)
+        configured_pin = str(settings.SAAS_SYSTEM_PIN).strip().strip("'").strip('"')
+        
+        if pin == configured_pin:
+            request.session['saas_system_unlocked'] = True
+            messages.success(request, "Accès système déverrouillé.")
+            return redirect(next_url)
+        else:
+            messages.error(request, f"Code PIN incorrect.")
+            
+    return render(request, 'saas_admin_app/saas_system_lock.html', {'next_url': next_url})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_system_logout_view(request):
+    """Verrouille à nouveau l'accès aux outils système."""
+    request.session['saas_system_unlocked'] = False
+    messages.info(request, "Accès système verrouillé.")
+    return redirect('saas_admin_app:saas_dashboard')
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_performance_view(request):
@@ -496,7 +540,7 @@ def saas_processes_view(request):
     
     return render(request, 'saas_admin_app/saas_processes.html', context)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def saas_terminal_view(request):
     """Affiche la page du terminal système."""
     # Initialiser le répertoire de travail dans la session s'il n'existe pas ou sur demande
@@ -509,7 +553,7 @@ def saas_terminal_view(request):
     }
     return render(request, 'saas_admin_app/saas_terminal.html', context)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def saas_terminal_exec_view(request):
     """API endpoint pour exécuter des commandes système avec suivi du répertoire."""
     import subprocess
@@ -580,7 +624,7 @@ def saas_terminal_exec_view(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def saas_explorer_view(request):
     """Affiche la page principale de l'explorateur de fichiers système."""
     initial_path = request.GET.get('path', str(settings.BASE_DIR))
@@ -590,7 +634,7 @@ def saas_explorer_view(request):
     }
     return render(request, 'saas_admin_app/saas_explorer.html', context)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def api_explorer_browse(request):
     """API pour lister le contenu d'un répertoire système quelconque."""
     import os
@@ -636,7 +680,7 @@ def api_explorer_browse(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def api_explorer_read(request):
     """Lit le contenu d'un fichier texte."""
     import os
@@ -665,7 +709,7 @@ def api_explorer_read(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def api_explorer_save(request):
     """Enregistre les modifications d'un fichier."""
     import os
@@ -687,7 +731,7 @@ def api_explorer_save(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
 def api_explorer_delete(request):
     """Supprime un fichier ou un répertoire."""
     import os
