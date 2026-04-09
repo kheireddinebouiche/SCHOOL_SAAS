@@ -7,7 +7,9 @@ from .views import (
     saas_reset_user_password_view, saas_email_config_view, saas_test_email_view,
     saas_toggle_maintenance_view, saas_backups_view, saas_create_backup_view,
     saas_delete_backup_view, saas_download_backup_view, saas_restore_backup_view,
-    saas_processes_view, saas_terminal_view, saas_terminal_exec_view
+    saas_processes_view, saas_terminal_view, saas_terminal_exec_view,
+    saas_explorer_view, api_explorer_browse, api_explorer_read,
+    api_explorer_save, api_explorer_delete
 )
 
 app_name = 'saas_admin_app'
@@ -21,6 +23,11 @@ urlpatterns = [
     path('processes/', saas_processes_view, name='saas_processes'),
     path('terminal/', saas_terminal_view, name='saas_terminal'),
     path('api/terminal/exec/', saas_terminal_exec_view, name='saas_terminal_exec'),
+    path('explorer/', saas_explorer_view, name='saas_explorer'),
+    path('api/explorer/browse/', api_explorer_browse, name='api_explorer_browse'),
+    path('api/explorer/read/', api_explorer_read, name='api_explorer_read'),
+    path('api/explorer/save/', api_explorer_save, name='api_explorer_save'),
+    path('api/explorer/delete/', api_explorer_delete, name='api_explorer_delete'),
     path('logs/', saas_logs_view, name='saas_logs'),
     path('backups/', saas_backups_view, name='saas_backups'),
     path('backups/create/', saas_create_backup_view, name='saas_create_backup'),

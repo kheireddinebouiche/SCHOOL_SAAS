@@ -1,0 +1,330 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+
+{% block title %} Explorateur de Fichiers Système {% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-box info">
+                            <i class="ri-folder-open-line"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 text-primary">Explorateur Système</h4>
+                            <p class="text-muted mb-0 fs-13">Gérez les fichiers et répertoires de votre serveur</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button id="refreshBtn" class="btn btn-soft-primary d-flex align-items-center gap-2">
+                            <i class="ri-refresh-line"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Breadcrumbs -->
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-light p-2 rounded-3 mb-0" id="breadcrumbs">
+                        <li class="breadcrumb-item"><a href="#" data-path="/">Système</a></li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explorer Content -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card overflow-hidden">
+                <div class="table-responsive" style="min-height: 400px; max-height: 700px;">
+                    <table class="table table-hover table-nowrap table-modern mb-0" id="fileTable">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Taille</th>
+                                <th>Modifié le</th>
+                                <th>Permissions</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileList">
+                            <!-- JS content -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="loader" class="text-center p-5 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Chargement des fichiers...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Édition Fichier -->
+<div class="modal fade" id="editorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content glass-modal border-0">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <i class="ri-edit-box-line text-primary"></i>
+                    <span id="editorFilename">Édition</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="editor" style="height: 600px; width: 100%;"></div>
+            </div>
+            <div class="modal-footer border-top bg-light justify-content-between">
+                <div class="text-muted fs-12">
+                    Chemin: <span id="editorPath" class="fw-medium"></span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" id="saveFileBtn" class="btn btn-primary d-flex align-items-center gap-2">
+                        <i class="ri-save-line"></i> Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.min.js"></script>
+
+<style>
+    .breadcrumb-item a { text-decoration: none; color: var(--primary-color); font-weight: 500; }
+    .breadcrumb-item.active { color: var(--text-muted); }
+    .file-icon { font-size: 1.2rem; margin-right: 10px; }
+    .folder-link { cursor: pointer; color: var(--text-dark); text-decoration: none; font-weight: 500; }
+    .folder-link:hover { color: var(--primary-color); }
+    .glass-modal { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+</style>
+
+<script>
+    let currentPath = "{{ initial_path|escapejs }}";
+    let editor;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Ace Editor
+        editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/text");
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            fontSize: "14px"
+        });
+
+        loadDirectory(currentPath);
+
+        document.getElementById('refreshBtn').addEventListener('click', () => loadDirectory(currentPath));
+        document.getElementById('saveFileBtn').addEventListener('click', saveFile);
+    });
+
+    async function loadDirectory(path) {
+        const list = document.getElementById('fileList');
+        const loader = document.getElementById('loader');
+        const table = document.getElementById('fileTable');
+        
+        list.innerHTML = '';
+        loader.classList.remove('d-none');
+        table.classList.add('opacity-50');
+
+        try {
+            const response = await fetch(`{% url 'saas_admin_app:api_explorer_browse' %}?path=${encodeURIComponent(path)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                currentPath = data.current_path;
+                updateBreadcrumbs(data.current_path, data.sep);
+                
+                if (data.parent_path !== data.current_path) {
+                    addFileRow({ name: '..', is_dir: true, size_formatted: '--', modified: '--', permissions: '--' }, data.parent_path);
+                }
+
+                data.items.forEach(item => {
+                    const itemPath = data.current_path + data.sep + item.name;
+                    addFileRow(item, itemPath);
+                });
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        } catch (err) {
+            alert('Erreur réseau : ' + err.message);
+        } finally {
+            loader.classList.add('d-none');
+            table.classList.remove('opacity-50');
+        }
+    }
+
+    function addFileRow(item, path) {
+        const list = document.getElementById('fileList');
+        const row = document.createElement('tr');
+        
+        const icon = item.is_dir ? 'ri-folder-fill text-warning' : 'ri-file-text-line text-primary';
+        const nameContent = item.is_dir 
+            ? `<a class="folder-link" onclick="loadDirectory('${path.replace(/\\/g, '\\\\')}')"><i class="${icon} file-icon"></i>${item.name}</a>`
+            : `<span><i class="${icon} file-icon"></i>${item.name}</span>`;
+
+        let actions = '';
+        if (!item.is_dir && item.name !== '..') {
+            actions = `
+                <button class="btn btn-sm btn-soft-primary me-1" onclick="editFile('${path.replace(/\\/g, '\\\\')}')" title="Éditer"><i class="ri-edit-line"></i></button>
+                <button class="btn btn-sm btn-soft-danger" onclick="deleteItem('${path.replace(/\\/g, '\\\\')}', '${item.name}')" title="Supprimer"><i class="ri-delete-bin-line"></i></button>
+            `;
+        } else if (item.is_dir && item.name !== '..') {
+            actions = `
+                <button class="btn btn-sm btn-soft-danger" onclick="deleteItem('${path.replace(/\\/g, '\\\\')}', '${item.name}')" title="Supprimer"><i class="ri-delete-bin-line"></i></button>
+            `;
+        }
+
+        row.innerHTML = `
+            <td>${nameContent}</td>
+            <td>${item.size_formatted}</td>
+            <td class="text-muted fs-12">${item.modified}</td>
+            <td><code class="fs-11">${item.permissions}</code></td>
+            <td class="text-end">${actions}</td>
+        `;
+        list.appendChild(row);
+    }
+
+    function updateBreadcrumbs(path, sep) {
+        const bc = document.getElementById('breadcrumbs');
+        bc.innerHTML = '';
+        
+        // Root logic
+        const rootItem = document.createElement('li');
+        rootItem.className = 'breadcrumb-item';
+        rootItem.innerHTML = `<a href="#" onclick="loadDirectory('/')">Système</a>`;
+        bc.appendChild(rootItem);
+
+        const parts = path.split(sep).filter(p => p);
+        let currentBuild = '';
+        let startIndex = 0;
+        
+        if (sep === '\\') { // Windows
+            // Handle drive letters like C:
+            if (path.includes(':')) {
+                currentBuild = path.split(':')[0] + ':';
+                // Si le premier élément est la lettre de lecteur, on le passe
+                if (parts.length > 0 && parts[0].toLowerCase() === currentBuild.toLowerCase()) {
+                    startIndex = 1;
+                }
+            }
+        }
+
+        parts.slice(startIndex).forEach((part, index) => {
+            const adjustedIndex = index + startIndex;
+            currentBuild += (currentBuild.endsWith(sep) || currentBuild === '' ? '' : sep) + part;
+            const item = document.createElement('li');
+            item.className = 'breadcrumb-item' + (adjustedIndex === parts.length - 1 ? ' active' : '');
+            
+            if (adjustedIndex === parts.length - 1) {
+                item.textContent = part;
+            } else {
+                item.innerHTML = `<a href="#" onclick="loadDirectory('${currentBuild.replace(/\\/g, '\\\\')}')">${part}</a>`;
+            }
+            bc.appendChild(item);
+        });
+    }
+
+    async function editFile(path) {
+        try {
+            const response = await fetch(`{% url 'saas_admin_app:api_explorer_read' %}?path=${encodeURIComponent(path)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('editorFilename').textContent = data.filename;
+                document.getElementById('editorPath').textContent = path;
+                
+                // Set mode based on extension
+                let mode = "ace/mode/text";
+                const ext = data.extension;
+                if (ext === '.py') mode = "ace/mode/python";
+                else if (ext === '.html') mode = "ace/mode/html";
+                else if (ext === '.css') mode = "ace/mode/css";
+                else if (ext === '.js') mode = "ace/mode/javascript";
+                else if (ext === '.json') mode = "ace/mode/json";
+                else if (ext === '.env' || ext === '.ini') mode = "ace/mode/ini";
+                
+                editor.session.setMode(mode);
+                editor.setValue(data.content, -1);
+                
+                const modal = new bootstrap.Modal(document.getElementById('editorModal'));
+                modal.show();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        } catch (err) {
+            alert('Erreur technique : ' + err.message);
+        }
+    }
+
+    async function saveFile() {
+        const path = document.getElementById('editorPath').textContent;
+        const content = editor.getValue();
+        const btn = document.getElementById('saveFileBtn');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enregistrement...';
+
+        try {
+            const response = await fetch("{% url 'saas_admin_app:api_explorer_save' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({ path, content })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Fichier enregistré avec succès');
+                bootstrap.Modal.getInstance(document.getElementById('editorModal')).hide();
+                loadDirectory(currentPath);
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        } catch (err) {
+            alert('Erreur réseau');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-save-line"></i> Enregistrer';
+        }
+    }
+
+    async function deleteItem(path, name) {
+        if (!confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch("{% url 'saas_admin_app:api_explorer_delete' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({ path })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                loadDirectory(currentPath);
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        } catch (err) {
+            alert('Erreur réseau');
+        }
+    }
+</script>
+{% endblock content %}

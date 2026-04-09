@@ -16,7 +16,7 @@
                     <div>
                         <h4 class="mb-1 text-danger">Terminal Système</h4>
                         <p class="text-muted mb-0 fs-13">
-                            <i class="ri-map-pin-line me-1"></i> Racine du site : <code class="bg-light px-2 rounded">{{ current_dir }}</code>
+                            <i class="ri-map-pin-line me-1"></i> Position actuelle : <code id="currentPathDisplay" class="bg-light px-2 rounded">{{ current_dir }}</code>
                             <span class="ms-3 badge bg-dark text-white border">OS: {{ system_os }}</span>
                         </p>
                     </div>
@@ -102,7 +102,7 @@
                 <!-- Terminal Body -->
                 <div class="terminal-body p-3 font-monospace flex-grow-1 overflow-auto" id="terminalOutput">
                     <div class="line mb-1">
-                        <span class="text-success fw-bold">saas-admin@server:</span><span class="text-primary fw-bold">~{{ current_dir }}</span>$ welcome --help
+                        <span class="text-success fw-bold">saas-admin@server:</span><span class="text-primary fw-bold" id="initialPromptPath">{{ current_dir }}</span>$ welcome --help
                     </div>
                     <div class="line mb-3 text-white-50">
                         Bienvenue dans le terminal d'administration SaaS.<br>
@@ -112,7 +112,7 @@
 
                 <!-- Terminal Input Area -->
                 <div class="terminal-input-row d-flex align-items-center px-3 py-3 border-top">
-                    <span class="prompt text-success fw-bold me-2">saas-admin@server:~$</span>
+                    <span class="prompt text-success fw-bold me-2">saas-admin@server:<span class="text-primary" id="currentPromptPath">{{ current_dir }}</span>$</span>
                     <input type="text" id="terminalInput" class="terminal-input-field flex-grow-1" placeholder="Entrez une commande..." autofocus autocomplete="off">
                     <i class="ri-corner-down-left-line text-muted ms-2"></i>
                 </div>
@@ -217,16 +217,19 @@
         const output = document.getElementById('terminalOutput');
         const status = document.getElementById('status-indicator');
         const clearBtn = document.getElementById('clearTerminal');
+        const currentPathDisplay = document.getElementById('currentPathDisplay');
+        const currentPromptPath = document.getElementById('currentPromptPath');
         
         let history = [];
         let historyIndex = -1;
+        let currentCwd = "{{ current_dir }}";
 
         // Command execution logic
         async function executeCommand(cmd) {
             if (!cmd.trim()) return;
 
             // Add to UI history
-            appendToTerminal(`<div class="line mt-3"><span class="text-success fw-bold">saas-admin@server:</span><span class="text-primary fw-bold">~</span>$ ${cmd}</div>`);
+            appendToTerminal(`<div class="line mt-3"><span class="text-success fw-bold">saas-admin@server:</span><span class="text-primary fw-bold">${currentCwd}</span>$ ${cmd}</div>`);
             
             // Set status to busy
             status.innerHTML = '<span class="status-dot busy"></span> EN COURS...';
@@ -251,6 +254,14 @@
                     if (data.stderr) {
                         appendToTerminal(`<div class="cmd-stderr">${formatOutput(data.stderr)}</div>`);
                     }
+                    
+                    // Update CWD
+                    if (data.current_dir) {
+                        currentCwd = data.current_dir;
+                        if (currentPathDisplay) currentPathDisplay.textContent = currentCwd;
+                        if (currentPromptPath) currentPromptPath.textContent = currentCwd;
+                    }
+                    
                     appendToTerminal(`<div class="cmd-info text-muted">Process finished with exit code ${data.returncode}</div>`);
                 } else {
                     appendToTerminal(`<div class="cmd-stderr">Erreur: ${data.error}</div>`);

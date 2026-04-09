@@ -499,15 +499,19 @@ def saas_processes_view(request):
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_terminal_view(request):
     """Affiche la page du terminal système."""
+    # Initialiser le répertoire de travail dans la session s'il n'existe pas ou sur demande
+    if 'terminal_cwd' not in request.session or request.GET.get('reset') == '1':
+        request.session['terminal_cwd'] = str(settings.BASE_DIR)
+        
     context = {
-        'current_dir': settings.BASE_DIR,
+        'current_dir': request.session['terminal_cwd'],
         'system_os': platform.system(),
     }
     return render(request, 'saas_admin_app/saas_terminal.html', context)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_terminal_exec_view(request):
-    """API endpoint pour exécuter des commandes système."""
+    """API endpoint pour exécuter des commandes système avec suivi du répertoire."""
     import subprocess
     import os
     from django.http import JsonResponse
@@ -519,39 +523,192 @@ def saas_terminal_exec_view(request):
     if not command:
         return JsonResponse({'success': False, 'error': 'Commande vide'})
     
+    # Récupérer le répertoire actuel depuis la session
+    cwd = request.session.get('terminal_cwd', str(settings.BASE_DIR))
+    if not os.path.exists(cwd):
+        cwd = str(settings.BASE_DIR)
+        request.session['terminal_cwd'] = cwd
+
+    system_os = platform.system()
+    
     try:
-        # Exécution de la commande dans la racine du site
-        # Timeout de 60 secondes pour éviter les blocages
+        # Pour supporter le changement de répertoire (cd), on exécute la commande 
+        # puis on demande le nouveau chemin (pwd).
+        # On utilise un marqueur spécial pour isoler le nouveau CWD.
+        cwd_marker = "---SAAS_CWD_MARKER---"
+        
+        if system_os == 'Windows':
+            # Sur Windows (cmd/powershell), cd et pwd fonctionnent différemment
+            full_command = f"{command} & echo {cwd_marker} & cd"
+        else:
+            # Sur Linux (bash/sh), on utilise subshell et pwd
+            full_command = f"({command}); echo {cwd_marker}; pwd"
+        
         result = subprocess.run(
-            command,
+            full_command,
             shell=True,
             capture_output=True,
             text=True,
-            cwd=settings.BASE_DIR,
+            cwd=cwd,
             timeout=60,
-            # Forcer l'encodage selon l'OS pour éviter les plantages
             encoding='utf-8',
             errors='replace'
         )
         
+        stdout = result.stdout
+        new_cwd = cwd
+        
+        # Extraire le nouveau CWD depuis la sortie
+        if cwd_marker in stdout:
+            parts = stdout.rsplit(cwd_marker, 1)
+            stdout = parts[0].strip()
+            potential_new_cwd = parts[1].strip()
+            if os.path.exists(potential_new_cwd) and os.path.isdir(potential_new_cwd):
+                new_cwd = potential_new_cwd
+                request.session['terminal_cwd'] = new_cwd
+        
         return JsonResponse({
             'success': True,
-            'stdout': result.stdout,
+            'stdout': stdout,
             'stderr': result.stderr,
             'returncode': result.returncode,
-            'current_dir': str(settings.BASE_DIR)
+            'current_dir': new_cwd
         })
         
     except subprocess.TimeoutExpired:
+        return JsonResponse({'success': False, 'error': 'Délai d\'exécution dépassé (60s)'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_explorer_view(request):
+    """Affiche la page principale de l'explorateur de fichiers système."""
+    initial_path = request.GET.get('path', str(settings.BASE_DIR))
+    context = {
+        'initial_path': initial_path,
+        'system_os': platform.system(),
+    }
+    return render(request, 'saas_admin_app/saas_explorer.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_explorer_browse(request):
+    """API pour lister le contenu d'un répertoire système quelconque."""
+    import os
+    from django.http import JsonResponse
+    
+    path = request.GET.get('path', str(settings.BASE_DIR))
+    
+    # Normalisation pour Windows/Linux
+    path = os.path.normpath(path)
+    
+    if not os.path.exists(path):
+        return JsonResponse({'success': False, 'error': 'Chemin inexistant'}, status=404)
+    
+    if not os.path.isdir(path):
+        return JsonResponse({'success': False, 'error': 'N\'est pas un répertoire'}, status=400)
+    
+    items = []
+    try:
+        for entry in os.scandir(path):
+            try:
+                info = entry.stat()
+                items.append({
+                    'name': entry.name,
+                    'is_dir': entry.is_dir(),
+                    'size': info.st_size,
+                    'size_formatted': format_size(info.st_size) if entry.is_file() else '--',
+                    'modified': datetime.fromtimestamp(info.st_mtime).strftime('%d/%m/%Y %H:%M'),
+                    'permissions': oct(info.st_mode & 0o777),
+                })
+            except Exception:
+                continue
+                
+        # Tri : dossiers d'abord, puis fichiers
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+        
         return JsonResponse({
-            'success': False,
-            'error': 'Délai d\'exécution dépassé (Timeout : 60s)'
+            'success': True,
+            'current_path': path,
+            'parent_path': os.path.dirname(path),
+            'items': items,
+            'sep': os.sep
         })
     except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_explorer_read(request):
+    """Lit le contenu d'un fichier texte."""
+    import os
+    from django.http import JsonResponse
+    
+    path = request.GET.get('path')
+    if not path or not os.path.isfile(path):
+        return JsonResponse({'success': False, 'error': 'Fichier invalide'}, status=400)
+    
+    try:
+        # Vérification si binaire (basique)
+        with open(path, 'rb') as f:
+            chunk = f.read(1024)
+            if b'\0' in chunk:
+                return JsonResponse({'success': False, 'is_binary': True, 'error': 'Fichier binaire non éditable'})
+        
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            content = f.read()
+            
         return JsonResponse({
-            'success': False,
-            'error': str(e)
+            'success': True,
+            'content': content,
+            'filename': os.path.basename(path),
+            'extension': os.path.splitext(path)[1].lower()
         })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_explorer_save(request):
+    """Enregistre les modifications d'un fichier."""
+    import os
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    path = request.POST.get('path')
+    content = request.POST.get('content', '')
+    
+    if not path or not os.path.isfile(path):
+        return JsonResponse({'success': False, 'error': 'Fichier invalide'}, status=400)
+        
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return JsonResponse({'success': True, 'message': 'Fichier enregistré avec succès'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_explorer_delete(request):
+    """Supprime un fichier ou un répertoire."""
+    import os
+    import shutil
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    path = request.POST.get('path')
+    if not path or not os.path.exists(path):
+        return JsonResponse({'success': False, 'error': 'Chemin invalide'}, status=400)
+        
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+        return JsonResponse({'success': True, 'message': 'Suppression effectuée avec succès'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 def extract_timestamp(log_line):
     """Extract timestamp from a log line."""
