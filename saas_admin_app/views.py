@@ -728,6 +728,8 @@ def api_explorer_save(request):
         with open(path, 'w', encoding='utf-8') as f:
             f.write(content)
         return JsonResponse({'success': True, 'message': 'Fichier enregistré avec succès'})
+    except PermissionError:
+        return JsonResponse({'success': False, 'error': 'Permission refusée : l\'utilisateur système du site n\'a pas les droits pour modifier ce fichier.'}, status=403)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
