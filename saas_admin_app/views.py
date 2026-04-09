@@ -539,7 +539,7 @@ def saas_terminal_exec_view(request):
             'stdout': result.stdout,
             'stderr': result.stderr,
             'returncode': result.returncode,
-            'current_dir': settings.BASE_DIR
+            'current_dir': str(settings.BASE_DIR)
         })
         
     except subprocess.TimeoutExpired:
