@@ -196,27 +196,17 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from institut_app.models import Notification
+from app.models import TenantMessage
+
 @login_required
 def tenant_comm_hub(request):
-    # Existing code for tenant_comm_hub...
-    # (Checking if I need to re-read it to not delete it. The user only asked for tenant_comm_detail changes mostly, but let's be safe.
-    # Actually wait, replace_file_content replaces a block. I should only replace the imports and tenant_comm_detail logic.)
-    # Since existing imports are at top, let me just add the new imports to the top first, then replace the view function.
-    pass
-
-# I will do this in two steps to be safe. 
-# Step 1: Update imports
-# Step 2: Update tenant_comm_detail
-# Wait, I can do it in one go if I identify the block correctly. 
-# The imports are at the top. tenant_comm_detail starts around line 190.
-# Let's just create a new tool call to update imports first.
-
     current_tenant = request.tenant
     
-    # If Master, show list of sub-tenants
     if current_tenant.tenant_type == 'master':
         tenants_list = Institut.objects.filter(tenant_type='second')
-    # If Second, show list of Master tenants
     else:
         tenants_list = Institut.objects.filter(tenant_type='master')
 
@@ -224,6 +214,7 @@ def tenant_comm_hub(request):
         'tenants_list': tenants_list,
         'is_master': current_tenant.tenant_type == 'master'
     })
+
 
 from django.http import JsonResponse
 
@@ -250,17 +241,21 @@ def tenant_comm_detail(request, tenant_id):
         # 1. Send Message
         if action == 'send_message':
             message_content = request.POST.get('message')
-            if message_content:
+            attached_file = request.FILES.get('file')
+            if message_content or attached_file:
                 msg = TenantMessage.objects.create(
                     sender=current_tenant,
                     receiver=target_tenant,
-                    message=message_content
+                    message=message_content,
+                    attached_file=attached_file
                 )
                 
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
                         'status': 'success',
                         'message': msg.message,
+                        'file_url': msg.attached_file.url if msg.attached_file else None,
+                        'file_name': msg.attached_file.name.split('/')[-1] if msg.attached_file else None,
                         'created_at': msg.created_at.strftime("%H:%M"),
                         'sender_id': msg.sender.id,
                         'is_me': True
@@ -388,3 +383,169 @@ def tenant_comm_detail(request, tenant_id):
 
     # --- Full Page Render ---
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
+
+@login_required
+def tenant_comm_global(request):
+    current_tenant = request.tenant
+    
+    # Determine current folder ID from GET (nav) or POST (action parent)
+    current_folder_id = request.GET.get('folder_id') or request.POST.get('parent_id')
+    current_folder = None
+    if current_folder_id and current_folder_id != 'null':
+        current_folder = get_object_or_404(TenantFolder, id=current_folder_id, receiver__isnull=True)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        # 1. Send Message
+        if action == 'send_message':
+            message_content = request.POST.get('message')
+            attached_file = request.FILES.get('file')
+            if message_content or attached_file:
+                msg = TenantMessage.objects.create(
+                    sender=current_tenant,
+                    receiver=None,
+                    message=message_content,
+                    attached_file=attached_file
+                )
+                
+                # Broadcast notification to everyone
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    "global_tenant_broadcast",
+                    {
+                        "type": "send_notification",
+                        "message": f"Nouveau message global de {current_tenant.nom}",
+                        "link": reverse('tenant_comm_global'),
+                        "id": "global"
+                    }
+                )
+                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': msg.message,
+                        'file_url': msg.attached_file.url if msg.attached_file else None,
+                        'file_name': msg.attached_file.name.split('/')[-1] if msg.attached_file else None,
+                        'created_at': msg.created_at.strftime("%H:%M"),
+                        'sender_id': msg.sender.id,
+                        'is_me': True
+                    })
+
+        # 2. Create Folder
+        elif action == 'create_folder':
+            folder_name = request.POST.get('folder_name')
+            if folder_name:
+                TenantFolder.objects.create(
+                    sender=current_tenant,
+                    receiver=None,
+                    name=folder_name,
+                    parent=current_folder
+                )
+        
+        # 3. Upload File
+        elif action == 'upload_file':
+            uploaded_file = request.FILES.get('file')
+            if uploaded_file:
+                TenantDocument.objects.create(
+                    sender=current_tenant,
+                    receiver=None,
+                    file=uploaded_file,
+                    description=uploaded_file.name,
+                    folder=current_folder
+                )
+
+        # 4. Delete Folder
+        elif action == 'delete_folder':
+            folder_id = request.POST.get('item_id')
+            if folder_id:
+                folder = get_object_or_404(TenantFolder, id=folder_id)
+                # Security: Only verify sender match to allow deletion
+                if folder.sender == current_tenant:
+                    folder.delete()
+
+        # 5. Delete File
+        elif action == 'delete_file':
+            file_id = request.POST.get('item_id')
+            if file_id:
+                doc = get_object_or_404(TenantDocument, id=file_id)
+                # Security: Only verify sender match
+                if doc.sender == current_tenant:
+                    doc.delete()
+
+        # If it's not an AJAX request, redirect to avoid resubmission
+        if request.headers.get('x-requested-with') != 'XMLHttpRequest':
+            redirect_url = reverse('tenant_comm_global')
+            if current_folder_id:
+                redirect_url += f'?folder_id={current_folder_id}'
+            return redirect(redirect_url)
+
+    # --- Fetch Data for Context ---
+
+    # Fetch shared folders (global)
+    folders = TenantFolder.objects.filter(
+        receiver__isnull=True,
+        parent=current_folder
+    ).order_by('-created_at')
+
+    # Fetch shared documents (global)
+    documents = TenantDocument.objects.filter(
+        receiver__isnull=True,
+        folder=current_folder
+    ).order_by('-created_at')
+
+    # Fetch global messages
+    messages_list = TenantMessage.objects.filter(
+        receiver__isnull=True
+    ).order_by('created_at')
+    
+    # We do not mark global messages as read here yet because we need to implement a global read mechanism
+    # Currently we ignore is_read for global
+    
+    if current_tenant.tenant_type == 'master':
+        tenants_list = Institut.objects.filter(tenant_type='second')
+    else:
+        tenants_list = Institut.objects.filter(tenant_type='master')
+
+    # Mock target_tenant for global space rendering
+    target_tenant = type('', (), {})()
+    target_tenant.id = 'global'
+    target_tenant.nom = 'Espace Global'
+    
+    context = {
+        'target_tenant': target_tenant,
+        'messages_list': messages_list,
+        'folders': folders,
+        'documents': documents,
+        'is_master': current_tenant.tenant_type == 'master',
+        'tenants_list': tenants_list,
+        'current_folder': current_folder,
+        'is_global': True,
+    }
+
+    # Handle AJAX request
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        is_sidebar_update = False
+        if request.method == 'POST':
+            is_sidebar_update = True
+        elif 'folder_id' in request.GET:
+            is_sidebar_update = True
+            
+        if is_sidebar_update:
+            html = render_to_string('tenant_folder/communication/partials/sidebar_content.html', {
+                'folders': folders,
+                'documents': documents,
+                'current_folder': current_folder,
+                'is_global': True,
+            }, request=request)
+            return JsonResponse({
+                'status': 'success', 
+                'html': html,
+                'current_folder_id': current_folder.id if current_folder else ''
+            })
+        else:
+            html = render_to_string('tenant_folder/communication/partials/main_chat.html', context, request=request)
+            return JsonResponse({'status': 'success', 'html': html, 'type': 'full_chat'})
+
+    return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
+    

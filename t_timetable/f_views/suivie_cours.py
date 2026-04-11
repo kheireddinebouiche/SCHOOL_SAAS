@@ -38,13 +38,30 @@ def PageSuivieCours(request):
     
     groupes = Groupe.objects.all().values('id','nom').order_by('nom')
 
-    paginator = Paginator(seances, 15)
+    seances_list = list(seances)
+
+    # Modules sans volume horaire (pour l'avertissement)
+    modules_sans_vh = [
+        s for s in seances_list
+        if not s.get('module__duree') or s['module__duree'] == 0
+    ]
+    # Dédoublonnage par module id
+    seen = set()
+    modules_sans_vh_uniques = []
+    for m in modules_sans_vh:
+        key = (m['module__id'], m['registre__groupe__id'])
+        if key not in seen:
+            seen.add(key)
+            modules_sans_vh_uniques.append(m)
+
+    paginator = Paginator(seances_list, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
         'page_obj': page_obj,
         'groupes': list(groupes),
+        'modules_sans_vh': modules_sans_vh_uniques,
         'filters': {
             'groupe_id': groupe_id,
             'q': search_query,

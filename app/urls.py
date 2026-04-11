@@ -26,6 +26,7 @@ urlpatterns = [
     
     # Cross-Tenant Communication
     path('communication/inter-etablissements/', tenant_comm_hub, name='tenant_comm_hub'),
+    path('communication/inter-etablissements/global/', tenant_comm_global, name='tenant_comm_global'),
     path('communication/inter-etablissements/<int:tenant_id>/', tenant_comm_detail, name='tenant_comm_detail'),
     
 ]

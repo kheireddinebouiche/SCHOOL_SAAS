@@ -20,6 +20,7 @@ import json
 from .data.modules_data import MODULES_DATA
 
 TenantModel = get_tenant_model()
+from app.models import Institut
 
 def listModules(request):
     modules = Modules.objects.all()
@@ -272,8 +273,8 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
             # Chercher si la spécialité existe déjà
             sync_specialite, created = Specialites.objects.update_or_create(
                 code=specialite.code,
-                formation=sync_formation,
                 defaults={
+                    'formation': sync_formation,
                     'label': specialite.label,
                     'duree': specialite.duree,
                     'version': specialite.version,
@@ -295,8 +296,8 @@ def update_or_create_module_in_tenant(module, specialite, institut_schema):
             # Chercher si le module existe déjà
             sync_module, created = Modules.objects.update_or_create(
                 code=module.code,
-                specialite=specialite,
                 defaults={
+                    'specialite': specialite,
                     'label': module.label,
                     'coef': module.coef,
                     'duree': module.duree,
@@ -629,10 +630,13 @@ def detailFormation(request, pk):
     if request.tenant.tenant_type != 'master':
         queryset = queryset.filter(is_visible=True)
 
+    master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
+
     context = {
         'formation' : formation,
         'tenant' : request.tenant,
         'specialite' : queryset,
+        'master_tenant_name': master_tenant.nom if master_tenant else "l'établissement maître"
     }
     return render(request, 'tenant_folder/formations/details_formation.html', context)
 
@@ -649,7 +653,6 @@ def ApiToggleTenantVisibility(request):
         return JsonResponse({'success': False, 'message': 'Paramètres manquants.'})
 
     try:
-        from app.models import Institut
         inst = Institut.objects.get(id=tenant_id)
         with schema_context(inst.schema_name):
             try:
@@ -670,16 +673,19 @@ def ApiToggleTenantVisibility(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
-
+@login_required(login_url="institut_app:login")
 def detailSpecialite(request, pk):
     object = Specialites.objects.get(id = pk)
+    master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
+
     context = {
         'object' : object,
-        'tenant' : request.tenant
+        'tenant' : request.tenant,
+        'master_tenant_name': master_tenant.nom if master_tenant else "l'établissement maître",
+        'is_foreign_program': True if object.formation.type_formation == 'etrangere' or (object.formation.partenaire and object.formation.partenaire.type_partenaire == 'etranger') else False
     }
 
     if request.tenant.tenant_type == 'master':
-        from app.models import Institut
         instituts = Institut.objects.filter(tenant_type='second').order_by('nom')
         tenant_visibility = []
         for inst in instituts:

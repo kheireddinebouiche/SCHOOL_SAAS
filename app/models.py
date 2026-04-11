@@ -18,7 +18,7 @@ class Domaine(DomainMixin):
 
 class TenantFolder(models.Model):
     sender = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='sent_folders')
-    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_folders')
+    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_folders', null=True, blank=True)
     name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -28,8 +28,9 @@ class TenantFolder(models.Model):
 
 class TenantMessage(models.Model):
     sender = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_messages')
-    message = models.TextField()
+    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
+    message = models.TextField(null=True, blank=True)
+    attached_file = models.FileField(upload_to='tenant_chat_docs/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
@@ -38,7 +39,7 @@ class TenantMessage(models.Model):
 
 class TenantDocument(models.Model):
     sender = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='sent_documents')
-    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_documents')
+    receiver = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='received_documents', null=True, blank=True)
     file = models.FileField(upload_to='tenant_docs/')
     folder = models.ForeignKey(TenantFolder, on_delete=models.CASCADE, null=True, blank=True, related_name='documents')
     description = models.TextField(null=True, blank=True)
