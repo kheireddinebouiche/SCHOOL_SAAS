@@ -929,9 +929,15 @@
                     }));
                     
                     $.each(groups, function(index, group) {
+                        var text = group.nom;
+                        var disabled = false;
+                        if (group.etat === 'inscription_terminee') {
+                            text += ' (Inscription terminée)';
+                        }
                         groupSelect.append($('<option>', {
                             value: group.id,
-                            text: group.nom,
+                            text: text,
+                            'data-etat': group.etat
                         }));
                     });
 
@@ -1171,7 +1177,13 @@
                     html += '<span class="fw-bold text-dark">' + group.nom + '</span>';
                     html += '</div></td>';
                     html += '<td><span class="badge badge-soft-secondary">' + group.max_student + '</span></td>';
-                    html += '<td><span class="badge badge-soft-info">' + group.total + '</span> étudiants</td>';
+                    html += '<td>';
+                    if (group.etat === 'inscription_terminee') {
+                        html += '<span class="badge badge-soft-warning">Inscription terminée</span>';
+                    } else {
+                        html += '<span class="badge badge-soft-success">' + group.total + '</span> étudiants';
+                    }
+                    html += '</td>';
                     html += '<td class="text-end">';
                     html += '<div class="dropdown d-inline-block">';
                     html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">';
@@ -1206,6 +1218,14 @@
             var specialite = "{{specialite_id}}";
             
             if (groupId) {
+                var selectedOption = $('#groupSelect option:selected');
+                var etat = selectedOption.data('etat');
+                
+                if (etat === 'inscription_terminee') {
+                    alertify.error('Les inscriptions pour ce groupe sont terminées.');
+                    return;
+                }
+
                 var btn = $(this); // référence du bouton
                 btn.prop('disabled', true); // désactive le bouton
 

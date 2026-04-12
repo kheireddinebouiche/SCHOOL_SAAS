@@ -277,7 +277,7 @@ def ApiGroupeListeForAffectation(request):
     promoId = request.GET.get('promoId')
     specialite = request.GET.get('specialite') 
     
-    liste = Groupe.objects.filter(promotion__code=promoId,specialite_id=specialite,etat='inscription').annotate(total=Count('groupe_line_groupe')).values('id', 'nom', 'min_student', 'max_student', 'etat', 'total')
+    liste = Groupe.objects.filter(promotion__code=promoId, specialite_id=specialite, etat__in=['inscription', 'inscription_terminee']).annotate(total=Count('groupe_line_groupe')).values('id', 'nom', 'min_student', 'max_student', 'etat', 'total')
 
     return JsonResponse(list(liste), safe=False)
 
@@ -339,6 +339,13 @@ def ApiAffectStudentToGroupe(request):
 
         if not studentId and not groupId:
             return JsonResponse({"status":"error",'message':'Informations manquantes'})
+
+        try:
+            groupe_obj = Groupe.objects.get(id=groupId)
+            if groupe_obj.etat == 'inscription_terminee':
+                return JsonResponse({"status": "error", "message": "Les inscriptions pour ce groupe sont terminées."})
+        except Groupe.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Groupe non trouvé."})
 
         GroupeLine.objects.create(
             student_id = studentId,

@@ -785,12 +785,30 @@
                                     <button type="button" class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#consultationEcheancierModal">
                                         <i class="ri-eye-line me-1"></i> Consulter l'échéancier
                                     </button>
+                                    <button type="button" id="btnToggleFinancialAlert" class="btn btn-danger btn-action" data-bs-toggle="modal" data-bs-target="#financialAlertModal">
+                                        <i class="ri-alarm-warning-line me-1"></i> Lancer une alerte
+                                    </button>
                                 </div>
                             </div>
                             
                             <!-- Hidden fields for logo URLs -->
                             <input type="hidden" id="_logoHeader" />
                             <input type="hidden" id="_logoFooter" />
+                        </div>
+                    </div>
+                    <!-- Financial Alert Banner (hidden by default) -->
+                    <div id="financialAlertBanner" class="alert border-0 d-none mx-0 mb-0" role="alert"
+                         style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; border-radius: 0.5rem;">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-alarm-warning-fill fs-3 me-3 text-white"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 text-white fw-bold"><i class="ri-error-warning-line me-1"></i> ALERTE FINANCIÈRE ACTIVE</h6>
+                                <p class="mb-0 small text-white" id="financialAlertText">Étudiant en situation irrégulière pour défaut de paiement</p>
+                                <p class="mb-0 small text-white-50" id="financialAlertMeta"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-light ms-3" style="display:none;" id="btnDisableFinancialAlert" data-bs-toggle="modal" data-bs-target="#deactivateFinancialAlertModal">
+                                <i class="ri-close-circle-line me-1"></i>Désactiver
+                            </button>
                         </div>
                     </div>
                     <!-- Payment sections -->
@@ -1536,8 +1554,98 @@
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
 
+<!-- Modal Alerte Financière -->
+<div class="modal fade" id="financialAlertModal" tabindex="-1" aria-labelledby="financialAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header px-4 py-3" style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);">
+                <div class="d-flex align-items-center w-100">
+                    <div class="modal-icon bg-white bg-opacity-20 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="min-width: 40px; min-height: 40px;">
+                        <i class="ri-alarm-warning-line text-white fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="modal-title fw-bold text-white mb-0" id="financialAlertModalLabel">Lancer une alerte financière</h5>
+                        <p class="text-white text-opacity-75 mb-0 fs-6">Cette action est visible dans le profil étudiant et le groupe</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger d-flex align-items-start mb-4 border-0" style="background: rgba(220,53,69,0.08); border-radius: 10px;">
+                    <i class="ri-error-warning-fill text-danger fs-5 me-2 mt-1"></i>
+                    <div>
+                        <strong class="text-danger">Attention :</strong>
+                        <span class="text-muted"> Cette alerte sera visible dans le profil de l'étudiant et dans la liste du groupe. Seul vous pourrez la désactiver.</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="financialAlertMessageInput" class="form-label fw-semibold">Message de l'alerte</label>
+                    <textarea id="financialAlertMessageInput" class="form-control" rows="3"
+                              placeholder="Ex: Étudiant en situation irrégulière pour défaut de paiement">Étudiant en situation irrégulière pour défaut de paiement</textarea>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmAlertCheck">
+                    <label class="form-check-label text-muted" for="confirmAlertCheck">
+                        Je confirme vouloir lancer cette alerte sur cet étudiant.
+                    </label>
+                </div>
+                <div class="hstack gap-2 justify-content-end">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" id="confirmEnableAlertBtn" class="btn btn-danger" disabled>
+                        <i class="ri-alarm-warning-line me-1"></i> Confirmer l'alerte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Désactivation Alerte Financière -->
+<div class="modal fade" id="deactivateFinancialAlertModal" tabindex="-1" aria-labelledby="deactivateFinancialAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header px-4 py-3 bg-warning text-dark">
+                <div class="d-flex align-items-center w-100">
+                    <div class="modal-icon bg-white bg-opacity-20 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="min-width: 40px; min-height: 40px;">
+                        <i class="ri-close-circle-line text-dark fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="deactivateFinancialAlertModalLabel">Désactiver l'alerte financière</h5>
+                        <p class="text-dark text-opacity-75 mb-0 fs-6">Cette action retirera tous les indicateurs d'alerte</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-warning bg-opacity-10 text-warning display-5 rounded-circle">
+                        <i class="ri-error-warning-line"></i>
+                    </div>
+                </div>
+                <h4 class="mb-3">Confirmation de désactivation</h4>
+                <p class="text-muted mb-4">Êtes-vous sûr(e) de vouloir désactiver l'alerte financière pour cet étudiant ?</p>
+                
+                <div class="form-check mb-4 d-inline-block text-start">
+                    <input class="form-check-input" type="checkbox" id="confirmDeactivateAlertCheck">
+                    <label class="form-check-label text-muted" for="confirmDeactivateAlertCheck">
+                        Je confirme la désactivation de l'alerte.
+                    </label>
+                </div>
+                
+                <div class="hstack gap-2 justify-content-center">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" id="confirmDisableAlertBtn" class="btn btn-warning" disabled>
+                        <i class="ri-checkbox-circle-line me-1"></i> Désactiver l'alerte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Détails du Client -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-labelledby="clientDetailsModalLabel" aria-hidden="true">
+
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
             <div class="modal-header bg-gradient-primary text-white px-4 py-3" style="background: linear-gradient(135deg, #3b7ddd 0%, #1a56b0 100%) !important;">
@@ -3344,6 +3452,39 @@
                         data.user_data.demandeur_date_inscription,
                     )
 
+                    // === Financial Alert UI ===
+                    function updateAlertUI(hasAlert, message, alertUserName, canDisable) {
+                        var banner = $('#financialAlertBanner');
+                        var btn = $('#btnToggleFinancialAlert');
+                        var disableBtn = $('#btnDisableFinancialAlert');
+
+                        if (hasAlert) {
+                            banner.removeClass('d-none');
+                            $('#financialAlertText').text(message || 'Étudiant en situation irrégulière pour défaut de paiement');
+                            if (alertUserName) {
+                                $('#financialAlertMeta').text('Alerte lancée par : ' + alertUserName);
+                            }
+                            btn.html('<i class="ri-alarm-warning-line me-1"></i> Alerte active').removeClass('btn-danger').addClass('btn-outline-danger').attr('data-bs-toggle', null).attr('data-bs-target', null).prop('disabled', true);
+                            if (canDisable) {
+                                disableBtn.show();
+                            } else {
+                                disableBtn.hide();
+                            }
+                        } else {
+                            banner.addClass('d-none');
+                            btn.html('<i class="ri-alarm-warning-line me-1"></i> Lancer une alerte').removeClass('btn-outline-danger').addClass('btn-danger').attr('data-bs-toggle', 'modal').attr('data-bs-target', '#financialAlertModal').prop('disabled', false);
+                            disableBtn.hide();
+                        }
+                    }
+
+                    updateAlertUI(
+                        data.user_data.has_financial_alert,
+                        data.user_data.financial_alert_message,
+                        data.user_data.alert_user_name,
+                        data.user_data.can_disable_alert
+                    );
+                    // ==============================
+
                     DetailsRembourssementAvantTraitement(data.refund_data.date_de_demande, data.refund_data.montant_paye, data.refund_data.motif_rembourssement);
                 },
             });
@@ -4972,6 +5113,86 @@
         });
     }
     // ==================================================================
+
+
+        // === Financial Alert Handlers ===
+
+        // Toggle confirm button with checkbox
+        $(document).on('change', '#confirmAlertCheck', function() {
+            $('#confirmEnableAlertBtn').prop('disabled', !$(this).is(':checked'));
+        });
+
+        // Reset modal state on open
+        $('#financialAlertModal').on('show.bs.modal', function () {
+            $('#confirmAlertCheck').prop('checked', false);
+            $('#confirmEnableAlertBtn').prop('disabled', true);
+        });
+
+        // Enable alert
+        $(document).on('click', '#confirmEnableAlertBtn', function() {
+            var message = $('#financialAlertMessageInput').val().trim();
+            if (!message) { alertify.error("Veuillez saisir un message pour l'alerte."); return; }
+            var id_client = "{{pk}}";
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiToggleFinancialAlert' %}",
+                type: 'POST',
+                dataType: 'JSON',
+                data: {
+                    'id_client': id_client,
+                    'action': 'enable',
+                    'message': message,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        $('#financialAlertModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function() { alertify.error("Erreur réseau."); }
+            });
+        });
+
+        // Reset Deactivation modal state on open
+        $('#deactivateFinancialAlertModal').on('show.bs.modal', function () {
+            $('#confirmDeactivateAlertCheck').prop('checked', false);
+            $('#confirmDisableAlertBtn').prop('disabled', true);
+        });
+
+        // Toggle confirm button with checkbox
+        $(document).on('change', '#confirmDeactivateAlertCheck', function() {
+            $('#confirmDisableAlertBtn').prop('disabled', !$(this).is(':checked'));
+        });
+
+        // Disable alert
+        $(document).on('click', '#confirmDisableAlertBtn', function() {
+            var id_client = "{{pk}}";
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiToggleFinancialAlert' %}",
+                type: 'POST',
+                dataType: 'JSON',
+                data: {
+                    'id_client': id_client,
+                    'action': 'disable',
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        $('#deactivateFinancialAlertModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function() { alertify.error("Erreur réseau."); }
+            });
+        });
+
+        // ================================
 
 </script>
 

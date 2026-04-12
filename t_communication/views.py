@@ -12,12 +12,19 @@ def calendar_view(request):
     users = User.objects.exclude(id=request.user.id)
     
     # Calculate stats
+    from t_crm.models import RendezVous
+    
     reminders = Reminder.objects.filter(
         Q(user=request.user) | Q(participants=request.user)
     ).distinct()
     
-    total = reminders.count()
-    completed = reminders.filter(is_completed=True).count()
+    # CRM stats
+    rv_all = RendezVous.objects.filter(created_by=request.user, archived=False)
+    rv_total = rv_all.count()
+    rv_completed = rv_all.filter(statut__in=['termine', 'abouti', 'nabouti']).count()
+    
+    total = reminders.count() + rv_total
+    completed = reminders.filter(is_completed=True).count() + rv_completed
     pending = total - completed
     
     context = {
@@ -65,6 +72,42 @@ def reminder_api_list(request):
             },
             # Visual cue for shared events if needed
             'borderColor': '#000' if not is_owner else None
+        })
+
+    # Integration CRM: Add RendezVous
+    from t_crm.models import RendezVous
+    from datetime import datetime, time
+    
+    rv_qs = RendezVous.objects.filter(created_by=request.user, archived=False)
+    if start and end:
+        rv_qs = rv_qs.filter(date_rendez_vous__gte=start[:10], date_rendez_vous__lte=end[:10])
+        
+    for rv in rv_qs:
+        is_completed = rv.statut in ['termine', 'abouti', 'nabouti']
+        # Start time combining date and time fields
+        start_time = datetime.combine(rv.date_rendez_vous, rv.heure_rendez_vous or time.min)
+        
+        # Mapping type to category colors
+        cat = 'bg-info'
+        if rv.type == 'appel': cat = 'bg-warning'
+        elif rv.type == 'rendez_vous': cat = 'bg-success'
+        
+        events.append({
+            'id': f'rv_{rv.id}',
+            'title': f"[{rv.type.capitalize()}] {rv.object or rv.prospect}",
+            'start': start_time.isoformat(),
+            'description': rv.description or f"Contact CRM avec {rv.prospect}",
+            'className': f"{cat} event-owner {'event-completed' if is_completed else 'event-pending'}",
+            'extendedProps': {
+                'is_completed': is_completed,
+                'category': cat,
+                'is_owner': False, # Mark as read-only for Reminder form
+                'is_crm': True,
+                'prospect_name': str(rv.prospect),
+                'statut': rv.statut,
+                'type': rv.type,
+                'participants': []
+            }
         })
     return JsonResponse(events, safe=False)
 

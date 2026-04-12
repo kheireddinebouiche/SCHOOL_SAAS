@@ -364,7 +364,10 @@ def ApiGetClientEcheancier(request):
             "demandeur_date_inscription" : obj.created_at.strftime("%Y-%m-%d"),
             "client_id" : obj.id,
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "client_id": obj.id,  # Add client ID to the response
+            "has_financial_alert": obj.has_financial_alert,
+            "financial_alert_message": obj.financial_alert_message,
+            "can_disable_alert": obj.financial_alert_user == request.user if obj.has_financial_alert else True,
+            "alert_user_name": f"{obj.financial_alert_user.first_name} {obj.financial_alert_user.last_name}" if obj.financial_alert_user else None,
         }
 
         # Extraction des frais d'inscription depuis DuePaiements
@@ -577,7 +580,10 @@ def ApiGetClientEcheancierDouble(request):
             "demandeur_date_inscription" : obj.created_at.strftime("%Y-%m-%d"),
             "client_id" : obj.id,
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "client_id": obj.id,  # Add client ID to the response
+            "has_financial_alert": obj.has_financial_alert,
+            "financial_alert_message": obj.financial_alert_message,
+            "can_disable_alert": obj.financial_alert_user == request.user if obj.has_financial_alert else True,
+            "alert_user_name": f"{obj.financial_alert_user.first_name} {obj.financial_alert_user.last_name}" if obj.financial_alert_user else None,
         }
 
         # Extraction des frais d'inscription depuis DuePaiements
@@ -741,9 +747,6 @@ def ApiGetEntrepriseInfos(request):
         'telephone' : entreprise.telephone,
     }
 
-    return JsonResponse(data, safe=False)
-
-
 @login_required(login_url="institut_app:login")
 def ApiGetProspectsList(request):
 
@@ -804,3 +807,44 @@ def ApiGetProspectsList(request):
         return JsonResponse({'prospects': prospects_list}, safe=False)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiToggleFinancialAlert(request):
+    if request.method == "POST":
+        id_client = request.POST.get('id_client')
+        action = request.POST.get('action') # 'enable' or 'disable'
+        message = request.POST.get('message', 'Étudiant en situation irrégulière pour défaut de paiement')
+
+        try:
+            student = Prospets.objects.get(id=id_client)
+            
+            if action == 'enable':
+                student.has_financial_alert = True
+                student.financial_alert_message = message
+                student.financial_alert_user = request.user
+                student.financial_alert_date = now()
+                student.save()
+                return JsonResponse({"status": "success", "message": "Alerte activée avec succès"})
+            
+            elif action == 'disable':
+                # Restriction: only the user who set the alert can disable it
+                if student.financial_alert_user and student.financial_alert_user != request.user:
+                    return JsonResponse({"status": "error", "message": "Seul l'utilisateur ayant activé l'alerte peut la désactiver"})
+                
+                student.has_financial_alert = False
+                student.financial_alert_message = None
+                student.financial_alert_user = None
+                student.financial_alert_date = None
+                student.save()
+                return JsonResponse({"status": "success", "message": "Alerte désactivée avec succès"})
+            
+            return JsonResponse({"status": "error", "message": "Action non reconnue"})
+        
+        except Prospets.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Étudiant introuvable"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)

@@ -314,6 +314,7 @@ def update_or_create_dossier_in_tenant(dossier, sync_formation, institut_schema)
                 label=dossier.label,
                 defaults={
                     'is_required': dossier.is_required,
+                    'include_in_tracking': dossier.include_in_tracking,
                 }
             )
             return sync_dossier
@@ -1195,7 +1196,7 @@ def get_module_details_with_teachers(request):
 @login_required(login_url='intitut_app:login')
 def ApiLoadDocuments(request):
     code_formation = request.GET.get('code_formation')
-    documents = DossierInscription.objects.filter(formation__code = code_formation).values('id','label', 'is_required')
+    documents = DossierInscription.objects.filter(formation__code = code_formation).values('id','label', 'is_required', 'include_in_tracking')
 
 
     return JsonResponse(list(documents), safe=False)
@@ -1211,10 +1212,18 @@ def ApiAddDocument(request):
     else:
         _required = True
 
+    include_in_tracking = request.POST.get('include_in_tracking')
+    
+    if include_in_tracking == "false":
+        _include = False
+    else:
+        _include = True
+
     DossierInscription.objects.create(
         formation = Formation.objects.get(code = code_formation),
         label = label,
-        is_required = _required
+        is_required = _required,
+        include_in_tracking = _include
     )
 
     return JsonResponse({"status" : "success","message" : "Le document a été ajouté avec succès"})
@@ -1245,6 +1254,11 @@ def ApiUpdateDoc(request):
         doc = DossierInscription.objects.get(id=id_doc)
         doc.label = label
         doc.is_required = (required == "true")
+        
+        include_in_tracking = request.POST.get('include_in_tracking')
+        if include_in_tracking is not None:
+             doc.include_in_tracking = (include_in_tracking == "true")
+             
         doc.save()
         return JsonResponse({'status' : 'success', 'message' : 'Document mis à jour avec succès' })
     except DossierInscription.DoesNotExist:

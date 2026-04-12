@@ -255,6 +255,13 @@ class Prospets(models.Model):
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
 
     specialite_obtenu = models.CharField(max_length=100, null=True, blank=True)
+    filiere = models.CharField(max_length=255, null=True, blank=True)
+
+    # Alerte financière
+    has_financial_alert = models.BooleanField(default=False)
+    financial_alert_message = models.TextField(null=True, blank=True)
+    financial_alert_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='financial_alerts_triggered')
+    financial_alert_date = models.DateTimeField(null=True, blank=True)
 
     conseil_pipeline_stage = models.CharField(
         max_length=50, 

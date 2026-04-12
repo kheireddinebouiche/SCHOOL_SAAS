@@ -47,7 +47,8 @@ def get_missing_docs_list(prospect):
             
             required_docs = DossierInscription.objects.filter(
                 (Q(formation=formation1) | Q(formation=formation2)), 
-                is_required=True
+                is_required=True,
+                include_in_tracking=True
             )
             
             provided_docs = DocumentsDemandeInscription.objects.filter(
@@ -243,7 +244,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'code_zip' : prospect.code_zip,
         'lieu_naissance' : prospect.lieu_naissance,
         'secu' : prospect.num_secu,
-        
+        'filiere' : prospect.filiere,
     }
 
     return JsonResponse(data, safe=False)
@@ -302,16 +303,34 @@ def ApiLoadNotePr(request):
 @login_required(login_url='intitut_app:login')
 def ApiCheckHasCompletedProfile(request):
     id_preinscrit = request.GET.get('id_preinscrit')
-    obj = Prospets.objects.get(id = id_preinscrit)
-    if not obj.indic1 or not obj.indic2 or not obj.diplome or not obj.lieu_naissance or not obj.pays or not obj.wilaya or not obj.code_zip or not obj.commune or not obj.nom_arabe or not obj.prenom_arabe or not obj.nin or not obj.date_naissance or not obj.groupe_sanguin or not obj.prenom_pere or not obj.prenom_mere or not obj.nom_mere:
-        profile_completed = False
-    else:
-        profile_completed = True
+    try:
+        obj = Prospets.objects.get(id=id_preinscrit)
         
-    data = {
-        'profile_completed' : str(profile_completed).lower(),
-    }
-    return JsonResponse({'profile_completed' : data})
+        is_complete = True
+        mandatory_fields = [
+            obj.nom_arabe, obj.prenom_arabe, obj.date_naissance, obj.lieu_naissance, 
+            obj.nationnalite, obj.nin,
+            obj.prenom_pere, obj.indic1, obj.tel_pere,
+            obj.nom_mere, obj.prenom_mere, obj.indic2, obj.tel_mere,
+            obj.groupe_sanguin,
+            obj.adresse, obj.commune, obj.wilaya, obj.pays, obj.code_zip,
+            obj.niveau_scolaire, obj.filiere, obj.diplome, obj.specialite_obtenu, 
+            obj.etablissement, obj.annee_obtention
+        ]
+
+        for field in mandatory_fields:
+            if not field or str(field).strip() == "" or str(field) == "None":
+                is_complete = False
+                break
+        
+        if obj.has_endicap and (not obj.type_handicap or obj.type_handicap.strip() == ""):
+            is_complete = False
+
+        profile_completed = is_complete
+    except Prospets.DoesNotExist:
+        profile_completed = False
+        
+    return JsonResponse({'profile_completed' : {'profile_completed': str(profile_completed).lower()}})
 
 @login_required(login_url='institut_app:login')
 def ApiCheckCompletedDoc(request):
@@ -351,6 +370,7 @@ def ApiUpdatePreinscritInfos(request):
     indic_pere = request.POST.get('indic_pere')
     indic_mere = request.POST.get('indic_mere')
     specialite_obtenu = request.POST.get('specialite_obtenu')
+    filiere = request.POST.get('filiere')
 
     annee_diplome = request.POST.get('annee_diplome')
     commune = request.POST.get('commune')
@@ -382,6 +402,7 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.niveau_scolaire = niveau_scolaire
     preinscrit.diplome = diplome
     preinscrit.specialite_obtenu = specialite_obtenu
+    preinscrit.filiere = filiere
     preinscrit.etablissement = etablissement_diplome
     preinscrit.nin = nin
     preinscrit.nationnalite = nationnalite
@@ -396,36 +417,32 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.indic3 = indicatif_tuteur
     preinscrit.tel_tuteur = tel_tuteur
 
-    preinscrit.save()
-
-    obj = Prospets.objects.get(id = id_preinscrit)
-    # Liste des champs obligatoires
-    required_fields = [
-        obj.indic,
-        obj.indic1,
-        obj.indic2,
-        obj.diplome,
-        obj.lieu_naissance,
-        obj.pays,
-        obj.wilaya,
-        obj.code_zip,
-        obj.commune,
-        obj.nom_arabe,
-        obj.prenom_arabe,
-        obj.nin,
-        obj.date_naissance,
-        obj.groupe_sanguin,
-        obj.prenom_pere,
-        obj.prenom_mere,
-        obj.nom_mere,
+    # Vérification complète du profil
+    is_complete = True
+    
+    # Liste des champs strictement obligatoires
+    mandatory_fields = [
+        preinscrit.nom_arabe, preinscrit.prenom_arabe, preinscrit.date_naissance, preinscrit.lieu_naissance, 
+        preinscrit.nationnalite, preinscrit.nin,
+        preinscrit.prenom_pere, preinscrit.indic1, preinscrit.tel_pere,
+        preinscrit.nom_mere, preinscrit.prenom_mere, preinscrit.indic2, preinscrit.tel_mere,
+        preinscrit.groupe_sanguin,
+        preinscrit.adresse, preinscrit.commune, preinscrit.wilaya, preinscrit.pays, preinscrit.code_zip,
+        preinscrit.niveau_scolaire, preinscrit.filiere, preinscrit.diplome, preinscrit.specialite_obtenu, 
+        preinscrit.etablissement, preinscrit.annee_obtention
     ]
 
-    # Vérifier que tous les champs sont remplis
-    if all(required_fields):
-        obj.profile_completed = True
-    else:
-        obj.profile_completed = False
-    obj.save()
+    for field in mandatory_fields:
+        if not field or str(field).strip() == "" or str(field) == "None":
+            is_complete = False
+            break
+    
+    # Validation spécifique pour le handicap
+    if preinscrit.has_endicap and (not preinscrit.type_handicap or preinscrit.type_handicap.strip() == ""):
+        is_complete = False
+
+    preinscrit.profile_completed = is_complete
+    preinscrit.save()
 
     return JsonResponse({'status' : "success", "message" : "Les informations du preinscrit ont été mises à jour avec succès"})
 
@@ -440,7 +457,7 @@ def ApiLoadRequiredDocs(request):
             fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id=id_preinscrit, is_confirmed=True)
             formation1 = fiche_voeux_double.specialite.specialite1.formation
             formation2 = fiche_voeux_double.specialite.specialite2.formation
-            files = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2)).values('id', 'label', 'is_required')
+            files = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), include_in_tracking=True).values('id', 'label', 'is_required')
         else:
             specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
             formation_id = specialites.specialite.formation.id
@@ -575,7 +592,7 @@ def check_all_required_docs(request):
     except Exception as e:
         return JsonResponse({"success": False,"missing_docs": [],"error": str(e)})
 
-    required_docs = DossierInscription.objects.filter(formation=formation,is_required=True)
+    required_docs = DossierInscription.objects.filter(formation=formation, is_required=True)
 
     provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id=prospect_id,id_document__in=required_docs).exclude(file="")
 
@@ -602,7 +619,7 @@ def check_all_required_doc_double(request):
         # required_docs_formation1 = DossierInscription.objects.filter(formation = formation1, is_required=True)
         # required_docs_formation2 = DossierInscription.objects.filter(formation = formation2, is_required=True)
 
-        required_docs = DossierInscription.objects.filter((Q(formation=formation1) | Q(formation=formation2)), is_required=True)
+        required_docs = DossierInscription.objects.filter((Q(formation=formation1) | Q(formation=formation2)), is_required=True, include_in_tracking=True)
 
         provided_docs = DocumentsDemandeInscription.objects.filter(prospect_id=prospect_id, id_document__in=required_docs).exclude(file="")
 
@@ -734,7 +751,7 @@ def get_prospects_incomplets_double():
             continue  
 
         
-        docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True)
+        docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True, include_in_tracking=True)
         total_docs = docs_requis.count()
 
 
@@ -862,7 +879,7 @@ def ApiGetDossierDetailsDouble(request):
                 
                 if formation1 and formation2:
                    
-                    docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True)
+                    docs_requis = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), is_required=True, include_in_tracking=True)
                     total_docs = docs_requis.count()
                     
                     docs_fournis_qs = DocumentsDemandeInscription.objects.filter(

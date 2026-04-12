@@ -18,6 +18,9 @@ urlpatterns = [
     path('valider-groupe/<int:pk>/',validateGroupe, name="validateGroupe"),
     path('closeGroupe/<int:pk>/',closeGroupe, name="closeGroupe"),
 
+    path('api-close-inscription/<int:pk>/', ApiCloseGroupInscription, name="ApiCloseGroupInscription"),
+    path('api-open-inscription/<int:pk>/', ApiOpenGroupInscription, name="ApiOpenGroupInscription"),
+
     path('ApiGetGroupeList', ApiGetGroupeList, name="ApiGetGroupeList"),
 
     path('affectation-en-attente/',AffectationPage, name="AffectationPage"),

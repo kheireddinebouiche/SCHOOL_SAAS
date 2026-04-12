@@ -275,8 +275,13 @@
                     <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
                         <i class="ri-notification-3-line text-primary fs-4"></i>
                     </div>
-                    <div>
-                        <h5 class="modal-title fw-bold text-primary mb-0" id="modalTitle">Nouveau Rappel</h5>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="modal-title fw-bold text-primary mb-0" id="modalTitle">Nouveau Rappel</h5>
+                            <span id="crmBadge" class="badge bg-soft-info text-info rounded-pill" style="display:none;">
+                                <i class="ri-customer-service-2-line me-1"></i>Source: CRM
+                            </span>
+                        </div>
                         <p class="text-muted small mb-0">Détails de votre événement</p>
                     </div>
                 </div>
@@ -376,6 +381,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     content.innerHTML = '<i class="ri-user-shared-line me-1"></i>' + content.innerHTML;
                 }
             }
+            // Add custom icon for CRM events
+            if (info.event.extendedProps.is_crm) {
+                let content = info.el.querySelector('.fc-event-title');
+                if (content) {
+                    content.innerHTML = '<i class="ri-customer-service-2-line me-1"></i>' + content.innerHTML;
+                }
+            }
         },
         
         select: function(info) {
@@ -409,20 +421,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             document.getElementById('completedContainer').style.display = 'flex';
-            document.getElementById('modalTitle').innerText = isOwner ? "Modifier le Rappel" : "Détails (Invité)";
+            
+            // CRM specific handling
+            var isCrm = event.extendedProps.is_crm;
+            if (isCrm) {
+                document.getElementById('modalTitle').innerText = "Rendez-vous CRM";
+                document.getElementById('crmBadge').style.display = 'block';
+                document.getElementById('description').value = (event.extendedProps.description || '') + 
+                    "\n\n--- Infos CRM ---\nProspect: " + event.extendedProps.prospect_name + 
+                    "\nStatut: " + event.extendedProps.statut;
+            } else {
+                document.getElementById('modalTitle').innerText = isOwner ? "Modifier le Rappel" : "Détails (Invité)";
+                document.getElementById('crmBadge').style.display = 'none';
+            }
             
             // Handle permissions
             var saveBtn = document.getElementById('saveBtn');
             var deleteBtn = document.getElementById('deleteBtn');
             var inputs = document.querySelectorAll('#reminderForm input, #reminderForm select, #reminderForm textarea');
             
-            if (isOwner) {
+            if (isOwner && !isCrm) {
                 deleteBtn.style.display = 'block';
                 saveBtn.style.display = 'block';
                 inputs.forEach(el => el.disabled = false);
             } else {
                 deleteBtn.style.display = 'none';
-                saveBtn.style.display = 'none'; // Guests cannot save changes
+                saveBtn.style.display = 'none'; // Guests or CRM events are read-only
                 inputs.forEach(el => el.disabled = true);
             }
             
@@ -522,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('category').value = 'bg-primary';
         document.getElementById('completedContainer').style.display = 'none';
         document.getElementById('deleteBtn').style.display = 'none';
+        document.getElementById('crmBadge').style.display = 'none';
         
         // Reset specific fields
         var participantsSelect = document.getElementById('participants');

@@ -315,3 +315,19 @@ def PrintSuivieCours(request):
 
 def PrintPvExamen(request):
     pass
+
+@login_required(login_url="institut_app:login")
+def ApiCloseGroupInscription(request, pk):
+    groupe = Groupe.objects.get(id=pk)
+    groupe.etat = 'inscription_terminee'
+    groupe.save()
+    messages.success(request, f"L'inscription au groupe {groupe.nom} est désormais terminée.")
+    return redirect('t_groupe:detailsgroupe', pk=pk)
+
+@login_required(login_url="institut_app:login")
+def ApiOpenGroupInscription(request, pk):
+    groupe = Groupe.objects.get(id=pk)
+    groupe.etat = 'inscription'
+    groupe.save()
+    messages.success(request, f"L'inscription au groupe {groupe.nom} est désormais réouverte.")
+    return redirect('t_groupe:detailsgroupe', pk=pk)
