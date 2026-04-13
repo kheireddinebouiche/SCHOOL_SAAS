@@ -87,6 +87,54 @@
         </div>
     </div>
 
+    <!-- Tenant Configuration Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card modern-card overflow-hidden">
+                <div class="card-header-modern bg-primary bg-opacity-10 d-flex align-items-center">
+                    <i class="ri-settings-4-line me-2 text-primary fs-20"></i>
+                    <h5 class="card-title mb-0">Configuration du Tenant</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" class="row align-items-end g-3" id="tenantConfigForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="update_upload_limit" value="1">
+                        
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-bold">Taille maximale d'upload (KB)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="ri-upload-cloud-2-line"></i></span>
+                                <input type="number" name="max_upload_size" id="tenantMaxUpload" class="form-control" 
+                                       value="{{ tenant_data.institut.max_upload_size|default:'' }}" 
+                                       placeholder="{{ global_config.max_upload_size }}">
+                                <span class="input-group-text">KB</span>
+                            </div>
+                            <small class="text-muted mt-2 d-block">
+                                <i class="ri-information-line me-1"></i>
+                                {% if tenant_data.institut.max_upload_size %}
+                                    Limite spécifique définie pour ce tenant.
+                                {% else %}
+                                    Sera basée sur la limite globale ({{ global_config.max_upload_size }} KB).
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-auto">
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                <i class="ri-save-line me-1"></i> Enregistrer
+                            </button>
+                            {% if tenant_data.institut.max_upload_size %}
+                            <button type="button" class="btn btn-soft-danger rounded-pill px-3" onclick="clearUploadLimit()">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Users Table -->
     <div class="row">
         <div class="col-12">
@@ -275,6 +323,11 @@
 
 <script>
 let currentEditingRow = null;
+
+function clearUploadLimit() {
+    document.getElementById('tenantMaxUpload').value = '';
+    document.getElementById('tenantConfigForm').submit();
+}
 
 function toggleEdit(btn, userId) {
     const row = btn.closest('tr');

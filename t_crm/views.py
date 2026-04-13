@@ -347,6 +347,29 @@ def InscriptionParticulier(request):
             donnee = form.save(commit=False)
             donnee.created_by = request.user
             donnee.type_prospect = "particulier"
+            
+            # Linking to previous journey
+            related_id = request.POST.get("related_prospect_id")
+            if related_id:
+                try:
+                    old_prospect = Prospets.objects.get(id=related_id)
+                    donnee.related_prospect = old_prospect
+                    
+                    # Copy missing identity fields to truly "eviter de ressaisir"
+                    fields_to_copy = [
+                        'nin', 'date_naissance', 'lieu_naissance', 'nationnalite', 
+                        'num_secu', 'groupe_sanguin', 'nom_arabe', 'prenom_arabe',
+                        'prenom_pere', 'tel_pere', 'indic1', 'nom_mere', 'prenom_mere', 'tel_mere', 'indic2',
+                        'adresse', 'wilaya', 'commune', 'pays', 'code_zip', 'tuteur_legal', 'tel_tuteur', 'indic3'
+                    ]
+                    for field in fields_to_copy:
+                        old_val = getattr(old_prospect, field)
+                        new_val = getattr(donnee, field)
+                        if old_val and not new_val:
+                            setattr(donnee, field, old_val)
+                except Prospets.DoesNotExist:
+                    pass
+
             donnee.save()
 
             type_select = form.cleaned_data.get('select_type')
@@ -498,7 +521,7 @@ def ApiLoadFormation(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadSpecialite(request):
     id_formation = request.GET.get('id_formation')
-    specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label')
+    specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label','version')
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
@@ -545,7 +568,7 @@ def ApiLoadProspectDetails(request):
         fiche_voeux_list.append({
             'id': fiche.id,
             'specialite_code': fiche.specialite.code,
-            'specialite_label': fiche.specialite.label,
+            'specialite_label': f"{fiche.specialite.label} ({fiche.specialite.version})" if fiche.specialite.version else fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
             'specialite_id_formation': fiche.specialite.formation.id
         })
@@ -566,7 +589,7 @@ def ApiLoadProspectDetails(request):
         data_specialite.append({
             'id': s.id,
             'code': s.code,
-            'label': s.label,
+            'label': f"{s.label} ({s.version})" if s.version else s.label,
         })
     data = {
         'id': prospect.id,
@@ -587,7 +610,44 @@ def ApiLoadProspectDetails(request):
         'statut': prospect.statut,
         'motif_annulation': prospect.motif_annulation,
     })
-    return JsonResponse({'prospect': data, 'fiche_voeux': fiche_voeux_list,'formations': data_formation,'specialites': data_specialite})
+    # History / Timeline logic
+    linked_query = Q()
+    if prospect.nin and prospect.nin.strip():
+        linked_query |= Q(nin=prospect.nin)
+    
+    history_list = []
+    if linked_query:
+        linked_prospects = Prospets.objects.filter(linked_query).exclude(id=prospect.id).order_by('-created_at')
+        for lp in linked_prospects:
+            # Get promo if exists
+            promo_label = "N/A"
+            if lp.is_double:
+                fvd = FicheVoeuxDouble.objects.filter(prospect=lp).first()
+                if fvd: promo_label = fvd.promo.get_session_display() + "-" + fvd.promo.begin_year + "/" + fvd.promo.end_year
+            else:
+                fdv = FicheDeVoeux.objects.filter(prospect=lp).first()
+                if fdv: promo_label = fdv.promo.get_session_display() + "-" + fdv.promo.begin_year + "/" + fdv.promo.end_year
+
+            history_list.append({
+                'id': lp.id,
+                'slug': lp.slug,
+                'statut_key': lp.statut,
+                'statut': lp.get_statut_display(),
+                'created_at': lp.created_at.strftime("%d/%m/%Y"),
+                'promo': promo_label,
+                'is_double': lp.is_double
+            })
+    else:
+        # If no valid email/nin, history is empty except for the current one if you want (currently excludes self)
+        pass
+
+    return JsonResponse({
+        'prospect': data, 
+        'fiche_voeux': fiche_voeux_list,
+        'formations': data_formation,
+        'specialites': data_specialite,
+        'history': history_list
+    })
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
@@ -693,3 +753,40 @@ def ApiCreateVoeuxDouble(request):
             return JsonResponse({'status' : 'error','message':'Veuillez remplir tous les champs.'})
     else:
         return JsonResponse({'status' : 'error'})
+@login_required(login_url="institut_app:login")
+def ApiQuickSearchExistingContact(request):
+    search_type = request.GET.get('search_type', '')
+    
+    contacts = Prospets.objects.none()
+    
+    if search_type == 'nin':
+        nin = request.GET.get('nin', '')
+        if len(nin) >= 3:
+            contacts = Prospets.objects.filter(nin__icontains=nin)
+    elif search_type == 'identite':
+        nom = request.GET.get('nom', '')
+        prenom = request.GET.get('prenom', '')
+        date_naissance = request.GET.get('date_naissance', '')
+        if nom and prenom and date_naissance:
+            contacts = Prospets.objects.filter(
+                nom__icontains=nom,
+                prenom__icontains=prenom,
+                date_naissance=date_naissance
+            )
+
+    contacts = contacts.values(
+        'id', 'nom', 'prenom', 'email', 'telephone', 'indic', 'nin', 'adresse', 'wilaya', 'commune', 
+        'date_naissance', 'lieu_naissance', 'nationnalite', 'num_secu', 'groupe_sanguin',
+        'nom_arabe', 'prenom_arabe', 'prenom_pere', 'tel_pere', 'nom_mere', 'prenom_mere', 'tel_mere',
+        'statut'
+    ).order_by('-created_at')[:20]
+
+    results = []
+    seen_identities = set()
+    for c in contacts:
+        identity = c['nin'] if c['nin'] else f"{c['nom']}_{c['prenom']}_{c['date_naissance']}"
+        if identity not in seen_identities:
+            results.append(c)
+            seen_identities.add(identity)
+
+    return JsonResponse({'status': 'success', 'results': results})

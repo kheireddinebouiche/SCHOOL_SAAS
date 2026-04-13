@@ -10,7 +10,7 @@ from .views import (
     ApiLoadProspects, ApiDeleteProspect, ApiFilterProspect,
     ApiLoadProspectDetails, ApiUpdatePropectDetails, ApiUpdateProspectEtsDetails,
     ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCreateVoeuxDouble,
-    ApiFilterPrinscrit, ApiLoadSpecialite,
+    ApiFilterPrinscrit, ApiLoadSpecialite, ApiQuickSearchExistingContact,
 )
 from .f_views.prospects import (
     ApiLoadProspectPerosnalInfos,
@@ -240,7 +240,7 @@ urlpatterns = [
     path('user-logs/', user_action_log_list, name='user_action_log_list'),
     path('user-logs/clear/', clear_logs, name='clear_logs'),
 
-    ########################################## Reporting ###################################################
+    path('api/quick-search-contact/', ApiQuickSearchExistingContact, name='ApiQuickSearchExistingContact'),
     path('reporting/', crm_reporting, name='crm_reporting'),
     path('api/reporting-data/', ApiGetCrmReportingData, name='ApiGetCrmReportingData'),
     ########################################## Reporting ###################################################

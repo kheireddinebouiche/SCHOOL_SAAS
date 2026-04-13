@@ -253,6 +253,7 @@ class Prospets(models.Model):
     is_double = models.BooleanField(default=False)
 
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
+    related_prospect = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='linked_enrollments')
 
     specialite_obtenu = models.CharField(max_length=100, null=True, blank=True)
     filiere = models.CharField(max_length=255, null=True, blank=True)

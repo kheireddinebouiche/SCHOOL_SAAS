@@ -17,7 +17,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation', 'created_by__username').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation', 'created_by__username', 'is_double').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
@@ -116,7 +116,7 @@ def ApiLoadFicheVoeuxProspect(request):
             'id': fiche.id,
             'formation_label': fiche.specialite.formation.nom,
             'specialite_code': fiche.specialite.code,
-            'specialite_label': fiche.specialite.label,
+            'specialite_label': f"{fiche.specialite.label} ({fiche.specialite.version})" if fiche.specialite.version else fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
             'specialite_id_formation': fiche.specialite.formation.id,
             'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
@@ -138,11 +138,13 @@ def ApiLoadFicheVoeuxDoubleProspect(request):
             fiche_voeux_list.append({
                 'id': fiche.id,
                 'specialite1_code': fiche.specialite.specialite1.code,
-                'specialite1_label': fiche.specialite.specialite1.label,
+                'specialite1_label': f"{fiche.specialite.specialite1.label} ({fiche.specialite.specialite1.version})" if fiche.specialite.specialite1.version else fiche.specialite.specialite1.label,
+                'specialite1_version': fiche.specialite.specialite1.version,
                 'formation_1' : fiche.specialite.specialite1.formation.nom,
                 'formation_2' : fiche.specialite.specialite2.formation.nom,
                 'specialite2_code': fiche.specialite.specialite2.code,
-                'specialite2_label': fiche.specialite.specialite2.label,
+                'specialite2_label': f"{fiche.specialite.specialite2.label} ({fiche.specialite.specialite2.version})" if fiche.specialite.specialite2.version else fiche.specialite.specialite2.label,
+                'specialite2_version': fiche.specialite.specialite2.version,
                 'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
                 'created_at' : fiche.created_at,
                 'updated_at' : fiche.updated_at
@@ -172,10 +174,12 @@ def ApiLoadDoubleSpecialite(request):
         obj = DoubleDiplomation.objects.get(id = id_formation)
 
         data = {
-            'specialite1' : obj.specialite1.label,
+            'specialite1' : f"{obj.specialite1.label} ({obj.specialite1.version})" if obj.specialite1.version else obj.specialite1.label,
+            'specialite1_version' : obj.specialite1.version,
             'specialite1_formation' : obj.specialite1.formation.nom,
 
-            'specialite2' : obj.specialite2.label,
+            'specialite2' : f"{obj.specialite2.label} ({obj.specialite2.version})" if obj.specialite2.version else obj.specialite2.label,
+            'specialite2_version' : obj.specialite2.version,
             'specialite2_formation' : obj.specialite2.formation.nom,
 
         }
@@ -520,7 +524,8 @@ def ApiLoadFormationAndSpecialite(request):
         specialite_liste.append({
             'id' : i.id,
             'code' : i.code,
-            'label' : i.label,
+            'label' : f"{i.label} ({i.version})" if i.version else i.label,
+            'version': i.version,
         })
 
     return JsonResponse({'formation' : formation_liste, 'specialite' : specialite_liste})
@@ -560,7 +565,8 @@ def ApiLoadSpecialiteProspect(request):
     for i in obj:
         data.append({
             "id" : i.id,
-            "label" : i.label,
+            "label" : f"{i.label} ({i.version})" if i.version else i.label,
+            "version": i.version,
             "code" : i.code,
         })
 

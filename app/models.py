@@ -1,5 +1,6 @@
 from django_tenants.models import TenantMixin,DomainMixin
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class Institut(TenantMixin):
@@ -9,6 +10,19 @@ class Institut(TenantMixin):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     tenant_type = models.CharField(max_length=255, null=True, blank=True, choices=[('associe','Associe'),('master','Compte maitre'),('second','Compte standard')])
+    max_upload_size = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Taille max upload (KB)"), help_text=_("Laissez vide pour utiliser la limite globale du SaaS"))
+
+    @property
+    def effective_max_upload_size(self):
+        """Retourne la limite d'upload effective (Tenant > Global > 400KB)."""
+        if self.max_upload_size is not None:
+            return self.max_upload_size
+        
+        try:
+            from saas_admin_app.models import SaaSGlobalConfiguration
+            return SaaSGlobalConfiguration.get_solo().max_upload_size
+        except (ImportError, Exception):
+            return 400
 
     def __str__(self):
         return self.nom

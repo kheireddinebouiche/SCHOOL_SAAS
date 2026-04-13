@@ -1530,6 +1530,49 @@
 </div>
 
 
+<!-- Modal Échéancier Manquant -->
+<div class="modal fade" id="missingEcheancierModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="missingEcheancierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-error-warning-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="missingEcheancierModalLabel">Échéancier manquant</h5>
+                        <p class="text-muted small mb-0">Configuration requise</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger display-5 rounded-circle">
+                        <i class="ri-calendar-close-line"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold text-dark mb-3">Absence d'échéancier appliqué</h5>
+                <p class="text-muted mb-4">
+                    Aucun échéancier de paiement par défaut n'a été trouvé pour cette combinaison de <strong>Double-Formation</strong> et <strong>Promotion</strong>.
+                </p>
+                <div class="alert alert-warning border-0 bg-warning bg-opacity-10 p-3 mb-0 text-start">
+                    <h6 class="fw-bold text-warning mb-2"><i class="ri-lightbulb-line me-1"></i> Que faire ?</h6>
+                    <ul class="text-muted small mb-0 ps-3">
+                        <li>Vérifiez si un échéancier a été créé pour cette promo.</li>
+                        <li>Assurez-vous qu'il est marqué comme <strong>échéancier par défaut</strong>.</li>
+                        <li>Appliquez-le à la double-formation correspondante.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <a href="{% url 't_tresorerie:attentes_de_paiements' %}" class="btn btn-primary w-100 py-2 rounded-pill">
+                    <i class="ri-arrow-left-line me-1"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Détails du Client -->
 <div class="modal fade" id="clientDetailsModal" tabindex="-1" aria-labelledby="clientDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -3215,6 +3258,11 @@
                 type : 'GET',
                 data : {'id_demande' : id_demande},
                 success : function(data){
+                    if (data.status === "error" && data.error_type === "missing_echeancier") {
+                        $('#missingEcheancierModal').modal('show');
+                        return;
+                    }
+
                     // Informations du demandeur
                     $('#demandeur').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
                     $('#created_at').text(data.user_data.created_at.split('T')[0]);

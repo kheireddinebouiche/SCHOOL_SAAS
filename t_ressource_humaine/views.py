@@ -13,6 +13,11 @@ from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 import openpyxl
 from openpyxl import Workbook
+from t_etudiants.models import SuiviCours, LigneRegistrePresence
+from t_timetable.models import TimetableEntry
+from datetime import datetime, timedelta
+from django.db.models import Count, Sum, Q
+import collections
 
 class ContratListView(LoginRequiredMixin, ListView):
     model = Contrat
@@ -750,4 +755,138 @@ def import_rubriques(request):
             return JsonResponse({'status': 'error', 'message': f'Erreur lors de l\'importation : {str(e)}'})
             
     return JsonResponse({'status': 'error', 'message': 'Fichier manquant ou méthode non autorisée.'})
+
+def fiches_mensuelles(request):
+    """
+    View to display monthly course summary for trainers.
+    """
+    # Get filter params
+    formateur_id = request.GET.get('formateur')
+    annee_filter = request.GET.get('annee')
+    mois_filter = request.GET.get('mois')
+
+    # Base query for completed course sessions
+    suivis_qs = SuiviCours.objects.filter(is_done=True).select_related(
+        'ligne_presence',
+        'ligne_presence__teacher',
+        'ligne_presence__module',
+        'ligne_presence__registre__groupe'
+    )
+
+    # Apply filters
+    if formateur_id:
+        suivis_qs = suivis_qs.filter(ligne_presence__teacher_id=formateur_id)
+    if annee_filter:
+        suivis_qs = suivis_qs.filter(date_seance__year=annee_filter)
+    if mois_filter:
+        suivis_qs = suivis_qs.filter(date_seance__month=mois_filter)
+
+    suivis = suivis_qs.order_by('-date_seance')
+
+    # Prepare data structure: Data -> Trainer -> Year -> Month -> List of sessions
+    report_data = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(list)))
+    
+    # Cache for durations to avoid redundant queries
+    durations_cache = {}
+
+    for suivi in suivis:
+        teacher = suivi.ligne_presence.teacher
+        if not teacher:
+            continue
+            
+        date = suivi.date_seance
+        if not date:
+            continue
+            
+        year = date.year
+        month = date.month
+        
+        # Calculate duration
+        module = suivi.ligne_presence.module
+        groupe = suivi.ligne_presence.registre.groupe if suivi.ligne_presence.registre else None
+        
+        cache_key = (module.id if module else None, groupe.id if groupe else None)
+        if cache_key not in durations_cache:
+            # Try to find a TimetableEntry for this module and group
+            entries = TimetableEntry.objects.filter(
+                cours=module,
+                timetable__groupe=groupe
+            ).distinct()
+            
+            total_minutes = 0
+            for entry in entries:
+                if entry.heure_debut and entry.heure_fin:
+                    d = datetime.combine(datetime.today(), entry.heure_debut)
+                    f = datetime.combine(datetime.today(), entry.heure_fin)
+                    total_minutes += (f - d).total_seconds() / 60
+            
+            if entries.exists():
+                avg_minutes = total_minutes / entries.count()
+                durations_cache[cache_key] = avg_minutes / 60
+            else:
+                # Fallback to LigneRegistrePresence strings if possible
+                try:
+                    if suivi.ligne_presence.heure_debut and suivi.ligne_presence.heure_fin:
+                        h1 = datetime.strptime(suivi.ligne_presence.heure_debut, "%H:%M")
+                        h2 = datetime.strptime(suivi.ligne_presence.heure_fin, "%H:%M")
+                        durations_cache[cache_key] = (h2 - h1).total_seconds() / 3600
+                    else:
+                        durations_cache[cache_key] = 0
+                except:
+                    durations_cache[cache_key] = 0
+        
+        duration = durations_cache[cache_key]
+        
+        session_info = {
+            'date': date,
+            'module': module,
+            'groupe': groupe,
+            'duration': round(duration, 2),
+            'observation': suivi.observation
+        }
+        
+        report_data[teacher][year][month].append(session_info)
+
+    # Flatten and format for template
+    formatted_report = []
+    for teacher, years in report_data.items():
+        teacher_report = {
+            'teacher': teacher,
+            'years': []
+        }
+        for year, months in sorted(years.items(), reverse=True):
+            year_report = {
+                'year': year,
+                'months': []
+            }
+            for month, sessions in sorted(months.items(), reverse=True):
+                month_report = {
+                    'month': month,
+                    'month_name': datetime(year, month, 1).strftime('%B'),
+                    'sessions': sessions,
+                    'total_hours': round(sum(s['duration'] for s in sessions), 2)
+                }
+                year_report['months'].append(month_report)
+            teacher_report['years'].append(year_report)
+        formatted_report.append(teacher_report)
+
+    # Metadata for filters
+    all_formateurs = Formateurs.objects.all().order_by('nom')
+    all_years = SuiviCours.objects.filter(is_done=True, date_seance__isnull=False).values_list('date_seance__year', flat=True).distinct().order_by('-date_seance__year')
+
+    context = {
+        'report': formatted_report,
+        'all_formateurs': all_formateurs,
+        'all_years': all_years,
+        'months_choices': [
+            (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'), 
+            (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
+            (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
+        ],
+        'selected_formateur': int(formateur_id) if formateur_id and formateur_id.isdigit() else None,
+        'selected_annee': int(annee_filter) if annee_filter and annee_filter.isdigit() else None,
+        'selected_mois': int(mois_filter) if mois_filter and mois_filter.isdigit() else None,
+    }
+    
+    return render(request, 'tenant_folder/rh/fiches_mensuelles.html', context)
 

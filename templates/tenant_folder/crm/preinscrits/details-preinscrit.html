@@ -3,118 +3,14 @@
 {% block title %}Détails du pré-inscrit {% endblock title %}
 {% block content %}
 
-<style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.4);
-    }
-
-    .main-content {
-        background-color: #f8fafc;
-    }
-
-    .completion-check-card {
-        transition: all 0.3s ease;
-        border: 1px solid #e9ecef;
-        border-radius: 1rem;
-    }
-    
-    .completion-check-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        border-color: #dee2e6;
-    }
-    
-    .completion-check-card.completed {
-        background-color: rgba(25, 135, 84, 0.05);
-        border-color: rgba(25, 135, 84, 0.2);
-    }
-    
-    .completion-check-card.incomplete {
-        background-color: rgba(220, 53, 69, 0.05);
-        border-color: rgba(220, 53, 69, 0.2);
-    }
-
-    /* Stat Cards Modern Design */
-    .stat-card {
-        border: 1px solid var(--glass-border);
-        background: var(--glass-bg);
-        backdrop-filter: blur(10px);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 1.25rem;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-        transform: translateX(-100%);
-        transition: 0.6s;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-    }
-
-    .stat-card:hover::before {
-        transform: translateX(100%);
-    }
-
-    .stat-icon {
-        width: 52px;
-        height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 1rem;
-        font-size: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    /* Table Customization */
-    .custom-table-card {
-        border-radius: 1.25rem;
-        border: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        background: #fff;
-    }
-
-    .table thead th {
-        background-color: #f1f5f9;
-        color: #475569;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        padding: 1rem 1.5rem;
-        border: none;
-    }
-
-    .table tbody td {
-        padding: 1.25rem 1.5rem;
-        color: #1e293b;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-
-    /* Validation Styles */
-    .is-invalid {
-        border-color: #dc3545 !important;
-        background-image: none !important;
-    }
-    
-    .select2-container--default .select2-selection--single.border-danger {
-        border-color: #dc3545 !important;
-    }
-</style>
+    <link rel="stylesheet" href="{% static 'tenant_folder/css/crm_details_redesign.css' %}">
+    <style>
+        /* Essential overrides for this page */
+        .main-content { background-color: #f0f2f5; }
+        #preinscritVoeuxDetails .col-md-4 { width: 100%; border-right: none; margin-bottom: 2rem; }
+        #preinscritVoeuxDetails .col-md-8 { width: 100%; }
+        .tab-content { padding-top: 1rem; }
+    </style>
 
 
 <!-- jQuery -->
@@ -124,507 +20,358 @@
 
 <div class="main-content">
     <div class="page-content">
-            <!-- start page title -->
-
-            <!-- Cancellation Alert Banner -->
-            <div id="cancellationBanner" class="row mb-4" style="display: none;">
-                <div class="col-12">
-                    <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-0 d-flex align-items-center justify-content-between">
+        <!-- Dashboard Header / Action Bar -->
+        <div class="container-fluid mb-4">
+            <div class="premium-card p-4 border-0 shadow-sm bg-white" style="border-radius: 1.25rem;">
+                <div class="row align-items-center">
+                    <div class="col">
                         <div class="d-flex align-items-center">
-                            <div class="bg-danger bg-opacity-10 rounded-3 p-3 me-3">
-                                <i class="ri-error-warning-line text-danger fs-3"></i>
+                            <div class="avatar-sm me-3">
+                                <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-4">
+                                    <i class="ri-user-heart-line"></i>
+                                </div>
                             </div>
                             <div>
-                                <h5 class="alert-heading mb-1 fw-bold text-danger">Préinscription Annulée</h5>
-                                <p class="mb-0 text-dark">Raison : <span id="cancellationReasonText" class="fw-semibold"></span></p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-danger rounded-pill px-4 py-2 fw-medium shadow-sm transition-all" id="btnReactivatePreinscrit">
-                            <i class="ri-refresh-line me-2"></i>Ré-activer la préinscription
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mb-4 mt-2">
-                <div class="col-12">
-                    <div class="d-flex align-items-center justify-content-between p-4 bg-white rounded-4 shadow-sm">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                <i class="ri-user-line text-primary fs-3"></i>
-                            </div>
-                            <div>
-                                <h4 class="mb-1 fw-bold text-primary">Détails du pré-inscrit</h4>
-                                <p class="text-muted mb-0">Consultation et gestion du dossier de candidature</p>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="d-none d-md-block">
+                                <h4 class="mb-1 fw-bold text-dark">Dossier Candidat</h4>
                                 <nav aria-label="breadcrumb">
-                                    <ol class="breadcrumb m-0 px-3 py-2 bg-light rounded-pill">
-                                        <li class="breadcrumb-item"><a href="javascript:void(0);" class="text-primary">CRM</a></li>
-                                        <li class="breadcrumb-item active">Détails</li>
+                                    <ol class="breadcrumb m-0 small">
+                                        <li class="breadcrumb-item"><a href="javascript:void(0);">CRM</a></li>
+                                        <li class="breadcrumb-item active">Détails Pré-inscrit</li>
                                     </ol>
                                 </nav>
                             </div>
-                            <div class="btn-group gap-2">
-                                <button type="button" class="btn btn-success rounded-pill px-4 py-2" data-bs-toggle="modal" id="validatePreinscritBtn">
-                                    <i class="ri-check-line me-2"></i>Valider
-                                </button>
-
-                                <button type="button" class="btn btn-soft-danger rounded-pill px-4 py-2" id="btnOpenCancelModal">
-                                    <i class="ri-close-circle-line me-2"></i>Annuler
-                                </button>
-                              
-                                <a href="/crm/liste-des-preinscrits/" class="btn btn-light rounded-pill px-4 py-2">
-                                    <i class="ri-arrow-left-line me-2"></i>Retour
-                                </a>
-                            </div>
                         </div>
+                    </div>
+                    <div class="col-auto d-flex gap-2">
+                        <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm" id="validatePreinscritBtn">
+                            <i class="ri-check-double-line me-1"></i> Valider
+                        </button>
+                        <button type="button" class="btn btn-soft-danger rounded-pill px-4" id="btnOpenCancelModal">
+                            <i class="ri-close-circle-line me-1"></i> Annuler
+                        </button>
+                        <a href="/crm/liste-des-preinscrits/" class="btn btn-light rounded-pill px-3">
+                            <i class="ri-arrow-left-line"></i>
+                        </a>
                     </div>
                 </div>
             </div>
-            <!-- end page title -->
-
-            <!-- Notification informations supplémentaires -->
-            <div  hidden id="incompleted_infos" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-warning d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-alert-line text-warning fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Informations supplémentaires requises</h5>
-                            <p class="mb-0">Veuillez compléter les informations supplémentaires pour ce pré-inscrit afin de faciliter le processus de validation.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-warning px-4 py-2" id="completeAdditionalInfoBtn">
-                                <i class="ri-edit-line me-2"></i>Compléter les informations
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notification dossier incomplet -->
-            <div hidden id="non_completed_docs" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-danger d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-error-warning-line text-danger fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Dossier incomplet</h5>
-                            <p class="mb-0">Certaines informations obligatoires sont manquantes. Veuillez compléter le dossier pour continuer.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-danger px-4 py-2" data-bs-toggle="modal" data-bs-target="#missingDocumentsModal">
-                                <i class="ri-file-list-line me-2"></i>Voir les documents manquants
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notification dossier complet -->
-            <div hidden id="completed_docs" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-success d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-checkbox-circle-line text-success fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Dossier complet</h5>
-                            <p class="mb-0">Toutes les informations requises ont été fournies. Ce dossier est prêt pour la validation.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-success px-3 py-2">
-                                <i class="ri-check-line me-1"></i>Complet
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notification dérogation acceptée -->
-            <div hidden id="derogation_acceptee" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-success d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-checkbox-circle-line text-success fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Dérogation acceptée</h5>
-                            <p class="mb-0">La demande de dérogation a été acceptée. Ce dossier peut être validé.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-success px-3 py-2">
-                                <i class="ri-check-line me-1"></i>Acceptée
-                            </span>
-                            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">
-                                <i class="ri-eye-line me-1"></i>Voir les détails
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notification dérogation refusée -->
-            <div hidden id="derogation_refusee" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-danger d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-close-circle-line text-danger fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Dérogation refusée</h5>
-                            <p class="mb-0">La demande de dérogation a été refusée. Veuillez consulter les détails pour plus d'informations.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-danger px-3 py-2">
-                                <i class="ri-close-line me-1"></i>Refusée
-                            </span>
-                            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">
-                                <i class="ri-eye-line me-1"></i>Voir les détails
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notification dérogation en attente -->
-            <div hidden id="derogation_attente" class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-warning d-flex align-items-center rounded-4 shadow-sm" role="alert">
-                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="ri-time-line text-warning fs-5"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Dérogation en attente</h5>
-                            <p class="mb-0">Une demande de dérogation est en cours de traitement. Veuillez patienter jusqu'à la décision finale.</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-warning px-3 py-2">
-                                <i class="ri-time-line me-1"></i>En attente
-                            </span>
-                            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">
-                                <i class="ri-eye-line me-1"></i>Voir les détails
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Première rangée : Informations personnelles et Fiche de Voeux -->
-            <div class="row mb-4">
-                <!-- Informations personnelles -->
-                <div class="col-lg-4">
-                    <div class="card stat-card h-100">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-user-line text-primary fs-4"></i>
-                                </div>
-                                <div>
-                                    <h5 class="card-title fw-semibold text-primary mb-1">Informations personnelles</h5>
-                                    <p class="text-muted small mb-0">Détails du contact</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-user-line text-primary"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Nom et Prénom</small>
-                                    <span class="fw-semibold" id="nom_prenom">-</span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-flag-line text-secondary"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Statut</small>
-                                    <span class="fw-semibold" id="statut_preinscrit">-</span>
-                                    <p class="text-muted" id="date_changement">-</p>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-mail-line text-info"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Email</small>
-                                    <span class="fw-semibold" id="email">-</span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-phone-line text-success"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Téléphone</small>
-                                    <span class="fw-semibold" id="phone">-</span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-calendar-line text-warning"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Créé le</small>
-                                    <span class="fw-semibold" id="created_at">-</span>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-center gap-2 mt-3">
-                                <button id="viewProfileBtn" type="button" class="btn btn-info btn-sm" >
-                                    <i class="ri-eye-line me-1"></i>Voir le profil
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#additionalInfoModal">
-                                    <i class="ri-edit-line me-1"></i>Modifier le profil
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section Fiche de Voeux -->
-                <div class="col-lg-8">
-                    <div class="card stat-card h-100">
-                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-graduation-cap-line text-info fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-info mb-1">Fiche de Voeux</h5>
-                                        <p class="text-muted small mb-0">Orientation académique du pré-inscrit</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-4 d-flex align-items-center justify-content-center">
-                            <div class="row w-100" id="preinscritVoeuxDetails">
-                               
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Documents du pré-inscrit -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card custom-table-card">
-                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-folder-line text-warning fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-warning mb-1">Documents du pré-inscrit</h5>
-                                        <p class="text-muted small mb-0">Liste des documents fournis par le pré-inscrit</p>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-warning px-4 py-2" id="addDocumentBtn">
-                                    <i class="ri-add-line me-2"></i>Ajouter un document
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="border-0 rounded-start">Nom du document</th>
-                                            <th class="border-0">Type</th>
-                                            <th class="border-0">Date d'ajout</th>
-                                            <th class="border-0 rounded-end text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeDesDocuments">
-                                        
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Situation financière -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card stat-card">
-                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-money-euro-circle-line text-success fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-success mb-1">Situation financière</h5>
-                                        <p class="text-muted small mb-0">État des paiements du pré-inscrit</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
-                                        <div class="flex-shrink-0">
-                                            <div class="avatar-sm">
-                                                <div class="avatar-title bg-success bg-opacity-10 text-success rounded-circle">
-                                                    <i class="ri-money-euro-circle-line fs-5"></i>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <h6 class="mb-1">Montant total</h6>
-                                            <h4 class="mb-0 fw-bold text-success" id="montant-total">0,00 DZD</h4>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
-                                        <div class="flex-shrink-0">
-                                            <div class="avatar-sm">
-                                                <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle">
-                                                    <i class="ri-bank-line fs-5"></i>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <h6 class="mb-1">Montant payé</h6>
-                                            <h4 class="mb-0 fw-bold text-info" id="montant-paye">0,00 DZD</h4>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="d-flex align-items-center bg-light rounded-3 p-3 h-100">
-                                        <div class="flex-shrink-0">
-                                            <div class="avatar-sm">
-                                                <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle">
-                                                    <i class="ri-alert-line fs-5"></i>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <h6 class="mb-1">Solde</h6>
-                                            <h4 class="mb-0 fw-bold text-warning" id="solde">0,00 DZD</h4>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rappels & Notes -->
-            <div class="row">
-                <!-- Rappels & Rendez-vous -->
-                <div class="col-lg-6">
-                    <div class="card custom-table-card h-100">
-                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-calendar-check-line text-success fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-success mb-1">Rappels & Rendez-vous</h5>
-                                        <p class="text-muted small mb-0">Gestion des tâches et rendez-vous</p>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-success px-4 py-2" id="addReminderBtn">
-                                    <i class="ri-add-line me-2"></i>Nouveau rappel
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="border-0 rounded-start">Type</th>
-                                            <th class="border-0">Date & Heure</th>
-                                            <th class="border-0">Objet</th>
-                                            <th class="border-0">Statut</th>
-                                            <th class="border-0 rounded-end text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeDesRendezVous">
-                                        <!-- Liste des rendez vous -->
-                                        
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section Notes -->
-                <div class="col-lg-6">
-                    <div class="card custom-table-card h-100">
-                        <!-- Header -->
-                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-sticky-note-line text-warning fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-warning mb-1">Notes</h5>
-                                        <p class="text-muted small mb-0">Commentaires et observations</p>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-warning px-4 py-2" id="addNoteModalBtn">
-                                    <i class="ri-add-line me-2"></i>Nouvelle note
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Body -->
-                        <div class="card-body p-4">
-                           
-                            <!-- Liste des notes -->
-                            <div class="vstack gap-4" id="ListeDesNotes">
-                                <button type="button" class="border-start border-4 border-dashed border-warning ps-4 py-4 bg-white rounded-end text-start w-100" data-bs-toggle="modal" data-bs-target="#addNoteModal">
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-sm me-3">
-                                            <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle fs-5">
-                                                <i class="ri-add-line"></i>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-medium text-warning mb-0">Ajouter une note</h6>
-                                            <small class="text-muted">Cliquez pour ajouter une nouvelle note</small>
-                                        </div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Fin Section Notes-->
-             
-
-
-                    </div>
-                </div>
-            </div>
-
         </div>
-        <!-- container-fluid -->
+
+        <div class="container-fluid">
+            <!-- Dynamic Banners (Preserved IDs) -->
+            <div hidden id="cancellationBanner" class="alert alert-danger border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-error-warning-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Préinscription Annulée</h6>
+                        <small id="cancellationReasonText" class="text-muted"></small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-danger rounded-pill px-3" id="btnReactivatePreinscrit">Réactiver</button>
+            </div>
+
+            <div hidden id="incompleted_infos" class="alert alert-warning border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-alert-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Profil Incomplet</h6>
+                        <small class="text-muted">Des informations supplémentaires sont requises.</small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-warning rounded-pill px-3" id="completeAdditionalInfoBtn">Compléter</button>
+            </div>
+
+            <div hidden id="derogation_attente" class="alert alert-info border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-time-line text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold">Dérogation en attente</h6>
+                        <small class="text-muted">Une demande est en cours de traitement par un responsable.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-info btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">Détails</button>
+            </div>
+
+            <div hidden id="derogation_acceptee" class="alert alert-success border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-checkbox-circle-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold">Dérogation Acceptée</h6>
+                        <small class="text-muted">La validation a été autorisée par un responsable.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-success btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">Détails</button>
+            </div>
+
+            <div hidden id="derogation_refusee" class="alert alert-danger border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-close-circle-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold">Dérogation Refusée</h6>
+                        <small class="text-muted">La demande de dérogation a été rejetée.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#detailsDerogationModal">Détails</button>
+            </div>
+
+            <div class="details-layout">
+                <!-- SIDEBAR: Profile Card & History -->
+                <aside class="profile-sidebar">
+                    <div class="profile-card mb-4">
+                        <div class="profile-header"></div>
+                        <div class="avatar-container">
+                            <div class="profile-avatar shadow-lg">
+                                <i class="ri-user-6-line"></i>
+                            </div>
+                        </div>
+                        <div class="p-4 pt-2 text-center">
+                            <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                                <h4 id="nom_prenom" class="mb-0 fw-bold text-dark">-</h4>
+                                <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center p-1" id="editBasicInfoBtn" data-bs-toggle="tooltip" title="Modifier les informations" style="width: 28px; height: 28px;">
+                                    <i class="ri-pencil-line text-primary"></i>
+                                </button>
+                            </div>
+                            <div class="badge-soft badge-soft-primary mb-4" id="statut_preinscrit" style="font-size: 0.7rem;">-</div>
+                            
+                            <div class="text-start space-y-3">
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0 mb-2">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Contact Email</small>
+                                    <div id="email" class="fw-semibold text-truncate">-</div>
+                                </div>
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0 mb-2">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Téléphone</small>
+                                    <div id="phone" class="fw-semibold">-</div>
+                                </div>
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Date de Création</small>
+                                    <div id="created_at" class="fw-semibold">-</div>
+                                </div>
+                            </div>
+
+                            <button id="viewProfileBtn" type="button" class="btn btn-soft-primary w-100 mt-4 rounded-3 py-2 fw-semibold">
+                                <i class="ri-profile-line me-1"></i> Fiche Complète
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Timeline Card -->
+                    <div class="premium-card p-4 border-0 shadow-sm" id="timeline-card" style="display: none;">
+                        <h6 class="fw-bold mb-4 d-flex align-items-center text-secondary">
+                            <i class="ri-history-line me-2"></i> Parcours & Historique
+                        </h6>
+                        <div class="timeline-v3" id="linked-inscriptions-list">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- MAIN AREA: Tabs based navigation -->
+                <main class="main-content-area">
+                    <nav class="nav nav-glass-tabs mb-4 px-2">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview">
+                            <i class="ri-dashboard-3-line"></i> <span>Aperçu</span>
+                        </button>
+
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-docs">
+                            <i class="ri-file-list-3-line"></i> <span>Documents</span>
+                        </button>
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tracking">
+                            <i class="ri-exchange-funds-line"></i> <span>Suivi & Finances</span>
+                        </button>
+                    </nav>
+
+                    <div class="tab-content">
+                        <!-- TAB 1: OVERVIEW -->
+                        <div class="tab-pane fade show active" id="tab-overview">
+                            <div class="premium-card border-0 shadow-sm p-4 overflow-hidden position-relative">
+                                <div class="d-flex align-items-center justify-content-between mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark">Orientation Académique</h5>
+                                    <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2" id="date_changement">-</span>
+                                </div>
+                                <div id="preinscritVoeuxDetails" class="row align-items-center">
+                                    <!-- Injected via AJAX -->
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <div class="premium-card p-4 border-0 shadow-sm h-100">
+                                        <h6 class="fw-bold text-secondary mb-3">Statut du Dossier</h6>
+                                        <div id="non_completed_docs" hidden class="p-3 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-10 d-flex align-items-center">
+                                            <i class="ri-error-warning-line text-danger fs-3 me-3"></i>
+                                            <div>
+                                                <div class="fw-bold text-danger">Dossier Incomplet</div>
+                                                <button class="btn btn-link btn-sm p-0 text-danger text-decoration-underline" data-bs-toggle="modal" data-bs-target="#missingDocumentsModal">Voir les pièces</button>
+                                            </div>
+                                        </div>
+                                        <div id="completed_docs" hidden class="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-10 d-flex align-items-center">
+                                            <i class="ri-checkbox-circle-line text-success fs-3 me-3"></i>
+                                            <div class="fw-bold text-success">Dossier Complet</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="premium-card p-4 border-0 shadow-sm h-100 bg-primary bg-opacity-10 border border-primary border-opacity-10">
+                                        <h6 class="fw-bold text-primary mb-3">Action Rapide</h6>
+                                        <p class="small text-muted mb-3">Mettre à jour les informations du profil ou enregistrer des notes de suivi.</p>
+                                        <button class="btn btn-primary btn-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#additionalInfoModal">
+                                            Modifier Profil
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: DOCUMENTS -->
+                        <div class="tab-pane fade" id="tab-docs">
+                            <div class="premium-card p-4 border-0 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark">Dossier Numérique</h5>
+                                    <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" onclick="loadSelectDocuement()" data-bs-target="#addDocumentModal">
+                                        <i class="ri-add-line me-1"></i> Ajouter Doc
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle custom-table">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">Document</th>
+                                                <th class="border-0">Type</th>
+                                                <th class="border-0">Ajouté le</th>
+                                                <th class="border-0 text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listeDesDocuments">
+                                            <!-- Injected via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: TRACKING & FINANCE -->
+                        <div class="tab-pane fade" id="tab-tracking">
+                            <!-- Financial Summary -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="premium-card p-4 border-0 shadow-sm bg-white text-center">
+                                        <div class="text-muted small mb-1 text-uppercase fw-bold">Total Inscription</div>
+                                        <h4 class="mb-0 fw-bold text-dark" id="montant-total">-</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="premium-card p-4 border-0 shadow-sm bg-success bg-opacity-10 text-center">
+                                        <div class="text-success small mb-1 text-uppercase fw-bold">Montant Versé</div>
+                                        <h4 class="mb-0 fw-bold text-success" id="montant-paye">-</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="premium-card p-4 border-0 shadow-sm bg-danger bg-opacity-10 text-center">
+                                        <div class="text-danger small mb-1 text-uppercase fw-bold">Solde Débiteur</div>
+                                        <h4 class="mb-0 fw-bold text-danger" id="solde">-</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="premium-card p-4 border-0 shadow-sm mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Échéances & Rappels</h5>
+                                    <button class="btn btn-soft-warning btn-sm rounded-pill px-3" id="addReminderBtn">
+                                        <i class="ri-alarm-line me-1"></i> Nouveau Rappel
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">Type</th>
+                                                <th class="border-0">Rendez-vous</th>
+                                                <th class="border-0">Objet</th>
+                                                <th class="border-0">Statut</th>
+                                                <th class="border-0 text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listeDesRendezVous">
+                                            <!-- Injected via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Notes Section -->
+                            <div class="premium-card p-4 border-0 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Notes de Suivi</h5>
+                                    <button class="btn btn-soft-dark btn-sm rounded-circle" id="addNoteModalBtn"><i class="ri-add-line"></i></button>
+                                </div>
+                                <div id="ListeDesNotes" class="vstack gap-3">
+                                    <!-- Injected via AJAX -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
     </div>
-    <!-- End Page-content -->
+</div>
+
+<!-- Modal Edit Basic Info -->
+<div class="modal fade" id="editBasicInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-3">
+                        <div class="avatar-title bg-primary bg-opacity-20 rounded-circle border border-primary border-opacity-25 shadow-sm">
+                            <i class="ri-edit-circle-line text-primary fs-4"></i>
+                        </div>
+                    </div>
+                    <h5 class="modal-title fw-bold text-primary mb-0">Modifier les informations</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-muted small">Nom <span class="text-danger">*</span></label>
+                        <input type="text" id="edit_nom" class="form-control form-control-md border-light-subtle rounded-3 shadow-sm bg-light bg-opacity-50">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium text-muted small">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" id="edit_prenom" class="form-control form-control-md border-light-subtle rounded-3 shadow-sm bg-light bg-opacity-50">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium text-muted small">Email</label>
+                        <input type="email" id="edit_email" class="form-control form-control-md border-light-subtle rounded-3 shadow-sm bg-light bg-opacity-50">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-medium text-muted small">Téléphone</label>
+                        <div class="input-group input-group-md shadow-sm rounded-3">
+                            <select id="edit_indicatif" class="form-select border-light-subtle bg-light bg-opacity-50" style="max-width: 140px; border-top-left-radius: 0.5rem; border-bottom-left-radius: 0.5rem;"></select>
+                            <input type="text" id="edit_telephone" class="form-control border-light-subtle bg-light bg-opacity-50" style="border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0 py-3">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm" id="saveBasicInfoBtn">
+                    <i class="ri-save-3-line me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal Annuler Préinscription -->
@@ -2819,7 +2566,7 @@
                     </div>
                     <div class="flex-grow-1">
                         <p class="mb-0">
-                            <strong>Restrictions :</strong> Les fichiers ne doivent pas dépasser 400 Ko et seuls les fichiers PDF et JPEG sont autorisés.
+                            <strong>Restrictions :</strong> Les fichiers ne doivent pas dépasser {{ max_upload_size }} Ko et seuls les fichiers PDF et JPEG sont autorisés.
                         </p>
                     </div>
                 </div>
@@ -3407,64 +3154,89 @@
                     var html="";
                     if (data.fiche_voeux.length > 0){
                         $.each(data.fiche_voeux, function(index, item){
-                            html += '<div class="col-12 col-md-4 text-center mb-4 mb-md-0">';
-                                    html += '<div class="avatar-lg mx-auto mb-4">';
-                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info display-5 rounded-circle">';
-                                            html += '<i class="ri-school-line"></i>';
-                                        html += '</div>';
-                                    html += '</div>';
-                                    html += '<h6 class="fw-semibold mb-2">'+item.formation_label+'</h6>';
-                                    html += '<h6 class="fw-semibold mb-2">Spécialité</h6>';
-                                    html += '<p class="text-muted mb-0">'+item.specialite_label+'</p>';
-                                     html += '<h6 class="fw-semibold mb-2 mt-3">Promotion/Session</h6>';
-                                    html += '<p class="text-muted mb-0">'+item.promo+'</p>';
-                                html += '</div>';
-                                html += '<div class="col-12 col-md-8 d-flex align-items-center">';
-                                    html += '<div class="vstack gap-4 w-100">';
-                                        html += '<div class="d-flex align-items-center justify-content-center">';
-                                            html += '<div class="d-flex align-items-center bg-light rounded-3 p-3 w-100">';
-                                                html += '<div class="flex-shrink-0">';
-                                                    html += '<div class="avatar-sm">';
-                                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle">';
-                                                            html += '<i class="ri-calendar-line fs-5"></i>';
-                                                        html += '</div>';
-                                                    html += '</div>';
-                                                html += '</div>';
-                                                html += '<div class="flex-grow-1 ms-3 text-center">';
-                                                    html += '<h6 class="mb-1">Date de création</h6>';
-                                                    html += '<small class="text-muted">'+item.created_at+'</small>';
-                                                html += '</div>';
-                                            html += '</div>';
-                                        html += '</div>';
+                            html += '<div class="col-12">';
+                            html += '  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">';
+                            html += '    <div class="card-body p-0">';
+                            html += '      <div class="row g-0">';
+                            html += '        <div class="col-md-5 bg-info bg-opacity-10 p-4 d-flex flex-column justify-content-center align-items-center text-center border-end">';
+                            html += '          <div class="avatar-xl mb-4">';
+                            html += '            <div class="avatar-title bg-info text-white display-4 rounded-circle shadow-sm">';
+                            html += '              <i class="ri-school-fill"></i>';
+                            html += '            </div>';
+                            html += '          </div>';
+                            html += '          <span class="badge bg-info text-white px-3 py-2 rounded-pill mb-3 fw-medium letter-spacing-1 text-uppercase fs-12">Formation Assignée</span>';
+                            html += '          <h4 class="fw-bold text-dark mb-1">'+item.formation_label+'</h4>';
+                            html += '        </div>';
+                            html += '        <div class="col-md-7 p-4">';
+                            html += '          <h5 class="fw-semibold text-dark mb-4 border-bottom pb-3"><i class="ri-article-line me-2 text-info fs-5 align-middle"></i>Détails de l\'orientation</h5>';
+                            html += '          <div class="row g-4">';
+                            html += '            <div class="col-sm-6">';
+                            html += '              <div class="d-flex align-items-start">';
+                            html += '                <div class="flex-shrink-0 mt-1">';
+                            html += '                  <i class="ri-honour-line fs-3 text-info"></i>';
+                            html += '                </div>';
+                            html += '                <div class="flex-grow-1 ms-3">';
+                            html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Spécialité</p>';
+                            html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.specialite_label+'</h6>';
+                            html += '                </div>';
+                            html += '              </div>';
+                            html += '            </div>';
+                            html += '            <div class="col-sm-6">';
+                            html += '              <div class="d-flex align-items-start">';
+                            html += '                <div class="flex-shrink-0 mt-1">';
+                            html += '                  <i class="ri-calendar-event-line fs-3 text-primary"></i>';
+                            html += '                </div>';
+                            html += '                <div class="flex-grow-1 ms-3">';
+                            html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Promotion</p>';
+                            html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.promo+'</h6>';
+                            html += '                </div>';
+                            html += '              </div>';
+                            html += '            </div>';
+                            html += '            <div class="col-sm-6">';
+                            html += '              <div class="d-flex align-items-start">';
+                            html += '                <div class="flex-shrink-0 mt-1">';
+                            html += '                  <i class="ri-time-line fs-3 text-success"></i>';
+                            html += '                </div>';
+                            html += '                <div class="flex-grow-1 ms-3">';
+                            html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Création</p>';
+                            html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.created_at+'</h6>';
+                            html += '                </div>';
+                            html += '              </div>';
+                            html += '            </div>';
+                            html += '            <div class="col-sm-6">';
+                            html += '              <div class="d-flex align-items-start">';
+                            html += '                <div class="flex-shrink-0 mt-1">';
+                            html += '                  <i class="ri-history-line fs-3 text-warning"></i>';
+                            html += '                </div>';
+                            html += '                <div class="flex-grow-1 ms-3">';
+                            html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Mise à jour</p>';
+                            html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.updated_at+'</h6>';
+                            html += '                </div>';
+                            html += '              </div>';
+                            html += '            </div>';
+                            html += '          </div>';
+                            html += '        </div>';
+                            html += '      </div>';
+                            html += '    </div>';
+                            html += '  </div>';
+                            html += '</div>';
 
-                                        html += '<div class="d-flex align-items-center justify-content-center">';
-                                            html += '<div class="d-flex align-items-center bg-light rounded-3 p-3 w-100">';
-                                                html += '<div class="flex-shrink-0">';
-                                                    html += '<div class="avatar-sm">';
-                                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle"><i class="ri-time-line fs-5"></i></div>';
-                                                    html += '</div>';
-                                                html += '</div>';
-                                                html += '<div class="flex-grow-1 ms-3 text-center"><h6 class="mb-1">Dernière mise à jour</h6><small class="text-muted">'+item.updated_at+'</small></div>';
-                                            html += '</div>';
-                                        html += '</div>';
-                                        
-                                    html += '</div>';
-                                html += '</div>';
-
-                                $('#editVoeuxBtn').data('id',item.id);
+                            $('#editVoeuxBtn').data('id',item.id);
                         });
                     }else{
-                        html += '<div class="col-12 text-center py-5">';
-                        html += '<div class="avatar-lg mx-auto mb-4">';
-                        html += '<div class="avatar-title bg-light text-muted display-5 rounded-circle">';
-                        html += '<i class="ri-file-search-line"></i>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '<h5 class="mb-3">Aucune fiche de vœux disponible</h5>';
-                        html += '<p class="text-muted mb-4">Ce prospect n\'a pas encore de fiche de vœux enregistrée.</p>';
-                        html += '<button type="button" class="btn btn-soft-primary px-4 py-2" data-bs-toggle="modal" data-bs-target="#voeuxModal">';
-                        html += '<i class="ri-add-line me-2"></i>Créer une fiche de vœux';
-                        html += '</button>';
+                        html += '<div class="col-12">';
+                        html += '  <div class="card shadow-none border border-dashed rounded-4 p-5 text-center bg-light">';
+                        html += '    <div class="avatar-xl mx-auto mb-4">';
+                        html += '      <div class="avatar-title bg-white shadow-sm text-primary display-4 rounded-circle">';
+                        html += '        <i class="ri-file-search-line"></i>';
+                        html += '      </div>';
+                        html += '    </div>';
+                        html += '    <h4 class="fw-bold text-dark mb-2">Aucune orientation académique</h4>';
+                        html += '    <p class="text-muted mb-4 fs-15 w-75 mx-auto">Ce prospect n\'est pas encore affilié à une formation ou spécialité spécifique. Veuillez initialiser son orientation.</p>';
+                        html += '    <button type="button" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all voeux-create-btn" data-bs-toggle="modal" data-bs-target="#voeuxModal">';
+                        html += '      <i class="ri-add-circle-fill me-2 fs-5"></i>Créer une fiche de vœux';
+                        html += '    </button>';
+                        html += '  </div>';
                         html += '</div>';
                     }
 
@@ -3593,6 +3365,37 @@
                         } else {
                             $('#btnOpenCancelModal').hide();
                         }
+                    }
+
+                    // Render History/Timeline
+                    if (data.history && data.history.length > 0) {
+                        $('#timeline-card').show();
+                        var historyHtml = "";
+                        $.each(data.history, function(index, item) {
+                            var url = "";
+                            if (["prinscrit", "instance", "convertit"].includes(item.statut_key)) {
+                                url = "{% url 't_crm:DetailsPrinscrit' 0 %}".replace('0', item.id);
+                            } else {
+                                url = "{% url 't_crm:DetailsProspect' 'SLUG_PLACEHOLDER' %}".replace('SLUG_PLACEHOLDER', item.slug);
+                            }
+                            
+                            historyHtml += '<div class="timeline-item-v2">';
+                            historyHtml += '    <div class="timeline-dot-v2"><i class="ri-checkbox-blank-circle-fill"></i></div>';
+                            historyHtml += '    <a href="' + url + '" class="text-decoration-none">';
+                            historyHtml += '        <div class="timeline-content-v2">';
+                            historyHtml += '            <div class="timeline-date-v2">' + item.created_at + '</div>';
+                            historyHtml += '            <div class="timeline-title-v2">' + item.statut + '</div>';
+                            historyHtml += '            <div class="timeline-sub-v2">' + item.promo + '</div>';
+                             if (item.is_double) {
+                                historyHtml += '            <span class="badge bg-info-subtle text-info mt-1" style="font-size: 10px;">Double Diplomation</span>';
+                            }
+                            historyHtml += '        </div>';
+                            historyHtml += '    </a>';
+                            historyHtml += '</div>';
+                        });
+                        $('#linked-inscriptions-list').html(historyHtml);
+                    } else {
+                        $('#timeline-card').hide();
                     }
                 }
             });
@@ -3758,7 +3561,7 @@
 
         CheckCompletedInfos();
 
-        function loadSelectDocuement(){
+        window.loadSelectDocuement = function(docIdToSelect = null){
             $.ajax({
                 url : "{% url 't_crm:ApiLoadRequiredDocs' %}",
                 dataType : "JSON",
@@ -3771,6 +3574,9 @@
                     });
                     $('#documentType').html(option);
                     
+                    if (docIdToSelect) {
+                        $('#documentType').val(docIdToSelect);
+                    }
                 },
             })
         }
@@ -3820,9 +3626,10 @@
                     'id_preinscrit': id,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
-                success: function(response) {
-                    if (response.status === 'success') {
-                        alertify.success(response.message);
+                success: function(data) {
+                    if (data.status === 'success') {
+                        alertify.success(data.message);
+                        loadNotes();
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
@@ -3906,9 +3713,11 @@
                 success : function(data){
                     if (data.status === 'success'){
                         $('#addNoteModal').modal('hide');
-                        alertify.success(response.message);
+                        loadNotes();
+                        $('#content_note').val(""); // clear the input
+                        alertify.success(data.message);
                     } else {
-                        alertify.error(response.message);
+                        alertify.error(data.message);
                     }
                 }
             });
@@ -3917,6 +3726,35 @@
 
 
         
+        // Gestion de la suppression des notes
+        $(document).on('click', '#deleteNoteBtn', function(){
+            var id_note = $(this).data('id');
+            $('#deleteNoteModal').modal('show');
+            $('#ConfirmDeleteNoteBtn').data('id', id_note);
+        });
+
+        $(document).on('click', '#ConfirmDeleteNoteBtn', function(){
+            var id_note = $(this).data('id');
+            $.ajax({
+                url : "{% url 't_crm:ApiDeleteNote' %}",
+                dataType : 'JSON',
+                type : 'POST',
+                data : {
+                    'id_note' : id_note,
+                    'csrfmiddlewaretoken' : '{{ csrf_token }}'
+                },
+                success : function(data){
+                    if (data.status === 'success'){
+                        $('#deleteNoteModal').modal('hide');
+                        loadNotes();
+                        alertify.success(data.message);
+                    } else {
+                        alertify.error(data.message);
+                    }
+                }
+            });
+        });
+
         // Gestion de la modification des notes
         $(document).on('click', '.editNoteBtn', function() {
             var noteId = $(this).data('id');
@@ -3942,12 +3780,11 @@
                     'tage': tage,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
-                success: function(response) {
-                    if (response.status === 'success') {
+                success: function(data) {
+                    if (data.status === 'success') {
                         $('#editNoteModal').modal('hide');
                         loadNotes();
-loadNotes();
-                        $('#content_note').val('');
+                        $('#edit_content_note').val('');
                         alertify.success(data.message);
                     }else{
                         alert("Erreur lors de l'enregistrement de la note. Veuillez réessayer.");
@@ -4180,6 +4017,79 @@ loadNotes();
         });
 
         // Gestion du téléchargement des documents
+        $(document).on('click', '.download-doc', function(){
+            var documentUrl = $(this).data('url');
+            // Créer un élément <a> temporaire pour déclencher le téléchargement
+            var link = document.createElement('a');
+            link.href = documentUrl;
+            link.download = ''; // Le nom du fichier sera déterminé par le serveur
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Gestion de la modification des infos basiques
+        $(document).on('click', '#editBasicInfoBtn', function(){
+            $.ajax({
+                url: "{% url 't_crm:ApiLoadPrinscritsDataUpdate' %}",
+                type: "GET",
+                data: {'id_prospect': id},
+                success: function(response) {
+                    if (response.status !== 'error') {
+                        $('#edit_nom').val(response.nom);
+                        $('#edit_prenom').val(response.prenom);
+                        $('#edit_email').val(response.email);
+                        $('#edit_telephone').val(response.telephone);
+                        
+                        // Populate indicatif select
+                        let indicOptions = "";
+                        if (response.indic_choices) {
+                            response.indic_choices.forEach(function(choice) {
+                                let selected = (choice.id === response.indic) ? "selected" : "";
+                                indicOptions += '<option value="' + choice.id + '" ' + selected + '>' + choice.label + '</option>';
+                            });
+                        }
+                        $('#edit_indicatif').html(indicOptions);
+                        
+                        $('#editBasicInfoModal').modal('show');
+                    } else {
+                        alertify.error(response.message);
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', '#saveBasicInfoBtn', function(){
+            var btn = $(this);
+            var originalText = btn.html();
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span> Enregistrement...');
+
+            $.ajax({
+                url: "{% url 't_crm:ApiUpdatePreinscritPersonalData' %}",
+                type: "POST",
+                data: {
+                    'id_prospect': id,
+                    'nom': $('#edit_nom').val(),
+                    'prenom': $('#edit_prenom').val(),
+                    'email': $('#edit_email').val(),
+                    'indic': $('#edit_indicatif').val(),
+                    'telephone': $('#edit_telephone').val(),
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#editBasicInfoModal').modal('hide');
+                        alertify.success(response.message);
+                        loadPersonalInfos();
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
         $(document).on('click', '.download-doc', function(){
             var documentUrl = $(this).data('url');
             // Créer un élément <a> temporaire pour déclencher le téléchargement
@@ -4607,6 +4517,15 @@ loadNotes();
                 return;
             }
 
+            // Validation de la taille du fichier (client-side)
+            const maxLimitKb = {{ max_upload_size|default:400 }};
+            if (file.size > maxLimitKb * 1024) {
+                alertify.error(`Le fichier est trop volumineux (${(file.size / 1024).toFixed(1)} KB). La limite est de ${maxLimitKb} KB.`);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                return;
+            }
+
             let formData = new FormData();
             formData.append("name", name);
             formData.append("type", type);
@@ -4819,10 +4738,8 @@ loadNotes();
         // Gérer le clic sur le bouton d'ajout de document manquant
         $(document).on('click', '.add-missing-doc', function() {
             var docId = $(this).data('doc-id');
-            // Charger les types de documents dans la modale d'ajout
-            loadSelectDocuement();
-            // Sélectionner automatiquement le document concerné
-            $('#documentType').val(docId);
+            // Charger les types de documents dans la modale d'ajout (avec le document pré-sélectionné)
+            loadSelectDocuement(docId);
             // Fermer la modale des documents manquants
             $('#missingDocumentsModal').modal('hide');
             // Ouvrir la modale d'ajout de document

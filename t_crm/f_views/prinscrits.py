@@ -159,6 +159,7 @@ def ApiLoadPrinscrits(request):
             'type_prospect_label': obj.get_type_prospect_display(),
             'statut_label': obj.get_statut_display(),
             'missing_docs': missing_docs,
+            'is_double': obj.is_double,
         })
     
     return JsonResponse({
@@ -175,6 +176,7 @@ def DetailsPrinscrit(request, pk):
         'pk' : pk,
         'tenant' : request.tenant,
         'config': config,
+        'max_upload_size': request.tenant.effective_max_upload_size,
     }
     preinscrit = Prospets.objects.get(id = pk)
 
@@ -246,6 +248,38 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'secu' : prospect.num_secu,
         'filiere' : prospect.filiere,
     }
+
+    # History / Timeline logic
+    linked_query = Q()
+    if prospect.nin and prospect.nin.strip():
+        linked_query |= Q(nin=prospect.nin)
+    
+    history_list = []
+    if linked_query:
+        linked_prospects = Prospets.objects.filter(linked_query).exclude(id=prospect.id).order_by('-created_at')
+        for lp in linked_prospects:
+            promo_label = "N/A"
+            if lp.is_double:
+                fvd = FicheVoeuxDouble.objects.filter(prospect=lp).first()
+                if fvd: promo_label = fvd.promo.get_session_display() + "-" + fvd.promo.begin_year + "/" + fvd.promo.end_year
+            else:
+                fdv = FicheDeVoeux.objects.filter(prospect=lp).first()
+                if fdv: promo_label = fdv.promo.get_session_display() + "-" + fdv.promo.begin_year + "/" + fdv.promo.end_year
+
+            history_list.append({
+                'id': lp.id,
+                'slug': lp.slug,
+                'statut_key': lp.statut,
+                'statut': lp.get_statut_display(),
+                'created_at': lp.created_at.strftime("%d/%m/%Y"),
+                'promo': promo_label,
+                'is_double': lp.is_double
+            })
+    else:
+        # If no valid email/nin, history is empty except for the current one if you want (currently excludes self)
+        pass
+
+    data['history'] = history_list
 
     return JsonResponse(data, safe=False)
 
@@ -486,6 +520,14 @@ def add_document(request):
                 if not name or not doc_type or not file:
                     return JsonResponse({"success": False, "error": "Champs manquants"})
 
+                # Validation de la taille du fichier
+                limit_kb = request.tenant.effective_max_upload_size
+                if file.size > limit_kb * 1024:
+                    return JsonResponse({
+                        "success": False, 
+                        "error": f"Le fichier est trop volumineux ({file.size / 1024:.1f} KB). La limite est de {limit_kb} KB."
+                    })
+
                 document = DocumentsDemandeInscription.objects.create(
                     id_document=DossierInscription.objects.get(id=doc_type),
                     file=file,
@@ -518,6 +560,14 @@ def add_document_double(request):
 
                 if not name or not doc_type or not file:
                     return JsonResponse({"success": False, "error": "Champs manquants"})
+
+                # Validation de la taille du fichier
+                limit_kb = request.tenant.effective_max_upload_size
+                if file.size > limit_kb * 1024:
+                    return JsonResponse({
+                        "success": False, 
+                        "error": f"Le fichier est trop volumineux ({file.size / 1024:.1f} KB). La limite est de {limit_kb} KB."
+                    })
 
                 document = DocumentsDemandeInscription.objects.create(
                     id_document=DossierInscription.objects.get(id=doc_type),

@@ -15,7 +15,7 @@ from app.models import Institut
 from django_tenants.utils import tenant_context
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import get_user_model
-from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration
+from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration, SaaSGlobalConfiguration
 from .utils_backup import perform_backup, perform_restore
 
 
@@ -789,6 +789,122 @@ def extract_timestamp(log_line):
         pass
     return None
 
+def get_firewall_info():
+    """Détecte et retourne le statut et les règles du pare-feu actif."""
+    import subprocess
+    import platform
+    
+    info = {
+        'active': False,
+        'type': 'Aucun détecté',
+        'rules': [],
+        'error': None,
+        'raw_output': ""
+    }
+    
+    if platform.system() != 'Linux':
+        info['type'] = platform.system()
+        info['error'] = "La détection détaillée du pare-feu n'est supportée que sur Linux (UFW, iptables...)"
+        return info
+
+    # 1. Tester UFW
+    try:
+        result = subprocess.run(['sudo', 'ufw', 'status', 'numbered'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            stdout = result.stdout
+            info['raw_output'] = stdout
+            if "Status: active" in stdout:
+                info['active'] = True
+                info['type'] = 'UFW'
+                # Parsing basique des règles UFW numérotées
+                lines = stdout.splitlines()
+                for line in lines:
+                    if '[' in line and ']' in line:
+                        info['rules'].append({'raw': line.strip()})
+                return info
+    except Exception:
+        pass
+
+    # 2. Tester iptables
+    try:
+        result = subprocess.run(['sudo', 'iptables', '-L', '-n', '-v'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            info['active'] = True
+            info['type'] = 'iptables'
+            info['raw_output'] = result.stdout
+            return info
+    except Exception:
+        pass
+
+    # 3. Tester Firewalld
+    try:
+        result = subprocess.run(['sudo', 'firewall-cmd', '--state'], capture_output=True, text=True, timeout=2)
+        if result.returncode == 0 and "running" in result.stdout:
+            info['active'] = True
+            info['type'] = 'Firewalld'
+            rules_res = subprocess.run(['sudo', 'firewall-cmd', '--list-all'], capture_output=True, text=True, timeout=5)
+            info['raw_output'] = rules_res.stdout
+            return info
+    except Exception:
+        pass
+
+    return info
+
+def get_fail2ban_info():
+    """Récupère le statut de Fail2Ban et les IPs bannies."""
+    import subprocess
+    info = {
+        'active': False,
+        'jails': [],
+        'error': None,
+        'total_banned': 0
+    }
+    
+    try:
+        result = subprocess.run(['sudo', 'fail2ban-client', 'status'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            info['active'] = True
+            # Parsing des jails
+            for line in result.stdout.splitlines():
+                if "Jail list:" in line:
+                    jails_str = line.split(":", 1)[1].strip()
+                    if jails_str:
+                        jails = jails_str.split(",")
+                        for jail in jails:
+                            jail_name = jail.strip()
+                            jail_data = {'name': jail_name, 'banned_ips': [], 'count': 0}
+                            # Status de chaque jail
+                            jail_res = subprocess.run(['sudo', 'fail2ban-client', 'status', jail_name], capture_output=True, text=True, timeout=5)
+                            if jail_res.returncode == 0:
+                                for jline in jail_res.stdout.splitlines():
+                                    if "Banned IP list:" in jline:
+                                        ips_part = jline.split(":", 1)[1].strip()
+                                        if ips_part:
+                                            ips = ips_part.split(" ")
+                                            jail_data['banned_ips'] = [ip.strip() for ip in ips if ip.strip()]
+                                            jail_data['count'] = len(jail_data['banned_ips'])
+                                            info['total_banned'] += jail_data['count']
+                            info['jails'].append(jail_data)
+    except Exception as e:
+        info['error'] = str(e)
+        
+    return info
+
+@system_access_required
+def saas_firewall_view(request):
+    """Affiche l'état de la sécurité réseau (Pare-feu & Fail2Ban)."""
+    firewall = get_firewall_info()
+    fail2ban = get_fail2ban_info()
+    
+    context = {
+        'firewall': firewall,
+        'fail2ban': fail2ban,
+        'system_os': platform.system(),
+        'timestamp': datetime.now().strftime("%H:%M:%S")
+    }
+    
+    return render(request, 'saas_admin_app/saas_firewall.html', context)
+
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_tenant_detail_view(request, tenant_id):
     """Affiche les détails complets d'un tenant/institution."""
@@ -845,11 +961,47 @@ def saas_tenant_detail_view(request, tenant_id):
     except Exception as e:
         tenant_data['error'] = str(e)
     
+    if request.method == 'POST' and 'update_upload_limit' in request.POST:
+        try:
+            limit = request.POST.get('max_upload_size')
+            if limit:
+                institut.max_upload_size = int(limit)
+            else:
+                institut.max_upload_size = None
+            institut.save()
+            from django.contrib import messages
+            messages.success(request, f"Limite d'upload mise à jour pour {institut.nom}")
+            return redirect('saas_admin_app:saas_tenant_detail', tenant_id=tenant_id)
+        except ValueError:
+            pass
+
     context = {
         'tenant_data': tenant_data,
+        'global_config': SaaSGlobalConfiguration.get_solo(),
     }
     
     return render(request, 'saas_admin_app/saas_tenant_detail.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_global_config_view(request):
+    """Page de configuration globale du SaaS."""
+    from django.contrib import messages
+    config = SaaSGlobalConfiguration.get_solo()
+    
+    if request.method == 'POST':
+        try:
+            config.max_upload_size = int(request.POST.get('max_upload_size', 400))
+            config.save()
+            messages.success(request, 'Configuration globale sauvegardée avec succès')
+            return redirect('saas_admin_app:saas_global_config')
+        except ValueError:
+            messages.error(request, 'Valeur invalide pour la taille d\'upload')
+    
+    context = {
+        'config': config,
+    }
+    
+    return render(request, 'saas_admin_app/saas_global_config.html', context)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_update_user_view(request, tenant_id, user_id):

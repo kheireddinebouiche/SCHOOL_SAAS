@@ -114,3 +114,19 @@ class DatabaseBackup(models.Model):
             if os.path.isfile(self.file.path):
                 os.remove(self.file.path)
         super().delete(*args, **kwargs)
+
+class SaaSGlobalConfiguration(models.Model):
+    max_upload_size = models.PositiveIntegerField(default=400, verbose_name=_("Taille max upload globale (KB)"))
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration Globale SaaS"
+        verbose_name_plural = "Configurations Globales SaaS"
+
+    def __str__(self):
+        return "Configuration Globale SaaS"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj

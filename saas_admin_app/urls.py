@@ -10,7 +10,7 @@ from .views import (
     saas_processes_view, saas_terminal_view, saas_terminal_exec_view,
     saas_explorer_view, api_explorer_browse, api_explorer_read,
     api_explorer_save, api_explorer_delete, saas_system_lock_view,
-    saas_system_logout_view
+    saas_system_logout_view, saas_global_config_view, saas_firewall_view
 )
 
 app_name = 'saas_admin_app'
@@ -46,4 +46,6 @@ urlpatterns = [
     path('settings/email/', saas_email_config_view, name='saas_email_config'),
     path('api/settings/email/test/', saas_test_email_view, name='saas_test_email'),
     path('api/settings/maintenance/toggle/', saas_toggle_maintenance_view, name='saas_toggle_maintenance'),
+    path('settings/global/', saas_global_config_view, name='saas_global_config'),
+    path('firewall/', saas_firewall_view, name='saas_firewall'),
 ]

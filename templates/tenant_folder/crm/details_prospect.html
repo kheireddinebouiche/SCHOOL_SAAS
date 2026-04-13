@@ -5,357 +5,214 @@
 {% block title %}Détails du prospect {% endblock title %}
 
 {% block content %}
-<style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.4);
-    }
-
-    .main-content {
-        background-color: #f8fafc;
-    }
-
-    /* Stat Cards Modern Design */
-    .stat-card {
-        border: 1px solid var(--glass-border);
-        background: var(--glass-bg);
-        backdrop-filter: blur(10px);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 1.25rem;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-        transform: translateX(-100%);
-        transition: 0.6s;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-    }
-
-    .stat-card:hover::before {
-        transform: translateX(100%);
-    }
-
-    .stat-icon {
-        width: 52px;
-        height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 1rem;
-        font-size: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    /* Table Customization */
-    .custom-table-card {
-        border-radius: 1.25rem;
-        border: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        background: #fff;
-    }
-
-    .table thead th {
-        background-color: #f1f5f9;
-        color: #475569;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        padding: 1rem 1.5rem;
-        border: none;
-    }
-
-    .table tbody td {
-        padding: 1.25rem 1.5rem;
-        color: #1e293b;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-    
-    /* Loading Modal fallback */
-    #loadingModal .modal-content {
-        background: rgba(255, 255, 255, 0.9) !important;
-        backdrop-filter: blur(10px);
-    }
-</style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{% static 'tenant_folder/css/crm_details_redesign.css' %}">
+    <style>
+        /* Specific overrides for prospect page */
+        .main-content { background-color: #f0f2f5; }
+        .tab-content { padding-top: 1rem; }
+        #procespectVoeuxDetails .col-md-4 { width: 100%; border-right: none; margin-bottom: 2rem; }
+        #procespectVoeuxDetails .col-md-8 { width: 100%; }
+        .btn-软-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; border: none; }
+        .btn-软-success:hover { background-color: #10b981; color: #fff; }
+    </style>
 
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid">                                                    
-
-            <!-- start page title -->
-            <div class="row mb-4 mt-2">
-                <div class="col-12">
-                    <div class="d-flex align-items-center justify-content-between p-4 bg-white rounded-4 shadow-sm">
+        <!-- Dashboard Header / Action Bar -->
+        <div class="container-fluid mb-4">
+            <div class="premium-card p-4 border-0 shadow-sm bg-white" style="border-radius: 1.25rem;">
+                <div class="row align-items-center">
+                    <div class="col">
                         <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                <i class="ri-user-follow-line text-primary fs-3"></i>
+                            <div class="avatar-sm me-3">
+                                <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-4">
+                                    <i class="ri-user-follow-line"></i>
+                                </div>
                             </div>
                             <div>
-                                <h4 class="mb-1 fw-bold text-primary">Détails du prospect</h4>
-                                <p class="text-muted mb-0">Gestion et suivi de la conversion prospect</p>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="d-none d-md-block">
+                                <h4 class="mb-1 fw-bold text-dark">Détails du Prospect</h4>
                                 <nav aria-label="breadcrumb">
-                                    <ol class="breadcrumb m-0 px-3 py-2 bg-light rounded-pill">
-                                        <li class="breadcrumb-item"><a href="javascript:void(0);" class="text-primary">CRM</a></li>
+                                    <ol class="breadcrumb m-0 small">
+                                        <li class="breadcrumb-item"><a href="javascript:void(0);">CRM</a></li>
                                         <li class="breadcrumb-item active">Prospects</li>
                                     </ol>
                                 </nav>
                             </div>
-                            <div class="btn-group gap-2">
-                                <button type="button" hidden class="btn btn-success rounded-pill px-4 py-2" data-bs-toggle="modal" id="validateProspectBtn">
-                                    <i class="ri-check-line me-2"></i>Valider
-                                </button>
-                                <button type="button" class="btn btn-primary rounded-pill px-4 py-2" id="udapteProspectDetailsBtn">
-                                    <i class="ri-edit-line me-2"></i>Modifier
-                                </button>
-                                <a href="/crm/liste-des-prospects/" class="btn btn-light rounded-pill px-4 py-2">
-                                    <i class="ri-arrow-left-line me-2"></i>Retour
-                                </a>
-                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <!-- end page title -->
-
-            <!-- Cancellation Alert Banner -->
-            <div id="cancellationBanner" class="row mb-4" style="display: none;">
-                <div class="col-12">
-                    <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-0 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-danger bg-opacity-10 rounded-3 p-3 me-3">
-                                <i class="ri-error-warning-line text-danger fs-3"></i>
-                            </div>
-                            <div>
-                                <h5 class="alert-heading mb-1 fw-bold text-danger">Préinscription Annulée</h5>
-                                <p class="mb-0 text-dark">Raison : <span id="cancellationReasonText" class="fw-semibold"></span></p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-danger rounded-pill px-4 py-2 fw-medium shadow-sm transition-all" id="btnReactivatePreinscrit">
-                            <i class="ri-refresh-line me-2"></i>Ré-activer la préinscription
+                    <div class="col-auto d-flex gap-2">
+                        <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm" id="validateProspectBtn" hidden>
+                            <i class="ri-check-line me-1"></i> Valider
                         </button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" id="udapteProspectDetailsBtn">
+                            <i class="ri-edit-line me-1"></i> Modifier
+                        </button>
+                        <a href="/crm/liste-des-prospects/" class="btn btn-light rounded-pill px-3">
+                            <i class="ri-arrow-left-line"></i>
+                        </a>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Première rangée : Informations personnelles et Fiche de Voeux -->
-            <div class="row mb-4">
-                <!-- Informations personnelles -->
-                <div class="col-lg-4">
-                    <div class="card stat-card h-100">
-                        <div class="card-header border-0 bg-primary bg-opacity-10 px-4 py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="ri-user-line text-primary fs-4"></i>
-                                </div>
-                                <div>
-                                    <h5 class="card-title fw-semibold text-primary mb-1">Informations de personnelles</h5>
-                                    <p class="text-muted small mb-0">Détails du contact</p>
-                                </div>
+        <div class="container-fluid">
+            <!-- Dynamic Banners (Preserved IDs) -->
+            <div id="cancellationBanner" hidden class="alert alert-danger border-0 rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                        <i class="ri-error-warning-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Préinscription Annulée</h6>
+                        <small id="cancellationReasonText" class="text-muted"></small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-danger rounded-pill px-3" id="btnReactivatePreinscrit">Réactiver</button>
+            </div>
+
+            <div class="details-layout">
+                <!-- SIDEBAR: Profile Card & History -->
+                <aside class="profile-sidebar">
+                    <div class="profile-card mb-4">
+                        <div class="profile-header"></div>
+                        <div class="avatar-container">
+                            <div class="profile-avatar shadow-lg">
+                                <i class="ri-user-smile-line"></i>
                             </div>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-user-line text-primary"></i>
+                        <div class="p-4 pt-2 text-center">
+                            <h4 id="nom_prenom" class="mb-1 fw-bold text-dark">-</h4>
+                            <div class="badge-soft badge-soft-info mb-4" id="statut_prospect" style="font-size: 0.7rem;">-</div>
+                            
+                            <div class="text-start space-y-3">
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0 mb-2">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Contact Email</small>
+                                    <div id="email" class="fw-semibold text-truncate">-</div>
                                 </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Nom et Prénom</small>
-                                    <span class="fw-semibold" id="nom_prenom"></span>
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0 mb-2">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Téléphone</small>
+                                    <div id="phone" class="fw-semibold">-</div>
                                 </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-flag-line text-secondary"></i>
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0 mb-2">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Date de Création</small>
+                                    <div id="created_at" class="fw-semibold">-</div>
                                 </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Statut</small>
-                                    <span class="fw-semibold" id="statut_prospect"></span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-mail-line text-info"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Email</small>
-                                    <span class="fw-semibold" id="email"></span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-phone-line text-success"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Téléphone</small>
-                                    <span class="fw-semibold" id="phone"></span>
-                                </div>
-                            </div>
-                            <div class="mb-4 d-flex align-items-start">
-                                <div class="icon-circle bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-calendar-line text-warning"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Créé le</small>
-                                    <span class="fw-semibold" id="created_at"></span>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-start">
-                                <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="ri-user-voice-line text-primary"></i>
-                                </div>
-                                <div>
-                                    <small class="text-muted d-block mb-1">Créé par</small>
-                                    <span class="fw-semibold" id="created_by"></span>
+                                <div class="premium-card p-3 bg-light bg-opacity-50 border-0">
+                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.6rem;">Créé par</small>
+                                    <div id="created_by" class="fw-semibold small">-</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Section Fiche de Voeux -->
-                <div class="col-lg-8">
-                    <div class="card stat-card h-100">
-                        <div class="card-header border-0 bg-info bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-graduation-cap-line text-info fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-info mb-1">Fiche de Voeux</h5>
-                                        <p class="text-muted small mb-0">Orientation académique du prospect</p>
+                    <!-- History Timeline Card -->
+                    <div class="premium-card p-4 border-0 shadow-sm" id="timeline-card" style="display: none;">
+                        <h6 class="fw-bold mb-4 d-flex align-items-center text-secondary">
+                            <i class="ri-history-line me-2"></i> Parcours & Historique
+                        </h6>
+                        <div class="timeline-v3" id="linked-inscriptions-list">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- MAIN AREA: Tabs based navigation -->
+                <main class="main-content-area">
+                    <nav class="nav nav-glass-tabs mb-4 px-2">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview">
+                            <i class="ri-dashboard-3-line"></i> <span>Fiche de Vœux</span>
+                        </button>
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tracking">
+                            <i class="ri-exchange-funds-line"></i> <span>Suivi & Tâches</span>
+                        </button>
+                    </nav>
+
+                    <div class="tab-content">
+                        <!-- TAB 1: OVERVIEW -->
+                        <div class="tab-pane fade show active" id="tab-overview">
+                            <div class="premium-card border-0 shadow-sm p-4 overflow-hidden position-relative mb-4">
+                                <div class="d-flex align-items-center justify-content-between mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark">Orientation Académique</h5>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-soft-info btn-sm rounded-pill px-3" id="editVoeuxBtn">
+                                            <i class="ri-edit-line me-1"></i> Modifier vœux
+                                        </button>
+                                        <button type="button" class="btn btn-soft-success btn-sm rounded-pill px-3" id="inscriptionDoubleDiplomation">
+                                            <i class="ri-user-add-line me-1"></i> Double Diplômation
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-info px-4 py-2" id="editVoeuxBtn">
-                                        <i class="ri-edit-line me-2"></i>Modifier les voeux
+                                <div id="procespectVoeuxDetails" class="row align-items-center">
+                                    <!-- Injected via AJAX -->
+                                </div>
+
+                                <!-- Formations supplémentaires (Preserved ID for JS functionality) -->
+                                <div style="display:none !important;" id="idAffichageVoeuxSpu" class="mt-4 pt-3 border-top">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                                <i class="ri-add-circle-line text-success fs-5"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="text-decoration-none fw-semibold text-dark" id="voirVoeuxSuppLink">
+                                                Formations supplémentaires
+                                                <span class="badge bg-success rounded-pill ms-2" id="voeuxSuppCount">0</span>
+                                            </a>
+                                        </div>
+                                        <button type="button" class="btn btn-icon btn-soft-secondary btn-sm rounded-circle shadow-sm" id="configVoeuxSuppBtn" title="Configurer">
+                                            <i class="ri-settings-3-line"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: TRACKING -->
+                        <div class="tab-pane fade" id="tab-tracking">
+                            <div class="premium-card p-4 border-0 shadow-sm mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Rappels & Rendez-vous</h5>
+                                    <button class="btn btn-soft-success btn-sm rounded-pill px-4" id="addReminderBtn">
+                                        <i class="ri-add-line me-1"></i> Nouveau Rappel
                                     </button>
-                                    <button type="button" class="btn btn-success px-4 py-2" id="inscriptionDoubleDiplomation">
-                                        <i class="ri-user-add-line me-2"></i>S'inscrire à une double diplômation
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">Type</th>
+                                                <th class="border-0">Date & Heure</th>
+                                                <th class="border-0">Objet</th>
+                                                <th class="border-0">Statut</th>
+                                                <th class="border-0 text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="listeDesRendezVous">
+                                            <!-- Injected via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Notes Section -->
+                            <div class="premium-card p-4 border-0 shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Notes de Suivi</h5>
+                                    <button class="btn btn-soft-warning btn-sm rounded-circle" id="addNoteModalBtn">
+                                        <i class="ri-add-line"></i>
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-4 d-flex align-items-center justify-content-center">
-                            <div class="row w-100" id="procespectVoeuxDetails">
-                                <!-- Contenu dynamique de la fiche de voeux -->
-                            </div>
-                        </div>
-                        <div style="display:none !important;" id="idAffichageVoeuxSpu" class="card-footer bg-light bg-opacity-50 border-0 px-4 py-3">
-                            <div class="d-flex justify-content-center align-items-center">
-                                <a href="javascript:void(0);" class="text-decoration-none me-3" id="voirVoeuxSuppLink">
-                                    <i class="ri-eye-line me-1"></i>
-                                    Voir les formations supplémentaires
-                                    <span class="badge bg-success ms-1" id="voeuxSuppCount">0</span>
-                                </a>
-                                <button type="button" class="btn btn-icon btn-sm btn-ghost-secondary p-0" id="configVoeuxSuppBtn" title="Configurer les fiches de voeux supplémentaires">
-                                    <i class="ri-settings-3-line fs-18 text-muted"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Deuxième rangée : Rappels -->
-            <div class="row">
-                <!-- Colonne Prise de rendez vous -->
-                <div class="col-lg-12">
-                    <div class="card custom-table-card w-100">
-                        <div class="card-header border-0 bg-success bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-calendar-check-line text-success fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-success mb-1">Rappels & Rendez-vous</h5>
-                                        <p class="text-muted small mb-0">Gestion des tâches et rendez-vous</p>
-                                    </div>
+                                <div id="ListeDesNotes" class="vstack gap-3">
+                                    <!-- Injected via AJAX -->
                                 </div>
-                                <button type="button" class="btn btn-success px-4 py-2" id="addReminderBtn">
-                                    <i class="ri-add-line me-2"></i>Nouveau rappel
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th class="border-0 rounded-start">Type</th>
-                                            <th class="border-0">Date & Heure</th>
-                                            <th class="border-0">Objet</th>
-                                            <th class="border-0">Statut</th>
-                                            <th class="border-0 rounded-end text-end">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="listeDesRendezVous">
-                                        <!-- Liste des rendez vous -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                    </div>
-                </div>
-                <!-- Fin Colonne de prise de rendez vous-->
-            </div>
-            <!--Fin Row notes-->
-
-
-            <!-- Section Notes -->
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="card custom-table-card">
-                        <!-- Header -->
-                        <div class="card-header border-0 bg-warning bg-opacity-10 px-4 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
-                                        <i class="ri-sticky-note-line text-warning fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title fw-semibold text-warning mb-1">Notes</h5>
-                                        <p class="text-muted small mb-0">Commentaires et observations</p>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-warning px-4 py-2" id="addNoteModalBtn">
-                                    <i class="ri-add-line me-2"></i>Nouvelle note
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Body -->
-                        <div class="card-body p-4">
-                            <!-- Liste des notes -->
-                            <div class="vstack gap-4" id="ListeDesNotes">
-                                
-
                             </div>
                         </div>
                     </div>
-                </div>
+                </main>
             </div>
-            <!-- Fin Section Notes-->
+        </div>
+    </div>
+</div>
 
             <!-- Modal Nouveau Rappel -->
             <div class="modal fade" id="addReminderModal" tabindex="-1" aria-labelledby="addReminderModalLabel" aria-hidden="true">
@@ -1646,6 +1503,7 @@
         let has_voeux = null;
        
         let has_second_wished = null;
+        let is_prospect_double = false;
         let promoListee = [];
         let IdFicheVeoux = [];
         let has_completed_profile = false;
@@ -1705,75 +1563,157 @@
         }   
 
         function loadFicheVoeux(){
+            var apiUrl = is_prospect_double ? "{% url 't_crm:ApiLoadFicheVoeuxDoubleProspect' %}" : "{% url 't_crm:ApiLoadFicheVoeuxProspect' %}";
+            
             $.ajax({
-                url : "{% url 't_crm:ApiLoadFicheVoeuxProspect' %}",
+                url : apiUrl,
                 dataType : 'JSON',
                 type : 'GET',
                 data : {'id_prospect' : id},
                 success : function(data){
                     var html="";
                     if (data.fiche_voeux.length > 0){
-                        IdFicheVeoux = data.fiche_voeux[0].id;
-                        $.each(data.fiche_voeux, function(index, item){
-                            html += '<div class="col-12 col-md-4 text-center mb-4 mb-md-0">';
-                                    html += '<div class="avatar-lg mx-auto mb-4">';
-                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info display-5 rounded-circle">';
-                                            html += '<i class="ri-school-line"></i>';
-                                        html += '</div>';
-                                    html += '</div>';
-                                    html += '<h6 class="fw-semibold mb-2">'+item.formation_label+'</h6>';
-                                    html += '<h6 class="fw-semibold mb-2">Spécialité</h6>';
-                                    html += '<p class="text-muted mb-0">'+item.specialite_label+'</p>';
-                                    html += '<h6 class="fw-semibold mb-2 mt-3">Promotion/Session</h6>';
-                                    html += '<p class="text-muted mb-0">'+item.promo+'</p>';
-
+                        if (is_prospect_double) {
+                            var item = data.fiche_voeux[0];
+                            IdFicheVeoux = item.id;
+    
+                            // First Speciality Card (Double)
+                            html += '<div class="col-12 mb-4">';
+                            html += '  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0">';
+                            html += '    <div class="card-body p-0">';
+                            html += '      <div class="row g-0">';
+                            html += '        <div class="col-md-5 bg-info bg-opacity-10 p-4 d-flex flex-column justify-content-center align-items-center text-center border-end">';
+                            html += '          <div class="avatar-xl mb-4">';
+                            html += '            <div class="avatar-title bg-info text-white display-4 rounded-circle shadow-sm">';
+                            html += '              <i class="ri-school-fill"></i>';
+                            html += '            </div>';
+                            html += '          </div>';
+                            html += '          <span class="badge bg-info text-white px-3 py-2 rounded-pill mb-3 fw-medium letter-spacing-1 text-uppercase fs-12">Spécialité 1</span>';
+                            html += '          <h4 class="fw-bold text-dark mb-1">'+item.formation_1+'</h4>';
+                            html += '        </div>';
+                            html += '        <div class="col-md-7 p-4">';
+                            html += '          <h5 class="fw-semibold text-dark mb-4 border-bottom pb-3"><i class="ri-article-line me-2 text-info fs-5 align-middle"></i>Détails Orientation (1)</h5>';
+                            html += '          <div class="row g-4">';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-honour-line fs-3 text-info"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Spécialité</p><h6 class="fw-bold mb-0 text-dark">'+item.specialite1_label+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-calendar-event-line fs-3 text-primary"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Promotion</p><h6 class="fw-bold mb-0 text-dark">'+item.promo+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-time-line fs-3 text-success"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Création</p><h6 class="fw-bold mb-0 text-dark">'+item.created_at+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-history-line fs-3 text-warning"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Mise à jour</p><h6 class="fw-bold mb-0 text-dark">'+item.updated_at+'</h6></div></div></div>';
+                            html += '          </div>';
+                            html += '        </div>';
+                            html += '      </div>';
+                            html += '    </div>';
+                            html += '  </div>';
+                            html += '</div>';
+    
+                            // Second Speciality Card (Double)
+                            html += '<div class="col-12">';
+                            html += '  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">';
+                            html += '    <div class="card-body p-0">';
+                            html += '      <div class="row g-0">';
+                            html += '        <div class="col-md-5 bg-success bg-opacity-10 p-4 d-flex flex-column justify-content-center align-items-center text-center border-end">';
+                            html += '          <div class="avatar-xl mb-4">';
+                            html += '            <div class="avatar-title bg-success text-white display-4 rounded-circle shadow-sm">';
+                            html += '              <i class="ri-school-line"></i>';
+                            html += '            </div>';
+                            html += '          </div>';
+                            html += '          <span class="badge bg-success text-white px-3 py-2 rounded-pill mb-3 fw-medium letter-spacing-1 text-uppercase fs-12">Spécialité 2</span>';
+                            html += '          <h4 class="fw-bold text-dark mb-1">'+item.formation_2+'</h4>';
+                            html += '        </div>';
+                            html += '        <div class="col-md-7 p-4">';
+                            html += '          <h5 class="fw-semibold text-dark mb-4 border-bottom pb-3"><i class="ri-article-line me-2 text-success fs-5 align-middle"></i>Détails Orientation (2)</h5>';
+                            html += '          <div class="row g-4">';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-honour-line fs-3 text-success"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Spécialité</p><h6 class="fw-bold mb-0 text-dark">'+item.specialite2_label+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-calendar-event-line fs-3 text-primary"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Promotion</p><h6 class="fw-bold mb-0 text-dark">'+item.promo+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-time-line fs-3 text-info"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Création</p><h6 class="fw-bold mb-0 text-dark">'+item.created_at+'</h6></div></div></div>';
+                            html += '            <div class="col-sm-6"><div class="d-flex align-items-start"><div class="flex-shrink-0 mt-1"><i class="ri-history-line fs-3 text-warning"></i></div><div class="flex-grow-1 ms-3"><p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Mise à jour</p><h6 class="fw-bold mb-0 text-dark">'+item.updated_at+'</h6></div></div></div>';
+                            html += '          </div>';
+                            html += '        </div>';
+                            html += '      </div>';
+                            html += '    </div>';
+                            html += '  </div>';
+                            html += '</div>';
+    
+                            $('#editVoeuxBtn').data('id',item.id);
+                        } else {
+                            // Standard Case
+                            IdFicheVeoux = data.fiche_voeux[0].id;
+                            $.each(data.fiche_voeux, function(index, item){
+                                html += '<div class="col-12">';
+                                html += '  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0">';
+                                html += '    <div class="card-body p-0">';
+                                html += '      <div class="row g-0">';
+                                html += '        <div class="col-md-5 bg-info bg-opacity-10 p-4 d-flex flex-column justify-content-center align-items-center text-center border-end">';
+                                html += '          <div class="avatar-xl mb-4">';
+                                html += '            <div class="avatar-title bg-info text-white display-4 rounded-circle shadow-sm">';
+                                html += '              <i class="ri-school-fill"></i>';
+                                html += '            </div>';
+                                html += '          </div>';
+                                html += '          <span class="badge bg-info text-white px-3 py-2 rounded-pill mb-3 fw-medium letter-spacing-1 text-uppercase fs-12">Formation Assignée</span>';
+                                html += '          <h4 class="fw-bold text-dark mb-1">'+item.formation_label+'</h4>';
+                                html += '        </div>';
+                                html += '        <div class="col-md-7 p-4">';
+                                html += '          <h5 class="fw-semibold text-dark mb-4 border-bottom pb-3"><i class="ri-article-line me-2 text-info fs-5 align-middle"></i>Détails de l\'orientation</h5>';
+                                html += '          <div class="row g-4">';
+                                html += '            <div class="col-sm-6">';
+                                html += '              <div class="d-flex align-items-start">';
+                                html += '                <div class="flex-shrink-0 mt-1"><i class="ri-honour-line fs-3 text-info"></i></div>';
+                                html += '                <div class="flex-grow-1 ms-3">';
+                                html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Spécialité</p>';
+                                html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.specialite_label+'</h6>';
+                                html += '                </div>';
+                                html += '              </div>';
+                                html += '            </div>';
+                                html += '            <div class="col-sm-6">';
+                                html += '              <div class="d-flex align-items-start">';
+                                html += '                <div class="flex-shrink-0 mt-1"><i class="ri-calendar-event-line fs-3 text-primary"></i></div>';
+                                html += '                <div class="flex-grow-1 ms-3">';
+                                html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Promotion</p>';
+                                html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.promo+'</h6>';
+                                html += '                </div>';
+                                html += '              </div>';
+                                html += '            </div>';
+                                html += '            <div class="col-sm-6">';
+                                html += '              <div class="d-flex align-items-start">';
+                                html += '                <div class="flex-shrink-0 mt-1"><i class="ri-time-line fs-3 text-success"></i></div>';
+                                html += '                <div class="flex-grow-1 ms-3">';
+                                html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Création</p>';
+                                html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.created_at+'</h6>';
+                                html += '                </div>';
+                                html += '              </div>';
+                                html += '            </div>';
+                                html += '            <div class="col-sm-6">';
+                                html += '              <div class="d-flex align-items-start">';
+                                html += '                <div class="flex-shrink-0 mt-1"><i class="ri-history-line fs-3 text-warning"></i></div>';
+                                html += '                <div class="flex-grow-1 ms-3">';
+                                html += '                  <p class="text-muted mb-0 fs-13 text-uppercase fw-semibold">Mise à jour</p>';
+                                html += '                  <h6 class="fw-bold mb-0 text-dark">'+item.updated_at+'</h6>';
+                                html += '                </div>';
+                                html += '              </div>';
+                                html += '            </div>';
+                                html += '          </div>';
+                                html += '        </div>';
+                                html += '      </div>';
+                                html += '    </div>';
+                                html += '  </div>';
                                 html += '</div>';
-                                html += '<div class="col-12 col-md-8 d-flex align-items-center">';
-                                    html += '<div class="vstack gap-4 w-100">';
-                                        html += '<div class="d-flex align-items-center justify-content-center">';
-                                            html += '<div class="d-flex align-items-center bg-light rounded-3 p-3 w-100">';
-                                                html += '<div class="flex-shrink-0">';
-                                                    html += '<div class="avatar-sm">';
-                                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle">';
-                                                            html += '<i class="ri-calendar-line fs-5"></i>';
-                                                        html += '</div>';
-                                                    html += '</div>';
-                                                html += '</div>';
-                                                html += '<div class="flex-grow-1 ms-3 text-center">';
-                                                    html += '<h6 class="mb-1">Date de création</h6>';
-                                                    html += '<small class="text-muted">'+item.created_at+'</small>';
-                                                html += '</div>';
-                                            html += '</div>';
-                                        html += '</div>';
-
-                                        html += '<div class="d-flex align-items-center justify-content-center">';
-                                            html += '<div class="d-flex align-items-center bg-light rounded-3 p-3 w-100">';
-                                                html += '<div class="flex-shrink-0">';
-                                                    html += '<div class="avatar-sm">';
-                                                        html += '<div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle"><i class="ri-time-line fs-5"></i></div>';
-                                                    html += '</div>';
-                                                html += '</div>';
-                                                html += '<div class="flex-grow-1 ms-3 text-center"><h6 class="mb-1">Dernière mise à jour</h6><small class="text-muted">'+item.updated_at+'</small></div>';
-                                            html += '</div>';
-                                        html += '</div>';
-
-                                    html += '</div>';
-                                html += '</div>';
-
+    
                                 $('#editVoeuxBtn').data('id',item.id);
-                        });
+                            });
+                        }
                     }else{
-                        html += '<div class="col-12 text-center py-5">';
-                        html += '<div class="avatar-lg mx-auto mb-4">';
-                        html += '<div class="avatar-title bg-light text-muted display-5 rounded-circle">';
-                        html += '<i class="ri-file-search-line"></i>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '<h5 class="mb-3">Aucune fiche de vœux disponible</h5>';
-                        html += '<p class="text-muted mb-4">Ce prospect n\'a pas encore de fiche de vœux enregistrée.</p>';
-                        html += '<button type="button" class="btn btn-primary px-4 py-2 rounded-pill fw-medium" id="createVoeuxBtn">';
-                        html += '<i class="ri-add-line me-2"></i>Créer une fiche de vœux';
-                        html += '</button>';
+                        html += '<div class="col-12">';
+                        html += '  <div class="card shadow-none border border-dashed rounded-4 p-5 text-center bg-light">';
+                        html += '    <div class="avatar-xl mx-auto mb-4">';
+                        html += '      <div class="avatar-title bg-white shadow-sm text-primary display-4 rounded-circle">';
+                        html += '        <i class="ri-file-search-line"></i>';
+                        html += '      </div>';
+                        html += '    </div>';
+                        html += '    <h4 class="fw-bold text-dark mb-2">Aucune orientation académique</h4>';
+                        html += '    <p class="text-muted mb-4 fs-15 w-75 mx-auto">Ce prospect n\'a pas encore de fiche de vœux enregistrée. Veuillez initialiser son orientation.</p>';
+                        html += '    <button type="button" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all create-voeux-btn" id="createVoeuxBtn">';
+                        html += '      <i class="ri-add-circle-fill me-2 fs-5"></i>Créer une fiche de vœux';
+                        html += '    </button>';
+                        html += '  </div>';
                         html += '</div>';
                     }
 
@@ -1831,7 +1771,7 @@
         }
 
         function loadPersonalInfos(){
-            $.ajax({
+            return $.ajax({
                 url : "{% url 't_crm:ApiLoadProspectPerosnalInfos' %}",
                 dataType : 'JSON',
                 type : 'GET',
@@ -1845,6 +1785,7 @@
                     $('#statut_prospect').text(data.statut_label);
 
                     has_second_wished = data.has_second_wish;
+                    is_prospect_double = data.is_double;
 
                     // Handle cancellation banner
                     if (data.motif_annulation) {
@@ -1863,6 +1804,37 @@
                     }else if(data.statut === "visiteur"){
                         document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "block", 'important');
 
+                    }
+
+                    // Render History/Timeline
+                    if (data.history && data.history.length > 0) {
+                        $('#timeline-card').show();
+                        var historyHtml = "";
+                        $.each(data.history, function(index, item) {
+                            var url = "";
+                            if (["prinscrit", "instance", "convertit"].includes(item.statut_key)) {
+                                url = "{% url 't_crm:DetailsPrinscrit' 0 %}".replace('0', item.id);
+                            } else {
+                                url = "{% url 't_crm:DetailsProspect' 'SLUG_PLACEHOLDER' %}".replace('SLUG_PLACEHOLDER', item.slug);
+                            }
+                            
+                            historyHtml += '<div class="timeline-item-v2">';
+                            historyHtml += '    <div class="timeline-dot-v2"><i class="ri-checkbox-blank-circle-fill"></i></div>';
+                            historyHtml += '    <a href="' + url + '" class="text-decoration-none">';
+                            historyHtml += '        <div class="timeline-content-v2">';
+                            historyHtml += '            <div class="timeline-date-v2">' + item.created_at + '</div>';
+                            historyHtml += '            <div class="timeline-title-v2">' + item.statut + '</div>';
+                            historyHtml += '            <div class="timeline-sub-v2">' + item.promo + '</div>';
+                            if (item.is_double) {
+                                historyHtml += '            <span class="badge bg-info-subtle text-info mt-1" style="font-size: 10px;">Double Diplomation</span>';
+                            }
+                            historyHtml += '        </div>';
+                            historyHtml += '    </a>';
+                            historyHtml += '</div>';
+                        });
+                        $('#linked-inscriptions-list').html(historyHtml);
+                    } else {
+                        $('#timeline-card').hide();
                     }
                 }
             });
@@ -2150,8 +2122,9 @@
 
         CheckPropspectStatut();
         loadNotes();
-        loadFicheVoeux();
-        loadPersonalInfos();
+        loadPersonalInfos().done(function() {
+            loadFicheVoeux();
+        });
         loadRappelRendezVous();
         loadVoeuxSupplementairesCount();
 
@@ -2470,7 +2443,8 @@ loadNotes();
                 success : function(data){
                     var row = "<option value='0'>Sélectionnez une spécialité</option>";
                     $.each(data, function(index, item){
-                        row += "<option value="+item.id+">"+item.label+"</option>";
+                        var labelWithVersion = item.label + (item.version ? ' (' + item.version + ')' : '');
+                        row += "<option value="+item.id+">"+labelWithVersion+"</option>";
                     });
                     $('#specialite_voeux').html(row);
                 }
@@ -2487,7 +2461,8 @@ loadNotes();
                 success : function(data){
                     var row = "<option value='0'>Sélectionnez une spécialité</option>";
                     $.each(data, function(index, item){
-                        row += "<option value="+item.id+">"+item.label+"</option>";
+                        var labelWithVersion = item.label + (item.version ? ' (' + item.version + ')' : '');
+                        row += "<option value="+item.id+">"+labelWithVersion+"</option>";
                     });
                     $('#create_specialite_voeux').html(row);
                 }
@@ -2626,6 +2601,22 @@ loadNotes();
         $(document).on('click', '#confirmeValidationBtn', function(){
             var id_prospect = $(this).data('id');
             var btn = $(this);
+            
+            // Masquer la modale de confirmation initiale
+            $('#validateProspectModal').modal('hide');
+
+            // Afficher la fenêtre de progression premium
+            Swal.fire({
+                title: 'Validation en cours...',
+                html: 'Veuillez patienter pendant que nous finalisons le dossier et vous redirigeons vers la liste des prospects.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             btn.prop('disabled', true);
             $.ajax({
                 url : "{% url 't_crm:ApiValidateProspect' %}",
@@ -2638,20 +2629,39 @@ loadNotes();
                 },
                 success : function(data){
                     if (data.status === 'success'){
-                        $('#validateProspectModal').modal('hide');
                         CheckPropspectStatut();
-                        alertify.success(data.message);
+                        
+                        // Mettre à jour le modal pour indiquer le succès avant la redirection
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Prospect validé !',
+                            text: 'Redirection vers la liste des prospects en cours...',
+                            timer: 2000,
+                            timerProgressBar: true,
+                            showConfirmButton: false,
+                            allowOutsideClick: false
+                        });
+
                         setTimeout(function(){
                             window.location.href = "{% url 't_crm:ListeDesProspects' %}";
-                        }, 1500);
+                        }, 2000);
                     }else{
-                        alertify.error(data.message);
+                        btn.prop('disabled', false);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: data.message || "Une erreur s'est produite lors du traitement de la requête !"
+                        });
                     }
                 },
-                complete : function(){
+                error: function() {
                     btn.prop('disabled', false);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: "Une erreur critique s'est produite lors de la validation."
+                    });
                 }
-
             });
         });
 
@@ -2685,7 +2695,8 @@ loadNotes();
                 success : function(data){
                     var row = "<option value='0'>Sélectionnez une spécialité</option>";
                     $.each(data, function(index, item){
-                        row += "<option value="+item.id+">"+item.label+"</option>";
+                        var labelWithVersion = item.label + (item.version ? ' (' + item.version + ')' : '');
+                        row += "<option value="+item.id+">"+labelWithVersion+"</option>";
                     });
                     $('#config_specialite_supp').html(row);
                 }
@@ -2950,7 +2961,48 @@ loadNotes();
                     "id_formation" : id_formation,
                 },
                 success : function(data){
-                   
+                    var container = $('#create_specialite_double_voeux_container');
+                    if(data.status === "error"){
+                        container.html('<div class="alert alert-warning py-2 small text-center"><i class="ri-error-warning-line me-1"></i> ' + data.message + '</div>');
+                        return;
+                    }
+
+                    var html = '<div class="row g-3">';
+                    
+                    // Card for Specialty 1
+                    html += '<div class="col-md-6">';
+                    html += '  <div class="card border border-info border-opacity-25 rounded-3 bg-info bg-opacity-10 h-100 mb-0 transition-all hover-shadow-sm">';
+                    html += '    <div class="card-body p-3 text-center">';
+                    html += '      <div class="avatar-sm mx-auto mb-3">';
+                    html += '        <div class="avatar-title bg-info text-white rounded-circle fs-4 shadow-sm"><i class="ri-honour-line"></i></div>';
+                    html += '      </div>';
+                    html += '      <small class="text-info fw-bold text-uppercase d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Spécialité 1</small>';
+                    html += '      <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">' + (data.specialite1 || "N/A") + '</h6>';
+                    html += '      <small class="text-muted d-block" style="font-size: 0.75rem;">' + (data.specialite1_formation || "") + '</small>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+
+                    // Card for Specialty 2
+                    html += '<div class="col-md-6">';
+                    html += '  <div class="card border border-success border-opacity-25 rounded-3 bg-success bg-opacity-10 h-100 mb-0 transition-all hover-shadow-sm">';
+                    html += '    <div class="card-body p-3 text-center">';
+                    html += '      <div class="avatar-sm mx-auto mb-3">';
+                    html += '        <div class="avatar-title bg-success text-white rounded-circle fs-4 shadow-sm"><i class="ri-honour-line"></i></div>';
+                    html += '      </div>';
+                    html += '      <small class="text-success fw-bold text-uppercase d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Spécialité 2</small>';
+                    html += '      <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">' + (data.specialite2 || "N/A") + '</h6>';
+                    html += '      <small class="text-muted d-block" style="font-size: 0.75rem;">' + (data.specialite2_formation || "") + '</small>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                    
+                    html += '</div>';
+
+                    container.html(html);
+                },
+                error: function() {
+                    $('#create_specialite_double_voeux_container').html('<div class="alert alert-danger py-2 small text-center"><i class="ri-error-warning-line me-1"></i> Erreur lors du chargement des spécialités.</div>');
                 }
             });
         }

@@ -232,8 +232,52 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* section icon box */
+    .section-icon-box {
+        width: 48px;
+        height: 48px;
+        background: #f8fafc;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+        transition: all 0.3s ease;
+    }
+
     .animate-up {
         animation: slideUp 0.6s ease-out forwards;
+    }
+
+    /* Search Results Styling */
+    #search-results-container {
+        border: 1.5px solid #f1f5f9;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #fff;
+        margin-top: 1rem;
+    }
+
+    .select-contact-btn {
+        transition: all 0.2s ease;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+
+    .select-contact-btn:hover {
+        background: #f8fafc;
+    }
+
+    /* Spinner */
+    .search-spinner {
+        display: none;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-width: 0.25em;
     }
 
     .help-text {
@@ -271,6 +315,14 @@
                 </div>
             </div>
 
+            <!-- Quick Search Button -->
+            <div class="d-flex justify-content-end mb-4 animate-up" style="animation-delay: 0.05s;">
+                <button type="button" class="btn btn-warning px-4 py-2 rounded-3 text-white fw-medium shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#quickSearchModal" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+                    <i class="ri-search-eye-line fs-5"></i> 
+                    Recherche rapide (Ré-inscription)
+                </button>
+            </div>
+
             <!-- Main Form Card -->
             <div class="row justify-content-center animate-up" style="animation-delay: 0.1s;">
                 <div class="col-12">
@@ -288,6 +340,7 @@
                         <div class="card-body p-4 p-lg-5">
                             <form method="POST" class="needs-validation" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
                                 {% csrf_token %}
+                                <input type="hidden" name="related_prospect_id" id="id_related_prospect_id">
 
                                 <!-- Situation de contact -->
                                 <div class="form-section">
@@ -320,14 +373,18 @@
                                         <h5 class="section-title">Identité du prospect</h5>
                                     </div>
                                     <div class="row g-4">
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <label class="form-label">{{form.nom.label}}</label>
-                                            <input type="text" required name="nom" id="id_last_name" class="form-control" placeholder="EX: BOUICHE" />
+                                            <input type="text" required name="nom" id="id_last_name" class="form-control" placeholder="Saisir le nom" />
                                         </div>
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <label class="form-label">{{form.prenom.label}}</label>
-                                            <input type="text" required name="prenom" id="id_first_name" class="form-control" placeholder="EX: Kheireddine" />
+                                            <input type="text" required name="prenom" id="id_first_name" class="form-control" placeholder="Saisir le prénom" />
                                         </div>
+                                        <div class="col-lg-4">
+                                           <label class="form-label">N° Identification National (NIN)</label>
+                                           <input type="text" name="nin" id="id_nin" class="form-control" placeholder="Optionnel si nouveau" />
+                                       </div>
                                     </div>
                                 </div>
 
@@ -480,9 +537,20 @@
           dataType: "JSON",
           type  : "GET",
           success : function(data){
-            var option = "<option value='0'>Veuillez selectionner une promo</option>";
+            var option = "<option value='0'>Veuillez sélectionner une promo</option>";
             $.each(data, function(index, item){
-              option += "<option value="+item.code+">#"+item.code+ " - "+item.session_label+'-'+item.begin_year+'/'+item.end_year+"</option>";
+              // Utiliser le libellé de la session (mois en lettre)
+              let mois = item.session_label || '---';
+              
+              // Extraire l'année de la date de lancement (date_debut)
+              let annee = '----';
+              if (item.date_debut) {
+                  annee = item.date_debut.split('-')[0];
+              } else if (item.begin_year) {
+                  annee = item.begin_year;
+              }
+
+              option += "<option value="+item.code+">"+item.code+ " - " + mois + " / " + annee + "</option>";
             });
             $('#id_promo_selection').html(option);
             $('#id_promo_selection_double').html(option);
@@ -604,14 +672,249 @@
     $('#id_last_name').on('input', function() {
         $(this).val($(this).val().toUpperCase());
     });
-
-    $('#id_first_name').on('input', function() {
-        let val = $(this).val();
-        if (val.length > 0) {
-            $(this).val(val.charAt(0).toUpperCase() + val.slice(1).toLowerCase());
-        }
-    });
   });
 </script>
+
+
+<script>
+    $(document).ready(function() {
+        const resultsDropdown = $('#search-results-dropdown');
+        const resultsContainer = $('#search-results-container');
+        const searchSpinner = $('#search-loading-spinner');
+        let searchTimeout;
+
+        function renderResults(response) {
+            searchSpinner.hide();
+            resultsContainer.show();
+            
+            if (response.status === 'success' && response.results.length > 0) {
+                let html = '';
+                response.results.forEach(item => {
+                    html += `
+                        <button class="select-contact-btn p-3 border-bottom d-block w-100" 
+                                type="button"
+                                data-id="${item.id}"
+                                data-nom="${item.nom || ''}"
+                                data-prenom="${item.prenom || ''}"
+                                data-email="${item.email || ''}"
+                                data-tel="${item.telephone || ''}"
+                                data-indic="${item.indic || ''}"
+                                data-nin="${item.nin || ''}"
+                                data-adresse="${item.adresse || ''}"
+                                data-wilaya="${item.wilaya || ''}"
+                                data-commune="${item.commune || ''}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-start">
+                                    <div class="fw-bold text-dark fs-15">${item.nom} ${item.prenom}</div>
+                                    <div class="text-muted small">
+                                        <i class="ri-mail-line me-1"></i>${item.email || 'N/A'} | 
+                                        <i class="ri-phone-line me-1"></i>${item.telephone || 'N/A'} |
+                                        <span class="text-primary fw-medium">NIN: ${item.nin || 'N/A'}</span>
+                                    </div>
+                                </div>
+                                <span class="badge bg-soft-info text-info rounded-pill px-3">Enregistré</span>
+                            </div>
+                        </button>`;
+                });
+                resultsDropdown.html(html);
+            } else {
+                resultsDropdown.html(`
+                    <div class="p-5 text-center animate-up">
+                        <div class="section-icon-box bg-soft-secondary text-muted mx-auto mb-3" style="width: 64px; height: 64px; border-radius: 20px;">
+                            <i class="ri-search-2-line fs-1"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Aucun contact trouvé</h5>
+                        <p class="text-muted mb-0 mx-auto" style="max-width: 300px;">
+                            Nous n'avons trouvé aucun étudiant ou prospect correspondant à ces critères dans la base de données.
+                            <br><small class="text-primary fw-medium">Vous pouvez continuer la saisie manuelle.</small>
+                        </p>
+                    </div>
+                `);
+            }
+        }
+
+        $('#quick-search-nin').on('input', function() {
+            clearTimeout(searchTimeout);
+            const nin = $(this).val();
+
+            if (nin.length < 3) {
+                resultsContainer.hide();
+                return;
+            }
+
+            searchSpinner.show();
+            resultsContainer.hide();
+
+            searchTimeout = setTimeout(() => {
+                $.ajax({
+                    url: "{% url 't_crm:ApiQuickSearchExistingContact' %}",
+                    data: { 'search_type': 'nin', 'nin': nin },
+                    success: renderResults,
+                    error: function() {
+                        searchSpinner.hide();
+                        resultsContainer.show();
+                        resultsDropdown.html('<div class="p-4 text-center text-danger"><i class="ri-error-warning-line me-2"></i>Erreur lors de la recherche sur le serveur.</div>');
+                    }
+                });
+            }, 500);
+        });
+
+        $('#btn-search-identite').on('click', function() {
+            const nom = $('#quick-search-nom').val();
+            const prenom = $('#quick-search-prenom').val();
+            const date = $('#quick-search-date').val();
+
+            if (!nom || !prenom || !date) {
+                resultsContainer.show();
+                resultsDropdown.html('<div class="p-4 text-center text-warning fw-medium"><i class="ri-alert-line me-2"></i>Veuillez remplir le nom, le prénom et la date de naissance.</div>');
+                return;
+            }
+
+            searchSpinner.show();
+            resultsContainer.hide();
+
+            $.ajax({
+                url: "{% url 't_crm:ApiQuickSearchExistingContact' %}",
+                data: { 'search_type': 'identite', 'nom': nom, 'prenom': prenom, 'date_naissance': date },
+                success: renderResults,
+                error: function() {
+                    searchSpinner.hide();
+                    resultsContainer.show();
+                    resultsDropdown.html('<div class="p-4 text-center text-danger"><i class="ri-error-warning-line me-2"></i>Erreur lors de la recherche sur le serveur.</div>');
+                }
+            });
+        });
+
+        $(document).on('click', '.select-contact-btn', function() {
+            const btn = $(this);
+            
+            // Auto-fill form
+            $('#id_last_name').val(btn.data('nom'));
+            $('#id_first_name').val(btn.data('prenom'));
+            $('input[name="email"]').val(btn.data('email'));
+            
+            // Set indic and trigger change for Select2
+            if (btn.data('indic')) {
+                $('#id_indic_select').val(btn.data('indic')).trigger('change');
+            }
+            
+            $('input[name="telephone"]').val(btn.data('tel'));
+            $('#id_nin').val(btn.data('nin'));
+            $('textarea[name="adresse"]').val(btn.data('adresse'));
+            $('input[name="wilaya"]').val(btn.data('wilaya'));
+            $('input[name="commune"]').val(btn.data('commune'));
+            
+            // Set link to existing prospect
+            $('#id_related_prospect_id').val(btn.data('id'));
+
+            resultsDropdown.hide();
+            $('#quick-search-nin, #quick-search-nom, #quick-search-prenom, #quick-search-date').val('');
+            
+            // Hide modal
+            $('#quickSearchModal').modal('hide');
+
+            // Highlight form sections with a visual cue
+            $('.form-section').css('border-color', '#10b981').css('box-shadow', '0 0 0 4px rgba(16, 185, 129, 0.1)');
+            setTimeout(() => {
+                $('.form-section').css('border-color', '').css('box-shadow', '');
+            }, 1000);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Données importées',
+                text: 'Les informations ont été chargées.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        });
+
+        // Close dropdown when clicking outside
+        $(document).click(function(event) {
+            if (!$(event.target).closest('.search-group, #search-results-container').length) {
+                // Keep results visible for easier use
+                // resultsContainer.hide(); 
+            }
+        });
+    });
+</script>
+
+<!-- Quick Search Modal -->
+<div class="modal fade" id="quickSearchModal" tabindex="-1" aria-labelledby="quickSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header bg-light border-0 p-4">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="quickSearchModalLabel">
+            <div class="section-icon-box bg-warning bg-opacity-10 text-warning m-0 me-3">
+                <i class="ri-search-eye-line"></i>
+            </div>
+            Recherche rapide (Ré-inscription)
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 bg-white">
+        <div class="alert alert-info bg-info bg-opacity-10 border-0 rounded-3 mb-4 d-flex align-items-start shadow-sm">
+            <i class="ri-information-line fs-4 text-info me-3 mt-1"></i>
+            <div>
+                <h6 class="fw-bold text-info mb-1">Pourquoi utiliser cette recherche ?</h6>
+                <p class="mb-0 text-dark small" style="line-height: 1.5;">Cet outil vous permet de retrouver rapidement un étudiant ou prospect existant. En récupérant ses données, vous <strong>évitez les saisies en double</strong>, gagnez du temps, et assurez la <strong>traçabilité de tout son historique</strong> au sein du CRM.</p>
+            </div>
+        </div>
+        
+        <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pills-nin-tab" data-bs-toggle="pill" data-bs-target="#pills-nin" type="button" role="tab" aria-controls="pills-nin" aria-selected="true"><i class="ri-barcode-line me-1"></i> Par NIN</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pills-identite-tab" data-bs-toggle="pill" data-bs-target="#pills-identite" type="button" role="tab" aria-controls="pills-identite" aria-selected="false"><i class="ri-user-search-line me-1"></i> Par Identité</button>
+          </li>
+        </ul>
+        
+        <div class="tab-content" id="pills-tabContent">
+          <div class="tab-pane fade show active" id="pills-nin" role="tabpanel" aria-labelledby="pills-nin-tab">
+              <div class="position-relative">
+                  <div class="input-group input-group-lg search-group">
+                      <span class="input-group-text bg-white border-end-0"><i class="ri-search-line text-muted"></i></span>
+                      <input type="text" id="quick-search-nin" class="form-control border-start-0" placeholder="Entrez le numéro NIN..." autocomplete="off">
+                  </div>
+              </div>
+          </div>
+          <div class="tab-pane fade" id="pills-identite" role="tabpanel" aria-labelledby="pills-identite-tab">
+              <div class="row g-3 position-relative search-group">
+                  <div class="col-md-4">
+                      <input type="text" id="quick-search-nom" class="form-control form-control-lg" placeholder="Nom..." autocomplete="off">
+                  </div>
+                  <div class="col-md-4">
+                      <input type="text" id="quick-search-prenom" class="form-control form-control-lg" placeholder="Prénom..." autocomplete="off">
+                  </div>
+                  <div class="col-md-4">
+                      <input type="date" id="quick-search-date" class="form-control form-control-lg" title="Date de Naissance">
+                  </div>
+                  <div class="col-12 text-end mt-3">
+                      <button type="button" class="btn btn-primary btn-lg px-4" id="btn-search-identite"><i class="ri-search-line me-1"></i> Rechercher</button>
+                  </div>
+              </div>
+          </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="text-center py-4" id="search-loading-spinner" style="display: none;">
+            <div class="spinner-border text-primary search-spinner" role="status">
+                <span class="visually-hidden">Recherche...</span>
+            </div>
+            <p class="text-muted mt-2 fw-medium">Recherche en cours...</p>
+        </div>
+
+        <div id="search-results-container" class="mt-4" style="display:none;">
+            <div class="p-2 bg-light bg-opacity-50 rounded-3 mb-2">
+                <span class="text-muted small fw-bold px-2 text-uppercase">Résultats de recherche</span>
+            </div>
+            <div id="search-results-dropdown" style="max-height: 400px; overflow-y: auto;">
+                <!-- Results will be injected here -->
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock content %}

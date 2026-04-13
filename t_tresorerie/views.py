@@ -135,8 +135,11 @@ def ApiGetDetailsDemandePaiement(request):
         obj = ClientPaiementsRequest.objects.get(id = id)
         voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
-        echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, is_default=True, model__promo = voeux.promo)
-        frais_inscription = echeancierId.frais_inscription
+        try:
+            echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, is_default=True, model__promo = voeux.promo)
+            frais_inscription = echeancierId.frais_inscription
+        except EcheancierPaiement.DoesNotExist:
+            return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier par défaut non trouvé pour cette spécialité et promo."}, status=200)
     
         special_echeancier_data = []
         has_special_echeancier = False
@@ -395,6 +398,10 @@ def ApiGetDetailsDemandePaiementDouble(request):
         voeux = FicheVoeuxDouble.objects.filter(prospect=obj.client, is_confirmed=True).first()
 
         echeancierId = EcheancierPaiement.objects.filter(formation_double_id = voeux.specialite.id , is_default=True, model__promo = voeux.promo).last()
+        
+        if not echeancierId:
+            return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier par défaut non trouvé pour cette double-formation et promo."}, status=200)
+
         echeancier = echeancierId
         frais_inscription = echeancier.frais_inscription if echeancier else 0
 
