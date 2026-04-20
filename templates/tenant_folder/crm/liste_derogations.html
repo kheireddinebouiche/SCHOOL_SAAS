@@ -117,10 +117,21 @@
   .premium-input {
     background-color: #f8fafc !important;
     border: 1.5px solid #e2e8f0 !important;
-    padding: 0.75rem 1.25rem !important;
+    padding: 0.75rem 1.25rem;
     border-radius: 1rem !important;
     font-weight: 500;
     transition: all 0.3s ease !important;
+  }
+
+  /* Specific padding for search input with icon */
+  input.premium-input#table-filter {
+    padding-left: 3.25rem !important;
+  }
+
+  /* Specific padding for selects to avoid arrow overlap */
+  select.premium-input {
+    padding-right: 3rem !important;
+    background-position: right 1rem center !important;
   }
 
   .premium-input:focus {
@@ -195,6 +206,17 @@
   /* Specifically ensure the row with an open dropdown stays on top */
   .table tbody tr:has(.show) {
     z-index: 100 !important;
+  }
+
+  .search-box i {
+    position: absolute;
+    top: 50%;
+    left: 1.25rem;
+    transform: translateY(-50%);
+    color: #64748b;
+    z-index: 10;
+    pointer-events: none;
+    font-size: 1.2rem;
   }
 </style>
 
@@ -304,6 +326,12 @@
                     <option value="en_attente" {% if filters.status == 'en_attente' %}selected{% endif %}>En attente</option>
                     <option value="acceptee" {% if filters.status == 'acceptee' %}selected{% endif %}>Acceptée</option>
                     <option value="rejetee" {% if filters.status == 'rejetee' %}selected{% endif %}>Rejetée</option>
+                  </select>
+                  <select id="filter-promotion" class="form-select premium-input w-auto">
+                    <option value="all" {% if filters.promotion == 'all' %}selected{% endif %}>Toutes les promotions</option>
+                    {% for promo in promotions %}
+                    <option value="{{ promo.id }}" {% if filters.promotion == promo.id|stringformat:"s" %}selected{% endif %}>{{ promo.label }} ({{ promo.session }})</option>
+                    {% endfor %}
                   </select>
                   <select id="date_filter-derogation" class="form-select premium-input w-auto">
                     <option value="recent" {% if filters.sort == 'recent' %}selected{% endif %}>Plus récent</option>
@@ -453,7 +481,7 @@
               <ul class="pagination pagination-separated pagination-sm mb-0">
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.previous_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">
+                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.previous_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}&promotion={{ filters.promotion }}">
                     <i class="ri-arrow-left-s-line fs-14"></i>
                   </a>
                 </li>
@@ -466,14 +494,14 @@
                   </li>
                   {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                   <li class="page-item">
-                    <a class="page-link rounded-circle mx-1 shadow-sm" href="?page={{ num }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">{{ num }}</a>
+                    <a class="page-link rounded-circle mx-1 shadow-sm" href="?page={{ num }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}&promotion={{ filters.promotion }}">{{ num }}</a>
                   </li>
                   {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.next_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}">
+                  <a class="page-link rounded-circle p-2 mx-1 shadow-sm" href="?page={{ page_obj.next_page_number }}&search={{ filters.search }}&status={{ filters.status }}&sort={{ filters.sort }}&promotion={{ filters.promotion }}">
                     <i class="ri-arrow-right-s-line fs-14"></i>
                   </a>
                 </li>
@@ -497,11 +525,13 @@
     function updateFilters() {
       const search = $('#table-filter').val();
       const status = $('#filter-derogation').val();
+      const promo = $('#filter-promotion').val();
       const sort = $('#date_filter-derogation').val();
       
       const url = new URL(window.location.href);
       url.searchParams.set('search', search);
       url.searchParams.set('status', status);
+      url.searchParams.set('promotion', promo);
       url.searchParams.set('sort', sort);
       url.searchParams.set('page', 1); // Reset to first page on filter change
       
@@ -515,7 +545,7 @@
       searchTimer = setTimeout(updateFilters, 500);
     });
 
-    $('#filter-derogation, #date_filter-derogation').on('change', updateFilters);
+    $('#filter-derogation, #filter-promotion, #date_filter-derogation').on('change', updateFilters);
 
     // Details & Traiter Handler (Unified)
     $(document).on('click', '.btn-details, .btn-traiter', function(){

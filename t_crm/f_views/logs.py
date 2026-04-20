@@ -16,16 +16,17 @@ def user_action_log_list(request):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    if user_id:
+    if user_id and user_id != 'None':
         logs_list = logs_list.filter(user_id=user_id)
-    if action_type:
+    if action_type and action_type != 'None':
         logs_list = logs_list.filter(action_type=action_type)
-    if target_model:
+    if target_model and target_model != 'None':
         logs_list = logs_list.filter(target_model__icontains=target_model)
-    if date_from:
+    if date_from and date_from != 'None':
         logs_list = logs_list.filter(created_at__gte=date_from)
-    if date_to:
-        logs_list = logs_list.filter(created_at__lte=date_to)
+    if date_to and date_to != 'None':
+        # Add 23:59:59 to include the whole day
+        logs_list = logs_list.filter(created_at__lte=f"{date_to} 23:59:59")
 
     # Pagination
     per_page = request.GET.get('per_page', '25')
@@ -43,11 +44,11 @@ def user_action_log_list(request):
         'page_obj': page_obj,
         'users': users,
         'action_choices': action_choices,
-        'selected_user': int(user_id) if user_id else None,
-        'selected_action': action_type,
-        'selected_target': target_model,
-        'date_from': date_from,
-        'date_to': date_to,
+        'selected_user': int(user_id) if (user_id and user_id != 'None') else None,
+        'selected_action': action_type if action_type != 'None' else None,
+        'selected_target': target_model if target_model != 'None' else None,
+        'date_from': date_from if date_from != 'None' else None,
+        'date_to': date_to if date_to != 'None' else None,
         'per_page': per_page,
     }
     return render(request, 'tenant_folder/crm/logs_list.html', context)

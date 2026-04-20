@@ -19,6 +19,7 @@ from .f_views.configure_penalite import *
 from .f_views.reporting_das import *
 from .f_views.type_depense import *
 from .f_views.payment_types import *
+from .f_views.suivi_paiements import *
 
 
 app_name="t_tresorerie"
@@ -270,4 +271,7 @@ urlpatterns = [
     # Paramètres Financiers Généraux
     path('api/get-parametre-financier/', ApiGetParametreFinancier, name='ApiGetParametreFinancier'),
     path('api/update-parametre-financier/', ApiUpdateParametreFinancier, name='ApiUpdateParametreFinancier'),
+
+    path('suivi-des-paiements/', PageSuiviPaiements, name="PageSuiviPaiements"),
+    path('ApiSuiviPaiements', ApiSuiviPaiements, name="ApiSuiviPaiements"),
 ]

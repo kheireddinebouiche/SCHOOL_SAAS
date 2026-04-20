@@ -117,9 +117,16 @@ def ApiLoadDoubleDiplomation(request):
             # Préparer la liste des combinaisons avec les détails nécessaires
             liste_combinaisons = []
             for combinaison in combinaisons:
+                has_hidden = False
+                if request.tenant.tenant_type != 'master':
+                    if (combinaison.specialite1 and not combinaison.specialite1.is_visible) or \
+                       (combinaison.specialite2 and not combinaison.specialite2.is_visible):
+                        has_hidden = True
+
                 combinaison_data = {
                     'id': combinaison.id,
                     'label': combinaison.label,
+                    'has_hidden_specialite': has_hidden,
                     'specialite1_id': combinaison.specialite1.id if combinaison.specialite1 else None,
                     'specialite1_label': f"{combinaison.specialite1.label} ({combinaison.specialite1.version})" if combinaison.specialite1 and combinaison.specialite1.version else (combinaison.specialite1.label if combinaison.specialite1 else 'N/A'),
                     'specialite1_formation': combinaison.specialite1.formation.nom if combinaison.specialite1 and combinaison.specialite1.formation else 'N/A',
@@ -308,7 +315,11 @@ def ApiDeleteDoubleDiplomation(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadSelestDoubleDiplomation(request):
     if request.method == "GET":
-        liste = DoubleDiplomation.objects.all().values('id','label')
+        queryset = DoubleDiplomation.objects.all()
+        if request.tenant.tenant_type != 'master':
+            queryset = queryset.filter(specialite1__is_visible=True, specialite2__is_visible=True)
+            
+        liste = queryset.values('id','label')
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status":"error"})

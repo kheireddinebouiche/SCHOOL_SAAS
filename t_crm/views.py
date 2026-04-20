@@ -147,7 +147,12 @@ def updateVisiteur(request,pk):
 def ApiGetSpecialite(request):
     formation_id = request.GET.get('formation_id')
     formation_obj = Formation.objects.get(id = formation_id)
-    specialites = Specialites.objects.filter(formation = formation_obj.code).values('id','label')
+    queryset = Specialites.objects.filter(formation = formation_obj.code)
+    
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
+        
+    specialites = queryset.values('id','label')
     return JsonResponse(list(specialites), safe=False)
 
 def ApiGETDemandeInscription(request):
@@ -521,7 +526,12 @@ def ApiLoadFormation(request):
 @login_required(login_url='institut_app:login')
 def ApiLoadSpecialite(request):
     id_formation = request.GET.get('id_formation')
-    specialites = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation)).values('id','code','label','version')
+    queryset = Specialites.objects.filter(formation = Formation.objects.get(id=id_formation))
+    
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
+        
+    specialites = queryset.values('id','code','label','version')
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')

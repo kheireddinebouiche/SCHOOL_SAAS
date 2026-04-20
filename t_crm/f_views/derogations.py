@@ -25,6 +25,7 @@ def liste_derogations(request):
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', 'all')
     sort_order = request.GET.get('sort', 'recent')
+    promo_filter = request.GET.get('promotion', 'all')
 
     queryset = Derogations.objects.all().order_by('-created_at')
 
@@ -37,6 +38,12 @@ def liste_derogations(request):
     
     if status_filter != 'all':
         queryset = queryset.filter(statut=status_filter)
+
+    if promo_filter != 'all':
+        queryset = queryset.filter(
+            Q(demandeur__prospect_fiche_voeux__promo_id=promo_filter) |
+            Q(demandeur__prospect_fiche_voeux_double__promo_id=promo_filter)
+        ).distinct()
 
     # Apply sorting
     if sort_order == 'old':
@@ -58,14 +65,19 @@ def liste_derogations(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # Promotions list for filter
+    promotions = Promos.objects.filter(etat='active').order_by('-created_at')
+
     context = {
         'page_title': 'Liste des dérogations',
         'page_obj': page_obj,
         'stats': stats,
+        'promotions': promotions,
         'filters': {
             'search': search_query,
             'status': status_filter,
             'sort': sort_order,
+            'promotion': promo_filter,
         },
         'tenant': request.tenant,
     }
@@ -199,6 +211,17 @@ def ApiDeleteDerogation(request):
         
         # Delete the derogation
         obj.delete()
+        
+        # Log the action
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Dérogation',
+            target_id=str(id_derogation),
+            details=f"Suppression de la demande de dérogation pour {prospect.nom} {prospect.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         # Check if there are any other accepted derogations for this prospect
         # to decide if we should keep the has_derogation flag

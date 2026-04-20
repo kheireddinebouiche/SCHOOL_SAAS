@@ -1710,7 +1710,7 @@
                         html += '    </div>';
                         html += '    <h4 class="fw-bold text-dark mb-2">Aucune orientation académique</h4>';
                         html += '    <p class="text-muted mb-4 fs-15 w-75 mx-auto">Ce prospect n\'a pas encore de fiche de vœux enregistrée. Veuillez initialiser son orientation.</p>';
-                        html += '    <button type="button" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all create-voeux-btn" id="createVoeuxBtn">';
+                        html += '    <button type="button" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all create-voeux-btn" id="createVoeuxBtn">';
                         html += '      <i class="ri-add-circle-fill me-2 fs-5"></i>Créer une fiche de vœux';
                         html += '    </button>';
                         html += '  </div>';
@@ -1788,20 +1788,24 @@
                     is_prospect_double = data.is_double;
 
                     // Handle cancellation banner
-                    if (data.motif_annulation) {
-                        $('#cancellationBanner').show();
-                        $('#cancellationReasonText').text(data.motif_annulation);
+                    if (data.motif_annulation || data.statut_key === "annuler") {
+                        $('#cancellationBanner').prop('hidden', false);
+                        if (data.motif_annulation) {
+                            $('#cancellationReasonText').text(data.motif_annulation);
+                        } else {
+                            $('#cancellationReasonText').text("Aucun motif spécifié.");
+                        }
                     } else {
-                        $('#cancellationBanner').hide();
+                        $('#cancellationBanner').prop('hidden', true);
                     }
 
-                    if(data.statut === "annuler"){
+                    if(data.statut_key === "annuler"){
                         document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "none", 'important');
 
-                    }else if (data.statut === "prinscrit"){
+                    }else if (data.statut_key === "prinscrit"){
                         document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "none", 'important');
 
-                    }else if(data.statut === "visiteur"){
+                    }else if(data.statut_key === "visiteur"){
                         document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "block", 'important');
 
                     }
@@ -2129,8 +2133,12 @@
         loadVoeuxSupplementairesCount();
 
         $(document).on('click', '#btnReactivatePreinscrit', function() {
+            $('#confirmReactivateModal').modal('show');
+        });
+
+        $(document).on('click', '#btnConfirmReactivatePost', function() {
             var btn = $(this);
-            btn.prop('disabled', true);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Traitement...');
             
             $.ajax({
                 url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
@@ -2140,8 +2148,11 @@
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success: function(response) {
+                    $('#confirmReactivateModal').modal('hide');
                     if (response.status === 'success') {
-                        alertify.success(response.message);
+                        $('#redirectionModalTitle').text('Réactivation Réussie !');
+                        $('#redirectionModalMessage').text('Le dossier a été réactivé avec succès. Préparation de la redirection...');
+                        $('#redirectionModal').modal('show');
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
@@ -2151,12 +2162,13 @@
                         } else {
                             alertify.error(response.message);
                         }
-                        btn.prop('disabled', false);
+                        btn.prop('disabled', false).text('Confirmer la réactivation');
                     }
                 },
                 error: function() {
+                    $('#confirmReactivateModal').modal('hide');
                     alertify.error("Erreur lors de la communication avec le serveur.");
-                    btn.prop('disabled', false);
+                    btn.prop('disabled', false).text('Confirmer la réactivation');
                 }
             });
         });
@@ -3055,5 +3067,53 @@ loadNotes();
 </script>
 
 
+
+<!-- Confirmation Reactivation Modal -->
+<div class="modal fade" id="confirmReactivateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-20 rounded-3 p-2 me-3">
+                        <i class="ri-alert-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Confirmer la réactivation</h5>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-0">Êtes-vous sûr de vouloir réactiver ce dossier ? Cette action restaurera le statut du candidat à "Pré-inscrit".</p>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning rounded-pill px-4 fw-bold" id="btnConfirmReactivatePost">Confirmer la réactivation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Redirection Waiting Modal -->
+<div class="modal fade" id="redirectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5 text-center">
+                <div class="mb-4">
+                    <div class="avatar-lg mx-auto">
+                        <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+                            <i class="ri-checkbox-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <h4 class="fw-bold text-dark mb-2" id="redirectionModalTitle">Réactivation Réussie !</h4>
+                <p class="text-muted mb-4" id="redirectionModalMessage">Le dossier a été réactivé avec succès. Préparation de la redirection...</p>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}

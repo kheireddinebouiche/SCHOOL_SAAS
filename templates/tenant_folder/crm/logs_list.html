@@ -18,6 +18,8 @@
   .stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
   .bg-soft-primary { background: rgba(60, 125, 222, 0.1) !important; color: #3c7dde !important; }
   .bg-soft-info { background: rgba(13, 148, 136, 0.1) !important; color: #0d9488 !important; }
+  .bg-purple-subtle { background: rgba(124, 58, 237, 0.1) !important; color: #7c3aed !important; }
+  .text-purple { color: #7c3aed !important; }
   .filter-bar { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--premium-shadow); border-radius: 12px; }
   .table th { font-weight: 600; color: var(--primary-teal); border-bottom: 2px solid #edf2f7; }
   .table td { vertical-align: middle; }
@@ -123,13 +125,40 @@
                 </div>
                 <div class="input-group" style="max-width: 260px;">
                   <span class="input-group-text bg-light border-0"><i class="ri-focus-3-line"></i></span>
-                  <input type="text" name="target_model" class="form-control border-0 bg-light filter-input" placeholder="Modèle Cible (ex: Prospect)" value="{{ selected_target|default:'' }}">
+                  <input type="text" name="target_model" id="target_model_input" list="model_suggestions" class="form-control border-0 bg-light filter-input" placeholder="Modèle Cible (ex: Prospect)" value="{{ selected_target|default:'' }}">
+                  <datalist id="model_suggestions">
+                    <option value="Dérogation">
+                    <option value="Prospect">
+                    <option value="Paiement">
+                    <option value="Utilisateur">
+                    <option value="Paramètre">
+                  </datalist>
                 </div>
                 <div class="input-group" style="max-width: 200px;">
-                  <span class="input-group-text bg-light border-0"><i class="ri-calendar-line"></i></span>
-                  <input type="date" name="date_from" class="form-control border-0 bg-light filter-input" value="{{ date_from|default:'' }}">
+                  <span class="input-group-text bg-light border-0 small">Du</span>
+                  <input type="date" name="date_from" class="form-control border-0 bg-light filter-input" value="{{ date_from|default:'' }}" title="Date de début">
+                </div>
+                <div class="input-group" style="max-width: 200px;">
+                  <span class="input-group-text bg-light border-0 small">Au</span>
+                  <input type="date" name="date_to" class="form-control border-0 bg-light filter-input" value="{{ date_to|default:'' }}" title="Date de fin">
+                </div>
+                <div class="ms-auto flex-shrink-0 d-flex gap-2">
+                  <a href="{% url 't_crm:user_action_log_list' %}" class="btn btn-soft-secondary btn-rounded px-3">
+                    <i class="ri-refresh-line me-1"></i> Réinitialiser
+                  </a>
                 </div>
                 <button type="submit" class="btn d-none">Filtrer</button>
+              </div>
+
+              <!-- Quick Filters Tags -->
+              <div class="mt-3 d-flex align-items-center gap-2">
+                <small class="text-muted fw-bold text-uppercase fs-11 me-1">Accès rapide :</small>
+                <button type="button" class="btn btn-sm btn-soft-primary rounded-pill px-3 py-1 quick-filter" data-target="Dérogation">
+                  <i class="ri-history-line me-1"></i> Dérogations
+                </button>
+                <button type="button" class="btn btn-sm btn-soft-info rounded-pill px-3 py-1 quick-filter" data-target="Prospect">
+                   <i class="ri-user-search-line me-1"></i> Prospects
+                </button>
               </div>
             </form>
           </div>
@@ -192,8 +221,18 @@
                         {% endif %}
                       </td>
                       <td>
-                        <h6 class="mb-0 small text-dark">{{ log.target_model|default:"-" }}</h6>
-                        <small class="text-muted">ID: {{ log.target_id|default:"-" }}</small>
+                        {% if log.target_model == 'Dérogation' %}
+                          <span class="badge bg-purple-subtle text-purple rounded-3 px-2 py-1 small">
+                            <i class="ri-file-shield-line me-1"></i>Dérogation
+                          </span>
+                        {% elif log.target_model == 'Prospect' %}
+                          <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 small">
+                            <i class="ri-user-line me-1"></i>Prospect
+                          </span>
+                        {% else %}
+                          <h6 class="mb-0 small text-dark">{{ log.target_model|default:"-" }}</h6>
+                        {% endif %}
+                        <small class="text-muted d-block mt-1">ID: {{ log.target_id|default:"-" }}</small>
                       </td>
                       <td style="max-width: 300px;">
                         <span class="d-inline-block text-truncate text-muted small" style="max-width:100%;" title="{{ log.details }}">{{ log.details|default:"-" }}</span>
@@ -365,6 +404,17 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', () => { clearTimeout(debounceTimer); fetchResults(); });
     });
     form.addEventListener('submit', e => { e.preventDefault(); fetchResults(); });
+
+    // Quick Filters Handler
+    document.querySelectorAll('.quick-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = this.getAttribute('data-target');
+            const input = document.getElementById('target_model_input');
+            input.value = target;
+            // Trigger AJAX
+            fetchResults();
+        });
+    });
 
     // Bulk Actions
     document.addEventListener('change', function(e) {

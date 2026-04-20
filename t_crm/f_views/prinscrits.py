@@ -528,12 +528,21 @@ def add_document(request):
                         "error": f"Le fichier est trop volumineux ({file.size / 1024:.1f} KB). La limite est de {limit_kb} KB."
                     })
 
+                prospect_obj = Prospets.objects.get(id = id_prospect)
                 document = DocumentsDemandeInscription.objects.create(
                     id_document=DossierInscription.objects.get(id=doc_type),
                     file=file,
-                    prospect = Prospets.objects.get(id = id_prospect),
+                    prospect = prospect_obj,
                     fiche_voeux = FicheDeVoeux.objects.get(prospect__id = id_prospect),
                     label = name,
+                )
+
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='CREATE',
+                    target_model='DocumentsDemandeInscription',
+                    target_id=str(document.id),
+                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Standard)"
                 )
 
                 return JsonResponse({"success": True, "id": document.id})
@@ -569,12 +578,21 @@ def add_document_double(request):
                         "error": f"Le fichier est trop volumineux ({file.size / 1024:.1f} KB). La limite est de {limit_kb} KB."
                     })
 
+                prospect_obj = Prospets.objects.get(id = id_prospect)
                 document = DocumentsDemandeInscription.objects.create(
                     id_document=DossierInscription.objects.get(id=doc_type),
                     file=file,
-                    prospect = Prospets.objects.get(id = id_prospect),
+                    prospect = prospect_obj,
                     fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect__id = id_prospect),
                     label = name,
+                )
+
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='CREATE',
+                    target_model='DocumentsDemandeInscription',
+                    target_id=str(document.id),
+                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Double Diplomation)"
                 )
 
                 return JsonResponse({"success": True, "id": document.id})
@@ -628,6 +646,18 @@ def LoadPresinscritDocs(request):
 def DeleteDocumentPreinscrit(request):
     id_document = request.POST.get('id_document')
     obj = DocumentsDemandeInscription.objects.get(id = id_document)
+
+    prospect_nom = obj.prospect.nom if obj.prospect else ""
+    prospect_prenom = obj.prospect.prenom if obj.prospect else ""
+    doc_label = obj.label or (obj.id_document.label if obj.id_document else "Document inconnu")
+    
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='DocumentsDemandeInscription',
+        target_id=str(id_document),
+        details=f"Suppression du document {doc_label} pour le pré-inscrit {prospect_nom} {prospect_prenom}"
+    )
 
     obj.delete()
 
@@ -1014,8 +1044,19 @@ def ApiCancelPreinscrit(request):
     try:
         preinscrit = Prospets.objects.get(id=id_preinscrit)
         preinscrit.statut = 'annuler'
+        preinscrit.etat = 'en_attente'
         preinscrit.motif_annulation = motif
         preinscrit.save()
+
+        # Log the action
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospect',
+            target_id=str(preinscrit.id),
+            details=f"Annulation de la préinscription pour {preinscrit.nom} {preinscrit.prenom}. Motif: {motif}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
 
         # Handle associated payment requests
         # We look for pending (unpaid) payment requests for this client
@@ -1087,8 +1128,19 @@ def ApiReactivatePreinscrit(request):
 
             # Si la fiche existe, on procède à la réactivation
             preinscrit.statut = 'prinscrit'
+            preinscrit.etat = 'accepte'
             preinscrit.motif_annulation = ''
             preinscrit.save()
+
+            # Log the action
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Prospect',
+                target_id=str(preinscrit.id),
+                details=f"Réactivation de la préinscription pour {preinscrit.nom} {preinscrit.prenom}.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 'status': 'success',

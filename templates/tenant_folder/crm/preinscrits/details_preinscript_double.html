@@ -3057,6 +3057,29 @@
         </div>
     </div>
 </div>
+
+<!-- Redirection Waiting Modal -->
+<div class="modal fade" id="redirectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5 text-center">
+                <div class="mb-4">
+                    <div class="avatar-lg mx-auto">
+                        <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+                            <i class="ri-checkbox-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <h4 class="fw-bold text-dark mb-2" id="redirectionModalTitle">Réactivation Réussie !</h4>
+                <p class="text-muted mb-4" id="redirectionModalMessage">Le dossier a été réactivé avec succès. Préparation de la redirection...</p>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 
 {% block extra_js %}
@@ -3290,7 +3313,7 @@
                         html += '    </div>';
                         html += '    <h4 class="fw-bold text-dark mb-2">Aucune orientation académique</h4>';
                         html += '    <p class="text-muted mb-4 fs-15 w-75 mx-auto">Ce prospect n\'est pas encore affilié à une formation ou spécialité spécifique. Veuillez initialiser son orientation.</p>';
-                        html += '    <button type="button" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all voeux-create-btn" data-bs-toggle="modal" data-bs-target="#voeuxModal">';
+                        html += '    <button type="button" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm fw-medium d-inline-flex align-items-center transition-all voeux-create-btn" data-bs-toggle="modal" data-bs-target="#voeuxModal">';
                         html += '      <i class="ri-add-circle-fill me-2 fs-5"></i>Créer une fiche de vœux';
                         html += '    </button>';
                         html += '  </div>';
@@ -3411,12 +3434,16 @@
                     };
 
                     // Handle cancellation banner
-                    if (data.motif_annulation) {
-                        $('#cancellationBanner').show();
-                        $('#cancellationReasonText').text(data.motif_annulation);
+                    if (data.motif_annulation || data.statut_key === "annuler") {
+                        $('#cancellationBanner').prop('hidden', false);
+                        if (data.motif_annulation) {
+                            $('#cancellationReasonText').text(data.motif_annulation);
+                        } else {
+                            $('#cancellationReasonText').text("Aucun motif spécifié.");
+                        }
                         $('#btnOpenCancelModal').hide();
                     } else {
-                        $('#cancellationBanner').hide();
+                        $('#cancellationBanner').prop('hidden', true);
                         if (data.statut_key === "prinscrit") {
                             $('#btnOpenCancelModal').show();
                         } else {
@@ -3679,8 +3706,12 @@
         loadFinancialData(); // Charger les données financières
 
         $(document).on('click', '#btnReactivatePreinscrit', function() {
+            $('#confirmReactivateModal').modal('show');
+        });
+
+        $(document).on('click', '#btnConfirmReactivatePost', function() {
             var btn = $(this);
-            btn.prop('disabled', true);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Traitement...');
             
             $.ajax({
                 url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
@@ -3690,8 +3721,9 @@
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success: function(response) {
+                    $('#confirmReactivateModal').modal('hide');
                     if (response.status === 'success') {
-                        alertify.success(response.message);
+                        $('#redirectionModal').modal('show');
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
@@ -3701,12 +3733,13 @@
                         } else {
                             alertify.error(response.message);
                         }
-                        btn.prop('disabled', false);
+                        btn.prop('disabled', false).text('Confirmer la réactivation');
                     }
                 },
                 error: function() {
+                    $('#confirmReactivateModal').modal('hide');
                     alertify.error("Erreur lors de la communication avec le serveur.");
-                    btn.prop('disabled', false);
+                    btn.prop('disabled', false).text('Confirmer la réactivation');
                 }
             });
         });
@@ -5177,10 +5210,12 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        alertify.success(response.message);
+                        $('#redirectionModalTitle').text('Annulation Réussie !');
+                        $('#redirectionModalMessage').text('Le dossier a été annulé avec succès. Redirection vers la liste...');
+                        $('#redirectionModal').modal('show');
                         setTimeout(function() {
                             window.location.href = "{% url 't_crm:ListeDesPrinscrits' %}";
-                        }, 1500);
+                        }, 2000);
                     } else {
                         alertify.error(response.message);
                         btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i>Confirmer l\'annulation');

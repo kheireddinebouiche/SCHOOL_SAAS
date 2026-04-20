@@ -22,7 +22,9 @@ def ApiLoadProspectPerosnalInfos(request):
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
         prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M")
+        prospect['statut_key'] = prospect['statut'] # The internal code (e.g. 'annuler')
         prospect['statut_label'] = obj.get_statut_display()
+        prospect['statut'] = obj.get_statut_display() # Consistent with ApiLoadPreinscrisPerosnalInfos
         prospect['created_by'] = prospect['created_by__username'] if prospect['created_by__username'] else "Système"
 
     return JsonResponse(prospect, safe=False)
@@ -158,7 +160,11 @@ def ApiLoadFicheVoeuxDoubleProspect(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadDoubleDiplomations(request):
     if request.method == "GET":
-        liste = DoubleDiplomation.objects.all().values('id', 'label')
+        queryset = DoubleDiplomation.objects.all()
+        if request.tenant.tenant_type != 'master':
+            queryset = queryset.filter(specialite1__is_visible=True, specialite2__is_visible=True)
+        
+        liste = queryset.values('id', 'label')
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status":"error"})
@@ -509,7 +515,10 @@ def ApiCheckStatutProspect(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadFormationAndSpecialite(request):
     formation = Formation.objects.all()
-    specialite = Specialites.objects.all()
+    spec_queryset = Specialites.objects.all()
+    
+    if request.tenant.tenant_type != 'master':
+        spec_queryset = spec_queryset.filter(is_visible=True)
 
     formation_liste = []
     for i in formation:
@@ -520,7 +529,7 @@ def ApiLoadFormationAndSpecialite(request):
         })
     
     specialite_liste = []
-    for i in specialite:
+    for i in spec_queryset:
         specialite_liste.append({
             'id' : i.id,
             'code' : i.code,
@@ -559,10 +568,13 @@ def ApiLoadFormation(request):
 def ApiLoadSpecialiteProspect(request):
     id_formation = request.GET.get('id_formation')
     formation = Formation.objects.get(id = id_formation)
-    obj = Specialites.objects.filter(formation__code = formation.code)
+    queryset = Specialites.objects.filter(formation__code = formation.code)
+    
+    if request.tenant.tenant_type != 'master':
+        queryset = queryset.filter(is_visible=True)
 
     data = []
-    for i in obj:
+    for i in queryset:
         data.append({
             "id" : i.id,
             "label" : f"{i.label} ({i.version})" if i.version else i.label,

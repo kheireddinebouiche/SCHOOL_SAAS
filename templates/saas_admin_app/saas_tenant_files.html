@@ -49,13 +49,29 @@
                         <i class="ri-folder-open-line me-2 text-success"></i>
                         <span id="currentPathLabel">Racine</span>
                     </h5>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-soft-primary" onclick="refreshFiles()" id="refreshBtn">
-                            <i class="ri-refresh-line me-1"></i> Actualiser
-                        </button>
-                        <button class="btn btn-sm btn-soft-secondary" onclick="goToParent()" id="parentBtn" style="display: none;">
-                            <i class="ri-arrow-go-back-line me-1"></i> Dossier parent
-                        </button>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="badge bg-danger-subtle text-danger fs-12 px-2 py-1"
+                             style="cursor: pointer;"
+                             onclick="viewTenantFileStatus('known')"
+                             title="Voir la liste des documents reconnus">
+                            <i class="ri-file-list-3-line me-1"></i> {{ doc_count }} Documents CRM
+                        </div>
+                        {% if unknown_count > 0 %}
+                        <div class="badge bg-secondary-subtle text-secondary fs-12 px-2 py-1"
+                             style="cursor: pointer;"
+                             onclick="viewTenantFileStatus('unknown')"
+                             title="Voir la liste des fichiers inconnus (orphelins)">
+                            <i class="ri-question-line me-1"></i> {{ unknown_count }} Fichiers Inconnus
+                        </div>
+                        {% endif %}
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-soft-primary" onclick="refreshFiles()" id="refreshBtn">
+                                <i class="ri-refresh-line me-1"></i> Actualiser
+                            </button>
+                            <button class="btn btn-sm btn-soft-secondary" onclick="goToParent()" id="parentBtn" style="display: none;">
+                                <i class="ri-arrow-go-back-line me-1"></i> Dossier parent
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body p-3">
@@ -71,6 +87,52 @@
                             </ol>
                         </nav>
 
+                        <!-- Filter Bar -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="bg-light bg-opacity-50 p-3 rounded-3 border border-dashed">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-3">
+                                            <div class="search-box">
+                                                <input type="text" id="fileSearch" class="form-control" placeholder="Rechercher localement..." onkeyup="filterLocalFiles()">
+                                                <i class="ri-search-line search-icon"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select id="sortBy" class="form-select form-select-sm" onchange="navigateTo(currentPath)">
+                                                <option value="name">Trier par : Nom</option>
+                                                <option value="size">Trier par : Taille</option>
+                                                <option value="modified">Trier par : Date</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select id="sortOrder" class="form-select form-select-sm" onchange="navigateTo(currentPath)">
+                                                <option value="asc">Ordre : Croissant</option>
+                                                <option value="desc">Ordre : Décroissant</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">De</span>
+                                                <input type="date" id="dateStart" class="form-control" onchange="navigateTo(currentPath)">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">À</span>
+                                                <input type="date" id="dateEnd" class="form-control" onchange="navigateTo(currentPath)">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button class="btn btn-sm btn-outline-danger w-100" onclick="resetFilters()">
+                                                <i class="ri-filter-off-line"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Files Table -->
                         <div class="table-responsive">
                             <table class="table table-hover table-nowrap table-modern mb-0" id="filesTable">
@@ -80,13 +142,14 @@
                                         <th>Nom</th>
                                         <th style="width: 120px;">Type</th>
                                         <th style="width: 120px;">Taille</th>
-                                        <th style="width: 160px;">Modifié le</th>
+                                        <th style="width: 130px;">Modifié le</th>
+                                        <th style="width: 180px;">Prospect / Propriétaire</th>
                                         <th style="width: 120px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="filesTableBody">
                                     <tr>
-                                        <td colspan="6" class="text-center py-5">
+                                        <td colspan="7" class="text-center py-5">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">Chargement...</span>
                                             </div>
@@ -253,6 +316,25 @@
 .file-info-panel .info-value {
     color: #1e293b;
 }
+
+/* Filter Bar Styles */
+.search-box {
+    position: relative;
+}
+.search-box .form-control {
+    padding-left: 35px;
+}
+.search-box .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #adb5bd;
+}
+
+.form-select-sm, .form-control-sm, .input-group-sm {
+    font-size: 0.825rem;
+}
 </style>
 
 <script>
@@ -331,9 +413,16 @@ function loadFiles(path = '') {
     document.getElementById('currentPathLabel').textContent = path || 'Racine';
     document.getElementById('breadcrumb').innerHTML = buildBreadcrumb(path);
     
+    // Collect filters
+    const sort = document.getElementById('sortBy').value;
+    const order = document.getElementById('sortOrder').value;
+    const dateStart = document.getElementById('dateStart').value;
+    const dateEnd = document.getElementById('dateEnd').value;
+    const search = document.getElementById('fileSearch').value;
+    
     document.getElementById('filesTableBody').innerHTML = `
         <tr>
-            <td colspan="6" class="text-center py-5">
+            <td colspan="7" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Chargement...</span>
                 </div>
@@ -342,11 +431,18 @@ function loadFiles(path = '') {
         </tr>
     `;
     
-    fetch(`/saas-admin/api/tenant/${tenantId}/files/browse/?path=${encodeURIComponent(path)}`)
+    let url = `/saas-admin/api/tenant/${tenantId}/files/browse/?path=${encodeURIComponent(path)}`;
+    url += `&sort=${sort}&order=${order}`;
+    if (dateStart) url += `&date_start=${dateStart}`;
+    if (dateEnd) url += `&date_end=${dateEnd}`;
+    
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 displayFiles(data.items, data.parent_path);
+                // Re-apply local search filter if any
+                if (search) filterLocalFiles();
             } else {
                 showError(data.error);
             }
@@ -357,13 +453,37 @@ function loadFiles(path = '') {
         });
 }
 
+function resetFilters() {
+    document.getElementById('fileSearch').value = '';
+    document.getElementById('sortBy').value = 'name';
+    document.getElementById('sortOrder').value = 'asc';
+    document.getElementById('dateStart').value = '';
+    document.getElementById('dateEnd').value = '';
+    navigateTo(currentPath);
+}
+
+function filterLocalFiles() {
+    const query = document.getElementById('fileSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#filesTableBody tr');
+    
+    rows.forEach(row => {
+        if (row.cells.length < 2) return; // Skip empty row/loader
+        const fileName = row.cells[1].textContent.toLowerCase();
+        if (fileName.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 function displayFiles(items, parentPath) {
     const tbody = document.getElementById('filesTableBody');
     
     if (items.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-5 text-muted">
+                <td colspan="7" class="text-center py-5 text-muted">
                     <i class="ri-folder-line fs-1" style="opacity: 0.5;"></i>
                     <div class="mt-2">Dossier vide</div>
                 </td>
@@ -403,6 +523,9 @@ function displayFiles(items, parentPath) {
                 <td class="text-muted">${item.size_formatted}</td>
                 <td class="text-muted fs-13">${item.modified}</td>
                 <td>
+                    ${renderProspectInfo(item.prospect_info)}
+                </td>
+                <td>
                     <div class="d-flex gap-2">
                         ${isDirectory ? 
                             `<button class="btn btn-sm btn-soft-primary" onclick="navigateTo('${escapedPath}')" title="Ouvrir">
@@ -420,6 +543,29 @@ function displayFiles(items, parentPath) {
     
     tbody.innerHTML = html;
     document.getElementById('parentBtn').style.display = parentPath ? 'inline-block' : 'none';
+    
+    // Re-apply local search filter if any
+    const search = document.getElementById('fileSearch').value;
+    if (search) filterLocalFiles();
+}
+
+function renderProspectInfo(info) {
+    if (info === "Inconnue") {
+        return `<span class="badge bg-light text-muted fw-normal">Inconnue</span>`;
+    }
+    return `
+        <div class="d-flex align-items-center">
+            <div class="avatar-xs flex-shrink-0 me-2">
+                <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-12">
+                    <i class="ri-user-line"></i>
+                </div>
+            </div>
+            <div class="flex-grow-1 overflow-hidden" style="max-width: 160px;">
+                <h6 class="mb-0 fs-13 text-truncate">${info.nom} ${info.prenom}</h6>
+                <p class="text-muted mb-0 fs-11">ID: ${info.id}</p>
+            </div>
+        </div>
+    `;
 }
 
 function buildBreadcrumb(path) {
@@ -880,5 +1026,106 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFiles('');
 });
 </script>
+<!-- File Status Detailed Modal -->
+<div class="modal fade" id="tenantFileStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tenantFileStatusTitle">Détails des fichiers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="ri-search-line text-muted"></i></span>
+                    <input type="text" id="tenantFileStatusSearch" class="form-control" placeholder="Rechercher...">
+                </div>
+                <div class="table-responsive" style="max-height: 50vh;">
+                    <table class="table table-sm table-modern table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr id="tenantFileStatusTableHeader">
+                                <!-- Headers dynamic -->
+                            </tr>
+                        </thead>
+                        <tbody id="tenantFileStatusTableBody">
+                            <!-- Rows dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<script>
+function viewTenantFileStatus(type) {
+    const modalEl = document.getElementById('tenantFileStatusModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const title = document.getElementById('tenantFileStatusTitle');
+    const header = document.getElementById('tenantFileStatusTableHeader');
+    const body = document.getElementById('tenantFileStatusTableBody');
+    const searchInput = document.getElementById('tenantFileStatusSearch');
+    
+    searchInput.value = '';
+    body.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>';
+    modal.show();
+    
+    fetch(`/saas-admin/api/tenant/${tenantId}/file-status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                title.innerHTML = type === 'known' 
+                    ? `<i class="ri-file-check-line text-success me-2"></i>Documents CRM` 
+                    : `<i class="ri-file-warning-line text-danger me-2"></i>Fichiers Inconnus (Orphelins)`;
+                
+                header.innerHTML = type === 'known'
+                    ? '<th>Fichier</th><th>Propriétaire</th><th>Catégorie</th>'
+                    : '<th>Chemin</th><th>Taille</th><th>Modifié</th>';
+                
+                const files = type === 'known' ? data.known_files : data.unknown_files;
+                
+                if (files.length === 0) {
+                    body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">Aucun fichier trouvé.</td></tr>';
+                    return;
+                }
+                
+                const renderList = (filtered) => {
+                    if (filtered.length === 0) {
+                        body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">Aucun résultat.</td></tr>';
+                        return;
+                    }
+                    body.innerHTML = filtered.map(f => {
+                        if (type === 'known') {
+                            return `<tr>
+                                <td class="text-truncate" style="max-width: 320px;" title="${f.rel_path}">
+                                    <div class="fw-medium text-dark">${f.name}</div>
+                                    <small class="text-muted font-monospace fs-10">${f.rel_path}</small>
+                                </td>
+                                <td><span class="badge bg-primary-subtle text-primary border-primary border-opacity-10">${f.owner}</span></td>
+                                <td><small class="text-muted fw-semibold">${f.type}</small></td>
+                            </tr>`;
+                        } else {
+                            return `<tr>
+                                <td class="text-truncate font-monospace fs-11" style="max-width: 350px;" title="${f.rel_path}">${f.rel_path}</td>
+                                <td><span class="badge bg-light text-dark">${f.size}</span></td>
+                                <td><small class="text-muted">${f.mtime}</small></td>
+                            </tr>`;
+                        }
+                    }).join('');
+                };
+
+                renderList(files);
+                
+                searchInput.onkeyup = function() {
+                    const q = this.value.toLowerCase();
+                    const filtered = files.filter(f => 
+                        f.rel_path.toLowerCase().includes(q) || 
+                        (f.owner && f.owner.toLowerCase().includes(q)) ||
+                        (f.name && f.name.toLowerCase().includes(q))
+                    );
+                    renderList(filtered);
+                };
+            }
+        });
+}
+</script>
 {% endblock content %}

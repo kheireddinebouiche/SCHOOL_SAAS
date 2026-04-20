@@ -10,7 +10,8 @@ from .views import (
     saas_processes_view, saas_terminal_view, saas_terminal_exec_view,
     saas_explorer_view, api_explorer_browse, api_explorer_read,
     api_explorer_save, api_explorer_delete, saas_system_lock_view,
-    saas_system_logout_view, saas_global_config_view, saas_firewall_view
+    saas_system_logout_view, saas_global_config_view, saas_firewall_view,
+    api_tenant_file_status, saas_performance_view
 )
 
 app_name = 'saas_admin_app'
@@ -42,6 +43,7 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/update/', saas_update_user_view, name='saas_update_user'),
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/reset-password/', saas_reset_user_password_view, name='saas_reset_user_password'),
     path('api/tenant/<int:tenant_id>/files/browse/', saas_file_browser_view, name='saas_file_browser'),
+    path('api/tenant/<int:tenant_id>/file-status/', api_tenant_file_status, name='api_tenant_file_status'),
     path('api/tenant/<int:tenant_id>/files/serve/<path:file_path>', saas_file_serve_view, name='saas_file_serve'),
     path('settings/email/', saas_email_config_view, name='saas_email_config'),
     path('api/settings/email/test/', saas_test_email_view, name='saas_test_email'),

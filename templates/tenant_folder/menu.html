@@ -3,7 +3,8 @@
 <style>
     /* Modern Menu Design Variables */
     :root {
-        --menu-width: 280px;
+        --menu-width: 260px;
+        --menu-width-sm: 70px;
         --menu-bg: #ffffff;
         --menu-item-color: #545a6d;
         --menu-item-hover-color: #3b7ddd;
@@ -15,16 +16,129 @@
 
     /* General Menu Container */
     .app-menu {
-        width: var(--menu-width) !important;
-        min-width: var(--menu-width) !important;
-        max-width: var(--menu-width) !important;
+        width: var(--menu-width);
+        min-width: var(--menu-width);
+        max-width: var(--menu-width);
         background: var(--menu-bg);
         border-right: 1px solid var(--border-color);
-        font-family: 'Inter', sans-serif; /* Ensuring modern font if available */
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
     }
 
-    .app-menu .container-fluid {
-        padding: 0 0.5rem !important;
+    /* Handle Sm Sidebar (Collapsed) - Fixed & Stabilized */
+    @media (min-width: 768px) {
+        html[data-sidebar-size="sm"] .navbar-menu,
+        html[data-sidebar-size="sm-hover"] .navbar-menu {
+            width: var(--menu-width-sm) !important;
+            min-width: var(--menu-width-sm) !important;
+            max-width: var(--menu-width-sm) !important;
+            overflow: visible !important;
+            /* DO NOT force position: relative here; it must stay fixed from theme */
+        }
+
+        /* Hide labels only in the main sidebar links, NOT in submenus/popovers */
+        html[data-sidebar-size="sm"] .navbar-menu #navbar-nav > .nav-item > .nav-link > span,
+        html[data-sidebar-size="sm"] .navbar-menu .menu-title,
+        html[data-sidebar-size="sm"] .navbar-menu .submenu-arrow {
+            display: none !important;
+        }
+
+        /* LIBERATE OVERFLOW across all parent layers (SimpleBar support) */
+        html[data-sidebar-size="sm"] .navbar-menu :is(#scrollbar, .simplebar-wrapper, .simplebar-mask, .simplebar-offset, .simplebar-content-wrapper, .simplebar-content, .navbar-nav, .nav-item) {
+            overflow: visible !important;
+            /* No position override here to prevent breaking document flow */
+        }
+
+        /* TOTAL VISIBILITY & RESTRUCTURING for Submenus (Popovers) */
+        html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item:hover > :is(.menu-dropdown, .collapse) {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: scale(1) !important;
+            position: absolute !important;
+            left: var(--menu-width-sm) !important;
+            top: -10px !important; /* Slight offset for better alignment */
+            width: 260px !important;
+            height: auto !important;
+            min-height: 50px !important;
+            background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important;
+            border-radius: 8px !important;
+            padding: 0 !important; /* Padding handled by container */
+            z-index: 9999 !important;
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            overflow: hidden !important;
+        }
+
+        /* Restore Main Title as Header in Popover - ULTIMATE SPECIFICITY & SCOPED */
+        html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .nav-item:hover > .nav-link span {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: absolute !important;
+            left: var(--menu-width-sm) !important;
+            top: -10px !important;
+            width: 260px !important;
+            padding: 15px 20px !important;
+            background: #eef2f7 !important; 
+            color: #3b7ddd !important;
+            font-weight: 800 !important;
+            font-size: 0.95rem !important;
+            border-bottom: 2px solid rgba(59, 125, 221, 0.15) !important;
+            border-radius: 8px 8px 0 0 !important;
+            z-index: 10001 !important;
+            box-sizing: border-box;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap !important;
+        }
+
+        /* Adjust internal container - SCOPED */
+        html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body .navbar-menu .nav-item:hover > .menu-dropdown .submenu-container {
+            padding-top: 60px !important;
+            padding-bottom: 20px !important;
+            padding-right: 15px !important;
+            padding-left: 15px !important;
+            overflow: visible !important;
+        }
+
+        /* Confine active/hover backgrounds to the 70px sidebar */
+        html[data-sidebar-size="sm"] .navbar-menu .nav-link,
+        html[data-sidebar-size="sm-hover"] .navbar-menu .nav-link {
+            width: 50px !important; /* Center the pill inside 70px */
+            margin-left: 10px !important;
+            margin-right: 10px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            justify-content: center !important;
+        }
+    }
+
+    /* ABSOLUTE ICON FIX - High Specificity */
+    html body #navbar-nav .nav-link :is(i, [class*="bx"], [class*="ri"]),
+    html body #navbar-nav .submenu-header i {
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    html[data-sidebar-size="sm"] #navbar-nav .nav-link:hover :is(i, [class*="bx"], [class*="ri"]),
+    html[data-sidebar-size="sm"] #navbar-nav .nav-link.active :is(i, [class*="bx"], [class*="ri"]),
+    #navbar-nav .nav-link:hover :is(i, [class*="bx"], [class*="ri"]),
+    #navbar-nav .nav-link.active :is(i, [class*="bx"], [class*="ri"]) {
+        color: #3b7ddd !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        z-index: 100 !important;
+    }
+
+    /* Override any theme rule that hides icons in SM mode */
+    html[data-sidebar-size="sm"] .navbar-menu .nav-link i {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 0.8 !important;
+        text-align: center;
+        width: 100%;
+        margin: 0 !important;
     }
 
     /* Menu Titles (Sections) */
@@ -41,7 +155,7 @@
     /* Main Navigation Items */
     .app-menu .nav-item {
         margin-bottom: 0.2rem !important;
-        border-bottom: 1px solid transparent !important; /* Cleaner separation */
+        border-bottom: 1px solid transparent !important;
     }
 
     .app-menu .nav-link {
@@ -55,7 +169,7 @@
         align-items: center;
         letter-spacing: 0.01em;
         white-space: nowrap;
-        overflow: hidden; /* Flex container fix */
+        overflow: hidden;
     }
 
     /* Handle text truncation inside nav link */
@@ -69,7 +183,7 @@
 
     .app-menu .nav-link i {
         font-size: 1.15rem !important;
-        min-width: 1.7rem; /* Fixed width for icon alignment */
+        min-width: 1.7rem;
         transition: transform 0.2s ease;
         opacity: 0.8;
     }
@@ -78,13 +192,21 @@
     .app-menu .nav-link:hover:not(.active) {
         color: var(--menu-item-hover-color) !important;
         background-color: var(--submenu-bg) !important;
-        transform: translateX(3px);
+        transform: none !important; /* Disabled transform to prevent clipping */
     }
 
-    .app-menu .nav-link:hover i {
-        opacity: 1;
-        color: var(--menu-item-hover-color);
-        transform: scale(1.05); /* Subtle grow */
+    .app-menu .nav-link:hover :is(i, [class*="bx"], [class*="ri"]) {
+        opacity: 1 !important;
+        color: #3b7ddd !important;
+        visibility: visible !important;
+        z-index: 100 !important;
+    }
+
+    .app-menu .submenu-header:hover :is(i, [class*="bx"], [class*="ri"]),
+    .app-menu .submenu-item a:hover :is(i, [class*="bx"], [class*="ri"]) {
+        color: #3b7ddd !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     /* Active State - Highlighted */
@@ -155,7 +277,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%; /* Perfect circle */
+        border-radius: 50%;
         background-color: rgba(59, 125, 221, 0.08) !important;
         transition: all 0.3s ease;
     }
@@ -172,7 +294,7 @@
     /* Submenu Content Tree */
     .submenu-content {
         padding-left: 0;
-        margin-left: 1.2rem; /* Align with icon center */
+        margin-left: 1.2rem;
         border-left: 2px solid var(--border-color);
         margin-top: 0.4rem !important;
         margin-bottom: 0.8rem !important;
@@ -186,7 +308,7 @@
         color: #6a7187 !important;
         border-radius: 6px;
         margin-bottom: 3px !important;
-        margin-left: 0.3rem; /* Spacing from border line */
+        margin-left: 0.3rem;
         display: flex;
         align-items: center;
         transition: all 0.2s;
@@ -194,12 +316,12 @@
     }
     
     .app-menu .submenu-content .submenu-item a i {
-        font-size: 0.9rem !important; /* Slightly smaller icons for children */
+        font-size: 0.9rem !important;
     }
 
     .app-menu .submenu-item.bg-light, 
     .app-menu .submenu-item.bg-opacity-50 {
-        background-color: transparent !important; /* Override bootstrap utils */
+        background-color: transparent !important;
     }
 
     .app-menu .submenu-item a:hover {
@@ -268,16 +390,102 @@
         border-radius: 6px;
         letter-spacing: 0.3px;
     }
+
     /* Layout Synchronization */
     @media (min-width: 768px) {
         .main-content, .footer {
-            margin-left: var(--menu-width) !important;
+            margin-left: var(--menu-width);
+            transition: margin-left 0.3s ease;
         }
         
         #page-topbar {
-            left: var(--menu-width) !important;
-            width: calc(100% - var(--menu-width)) !important;
+            left: var(--menu-width);
+            width: calc(100% - var(--menu-width));
+            transition: all 0.3s ease;
         }
+
+        /* Sync when limited */
+        html[data-sidebar-size="sm"] .main-content,
+        html[data-sidebar-size="sm"] .footer,
+        html[data-sidebar-size="sm-hover"] .main-content,
+        html[data-sidebar-size="sm-hover"] .footer {
+            margin-left: var(--menu-width-sm) !important;
+        }
+
+        html[data-sidebar-size="sm"] #page-topbar,
+        html[data-sidebar-size="sm-hover"] #page-topbar {
+            left: var(--menu-width-sm) !important;
+            width: calc(100% - var(--menu-width-sm)) !important;
+        }
+    }
+
+    /* FINAL SUBMENU RESTRUCTURING & VISIBILITY OVERRIDES */
+    .navbar-menu .nav-link:hover {
+        background-color: var(--submenu-bg) !important;
+    }
+
+    /* NUCLEAR VISIBILITY FOR ALL SPANS INSIDE POPOVERS - SCOPED TO SM MODE ONLY */
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown :is(span, i, h1, h2, h3, h4, h5, h6, small, b, strong) {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: auto !important;
+        min-width: 10px !important;
+        height: auto !important;
+        transform: none !important;
+        color: inherit;
+    }
+
+    /* Force visibility of span labels specifically - SCOPED */
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .nav-link span {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #212529 !important; /* Darkest for maximum contrast */
+        margin-left: 5px !important;
+        width: auto !important;
+        min-width: 130px !important; /* Prevent collapsing */
+    }
+
+    /* Style for sub-headers - SCOPED */
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .submenu-header {
+        background: rgba(59, 125, 221, 0.08) !important;
+        padding: 12px !important;
+        margin-top: 10px !important;
+        border-radius: 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .submenu-header h6 {
+        color: #3b7ddd !important;
+        font-weight: 800 !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 0 !important;
+        display: block !important;
+        width: auto !important;
+    }
+
+    /* Professional link styling - SCOPED */
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .nav-link {
+        color: #212529 !important;
+        font-weight: 600 !important;
+        padding: 10px 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .nav-link:hover {
+        color: #3b7ddd !important;
+        background: rgba(59, 125, 221, 0.08) !important;
+    }
+
+    html:is([data-sidebar-size="sm"], [data-sidebar-size="sm-hover"]) body #navbar-nav .menu-dropdown .nav-link i {
+        color: #3b7ddd !important;
+        margin-right: 8px !important;
+        font-size: 0.95rem !important;
     }
 </style>
 
@@ -1443,13 +1651,13 @@
                 {% user_can_access 'tre' 'view' as can_view_finance %}
                 {% if can_view_finance or request.user.is_superuser %}
                     <!-- Finance -->
-                    <li class="nav-item {% if request.resolver_match.url_name in 'PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseApplique ListePenalite PageConfPenalite PageNouveauAutrePaiement pageautrespaiement DetailsEcheancierClientDouble PageImputationComptable PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}active{% endif %}">
+                    <li class="nav-item {% if request.resolver_match.url_name in 'PageSuiviPaiements PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseApplique ListePenalite PageConfPenalite PageNouveauAutrePaiement pageautrespaiement DetailsEcheancierClientDouble PageImputationComptable PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}active{% endif %}">
                          <a class="nav-link menu-link rounded-2 mx-2 mb-1" href="#sidebarFinance" data-bs-toggle="collapse" role="button" 
-                        aria-expanded="{% if request.resolver_match.url_name in 'PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseAppliqueListePenalite PageConfPenalite PageNouveauAutrePaiement pageautrespaiement PageImputationComptable DetailsEcheancierClientDouble PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}true{% else %}false{% endif %}" 
+                        aria-expanded="{% if request.resolver_match.url_name in 'PageSuiviPaiements PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseAppliqueListePenalite PageConfPenalite PageNouveauAutrePaiement pageautrespaiement PageImputationComptable DetailsEcheancierClientDouble PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements PageConfigPaiementSeuil liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}true{% else %}false{% endif %}" 
                         aria-controls="sidebarFinance">
                             <i class='bx bx-money fs-5'></i> <span data-key="t-authentication" class="ms-1">Comptabilité/Finance</span>
                         </a>
-                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseApplique ListePenalite PageConfPenalite pageautrespaiement PageNouveauAutrePaiement PageImputationComptable DetailsEcheancierClientDouble PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement PageConfigPaiementSeuil attentes_de_paiements liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}show{% endif %}" id="sidebarFinance">
+                        <div class="collapse menu-dropdown {% if request.resolver_match.url_name in 'PageSuiviPaiements PagePlanComptableRecetteDepense payment_type_list PageRecouvrement ReportingDAS ListeRemise ListeRemiseApplique ListePenalite PageConfPenalite pageautrespaiement PageNouveauAutrePaiement PageImputationComptable DetailsEcheancierClientDouble PageProduits PageFacturation ImputationBancaire PageBrouillardCaisse PageBrouillardBanque DetailsRembourssement liste_types_depenses PageDetailsFournisseur PageNouveauFournisseur PageFournisseur PageNouvelleDepense PageDepenses listeDesRembourssement DetailsEcheancierClient FinanceDashboard ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement PageConfigPaiementSeuil attentes_de_paiements liste_des_remises ListeModelEcheancier CreeEcheancier ListeEcheancierSpecial ListeEcheanciersConfigures SuivieEcheancier' %}show{% endif %}" id="sidebarFinance">
                             <div class="submenu-container">
                                 <div class="row g-1">
                                     <div class="col-12">
@@ -1471,7 +1679,7 @@
                                             </div>
                                             <i class="bx bx-chevron-down submenu-arrow"></i>
                                         </a>
-                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in ' ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements liste_des_remises SuivieEcheancier' %}show{% endif %}" id="sidebarTresorerie">
+                                        <div class="collapse submenu-content mt-1 {% if request.resolver_match.url_name in 'PageSuiviPaiements ListeDesPaiements PageRemboursement ListeRemise PageDetailsDemandePaiement attentes_de_paiements liste_des_remises SuivieEcheancier' %}show{% endif %}" id="sidebarTresorerie">
                                             <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
                                                 <a href="{% url 't_tresorerie:attentes_de_paiements' %}" class="nav-link {% if request.resolver_match.url_name in ' PageDetailsDemandePaiement attentes_de_paiements' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-time me-1"></i>
@@ -1506,6 +1714,12 @@
                                                 <a href="{% url 't_tresorerie:SuivieEcheancier' %}" class="nav-link {% if request.resolver_match.url_name in 'DetailsEcheancierClient DetailsEcheancierClientDouble SuivieEcheancier' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
                                                     <i class="bx bx-calendar-check me-1"></i>
                                                     <span>Suivi des échéanciers</span>
+                                                </a>
+                                            </div>
+                                            <div class="submenu-item bg-light bg-opacity-50 rounded-2 mb-1">
+                                                <a href="{% url 't_tresorerie:PageSuiviPaiements' %}" class="nav-link {% if request.resolver_match.url_name in 'PageSuiviPaiements' %}active{% endif %} d-flex align-items-center py-1 px-2 rounded-2">
+                                                    <i class="bx bx-wallet me-1"></i>
+                                                    <span>Suivi des paiements</span>
                                                 </a>
                                             </div>
                                             <div class="submenu-item bg-light bg-opacity-50 rounded-2">

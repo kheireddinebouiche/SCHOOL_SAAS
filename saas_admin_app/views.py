@@ -63,6 +63,46 @@ def get_directory_size(directory):
                     pass
     return total_size
 
+def get_unknown_files_count(institut):
+    """Calcule le nombre de fichiers média non reliés à un prospect ou document CRM."""
+    schema_name = institut.schema_name
+    tenant_media_dir = os.path.join(settings.MEDIA_ROOT, schema_name)
+    
+    if not os.path.exists(tenant_media_dir):
+        return 0
+        
+    # 1. Lister tous les fichiers physiques
+    physical_files = set()
+    for root, _, files in os.walk(tenant_media_dir):
+        for f in files:
+            abs_f = os.path.join(root, f)
+            rel_f = os.path.relpath(abs_f, tenant_media_dir).replace('\\', '/')
+            # Format attendu en base : schema_name/relative/path
+            physical_files.add(f"{schema_name}/{rel_f}")
+            
+    # 2. Récupérer tous les fichiers référencés en base
+    documented_files = set()
+    try:
+        with tenant_context(institut):
+            from t_crm.models import DocumentsDemandeInscription, Prospets
+            
+            # Documents d'inscription
+            docs_qs = DocumentsDemandeInscription.objects.filter(file__isnull=False).values_list('file', flat=True)
+            for f in docs_qs:
+                if f: documented_files.add(str(f))
+                
+            # Photos et logos des prospects
+            prospects_qs = Prospets.objects.all().only('photo', 'logo_entreprise')
+            for p in prospects_qs:
+                if p.photo: documented_files.add(str(p.photo))
+                if p.logo_entreprise: documented_files.add(str(p.logo_entreprise))
+    except Exception:
+        pass
+        
+    # 3. La différence donne les fichiers orphelins (Inconnue)
+    unknown_files = physical_files - documented_files
+    return len(unknown_files)
+
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -105,6 +145,7 @@ def saas_dashboard_view(request):
     total_db_bytes = 0
     total_media_bytes = 0
     total_users = 0
+    total_docs = 0
 
     User = get_user_model()
     
@@ -116,15 +157,27 @@ def saas_dashboard_view(request):
         total_db_bytes += db_bytes
         db_size_formatted = format_size(db_bytes)
         
-        # 2. Nombre d'Utilisateurs
+        # 2. Statistiques Tenant (Users, Documents)
         try:
             with tenant_context(institut):
                 user_count = User.objects.count()
                 total_users += user_count
+                
+                # Nombre de Documents d'Inscription CRM
+                try:
+                    from t_crm.models import DocumentsDemandeInscription
+                    doc_count = DocumentsDemandeInscription.objects.count()
+                except Exception:
+                    doc_count = 0
+                total_docs += doc_count
         except Exception:
             user_count = 0
+            doc_count = 0
             
-        # 3. Taille des Fichiers Média (fichiers statiques uploader)
+        # 3. Fichiers Orphelins (Inconnue)
+        unknown_count = get_unknown_files_count(institut)
+        
+        # 4. Taille des Fichiers Média (fichiers statiques uploader)
         # Assuming the standard django-tenants structure: MEDIA_ROOT / tenant_schema directories
         tenant_media_dir = os.path.join(settings.MEDIA_ROOT, schema_name)
         media_bytes = get_directory_size(tenant_media_dir)
@@ -139,6 +192,8 @@ def saas_dashboard_view(request):
             'db_size': db_size_formatted,
             'db_bytes': db_bytes,  # Garder la valeur brute pour tri/jauges
             'user_count': user_count,
+            'doc_count': doc_count,
+            'unknown_count': unknown_count,
             'media_size': media_size_formatted,
             'media_bytes': media_bytes,
             'date_creation': date_creation,
@@ -149,6 +204,7 @@ def saas_dashboard_view(request):
         'total_db_size': format_size(total_db_bytes),
         'total_media_size': format_size(total_media_bytes),
         'total_users': total_users,
+        'total_docs': total_docs,
         'nombre_instances': len(instituts),
     }
     
@@ -1067,19 +1123,104 @@ def saas_tenant_files_view(request, tenant_id):
     schema_name = institut.schema_name
     tenant_media_dir = os.path.join(settings.MEDIA_ROOT, schema_name)
     
+    # Nombre de Documents d'Inscription CRM
+    try:
+        with tenant_context(institut):
+            from t_crm.models import DocumentsDemandeInscription
+            doc_count = DocumentsDemandeInscription.objects.count()
+    except Exception:
+        doc_count = 0
+    
+    # Nombre de fichiers inconnus (orphelins)
+    unknown_count = get_unknown_files_count(institut)
+    
     context = {
         'institut': institut,
         'tenant_id': tenant_id,
         'schema_name': schema_name,
         'media_root': tenant_media_dir,
         'media_exists': os.path.exists(tenant_media_dir),
+        'doc_count': doc_count,
+        'unknown_count': unknown_count,
     }
     
     return render(request, 'saas_admin_app/saas_tenant_files.html', context)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_tenant_file_status(request, tenant_id):
+    """API pour lister les fichiers connus et inconnus d'un tenant."""
+    from django.http import JsonResponse
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+    except Institut.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Tenant non trouvé'}, status=404)
+
+    schema_name = institut.schema_name
+    tenant_media_dir = os.path.join(settings.MEDIA_ROOT, schema_name)
+    
+    if not os.path.exists(tenant_media_dir):
+        return JsonResponse({'success': True, 'known_files': [], 'unknown_files': []})
+
+    # 1. Lister tous les fichiers physiques
+    physical_files = []
+    for root, _, files in os.walk(tenant_media_dir):
+        for f in files:
+            abs_f = os.path.join(root, f)
+            rel_f = os.path.relpath(abs_f, tenant_media_dir).replace('\\', '/')
+            db_path = f"{schema_name}/{rel_f}"
+            physical_files.append({
+                'db_path': db_path,
+                'rel_path': rel_f,
+                'name': f,
+                'size': format_size(os.path.getsize(abs_f)),
+                'mtime': datetime.fromtimestamp(os.path.getmtime(abs_f)).strftime('%d/%m/%Y %H:%M')
+            })
+
+    known_files = []
+    unknown_files = []
+    
+    # 2. Récupérer les correspondances en base
+    try:
+        with tenant_context(institut):
+            from t_crm.models import DocumentsDemandeInscription, Prospets
+            
+            # Mapping complet des fichiers documentés
+            prospect_mapping = {}
+            
+            # Documents
+            docs = DocumentsDemandeInscription.objects.filter(file__isnull=False).select_related('prospect')
+            for d in docs:
+                p_name = f"{d.prospect.nom} {d.prospect.prenom}" if d.prospect else "Sans prospect"
+                prospect_mapping[str(d.file)] = {'owner': p_name, 'type': 'Document Dossier'}
+            
+            # Photos/Logos
+            prospects = Prospets.objects.all()
+            for p in prospects:
+                p_name = f"{p.nom} {p.prenom}"
+                if p.photo: prospect_mapping[str(p.photo)] = {'owner': p_name, 'type': 'Photo Profil'}
+                if p.logo_entreprise: prospect_mapping[str(p.logo_entreprise)] = {'owner': p_name, 'type': 'Logo Entreprise'}
+
+            # Classification
+            for f_info in physical_files:
+                match = prospect_mapping.get(f_info['db_path'])
+                if match:
+                    f_info.update(match)
+                    known_files.append(f_info)
+                else:
+                    unknown_files.append(f_info)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'tenant_name': institut.nom,
+        'known_files': known_files,
+        'unknown_files': unknown_files
+    })
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_file_browser_view(request, tenant_id):
-    """API endpoint pour naviguer dans les fichiers d'un tenant."""
+    """API endpoint pour naviguer dans les fichiers d'un tenant avec filtres."""
     from django.http import JsonResponse
     
     try:
@@ -1090,13 +1231,17 @@ def saas_file_browser_view(request, tenant_id):
     schema_name = institut.schema_name
     tenant_media_dir = os.path.join(settings.MEDIA_ROOT, schema_name)
     
-    # Get the path to browse (relative to tenant media dir)
+    # Paramètres de filtrage et tri
     rel_path = request.GET.get('path', '')
+    sort_by = request.GET.get('sort', 'name')  # name, size, modified
+    order = request.GET.get('order', 'asc')     # asc, desc
+    date_start = request.GET.get('date_start')
+    date_end = request.GET.get('date_end')
     
-    # Normalize path separators
+    # Normalisation pour Windows/Linux
     rel_path = rel_path.replace('\\', '/')
     
-    # Security: prevent path traversal
+    # Sécurité : empêcher la traversée de répertoire
     abs_path = os.path.normpath(os.path.join(tenant_media_dir, rel_path))
     if not abs_path.startswith(os.path.normpath(tenant_media_dir)):
         return JsonResponse({'success': False, 'error': 'Accès non autorisé'}, status=403)
@@ -1104,20 +1249,37 @@ def saas_file_browser_view(request, tenant_id):
     if not os.path.exists(abs_path):
         return JsonResponse({'success': False, 'error': 'Chemin non trouvé'}, status=404)
     
+    # Fonction de filtrage par date
+    def is_in_date_range(mtime):
+        dt = datetime.fromtimestamp(mtime).date()
+        if date_start:
+            try:
+                ds = datetime.strptime(date_start, '%Y-%m-%d').date()
+                if dt < ds: return False
+            except ValueError: pass
+        if date_end:
+            try:
+                de = datetime.strptime(date_end, '%Y-%m-%d').date()
+                if dt > de: return False
+            except ValueError: pass
+        return True
+
     files_and_dirs = []
     
-    # If it's a file, return file info
+    # Si c'est un fichier, on retourne ses infos (cas rare pour cette API)
     if os.path.isfile(abs_path):
         stat = os.stat(abs_path)
-        files_and_dirs.append({
-            'name': os.path.basename(abs_path),
-            'type': 'file',
-            'size': stat.st_size,
-            'size_formatted': format_size(stat.st_size),
-            'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
-            'path': rel_path,
-            'extension': os.path.splitext(abs_path)[1].lower(),
-        })
+        if is_in_date_range(stat.st_mtime):
+            files_and_dirs.append({
+                'name': os.path.basename(abs_path),
+                'type': 'file',
+                'size': stat.st_size,
+                'size_formatted': format_size(stat.st_size),
+                'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
+                'modified_raw': stat.st_mtime,
+                'path': rel_path,
+                'extension': os.path.splitext(abs_path)[1].lower(),
+            })
         return JsonResponse({
             'success': True,
             'current_path': rel_path,
@@ -1125,36 +1287,90 @@ def saas_file_browser_view(request, tenant_id):
             'items': files_and_dirs,
         })
     
-    # If it's a directory, list contents
+    # Si c'est un répertoire, on liste le contenu
     try:
-        for item in sorted(os.listdir(abs_path)):
-            item_path = os.path.join(abs_path, item)
-            rel_item_path = os.path.relpath(item_path, tenant_media_dir)
+        # Récupération des informations de prospect pour les fichiers de ce tenant
+        prospect_mapping = {}
+        with tenant_context(institut):
+            from t_crm.models import DocumentsDemandeInscription, Prospets
             
-            # Ensure forward slashes for web URLs (important on Windows)
-            rel_item_path = rel_item_path.replace('\\', '/')
+            # Préfixe du chemin pour les recherches en base de données
+            # Les chemins en base commencent par schema_name/
+            db_path_prefix = f"{schema_name}/"
+            if rel_path:
+                db_path_prefix += f"{rel_path}/"
             
-            stat = os.stat(item_path)
-            is_dir = os.path.isdir(item_path)
+            # 1. Documents liés aux dossiers d'inscription
+            docs_qs = DocumentsDemandeInscription.objects.filter(
+                file__startswith=db_path_prefix,
+                prospect__isnull=False
+            ).select_related('prospect').only('file', 'prospect__id', 'prospect__nom', 'prospect__prenom')
             
-            item_info = {
-                'name': item,
-                'type': 'directory' if is_dir else 'file',
-                'size': stat.st_size if not is_dir else 0,
-                'size_formatted': '—' if is_dir else format_size(stat.st_size),
-                'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
-                'path': rel_item_path,
-            }
+            for d in docs_qs:
+                if d.file:
+                    prospect_mapping[str(d.file)] = {
+                        'id': d.prospect.id,
+                        'nom': d.prospect.nom,
+                        'prenom': d.prospect.prenom
+                    }
             
-            if not is_dir:
-                item_info['extension'] = os.path.splitext(item)[1].lower()
-            
-            files_and_dirs.append(item_info)
+            # 2. Photos et logos des prospects
+            prospects_qs = Prospets.objects.all().only('id', 'nom', 'prenom', 'photo', 'logo_entreprise')
+            for p in prospects_qs:
+                if p.photo and str(p.photo).startswith(db_path_prefix):
+                    prospect_mapping[str(p.photo)] = {'id': p.id, 'nom': p.nom, 'prenom': p.prenom}
+                if p.logo_entreprise and str(p.logo_entreprise).startswith(db_path_prefix):
+                    prospect_mapping[str(p.logo_entreprise)] = {'id': p.id, 'nom': p.nom, 'prenom': p.prenom}
+
+        if os.path.isdir(abs_path):
+            with os.scandir(abs_path) as entries:
+                for entry in entries:
+                    try:
+                        stat = entry.stat()
+                        # Filtrage par date
+                        if not is_in_date_range(stat.st_mtime):
+                            continue
+                            
+                        is_dir = entry.is_dir()
+                        rel_item_path = os.path.relpath(entry.path, tenant_media_dir).replace('\\', '/')
+                        
+                        # Recherche du prospect associé
+                        full_db_path = f"{schema_name}/{rel_item_path}"
+                        p_info = prospect_mapping.get(full_db_path)
+                        
+                        item_info = {
+                            'name': entry.name,
+                            'type': 'directory' if is_dir else 'file',
+                            'size': stat.st_size if not is_dir else 0,
+                            'size_formatted': '—' if is_dir else format_size(stat.st_size),
+                            'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M'),
+                            'modified_raw': stat.st_mtime,
+                            'path': rel_item_path,
+                            'prospect_info': p_info if p_info else "Inconnue",
+                        }
+                        
+                        if not is_dir:
+                            item_info['extension'] = os.path.splitext(entry.name)[1].lower()
+                        
+                        files_and_dirs.append(item_info)
+                    except Exception:
+                        continue
         
-        # Sort: directories first, then files
-        files_and_dirs.sort(key=lambda x: (x['type'] != 'directory', x['name'].lower()))
+        # Logique de tri
+        is_reverse = (order == 'desc')
         
-        # Calculate parent path
+        # Tri principal (selon le critère choisi)
+        if sort_by == 'size':
+            files_and_dirs.sort(key=lambda x: x['size'], reverse=is_reverse)
+        elif sort_by == 'modified':
+            files_and_dirs.sort(key=lambda x: x['modified_raw'], reverse=is_reverse)
+        else: # name par défaut
+            files_and_dirs.sort(key=lambda x: x['name'].lower(), reverse=is_reverse)
+            
+        # Toujours garder les dossiers en premier (tri stable)
+        files_and_dirs.sort(key=lambda x: x['type'] != 'directory')
+        
+        # Calcul du chemin parent
         parent_path = os.path.dirname(rel_path).replace('\\', '/') if rel_path else ''
         
         return JsonResponse({

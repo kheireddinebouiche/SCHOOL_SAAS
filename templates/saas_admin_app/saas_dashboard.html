@@ -44,7 +44,7 @@
 
             <!-- Stats Row -->
             <div class="row g-4 mb-4">
-                <div class="col-xl-3 col-sm-6">
+                <div class="col-xl col-sm-6">
                     <div class="card modern-card h-100 mb-0">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -64,7 +64,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-sm-6">
+                <div class="col-xl col-sm-6">
                     <div class="card modern-card h-100 mb-0">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -79,7 +79,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-sm-6">
+                <div class="col-xl col-sm-6">
                     <div class="card modern-card h-100 mb-0">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -94,7 +94,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-sm-6">
+                <div class="col-xl col-sm-6">
                     <div class="card modern-card h-100 mb-0">
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -105,6 +105,21 @@
                             </div>
                             <h2 class="stat-tile-value">{{ total_media_size }}</h2>
                             <p class="text-muted mb-0 fs-13">Fichiers médias</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl col-sm-6">
+                    <div class="card modern-card h-100 mb-0">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Documents CRM</h5>
+                                <div class="icon-box danger">
+                                    <i class="ri-file-list-3-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value">{{ total_docs }}</h2>
+                            <p class="text-muted mb-0 fs-13">Total documents</p>
                         </div>
                     </div>
                 </div>
@@ -128,6 +143,7 @@
                                             <th>Date d'Activation</th>
                                             <th>Taille BDD</th>
                                             <th>Comptes Actifs</th>
+                                            <th>Documents CRM</th>
                                             <th>Fichiers Médias</th>
                                             <th>Actions</th>
                                         </tr>
@@ -166,6 +182,24 @@
                                                 </span>
                                             </td>
                                             <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <span class="badge bg-danger-subtle text-danger fs-12 px-2 py-1" 
+                                                          style="cursor: pointer;" 
+                                                          onclick="viewFileStatus({{ metric.institut.id }}, 'known')"
+                                                          title="Voir la liste des documents reconnus">
+                                                        <i class="ri-file-list-3-line me-1"></i> {{ metric.doc_count }}
+                                                    </span>
+                                                    {% if metric.unknown_count > 0 %}
+                                                        <span class="text-muted fs-11" 
+                                                              style="cursor: pointer;" 
+                                                              onclick="viewFileStatus({{ metric.institut.id }}, 'unknown')"
+                                                              title="Voir la liste des fichiers inconnus (orphelins)">
+                                                            <i class="ri-question-line me-1"></i>{{ metric.unknown_count }} inconnus
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
                                                 <span class="badge bg-warning-subtle text-warning fs-12 px-2 py-1">
                                                     <i class="ri-folder-open-line me-1"></i> {{ metric.media_size }}
                                                 </span>
@@ -183,7 +217,7 @@
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="6" class="text-center py-5 text-muted">
+                                            <td colspan="7" class="text-center py-5 text-muted">
                                                 <i class="ri-inbox-archive-line fs-1" style="opacity: 0.5;"></i>
                                                 <div class="mt-2 text-muted">Aucun locataire trouvé.</div>
                                             </td>
@@ -199,7 +233,109 @@
 
         </div>
 
+<div class="modal fade" id="fileStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fileStatusTitle">Liste des fichiers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="ri-search-line text-muted"></i></span>
+                    <input type="text" id="fileStatusSearch" class="form-control" placeholder="Rechercher dans la liste (nom, chemin, propriétaire)...">
+                </div>
+                <div class="table-responsive" style="max-height: 50vh;">
+                    <table class="table table-sm table-modern table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr id="fileStatusTableHeader">
+                                <!-- Headers dynamic -->
+                            </tr>
+                        </thead>
+                        <tbody id="fileStatusTableBody">
+                            <!-- Rows dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function viewFileStatus(tenantId, type) {
+    const modalEl = document.getElementById('fileStatusModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const title = document.getElementById('fileStatusTitle');
+    const header = document.getElementById('fileStatusTableHeader');
+    const body = document.getElementById('fileStatusTableBody');
+    const searchInput = document.getElementById('fileStatusSearch');
+    
+    searchInput.value = '';
+    body.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>';
+    modal.show();
+    
+    fetch(`/saas-admin/api/tenant/${tenantId}/file-status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                title.innerHTML = type === 'known' 
+                    ? `<i class="ri-file-check-line text-success me-2"></i>Documents CRM - <span class="text-primary">${data.tenant_name}</span>` 
+                    : `<i class="ri-file-warning-line text-danger me-2"></i>Fichiers Inconnus (Orphelins) - <span class="text-primary">${data.tenant_name}</span>`;
+                
+                header.innerHTML = type === 'known'
+                    ? '<th>Fichier</th><th>Propriétaire</th><th>Catégorie</th>'
+                    : '<th>Chemin Relatif</th><th>Taille</th><th>Modifié</th>';
+                
+                const files = type === 'known' ? data.known_files : data.unknown_files;
+                
+                if (files.length === 0) {
+                    body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><p class="mb-0">Aucun fichier trouvé dans cette catégorie.</p></td></tr>';
+                    return;
+                }
+                
+                const renderList = (filteredFiles) => {
+                    if (filteredFiles.length === 0) {
+                        body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">Aucun résultat pour cette recherche.</td></tr>';
+                        return;
+                    }
+                    body.innerHTML = filteredFiles.map(f => {
+                        if (type === 'known') {
+                            return `<tr>
+                                <td class="text-truncate" style="max-width: 320px;" title="${f.rel_path}">
+                                    <div class="fw-medium text-dark">${f.name}</div>
+                                    <small class="text-muted font-monospace fs-10">${f.rel_path}</small>
+                                </td>
+                                <td><span class="badge bg-primary-subtle text-primary border-primary border-opacity-10">${f.owner}</span></td>
+                                <td><small class="text-muted fw-semibold">${f.type}</small></td>
+                            </tr>`;
+                        } else {
+                            return `<tr>
+                                <td class="text-truncate font-monospace fs-11" style="max-width: 350px;" title="${f.rel_path}">${f.rel_path}</td>
+                                <td><span class="badge bg-light text-dark">${f.size}</span></td>
+                                <td><small class="text-muted">${f.mtime}</small></td>
+                            </tr>`;
+                        }
+                    }).join('');
+                };
+
+                renderList(files);
+                
+                searchInput.onkeyup = function() {
+                    const q = this.value.toLowerCase();
+                    const filtered = files.filter(f => 
+                        f.rel_path.toLowerCase().includes(q) || 
+                        (f.owner && f.owner.toLowerCase().includes(q)) ||
+                        (f.name && f.name.toLowerCase().includes(q))
+                    );
+                    renderList(filtered);
+                };
+            } else {
+                body.innerHTML = `<tr><td colspan="3" class="text-center py-5 text-danger"><i class="ri-error-warning-line fs-2"></i><br>Erreur: ${data.error}</td></tr>`;
+            }
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const toggle = document.getElementById('maintenanceToggle');
     const label = document.getElementById('maintenanceToggleLabel');

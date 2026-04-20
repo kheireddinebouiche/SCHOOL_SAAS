@@ -242,7 +242,11 @@ def ApiLoadFormations(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadSpecialites(request):
     if request.method == "GET":
-        liste = Specialites.objects.all().values('id','code','label','version','formation__id')
+        queryset = Specialites.objects.all()
+        if request.tenant.tenant_type != 'master':
+            queryset = queryset.filter(is_visible=True)
+            
+        liste = queryset.values('id','code','label','version','formation__id')
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({'status':"error"})
