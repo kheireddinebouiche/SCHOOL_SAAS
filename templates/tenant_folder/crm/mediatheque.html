@@ -1,0 +1,748 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% block title %}Médiathèque CRM{% endblock title %}
+{% block content %}
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+        --premium-blue: #3b7ddd;
+        --premium-gradient: linear-gradient(135deg, #3b7ddd 0%, #2a52be 100%);
+        --soft-bg: #f8fafb;
+    }
+
+    .main-content { background-color: var(--soft-bg); min-height: 100vh; padding-top: 80px !important; }
+    .glass-card { 
+        background: var(--glass-bg); 
+        backdrop-filter: blur(10px); 
+        border: 1px solid var(--glass-border); 
+        border-radius: 1.25rem; 
+        box-shadow: var(--glass-shadow); 
+    }
+
+    .icon-box { 
+        width: 48px; height: 48px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+    }
+
+    .stat-card {
+        background: #fff; border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 1rem; padding: 1rem 1.5rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.04); }
+
+    /* Modern Modal Styling */
+    .modal-content { border-radius: 1.5rem; overflow: hidden; border: none; }
+    .modal-header-premium {
+        background: var(--premium-gradient);
+        padding: 1.5rem 2rem; border: none;
+    }
+    .modal-body-split { display: flex; padding: 0; }
+    
+    .modal-preview-side {
+        width: 38%; background: #f0f4f8; padding: 2rem;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        border-right: 1px solid rgba(0,0,0,0.05);
+    }
+    .modal-form-side { width: 62%; padding: 2rem; }
+
+    .file-big-preview {
+        width: 100px; height: 100px; border-radius: 20px;
+        background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 3rem; margin-bottom: 1.5rem; color: var(--premium-blue);
+    }
+
+    .form-label-premium { font-weight: 700; color: #495057; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.6rem; }
+    .form-control-premium {
+        background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem;
+        padding: 0.75rem 1rem; transition: all 0.2s;
+    }
+    .form-control-premium:focus {
+        background: #fff; border-color: var(--premium-blue); box-shadow: 0 0 0 4px rgba(59, 125, 221, 0.1);
+    }
+
+    .btn-premium {
+        background: var(--premium-gradient); color: #fff; border: none;
+        border-radius: 0.75rem; padding: 0.8rem 2rem; font-weight: 600;
+        box-shadow: 0 4px 15px rgba(59, 125, 221, 0.2); transition: all 0.3s;
+    }
+    .btn-premium:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 125, 221, 0.3); color: #fff; }
+
+    /* Animated entry */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animated-item { animation: fadeInUp 0.4s ease-out forwards; }
+
+    /* Select2 Tweaks */
+    .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 0.75rem !important; min-height: 45px !important; line-height: 2.2 !important;
+        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
+    }
+
+    /* Selection Modal Modernization */
+    #prospectSelectionModal .modal-header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        border-bottom: none; border-radius: 1.5rem 1.5rem 0 0; padding: 1.5rem 2rem;
+    }
+    #prospectSelectionModal .modal-title { font-weight: 800; letter-spacing: -0.5px; }
+    
+    #prospectSelectionTable_wrapper .dataTables_filter input {
+        border-radius: 0.8rem; border: 1px solid #e2e8f0; padding: 0.5rem 1rem;
+        background: #f8fafc; transition: all 0.2s; min-width: 250px;
+    }
+    #prospectSelectionTable_wrapper .dataTables_filter input:focus {
+        background: #fff; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    #prospectSelectionTable thead th {
+        background: #f1f5f9; color: #475569; font-weight: 700;
+        text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;
+        border: none; padding: 1.2rem 1rem;
+    }
+
+    .premium-row { transition: background 0.2s; cursor: pointer; }
+    .premium-row:hover { background-color: #f8fafc !important; }
+
+    .badge-outline-primary { border: 1px solid #3b82f6; color: #3b82f6; background: transparent; }
+    
+    .btn-select-premium {
+        border-radius: 0.75rem; font-weight: 700; font-size: 0.8rem;
+        padding: 0.5rem 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none; background: #3b82f6; color: white;
+    }
+    .btn-select-premium:hover {
+        background: #1d4ed8; transform: scale(1.05); box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+    }
+</style>
+
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+{% block extra_css %}
+<!-- PDF.js Styles (Extracted from details-preinscrit) -->
+<style>
+    .pdf-page-card { transition: transform 0.2s; }
+    .pdf-page-card:hover { transform: scale(1.01); }
+    #pdfPagesContainer canvas { max-width: 100%; height: auto !important; }
+    .btn-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; }
+</style>
+{% endblock extra_css %}
+
+<div class="main-content p-4">
+    <div class="container-fluid">
+        
+        <!-- Header Section -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary me-4">
+                            <i class="ri-folder-open-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="mb-1 fw-bold text-dark">Médiathèque des Fichiers</h2>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a href="#" class="text-primary fw-medium">CRM</a></li>
+                                    <li class="breadcrumb-item active">Stockage Physique</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                    <div class="stat-card d-flex align-items-center">
+                        <div class="text-end me-3">
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Fichiers à affecter</span>
+                            <h4 class="mb-0 fw-bold text-danger">{{ stats.fs_orphaned_count }}</h4>
+                        </div>
+                        <div class="icon-box bg-danger bg-opacity-10 text-danger" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                            <i class="ri-error-warning-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warning Notification -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="glass-card p-3 d-flex align-items-center border-start border-4 border-warning shadow-sm" style="background: rgba(255, 193, 7, 0.08);">
+                    <div class="icon-box bg-warning bg-opacity-20 text-warning me-3 pulse-animation" style="width: 45px; height: 45px; border: 1px solid rgba(255, 193, 7, 0.2);">
+                        <i class="ri-alert-fill fs-20"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold text-dark"><i class="ri-error-warning-line me-1"></i> ATTENTION : Erreur d'affectation</h6>
+                        <p class="text-dark small mb-0 fw-medium">
+                            Si vous vous trompez d'étudiant lors de l'affectation, vous devez <strong>impérativement supprimer le document</strong> depuis le dossier de l'étudiant concerné avant de pouvoir le réaffecter ici.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            @keyframes pulse-warning {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+                70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+            }
+            .pulse-animation {
+                animation: pulse-warning 2s infinite;
+            }
+        </style>
+
+        <!-- Main Workspace -->
+        <div class="glass-card overflow-hidden">
+            <div class="p-4 bg-white border-bottom d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center text-muted small">
+                    <i class="ri-focus-3-line me-2 text-primary"></i>
+                    <span>Focus : <strong>documents_demande_inscription</strong></span>
+                </div>
+                <form method="get" class="d-flex gap-2" style="max-width: 400px; width: 100%;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="ri-search-line text-muted"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Chercher un fichier..." value="{{ search_query }}">
+                        <button type="submit" class="btn btn-primary px-3">Filtre</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase fw-bold">
+                            <th class="ps-4">Aperçu</th>
+                            <th>Fichier / Chemin</th>
+                            <th>Capacité</th>
+                            <th>Date Modification</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fs_page_obj %}
+                        <tr class="animated-item">
+                            <td class="ps-4">
+                                <div class="icon-box {% if f.rel_path|lower|slice:'-4:' == '.pdf' %}bg-danger{% else %}bg-primary{% endif %} bg-opacity-10 
+                                            {% if f.rel_path|lower|slice:'-4:' == '.pdf' %}text-danger{% else %}text-primary{% endif %}" style="width: 42px; height: 42px;">
+                                    <i class="{% if f.rel_path|lower|slice:'-4:' == '.pdf' %}ri-file-pdf-fill{% else %}ri-image-2-fill{% endif %}"></i>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark mb-0">{{ f.name }}</div>
+                                <div class="text-muted x-small" style="font-size: 11px;">/{{ f.rel_path }}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark fw-medium">{{ f.size_formatted }}</span></td>
+                            <td class="text-muted">{{ f.mtime }}</td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-soft-primary btn-icon rounded-pill btn-view-doc" 
+                                            data-path="/media/{{ f.db_path }}" data-name="{{ f.name }}">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm rounded-pill btn-assign px-4" 
+                                            data-bs-toggle="modal" data-bs-target="#assignModal" 
+                                            data-path="{{ f.db_path }}" data-name="{{ f.name }}" data-size="{{ f.size_formatted }}">
+                                        <i class="ri-user-add-line me-1"></i> Affecter
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-5 text-center">
+                                <div class="display-4 text-success opacity-25 mb-3"><i class="ri-shield-check-fill"></i></div>
+                                <h5 class="text-dark fw-bold">Tout est en ordre !</h5>
+                                <p class="text-muted">Aucun fichier physique n'est orphelin dans ce dossier.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if fs_page_obj.has_other_pages %}
+            <div class="px-4 py-3 border-top bg-light">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        {% if fs_page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link shadow-none border-0" href="?fs_page={{ fs_page_obj.previous_page_number }}&search={{ search_query }}">Précédent</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link bg-primary border-0">{{ fs_page_obj.number }}</span></li>
+                        {% if fs_page_obj.has_next %}
+                        <li class="page-item"><a class="page-link shadow-none border-0" href="?fs_page={{ fs_page_obj.next_page_number }}&search={{ search_query }}">Suivant</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modernisé -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-2xl">
+            <div class="modal-header modal-header-premium">
+                <h5 class="modal-title fw-bold text-white d-flex align-items-center">
+                    <i class="ri-magic-line me-3 fs-3"></i>
+                    Centre d'Affectation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body-split">
+                <!-- Côte Gauche: Info Fichier -->
+                <div class="modal-preview-side">
+                    <div class="file-big-preview" id="preview_icon">
+                        <i class="ri-file-3-line"></i>
+                    </div>
+                    <h6 class="fw-bold text-center text-dark mb-1 px-3 text-truncate w-100" id="modal_display_name">-</h6>
+                    <p class="text-muted small text-center mb-4" id="modal_display_size">-</p>
+                    
+                    <div id="detection_status" class="w-100">
+                        <!-- Alert dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Côté Droit: Formulaire -->
+                <div class="modal-form-side">
+                    <form id="assignForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="db_path" id="modal_db_path">
+                        
+                        <div class="mb-4">
+                            <label class="form-label-premium">1. Sélectionner le Pré-inscrit</label>
+                            <div class="d-flex gap-2">
+                                <div class="flex-grow-1">
+                                    <select class="form-select select2-prospect" name="prospect_id" id="prospect_select" required></select>
+                                </div>
+                                <button type="button" class="btn btn-soft-primary px-3 rounded-pill shadow-sm"
+                                        id="btnOpenSelectionModal" title="Ouvrir la recherche avancée">
+                                    <i class="ri-search-eye-line fs-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4" id="dossier_type_container" style="display: none;">
+                            <label class="form-label-premium">2. Catégorie du Document</label>
+                            <select class="form-select form-control-premium" name="dossier_id" id="dossier_type_select" required disabled></select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label-premium">3. Renommer le Label (Optionnel)</label>
+                            <input type="text" name="label" class="form-control form-control-premium" id="modal_label_input" placeholder="ex: Mon Attestation">
+                        </div>
+
+                        <div class="d-grid mt-5">
+                            <button type="button" class="btn btn-premium" id="btnConfirm">
+                                <i class="ri-check-double-line me-2"></i> Finaliser l'Importation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sélection Avancée des Pré-inscrits -->
+<div class="modal fade" id="prospectSelectionModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content glass-card border-0 shadow-2xl">
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-white bg-opacity-20 text-white me-3">
+                        <i class="ri-user-search-line"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title text-white mb-0">Recherche Avancée d'Étudiants</h5>
+                        <p class="text-white text-opacity-75 small mb-0">Sélectionnez un candidat pré-inscrit ou en instance</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table id="prospectSelectionTable" class="table align-middle w-100" style="border-collapse: separate; border-spacing: 0 8px;">
+                        <thead>
+                            <tr>
+                                <th># ID</th>
+                                <th>Candidat</th>
+                                <th>Promotion / Spécialité</th>
+                                <th>Statut</th>
+                                <th>Contact</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via Ajax -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal Preview Document Premium -->
+<div class="modal fade" id="previewDocumentModal" tabindex="-1" aria-labelledby="previewDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+            <!-- Header avec Glassmorphism -->
+            <div class="modal-header border-0 p-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                        <i class="ri-file-text-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="previewDocumentModalLabel">Visualiseur de Document</h5>
+                        <p class="text-muted small mb-0" id="pdfMetaInfo">Chargement des informations...</p>
+                    </div>
+                </div>
+                <div class="hstack gap-2">
+                    <button type="button" class="btn btn-light btn-icon rounded-pill shadow-sm" id="btnDownloadDoc" title="Télécharger">
+                        <i class="ri-download-2-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-light btn-icon rounded-pill shadow-sm" onclick="window.print()" title="Imprimer">
+                        <i class="ri-printer-line"></i>
+                    </button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+            </div>
+
+            <div id="pdfToolbar" class="border-top border-bottom py-2 px-3 bg-white d-flex align-items-center justify-content-center gap-3" style="display: none !important;">
+                <div class="btn-group shadow-sm rounded-pill p-1 bg-light">
+                    <button id="btnZoomOut" class="btn btn-sm btn-white rounded-pill border-0"><i class="ri-zoom-out-line"></i></button>
+                    <span class="px-3 align-self-center fw-medium text-primary fs-13" id="zoomLevel">100%</span>
+                    <button id="btnZoomIn" class="btn btn-sm btn-white rounded-pill border-0"><i class="ri-zoom-in-line"></i></button>
+                </div>
+                <div class="vr mx-2"></div>
+                <div class="rounded-pill p-1 bg-light px-3 fs-13 fw-medium text-muted shadow-sm">
+                    Page <span id="currentPageNum">1</span> / <span id="totalPageNum">-</span>
+                </div>
+            </div>
+
+            <div class="modal-body p-0 bg-dark bg-opacity-10" style="min-height: 500px; max-height: 85vh;">
+                <div id="previewContent" class="text-center p-4"></div>
+                <div id="pdfPreviewContainer" style="display:none; overflow-y: auto; height: 100%;" class="p-4 d-flex flex-column align-items-center">
+                    <div id="pdfPagesContainer" class="d-flex flex-column gap-4 align-items-center w-100"></div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-0 p-2 justify-content-center" style="background: rgba(255, 255, 255, 0.5);">
+                <small class="text-muted"><i class="ri-information-line me-1"></i> Utilisez la molette pour faire défiler les pages</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Config PDF.js
+    const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+    }
+
+    let currentPdf = null;
+    let currentScale = 1.2;
+    // Select2 configuration
+    $('.select2-prospect').select2({
+        theme: 'bootstrap-5',
+        dropdownParent: $('#assignModal'),
+        ajax: {
+            url: "{% url 't_crm:ApiSearchProspects' %}",
+            dataType: 'json',
+            delay: 250,
+            data: params => ({ term: params.term || '' }),
+            processResults: data => ({ results: data.results }),
+            cache: true
+        },
+        minimumInputLength: 1,
+        placeholder: 'Tapez un nom ou une promo...'
+    });
+    
+    let selectionTable = null;
+
+    // Handle selection modal open
+    $('#btnOpenSelectionModal').on('click', function() {
+        $('#prospectSelectionModal').modal('show');
+        
+        if (!selectionTable) {
+            selectionTable = $('#prospectSelectionTable').DataTable({
+                ajax: "{% url 't_crm:ApiListPreinscritsJSON' %}",
+                createdRow: function(row, data, dataIndex) {
+                    $(row).addClass('premium-row animated-item');
+                },
+                columns: [
+                    { data: 'id', render: d => `<span class="fw-bold text-muted">#${d}</span>` },
+                    { data: 'full_name', render: (d, t, r) => `
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm me-3">
+                                <div class="avatar-title bg-soft-primary text-primary rounded-circle fw-bold">
+                                    ${r.nom.charAt(0)}${r.prenom.charAt(0)}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark fs-6">${d}</div>
+                                <div class="text-muted small">Candidat ID: ${r.id}</div>
+                            </div>
+                        </div>` 
+                    },
+                    { data: 'promo', render: d => `<div class="badge-outline-primary rounded-pill px-3 py-1 small fw-bold">${d}</div>` },
+                    { data: 'statut', render: d => {
+                        let cls = d === 'prinscrit' ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning';
+                        let lbl = d === 'prinscrit' ? 'Pré-inscrit' : 'En Instance';
+                        return `<span class="badge ${cls} rounded-pill px-3 py-1 fw-bold">${lbl}</span>`;
+                    }},
+                    { data: 'tele', render: (d, t, r) => `
+                        <div class="small">
+                            <div class="mb-1"><i class="ri-phone-fill text-primary me-1"></i>${d}</div>
+                            <div><i class="ri-mail-fill text-muted me-1"></i>${r.email}</div>
+                        </div>` 
+                    },
+                    { 
+                        data: 'id', 
+                        className: 'text-end',
+                        render: (data, type, row) => `
+                            <button type="button" class="btn-select-premium select-this-prospect" 
+                                    data-id="${row.id}" data-text="${row.full_name} (Promo: ${row.promo}) (ID: ${row.id})">
+                                <i class="ri-check-line me-1"></i> Sélectionner
+                            </button>`
+                    }
+                ],
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json",
+                    search: "",
+                    searchPlaceholder: "Rechercher un candidat..."
+                },
+                pageLength: 5,
+                lengthMenu: [5, 10, 25],
+                dom: '<"d-flex justify-content-between align-items-center mb-4"f>t<"d-flex justify-content-between align-items-center mt-4"ip>'
+            });
+        } else {
+            selectionTable.ajax.reload();
+        }
+    });
+
+    // Handle selection from table
+    $(document).on('click', '.select-this-prospect', function() {
+        const id = $(this).data('id');
+        const text = $(this).data('text');
+        
+        // Create a new option if it doesn't exist
+        if ($('#prospect_select').find("option[value='" + id + "']").length) {
+            $('#prospect_select').val(id).trigger('change');
+        } else {
+            const newOption = new Option(text, id, true, true);
+            $('#prospect_select').append(newOption).trigger('change');
+        }
+        
+        $('#prospectSelectionModal').modal('hide');
+    });
+
+    $('#assignModal').on('show.bs.modal', function (event) {
+        var btn = $(event.relatedTarget);
+        var name = btn.data('name');
+        var path = btn.data('path');
+        var size = btn.data('size');
+        
+        var modal = $(this);
+        modal.find('#modal_display_name').text(name);
+        modal.find('#modal_display_size').text(size);
+        modal.find('#modal_label_input').val(name.split('.')[0]); // Name minus extension
+        modal.find('#modal_db_path').val(path);
+
+        // Icon preview update
+        var ext = name.split('.').pop().toLowerCase();
+        var icon = "ri-file-3-line";
+        if (ext === 'pdf') { icon = "ri-file-pdf-fill"; $('#preview_icon').css('color', '#dc3545'); }
+        else if (['jpg','jpeg','png'].includes(ext)) { icon = "ri-image-2-fill"; $('#preview_icon').css('color', '#3b7ddd'); }
+        $('#preview_icon i').attr('class', icon);
+
+        // Reset
+        $('#prospect_select').val(null).trigger('change');
+        $('#dossier_type_container').hide();
+        $('#detection_status').empty();
+    });
+
+    $('#prospect_select').on('change', function() {
+        var pid = $(this).val();
+        var fileName = $('#modal_display_name').text().toLowerCase();
+
+        if (pid) {
+            $('#dossier_type_container').show();
+            $('#dossier_type_select').html('<option value="">Analyse du dossier...</option>').prop('disabled', true);
+            $('#detection_status').empty();
+            
+            $.ajax({
+                url: "{% url 't_crm:ApiLoadRequiredDocs' %}",
+                data: { 'id_preinscrit': pid },
+                success: function(data) {
+                    var opt = '<option value="">Choisir la catégorie...</option>';
+                    var bestMatchId = null;
+                    
+                    const keywords = {
+                        'bac': ['bac', 'diplome', 'attestation'],
+                        'id': ['carte', 'identit', 'cni', 'passeport', 'id_'],
+                        'photo': ['photo', 'img_'],
+                        'acte': ['naissance', 'acte'],
+                        'cv': ['cv', 'curriculum'],
+                        'releve': ['releve', 'note']
+                    };
+
+                    $.each(data, function(index, item) {
+                        let label = item.label;
+                        let status = item.is_uploaded ? "✅ Déjà présent" : (item.is_required ? "⭐ Requis" : "");
+                        opt += `<option value="${item.id}" ${item.is_uploaded ? 'disabled style="color: #ccc;"' : ''}>
+                                    ${label} ${status}
+                                </option>`;
+
+                        if (!bestMatchId && !item.is_uploaded) {
+                            const lowerLabel = label.toLowerCase();
+                            for (const [key, list] of Object.entries(keywords)) {
+                                if (list.some(k => lowerLabel.includes(k)) && list.some(k => fileName.includes(k))) {
+                                    bestMatchId = item.id;
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                    
+                    $('#dossier_type_select').html(opt).prop('disabled', false);
+                    
+                    if (bestMatchId) {
+                        $('#dossier_type_select').val(bestMatchId);
+                        $('#detection_status').html(`
+                            <div class="alert alert-success border-0 small mb-0 py-2 animated-item">
+                                <i class="ri-magic-line me-1"></i> <strong>Optimisation :</strong> Nous avons détecté que ce fichier correspond probablement à la catégorie sélectionnée.
+                            </div>
+                        `);
+                    }
+                }
+            });
+        }
+    });
+
+    $('#btnConfirm').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-grow spinner-grow-sm me-2"></span> Importation en cours...');
+
+        $.ajax({
+            url: "{% url 't_crm:ApiImportPhysicalFile' %}",
+            type: 'POST',
+            data: $('#assignForm').serialize(),
+            success: function(res) {
+                if (res.status === 'success') {
+                    // Success animation or feedback
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + res.message);
+                    btn.prop('disabled', false).html('<i class="ri-check-double-line me-2"></i> Finaliser l\'Importation');
+                }
+            },
+            error: () => { 
+                alert('Erreur de connexion.'); 
+                btn.prop('disabled', false).html('<i class="ri-check-double-line me-2"></i> Finaliser l\'Importation');
+            }
+        });
+    });
+    // Multi-Document View Logic
+    $(document).on('click', '.btn-view-doc', function() {
+        const url = $(this).data('path');
+        const name = $(this).data('name');
+        const isPdf = name.toLowerCase().endsWith('.pdf');
+
+        $('#previewDocumentModalLabel').text(name);
+        $('#btnDownloadDoc').off('click').on('click', () => window.open(url, '_blank'));
+        
+        // Reset View
+        $('#previewContent').hide().html('');
+        $('#pdfPreviewContainer').hide();
+        $('#pdfToolbar').hide();
+        $('#pdfMetaInfo').text('Chargement...');
+
+        if (isPdf) {
+            $('#pdfPreviewContainer').show();
+            $('#pdfToolbar').attr('style', 'display: flex !important;');
+            renderPdf(url);
+        } else {
+            $('#previewContent').show().html(`<img src="${url}" class="img-fluid rounded-3 shadow" style="max-height: 80vh;">`);
+            $('#pdfMetaInfo').text('Aperçu Image');
+        }
+
+        $('#previewDocumentModal').modal('show');
+    });
+
+    async function renderPdf(url, scale = 1.2) {
+        try {
+            const loadingTask = pdfjsLib.getDocument({
+                url: url,
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/',
+                cMapPacked: true,
+            });
+            
+            currentPdf = await loadingTask.promise;
+            $('#totalPageNum').text(currentPdf.numPages);
+            $('#pdfMetaInfo').text(`Document PDF • ${currentPdf.numPages} pages`);
+            $('#pdfPagesContainer').html('');
+
+            for (let i = 1; i <= currentPdf.numPages; i++) {
+                const canvasId = `pdf-canvas-${i}`;
+                $('#pdfPagesContainer').append(`
+                    <div class="pdf-page-card bg-white shadow-sm rounded-3 mb-4 p-1">
+                        <canvas id="${canvasId}"></canvas>
+                    </div>
+                `);
+
+                const page = await currentPdf.getPage(i);
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.getElementById(canvasId);
+                const context = canvas.getContext('2d');
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+            }
+        } catch (err) {
+            $('#pdfPagesContainer').html(`<div class="alert alert-danger m-4">Erreur: ${err.message}</div>`);
+        }
+    }
+
+    // Zoom Controls
+    $('#btnZoomIn').on('click', function() {
+        currentScale += 0.2;
+        $('#zoomLevel').text(Math.round(currentScale * 100) + '%');
+        const url = $('.btn-view-doc[data-name="' + $('#previewDocumentModalLabel').text() + '"]').data('path') || currentPdf._transport.api.loadingTask._params.url;
+        renderPdf(url, currentScale);
+    });
+
+    $('#btnZoomOut').on('click', function() {
+        if (currentScale > 0.6) {
+            currentScale -= 0.2;
+            $('#zoomLevel').text(Math.round(currentScale * 100) + '%');
+            const url = $('.btn-view-doc[data-name="' + $('#previewDocumentModalLabel').text() + '"]').data('path') || currentPdf._transport.api.loadingTask._params.url;
+            renderPdf(url, currentScale);
+        }
+    });
+
+});
+</script>
+{% endblock extra_js %}

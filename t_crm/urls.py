@@ -64,6 +64,7 @@ from .f_views.counter import get_crm_counters, increment_crm_counter, get_activi
 from .f_views.logs import user_action_log_list, clear_logs
 from .f_views.reporting import crm_reporting, ApiGetCrmReportingData
 from .f_views.generate_paiements import ApiGeneratePaiementRequest
+from .f_views.mediatheque import mediatheque_list, ApiSearchProspects, ApiAssignDocument, ApiImportPhysicalFile, ApiListPreinscritsJSON
 
 app_name="t_crm"
 
@@ -244,5 +245,13 @@ urlpatterns = [
     path('reporting/', crm_reporting, name='crm_reporting'),
     path('api/reporting-data/', ApiGetCrmReportingData, name='ApiGetCrmReportingData'),
     ########################################## Reporting ###################################################
+
+    ########################################## Médiatheque #################################################
+    path('mediatheque/', mediatheque_list, name='mediatheque_list'),
+    path('ApiSearchProspects/', ApiSearchProspects, name='ApiSearchProspects'),
+    path('ApiListPreinscritsJSON/', ApiListPreinscritsJSON, name='ApiListPreinscritsJSON'),
+    path('ApiAssignDocument/', ApiAssignDocument, name='ApiAssignDocument'),
+    path('ApiImportPhysicalFile/', ApiImportPhysicalFile, name='ApiImportPhysicalFile'),
+    ########################################## !Médiatheque #################################################
 
 ]

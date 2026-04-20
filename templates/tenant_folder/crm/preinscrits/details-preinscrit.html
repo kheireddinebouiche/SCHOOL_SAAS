@@ -3130,6 +3130,42 @@
     </div>
 </div>
 
+<!-- Modal: Validation Désactivée (Toggle Global) -->
+<div class="modal fade" id="registrationDisabledModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-warning bg-opacity-10 text-warning me-3">
+                        <i class="ri-error-warning-line"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold text-dark">Inscription Bloquée</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger display-4 rounded-circle">
+                        <i class="ri-lock-2-line"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold mb-3">Validation Suspendue</h5>
+                <p class="text-muted mb-0 mx-auto" style="max-width: 85%;">
+                    L'inscription est momentanément bloquée par l'administration.
+                </p>
+                <div class="alert alert-soft-info mt-4 mb-0 rounded-4 border-0 text-start">
+                    <div class="d-flex">
+                        <i class="ri-information-line fs-5 me-2 mt-1"></i>
+                        <p class="small mb-0">Veuillez contacter un administrateur ou activer le module dans <strong>Configuration > Générale</strong> pour valider ce dossier.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-light rounded-pill px-5 fw-bold" data-bs-dismiss="modal">Compris</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
@@ -3875,8 +3911,16 @@
             });
         });
 
+        // Check if registration validation is enabled globally
+        const isRegistrationValidationEnabled = {{ config.registration_validation_enabled|yesno:"true,false" }};
+
         //bouton de validation de la préinscription
         $(document).on('click', '#validatePreinscritBtn', function(){
+            if (!isRegistrationValidationEnabled) {
+                $('#registrationDisabledModal').modal('show');
+                return;
+            }
+
             // Vérifier si le profil et les documents sont complets avant de permettre la validation
             let profileCompleted = null;
             let documentsCompleted = null;

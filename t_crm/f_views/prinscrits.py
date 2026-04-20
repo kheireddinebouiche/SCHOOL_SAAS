@@ -487,18 +487,27 @@ def ApiLoadRequiredDocs(request):
         id_preinscrit = request.GET.get('id_preinscrit')
         obj_pre = Prospets.objects.get(id = id_preinscrit)
 
-        if obj_pre.is_double:
-            fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id=id_preinscrit, is_confirmed=True)
-            formation1 = fiche_voeux_double.specialite.specialite1.formation
-            formation2 = fiche_voeux_double.specialite.specialite2.formation
-            files = DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), include_in_tracking=True).values('id', 'label', 'is_required')
-        else:
-            specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
-            formation_id = specialites.specialite.formation.id
-            files = DossierInscription.objects.filter(formation = formation_id).values('id','label','is_required')
+        try:
+            if obj_pre.is_double:
+                fiche_voeux_double = FicheVoeuxDouble.objects.get(prospect_id=id_preinscrit, is_confirmed=True)
+                formation1 = fiche_voeux_double.specialite.specialite1.formation
+                formation2 = fiche_voeux_double.specialite.specialite2.formation
+                files = list(DossierInscription.objects.filter(Q(formation=formation1) | Q(formation=formation2), include_in_tracking=True).values('id', 'label', 'is_required'))
+            else:
+                specialites = FicheDeVoeux.objects.get(prospect__id = id_preinscrit) 
+                formation_id = specialites.specialite.formation.id
+                files = list(DossierInscription.objects.filter(formation = formation_id).values('id','label','is_required'))
 
+            # Check which docs are already uploaded
+            uploaded_doc_types = set(DocumentsDemandeInscription.objects.filter(prospect_id=id_preinscrit).values_list('id_document_id', flat=True))
+            
+            for f in files:
+                f['is_uploaded'] = f['id'] in uploaded_doc_types
 
-        return JsonResponse(list(files), safe=False)
+            return JsonResponse(files, safe=False)
+        except Exception:
+            # If no voeux found, return empty list of required docs
+            return JsonResponse([], safe=False)
     
     else:
         return JsonResponse({"status" : "error"})
